@@ -1,0 +1,113 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { expect, it } from "vitest";
+
+import { ToxilApiError, type ToxilClient } from "./index";
+import { registerToxilTools } from "./mcp";
+
+function makeStub() {
+	const calls: Array<{ method: string; args: unknown[] }> = [];
+	const record =
+		(method: string, result: unknown = []) =>
+		(...args: unknown[]) => {
+			calls.push({ method, args });
+			return Promise.resolve(result);
+		};
+	const stub = {
+		listWorkspaces: record("listWorkspaces", [{ id: "ws1", name: "Acme" }]),
+		listProjects: record("listProjects", [{ id: "p1" }]),
+		createWorkEntry: record("createWorkEntry", {
+			id: "e1",
+			entryDate: "2026-06-11",
+		}),
+		listWorkEntries: record("listWorkEntries", []),
+		updateWorkEntry: record("updateWorkEntry", { id: "e1" }),
+	} as unknown as ToxilClient;
+	return { stub, calls };
+}
+
+async function connect(client: ToxilClient) {
+	const server = new McpServer({ name: "toxil-test", version: "0.0.0" });
+	registerToxilTools(server, client);
+	const mcpClient = new Client({ name: "test-client", version: "0.0.0" });
+	const [clientTransport, serverTransport] =
+		InMemoryTransport.createLinkedPair();
+	await Promise.all([
+		server.connect(serverTransport),
+		mcpClient.connect(clientTransport),
+	]);
+	return mcpClient;
+}
+
+it("exposes the five toxil tools", async () => {
+	const { stub } = makeStub();
+	const client = await connect(stub);
+
+	const { tools } = await client.listTools();
+	expect(tools.map((tool) => tool.name).sort()).toEqual([
+		"list_entries",
+		"list_projects",
+		"list_workspaces",
+		"log_work",
+		"update_entry",
+	]);
+});
+
+it("routes tool calls to the api client and returns json text", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "log_work",
+		arguments: {
+			workspaceId: "ws1",
+			projectId: "p1",
+			durationMinutes: 30,
+			description: "via mcp",
+		},
+	});
+
+	expect(calls.at(-1)?.method).toBe("createWorkEntry");
+	expect(calls.at(-1)?.args[0]).toMatchObject({
+		workspaceId: "ws1",
+		durationMinutes: 30,
+	});
+	const content = result.content as Array<{ type: string; text: string }>;
+	expect(JSON.parse(content[0]?.text ?? "")).toMatchObject({ id: "e1" });
+	expect(result.isError).toBeFalsy();
+});
+
+it("maps api errors to tool errors", async () => {
+	const { stub } = makeStub();
+	(stub as { listProjects: unknown }).listProjects = () =>
+		Promise.reject(new ToxilApiError(403, "insufficient_scope", "needs read"));
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "list_projects",
+		arguments: { workspaceId: "ws1" },
+	});
+
+	expect(result.isError).toBe(true);
+	const content = result.content as Array<{ type: string; text: string }>;
+	expect(content[0]?.text).toContain("insufficient_scope");
+});
+
+it("rejects invalid tool input", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "log_work",
+		arguments: {
+			workspaceId: "ws1",
+			projectId: "p1",
+			durationMinutes: -5,
+			description: "x",
+		},
+	});
+
+	expect(result.isError).toBe(true);
+	expect(calls.some((call) => call.method === "createWorkEntry")).toBe(false);
+});

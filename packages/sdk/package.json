@@ -4,13 +4,16 @@
 	"private": true,
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./mcp": "./src/mcp.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@toxil/core": "workspace:*"
+		"@modelcontextprotocol/sdk": "^1.29.0",
+		"@toxil/core": "workspace:*",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"vitest": "^4.1.8"
