@@ -19,7 +19,6 @@ import {
 	listReportsByOwner,
 	listUsersByIds,
 	listWorkEntriesForReport,
-	listWorkspacesForUser,
 	type ReportRow,
 	updateReport,
 } from "@toxil/db";
@@ -27,6 +26,10 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
+import {
+	type MemberWorkspace,
+	requireScopeWorkspaces,
+} from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
@@ -44,30 +47,17 @@ export async function requireReportOwner(
 	return report;
 }
 
-type MemberWorkspace = Awaited<
-	ReturnType<typeof listWorkspacesForUser>
->[number];
-
 /**
  * Cross-workspace scopes are limited to the union of the caller's
  * memberships; the template must be builtin or reachable the same way.
  */
 async function validateScopeAndTemplate(
 	c: Context<AppEnv>,
-	userId: string,
 	scope: ReportScope,
 	templateId: string,
 ): Promise<{ workspaces: MemberWorkspace[]; templateBody: string }> {
-	const workspaces = await listWorkspacesForUser(c.var.db, userId);
+	const workspaces = await requireScopeWorkspaces(c, scope.workspaceIds);
 	const memberIds = new Set(workspaces.map((w) => w.id));
-	for (const workspaceId of scope.workspaceIds) {
-		if (!memberIds.has(workspaceId)) {
-			throw new AppError(
-				"forbidden",
-				"Report scope includes a workspace outside your memberships",
-			);
-		}
-	}
 
 	if (isBuiltinTemplateId(templateId)) {
 		const builtin = getBuiltinTemplate(templateId);
@@ -94,7 +84,7 @@ export const reportRoutes = new Hono<AppEnv>()
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
-		await validateScopeAndTemplate(c, user.id, input.scope, input.templateId);
+		await validateScopeAndTemplate(c, input.scope, input.templateId);
 		const report = await createReport(c.var.db, {
 			name: input.name,
 			ownerUserId: user.id,
@@ -109,13 +99,12 @@ export const reportRoutes = new Hono<AppEnv>()
 		return c.json(await requireReportOwner(c, c.req.param("id")));
 	})
 	.patch("/:id", async (c) => {
-		const { user } = requireScope(c, "write");
+		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		const input = validate(updateReportInputSchema, await c.req.json());
 		if (input.scope !== undefined || input.templateId !== undefined) {
 			await validateScopeAndTemplate(
 				c,
-				user.id,
 				input.scope ?? report.scope,
 				input.templateId ?? report.templateId,
 			);
@@ -133,12 +122,11 @@ export const reportRoutes = new Hono<AppEnv>()
 		return c.body(null, 204);
 	})
 	.post("/:id/run", async (c) => {
-		const { user } = requireScope(c, "write");
+		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		const scope = report.scope;
 		const { workspaces, templateBody } = await validateScopeAndTemplate(
 			c,
-			user.id,
 			scope,
 			report.templateId,
 		);

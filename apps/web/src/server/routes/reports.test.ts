@@ -235,6 +235,73 @@ it("guards snapshots by report ownership and supports delete", async () => {
 	).toBe(404);
 });
 
+it("revokes snapshot content access when workspace membership is lost", async () => {
+	const { admin, other, ws } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "other@example.com" },
+		admin,
+	);
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Mine",
+				templateId: "builtin:daily",
+				scope: { workspaceIds: [ws.id], dateRange: "today" },
+			},
+			other,
+		)
+	).json()) as { id: string };
+	const snapshot = (await (
+		await apiJson("POST", `/api/v1/reports/${report.id}/run`, undefined, other)
+	).json()) as { id: string };
+	expect(
+		(await apiGet(`/api/v1/report-snapshots/${snapshot.id}`, other)).status,
+	).toBe(200);
+
+	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
+		user: { id: string };
+	};
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${ws.id}/members/${me.user.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// Rendered content is gone with the membership; re-running is blocked too.
+	const denied = await apiGet(`/api/v1/report-snapshots/${snapshot.id}`, other);
+	expect(denied.status).toBe(403);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/reports/${report.id}/run`,
+				undefined,
+				other,
+			)
+		).status,
+	).toBe(403);
+	// The owner can still delete their own snapshot (no data exposure).
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/report-snapshots/${snapshot.id}`,
+				undefined,
+				other,
+			)
+		).status,
+	).toBe(204);
+});
+
 it("surfaces template rendering errors as bad_request", async () => {
 	const { admin, ws } = await setup();
 	const template = (await (
