@@ -1,0 +1,20 @@
+{
+  "name": "toxil-monorepo",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "typecheck": "pnpm -r run typecheck",
+    "db:generate": "pnpm --filter @toxil/db run generate",
+    "db:migrate:local": "pnpm --filter web exec wrangler d1 migrations apply toxil-db --local",
+    "db:migrate:remote": "pnpm --filter web exec wrangler d1 migrations apply toxil-db --remote",
+    "deploy": "pnpm --filter web run deploy"
+  }
+}
