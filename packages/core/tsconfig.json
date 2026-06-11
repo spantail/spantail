@@ -1,4 +1,9 @@
 {
 	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		// Runtime-agnostic package: DOM lib types the WebCrypto/encoding globals
+		// shared by browsers, Node, and Workers.
+		"lib": ["ES2023", "DOM", "DOM.Iterable"]
+	},
 	"include": ["src"]
 }
