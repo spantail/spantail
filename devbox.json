@@ -1,4 +1,4 @@
 {
-  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.17.2/.schema/devbox.schema.json",
-  "packages": ["nodejs@24", "pnpm@10"]
+	"$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.17.2/.schema/devbox.schema.json",
+	"packages": ["nodejs@24", "pnpm@10"]
 }
