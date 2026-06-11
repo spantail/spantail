@@ -9,5 +9,9 @@ export function createDb(d1: D1Database) {
 export type Database = ReturnType<typeof createDb>;
 
 export { authOptions } from "./auth-options";
+export * from "./queries/members";
+export * from "./queries/projects";
 export * from "./queries/users";
+export * from "./queries/work-entries";
+export * from "./queries/workspaces";
 export * as schema from "./schema";
