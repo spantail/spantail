@@ -1,0 +1,21 @@
+# Manual config validation. Real deployment is a self-hosting concern:
+# it needs a CLOUDFLARE_API_TOKEN secret and runs `wrangler deploy` against
+# the production environment. Until then this only builds and dry-runs.
+name: Deploy (dry run)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web run build
+      - run: pnpm --filter web exec wrangler deploy --dry-run
