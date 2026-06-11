@@ -1,0 +1,63 @@
+import {
+	createWorkspaceInputSchema,
+	updateWorkspaceInputSchema,
+} from "@toxil/core";
+import {
+	createWorkspace,
+	getWorkspaceBySlug,
+	listWorkspacesForUser,
+	updateWorkspace,
+} from "@toxil/db";
+import { Hono } from "hono";
+
+import { AppError } from "../lib/errors";
+import { requireWorkspaceAccess } from "../lib/permissions";
+import { validate } from "../lib/validate";
+import { requireAuth } from "../middleware/auth";
+import type { AppEnv } from "../types";
+import { memberRoutes } from "./members";
+
+export const workspaceRoutes = new Hono<AppEnv>()
+	.get("/", async (c) => {
+		const { user } = requireAuth(c);
+		return c.json(await listWorkspacesForUser(c.var.db, user.id));
+	})
+	.post("/", async (c) => {
+		const { user } = requireAuth(c);
+		if (!user.isAdmin) {
+			throw new AppError(
+				"forbidden",
+				"Only instance admins can create workspaces",
+			);
+		}
+		const input = validate(createWorkspaceInputSchema, await c.req.json());
+		if (await getWorkspaceBySlug(c.var.db, input.slug)) {
+			throw new AppError(
+				"conflict",
+				"A workspace with this slug already exists",
+			);
+		}
+		const workspace = await createWorkspace(c.var.db, {
+			...input,
+			ownerUserId: user.id,
+		});
+		return c.json(workspace, 201);
+	})
+	.get("/:id", async (c) => {
+		const { workspace } = await requireWorkspaceAccess(c, c.req.param("id"));
+		return c.json(workspace);
+	})
+	.patch("/:id", async (c) => {
+		const workspaceId = c.req.param("id");
+		await requireWorkspaceAccess(c, workspaceId, "admin");
+		const input = validate(updateWorkspaceInputSchema, await c.req.json());
+		const { archived, ...rest } = input;
+		const updated = await updateWorkspace(c.var.db, workspaceId, {
+			...rest,
+			...(archived === undefined
+				? {}
+				: { archivedAt: archived ? new Date() : null }),
+		});
+		return c.json(updated);
+	})
+	.route("/:id/members", memberRoutes);

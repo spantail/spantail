@@ -5,6 +5,7 @@ import { errorResponse } from "./lib/errors";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
 import { meRoutes } from "./routes/me";
+import { workspaceRoutes } from "./routes/workspaces";
 import type { AppEnv } from "./types";
 
 const app = new Hono<AppEnv>();
@@ -25,6 +26,7 @@ app.on(["GET", "POST"], "/api/auth/*", (c) => {
 const v1 = new Hono<AppEnv>();
 v1.use(loadAuth);
 v1.route("/me", meRoutes);
+v1.route("/workspaces", workspaceRoutes);
 
 app.route("/api/v1", v1);
 
