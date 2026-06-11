@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+coverage/
+
+# Cloudflare local state
+.wrangler/
+
+# Local secrets
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Local progress notes (not part of the public repository)
+PROGRESS.md
+
+# Editor / OS
+.DS_Store
+*.log
