@@ -1,170 +1,62 @@
-import {
-	AudioLinesIcon,
-	BookOpenIcon,
-	BotIcon,
-	FrameIcon,
-	GalleryVerticalEndIcon,
-	MapIcon,
-	PieChartIcon,
-	Settings2Icon,
-	TerminalIcon,
-	TerminalSquareIcon,
-} from "lucide-react";
-import type * as React from "react";
-import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
+import { Link, useRouterState } from "@tanstack/react-router";
+import type { AuthUser } from "@toxil/core";
+import { HomeIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
 import { NavUser } from "@/components/nav-user";
-import { TeamSwitcher } from "@/components/team-switcher";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarFooter,
+	SidebarGroup,
 	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
 	SidebarRail,
 } from "@/components/ui/sidebar";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
-// This is sample data.
-const data = {
-	user: {
-		name: "shadcn",
-		email: "m@example.com",
-		avatar: "/avatars/shadcn.jpg",
-	},
-	teams: [
-		{
-			name: "Acme Inc",
-			logo: <GalleryVerticalEndIcon />,
-			plan: "Enterprise",
-		},
-		{
-			name: "Acme Corp.",
-			logo: <AudioLinesIcon />,
-			plan: "Startup",
-		},
-		{
-			name: "Evil Corp.",
-			logo: <TerminalIcon />,
-			plan: "Free",
-		},
-	],
-	navMain: [
-		{
-			title: "Playground",
-			url: "#",
-			icon: <TerminalSquareIcon />,
-			isActive: true,
-			items: [
-				{
-					title: "History",
-					url: "#",
-				},
-				{
-					title: "Starred",
-					url: "#",
-				},
-				{
-					title: "Settings",
-					url: "#",
-				},
-			],
-		},
-		{
-			title: "Models",
-			url: "#",
-			icon: <BotIcon />,
-			items: [
-				{
-					title: "Genesis",
-					url: "#",
-				},
-				{
-					title: "Explorer",
-					url: "#",
-				},
-				{
-					title: "Quantum",
-					url: "#",
-				},
-			],
-		},
-		{
-			title: "Documentation",
-			url: "#",
-			icon: <BookOpenIcon />,
-			items: [
-				{
-					title: "Introduction",
-					url: "#",
-				},
-				{
-					title: "Get Started",
-					url: "#",
-				},
-				{
-					title: "Tutorials",
-					url: "#",
-				},
-				{
-					title: "Changelog",
-					url: "#",
-				},
-			],
-		},
-		{
-			title: "Settings",
-			url: "#",
-			icon: <Settings2Icon />,
-			items: [
-				{
-					title: "General",
-					url: "#",
-				},
-				{
-					title: "Team",
-					url: "#",
-				},
-				{
-					title: "Billing",
-					url: "#",
-				},
-				{
-					title: "Limits",
-					url: "#",
-				},
-			],
-		},
-	],
-	projects: [
-		{
-			name: "Design Engineering",
-			url: "#",
-			icon: <FrameIcon />,
-		},
-		{
-			name: "Sales & Marketing",
-			url: "#",
-			icon: <PieChartIcon />,
-		},
-		{
-			name: "Travel",
-			url: "#",
-			icon: <MapIcon />,
-		},
-	],
-};
+interface NavItem {
+	key: string;
+	to: "/";
+	icon: React.ComponentType<{ className?: string }>;
+}
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+// Routes appear here as their screens land (entries, settings, ...).
+const NAV_ITEMS: NavItem[] = [{ key: "nav.home", to: "/", icon: HomeIcon }];
+
+export function AppSidebar({ user }: { user: AuthUser }) {
+	const { t } = useTranslation();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+
 	return (
-		<Sidebar collapsible="icon" {...props}>
+		<Sidebar collapsible="icon">
 			<SidebarHeader>
-				<TeamSwitcher teams={data.teams} />
+				<WorkspaceSwitcher />
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain items={data.navMain} />
-				<NavProjects projects={data.projects} />
+				<SidebarGroup>
+					<SidebarMenu>
+						{NAV_ITEMS.map((item) => (
+							<SidebarMenuItem key={item.key}>
+								<SidebarMenuButton
+									asChild
+									isActive={pathname === item.to}
+									tooltip={t(item.key)}
+								>
+									<Link to={item.to}>
+										<item.icon />
+										<span>{t(item.key)}</span>
+									</Link>
+								</SidebarMenuButton>
+							</SidebarMenuItem>
+						))}
+					</SidebarMenu>
+				</SidebarGroup>
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser user={data.user} />
+				<NavUser user={user} />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>

@@ -1,31 +1,35 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
+import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/")({
 	component: Home,
 });
 
-// Temporary landing screen; replaced by the app shell in the next step.
 function Home() {
 	const { t } = useTranslation();
-	const navigate = useNavigate();
+	const { current } = useWorkspace();
 	const { session } = Route.useRouteContext();
 
+	if (!current) {
+		const isAdmin = Boolean(session.user.isAdmin);
+		return (
+			<div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+				<h2 className="font-heading text-xl font-semibold">
+					{t("workspace.empty.title")}
+				</h2>
+				<p className="text-muted-foreground max-w-md text-sm">
+					{isAdmin ? t("workspace.empty.admin") : t("workspace.empty.member")}
+				</p>
+			</div>
+		);
+	}
+
 	return (
-		<div className="flex min-h-svh flex-col items-center justify-center gap-4">
-			<p className="text-muted-foreground">{session.user.email}</p>
-			<Button
-				variant="outline"
-				onClick={async () => {
-					await authClient.signOut();
-					await navigate({ to: "/login" });
-				}}
-			>
-				{t("auth.logout")}
-			</Button>
+		<div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+			<h2 className="font-heading text-xl font-semibold">{current.name}</h2>
+			<p className="text-muted-foreground text-sm">{t("home.placeholder")}</p>
 		</div>
 	);
 }

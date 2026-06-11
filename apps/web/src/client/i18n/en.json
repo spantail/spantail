@@ -18,5 +18,21 @@
 	},
 	"errors": {
 		"generic": "Something went wrong. Please try again."
+	},
+	"nav": {
+		"home": "Home",
+		"switchLanguage": "日本語に切り替え"
+	},
+	"workspace": {
+		"label": "Workspaces",
+		"none": "No workspace",
+		"empty": {
+			"title": "No workspace yet",
+			"admin": "Create a workspace from Settings to start logging work.",
+			"member": "Ask an instance admin to add you to a workspace."
+		}
+	},
+	"home": {
+		"placeholder": "Select Entries from the sidebar to log work."
 	}
 }
