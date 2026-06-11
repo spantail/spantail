@@ -21,7 +21,8 @@
 	},
 	"nav": {
 		"home": "ホーム",
-		"switchLanguage": "Switch to English"
+		"switchLanguage": "Switch to English",
+		"entries": "記録"
 	},
 	"workspace": {
 		"label": "ワークスペース",
@@ -34,5 +35,26 @@
 	},
 	"home": {
 		"placeholder": "サイドバーから記録を選択して作業を記録します。"
+	},
+	"entries": {
+		"title": "作業記録",
+		"newTitle": "作業を記録",
+		"editTitle": "記録を編集",
+		"project": "プロジェクト",
+		"selectProject": "プロジェクトを選択",
+		"date": "日付",
+		"duration": "分",
+		"description": "内容",
+		"descriptionPlaceholder": "何に取り組みましたか?",
+		"note": "メモ",
+		"tags": "タグ",
+		"tagsPlaceholder": "api, design",
+		"author": "メンバー",
+		"logAction": "記録する",
+		"saveAction": "保存",
+		"cancelAction": "キャンセル",
+		"editAction": "編集",
+		"deleteAction": "削除",
+		"empty": "まだ記録がありません。上のフォームから記録しましょう。"
 	}
 }
