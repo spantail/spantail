@@ -1,0 +1,28 @@
+# Team weekly
+
+**Period:** 2026-05-25 – 2026-05-31 · **Total:** 12h 30m (8 entries)
+
+## By project
+
+| Project | Entries | Total |
+| --- | --- | --- |
+| Research | 2 | 5h 30m |
+| Toxil | 4 | 4h 30m |
+| Website | 2 | 2h 30m |
+
+## By member
+
+| Member | Entries | Total |
+| --- | --- | --- |
+| Alice | 4 | 7h |
+| Bob | 4 | 5h 30m |
+
+## Notes
+
+Shipped the report engine.
+
+**Next week:** share links.
+
+---
+
+_Generated 2026-06-01_

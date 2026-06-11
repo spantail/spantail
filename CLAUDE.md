@@ -55,8 +55,9 @@ pnpm deploy             # wrangler deploy (apps/web)
   workspace's timezone. All timestamps are UTC. Durations are integer minutes.
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report scopes
   must be validated against the union of the user's workspaces.
-- **Report templates are user input.** Handlebars rendering must keep the restricted helper set
-  and safety settings (no prototype access). Sanitize rendered HTML before display.
+- **Report templates are user input.** LiquidJS rendering must keep the safety settings
+  (own-property access only, strict filters, parse/render/memory limits, file tags disabled).
+  Rendered Markdown must be displayed without raw-HTML passthrough.
 
 ## Conventions
 
