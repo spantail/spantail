@@ -1,9 +1,22 @@
 {
 	"app": {
 		"name": "Toxil",
+		"tagline": "Know where your time goes.",
 		"loading": "Loading…"
 	},
 	"auth": {
-		"login": "Log in"
+		"login": "Log in",
+		"signup": "Sign up",
+		"name": "Name",
+		"email": "Email",
+		"password": "Password",
+		"loginAction": "Log in",
+		"signupAction": "Create account",
+		"noAccount": "No account? Sign up",
+		"haveAccount": "Already have an account? Log in",
+		"logout": "Log out"
+	},
+	"errors": {
+		"generic": "Something went wrong. Please try again."
 	}
 }

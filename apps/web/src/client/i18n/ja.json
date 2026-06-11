@@ -1,9 +1,22 @@
 {
 	"app": {
 		"name": "Toxil",
+		"tagline": "時間の使いみちを知る。",
 		"loading": "読み込み中…"
 	},
 	"auth": {
-		"login": "ログイン"
+		"login": "ログイン",
+		"signup": "新規登録",
+		"name": "名前",
+		"email": "メールアドレス",
+		"password": "パスワード",
+		"loginAction": "ログイン",
+		"signupAction": "アカウント作成",
+		"noAccount": "アカウントをお持ちでない方はこちら",
+		"haveAccount": "すでにアカウントをお持ちの方はこちら",
+		"logout": "ログアウト"
+	},
+	"errors": {
+		"generic": "問題が発生しました。もう一度お試しください。"
 	}
 }
