@@ -12,11 +12,13 @@
 		"typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.node.json"
 	},
 	"dependencies": {
+		"@toxil/core": "workspace:*",
 		"@toxil/db": "workspace:*",
 		"better-auth": "^1.6.16",
 		"hono": "^4.12.25",
 		"react": "^19.2.7",
-		"react-dom": "^19.2.7"
+		"react-dom": "^19.2.7",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.40.1",

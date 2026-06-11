@@ -20,6 +20,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@toxil/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@toxil/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -35,6 +38,9 @@ importers:
       react-dom:
         specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: ^1.40.1

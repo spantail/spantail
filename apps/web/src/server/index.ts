@@ -1,15 +1,31 @@
-import { createDb } from "@toxil/db";
 import { Hono } from "hono";
 
 import { createAuth } from "./auth";
+import { errorResponse } from "./lib/errors";
+import { loadAuth } from "./middleware/auth";
+import { requestContext } from "./middleware/context";
+import { meRoutes } from "./routes/me";
+import type { AppEnv } from "./types";
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<AppEnv>();
+
+app.onError((error, c) => errorResponse(c, error));
+app.notFound((c) =>
+	c.json({ error: { code: "not_found", message: "Not found" } }, 404),
+);
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
+app.use("/api/*", requestContext);
+
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
-	const db = createDb(c.env.DB);
-	return createAuth(c.env, db).handler(c.req.raw);
+	return createAuth(c.env, c.var.db).handler(c.req.raw);
 });
+
+const v1 = new Hono<AppEnv>();
+v1.use(loadAuth);
+v1.route("/me", meRoutes);
+
+app.route("/api/v1", v1);
 
 export default app;
