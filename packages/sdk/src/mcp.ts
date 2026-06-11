@@ -124,6 +124,60 @@ export function registerToxilTools(
 	);
 
 	server.registerTool(
+		"list_report_templates",
+		{
+			title: "List report templates",
+			description:
+				"List report templates available in a workspace, including the builtin " +
+				"daily/weekly/monthly templates. Returns ids usable as a report's templateId.",
+			inputSchema: {
+				workspaceId: z.string().describe("Workspace id from list_workspaces"),
+			},
+		},
+		({ workspaceId }) => run(() => client.listReportTemplates(workspaceId)),
+	);
+
+	server.registerTool(
+		"list_reports",
+		{
+			title: "List reports",
+			description:
+				"List the saved report definitions owned by the token owner, including " +
+				"each report's id, scope, template id, and note.",
+		},
+		() => run(() => client.listReports()),
+	);
+
+	server.registerTool(
+		"get_report",
+		{
+			title: "Get a report",
+			description:
+				"Get a saved report definition by id, including its scope, template id, " +
+				"and free-form markdown note. Get ids from list_reports.",
+			inputSchema: {
+				id: z.string().describe("Report id from list_reports"),
+			},
+		},
+		({ id }) => run(() => client.getReport(id)),
+	);
+
+	server.registerTool(
+		"run_report",
+		{
+			title: "Run a report",
+			description:
+				"Run a saved report now: resolves its date range, renders the template, " +
+				"stores an immutable snapshot, and returns it including the rendered " +
+				"Markdown. Requires the write scope.",
+			inputSchema: {
+				id: z.string().describe("Report id from list_reports"),
+			},
+		},
+		({ id }) => run(() => client.runReport(id)),
+	);
+
+	server.registerTool(
 		"update_entry",
 		{
 			title: "Update a work entry",
