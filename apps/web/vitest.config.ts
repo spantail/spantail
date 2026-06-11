@@ -13,6 +13,7 @@ const migrationsDir = path.join(
 export default defineConfig({
 	test: {
 		name: "web",
+		include: ["src/server/**/*.test.ts"],
 		setupFiles: ["./test/setup.ts"],
 	},
 	plugins: [
