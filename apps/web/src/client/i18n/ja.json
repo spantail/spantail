@@ -22,7 +22,8 @@
 	"nav": {
 		"home": "ホーム",
 		"switchLanguage": "Switch to English",
-		"entries": "記録"
+		"entries": "記録",
+		"settings": "設定"
 	},
 	"workspace": {
 		"label": "ワークスペース",
@@ -56,5 +57,43 @@
 		"editAction": "編集",
 		"deleteAction": "削除",
 		"empty": "まだ記録がありません。上のフォームから記録しましょう。"
+	},
+	"roles": {
+		"owner": "オーナー",
+		"admin": "管理者",
+		"member": "メンバー"
+	},
+	"settings": {
+		"title": "設定",
+		"slug": "スラッグ",
+		"timezone": "タイムゾーン",
+		"workspaceName": "ワークスペース名",
+		"status": "状態",
+		"createAction": "作成",
+		"saveAction": "保存",
+		"createWorkspace": {
+			"title": "ワークスペースを作成",
+			"description": "ワークスペースはプロジェクトとメンバーをまとめる単位です(部署・クライアント等)。"
+		},
+		"editWorkspace": {
+			"title": "ワークスペース: {{name}}"
+		},
+		"projects": {
+			"title": "プロジェクト",
+			"name": "プロジェクト名",
+			"archive": "アーカイブ",
+			"unarchive": "アーカイブ解除",
+			"status": {
+				"active": "稼働中",
+				"archived": "アーカイブ済み"
+			}
+		},
+		"members": {
+			"title": "メンバー",
+			"description": "登録済みユーザーをメールアドレスで追加します。",
+			"role": "ロール",
+			"addAction": "メンバーを追加",
+			"removeAction": "削除"
+		}
 	}
 }

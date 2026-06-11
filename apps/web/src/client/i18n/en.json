@@ -22,7 +22,8 @@
 	"nav": {
 		"home": "Home",
 		"switchLanguage": "日本語に切り替え",
-		"entries": "Entries"
+		"entries": "Entries",
+		"settings": "Settings"
 	},
 	"workspace": {
 		"label": "Workspaces",
@@ -56,5 +57,43 @@
 		"editAction": "Edit",
 		"deleteAction": "Delete",
 		"empty": "No entries yet. Log your first one above."
+	},
+	"roles": {
+		"owner": "Owner",
+		"admin": "Admin",
+		"member": "Member"
+	},
+	"settings": {
+		"title": "Settings",
+		"slug": "Slug",
+		"timezone": "Timezone",
+		"workspaceName": "Workspace name",
+		"status": "Status",
+		"createAction": "Create",
+		"saveAction": "Save",
+		"createWorkspace": {
+			"title": "Create workspace",
+			"description": "Workspaces group projects and members, e.g. a department or client."
+		},
+		"editWorkspace": {
+			"title": "Workspace: {{name}}"
+		},
+		"projects": {
+			"title": "Projects",
+			"name": "Project name",
+			"archive": "Archive",
+			"unarchive": "Unarchive",
+			"status": {
+				"active": "Active",
+				"archived": "Archived"
+			}
+		},
+		"members": {
+			"title": "Members",
+			"description": "Add registered users by their email address.",
+			"role": "Role",
+			"addAction": "Add member",
+			"removeAction": "Remove"
+		}
 	}
 }
