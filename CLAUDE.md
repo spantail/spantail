@@ -16,7 +16,7 @@ pnpm monorepo: a single Worker (`apps/web`) serves the REST API, the MCP endpoin
 ```bash
 pnpm dev                # SPA + Worker dev server (Cloudflare Vite plugin, local D1/R2)
 pnpm test               # all tests (vitest, Workers pool)
-pnpm test -- <pattern>  # single test file
+pnpm test <pattern>     # single test file (pnpm forwards args; do not add --)
 pnpm lint               # biome check (use `pnpm lint:fix` to autofix)
 pnpm typecheck          # tsc across all packages
 pnpm db:generate        # drizzle-kit generate (after editing packages/db/src/schema)
