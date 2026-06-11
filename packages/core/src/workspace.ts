@@ -49,3 +49,8 @@ export const addWorkspaceMemberInputSchema = z.object({
 export type AddWorkspaceMemberInput = z.infer<
 	typeof addWorkspaceMemberInputSchema
 >;
+export type AddWorkspaceMemberInputData = z.input<
+	typeof addWorkspaceMemberInputSchema
+>;
+
+export type WorkspaceWithRole = Workspace & { role: WorkspaceRole };

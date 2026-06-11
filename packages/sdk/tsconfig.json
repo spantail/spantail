@@ -1,0 +1,9 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		// The client runs in browsers, Node, and Workers; DOM lib provides the
+		// fetch/Response globals shared by all three.
+		"lib": ["ES2023", "DOM", "DOM.Iterable"]
+	},
+	"include": ["src"]
+}

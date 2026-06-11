@@ -34,6 +34,9 @@ export const createWorkEntryInputSchema = z.object({
 	tags: z.array(tagSchema).max(20).default([]),
 });
 export type CreateWorkEntryInput = z.infer<typeof createWorkEntryInputSchema>;
+export type CreateWorkEntryInputData = z.input<
+	typeof createWorkEntryInputSchema
+>;
 
 export const updateWorkEntryInputSchema = z
 	.object({
@@ -59,3 +62,8 @@ export const listWorkEntriesQuerySchema = z.object({
 	offset: z.coerce.number().int().min(0).default(0),
 });
 export type ListWorkEntriesQuery = z.infer<typeof listWorkEntriesQuerySchema>;
+// z.coerce fields have an `unknown` input type; clients send numbers.
+export type ListWorkEntriesQueryData = Omit<
+	z.input<typeof listWorkEntriesQuerySchema>,
+	"limit" | "offset"
+> & { limit?: number; offset?: number };
