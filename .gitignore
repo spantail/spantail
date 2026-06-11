@@ -13,8 +13,9 @@ coverage/
 .dev.vars.*
 !.dev.vars.example
 
-# Local progress notes (not part of the public repository)
+# Local notes and planning docs (not part of the public repository)
 PROGRESS.md
+/local/
 
 # Editor / OS
 .DS_Store
