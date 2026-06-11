@@ -11,15 +11,18 @@ import { Hono } from "hono";
 import { AppError } from "../lib/errors";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
+import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 export const memberRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
+		requireScope(c, "read");
 		const workspaceId = c.req.param("id") ?? "";
 		await requireWorkspaceAccess(c, workspaceId);
 		return c.json(await listMembers(c.var.db, workspaceId));
 	})
 	.post("/", async (c) => {
+		requireScope(c, "admin");
 		const workspaceId = c.req.param("id") ?? "";
 		await requireWorkspaceAccess(c, workspaceId, "admin");
 		const input = validate(addWorkspaceMemberInputSchema, await c.req.json());
@@ -46,6 +49,7 @@ export const memberRoutes = new Hono<AppEnv>()
 		);
 	})
 	.delete("/:userId", async (c) => {
+		requireScope(c, "admin");
 		const workspaceId = c.req.param("id") ?? "";
 		const userId = c.req.param("userId");
 		await requireWorkspaceAccess(c, workspaceId, "admin");

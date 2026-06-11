@@ -16,3 +16,10 @@ export async function findUserByEmail(
 ): Promise<UserRow | undefined> {
 	return db.select().from(user).where(eq(user.email, email)).get();
 }
+
+export async function getUserById(
+	db: Database,
+	id: string,
+): Promise<UserRow | undefined> {
+	return db.select().from(user).where(eq(user.id, id)).get();
+}

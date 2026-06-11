@@ -13,18 +13,18 @@ import { Hono } from "hono";
 import { AppError } from "../lib/errors";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
-import { requireAuth } from "../middleware/auth";
+import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 import { memberRoutes } from "./members";
 import { workspaceProjectRoutes } from "./projects";
 
 export const workspaceRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
-		const { user } = requireAuth(c);
+		const { user } = requireScope(c, "read");
 		return c.json(await listWorkspacesForUser(c.var.db, user.id));
 	})
 	.post("/", async (c) => {
-		const { user } = requireAuth(c);
+		const { user } = requireScope(c, "admin");
 		if (!user.isAdmin) {
 			throw new AppError(
 				"forbidden",
@@ -45,10 +45,12 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		return c.json(workspace, 201);
 	})
 	.get("/:id", async (c) => {
+		requireScope(c, "read");
 		const { workspace } = await requireWorkspaceAccess(c, c.req.param("id"));
 		return c.json(workspace);
 	})
 	.patch("/:id", async (c) => {
+		requireScope(c, "admin");
 		const workspaceId = c.req.param("id");
 		await requireWorkspaceAccess(c, workspaceId, "admin");
 		const input = validate(updateWorkspaceInputSchema, await c.req.json());

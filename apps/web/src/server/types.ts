@@ -1,16 +1,9 @@
+import type { AuthUser, TokenScope } from "@toxil/core";
 import type { Database } from "@toxil/db";
 
-export interface AuthUser {
-	id: string;
-	name: string;
-	email: string;
-	isAdmin: boolean;
-}
-
-export interface AuthContext {
-	user: AuthUser;
-	via: "session";
-}
+export type AuthContext =
+	| { user: AuthUser; via: "session" }
+	| { user: AuthUser; via: "pat"; scopes: TokenScope[] };
 
 export type AppEnv = {
 	Bindings: Env;

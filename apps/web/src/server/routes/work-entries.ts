@@ -19,7 +19,7 @@ import { Hono } from "hono";
 import { AppError } from "../lib/errors";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 async function requireProjectInWorkspace(
@@ -55,12 +55,13 @@ function requireAuthor(c: Context<AppEnv>, entry: WorkEntryRow): void {
 
 export const workEntryRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
+		requireScope(c, "read");
 		const query = validate(listWorkEntriesQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
 		return c.json(await listWorkEntries(c.var.db, query));
 	})
 	.post("/", async (c) => {
-		const { user } = requireAuth(c);
+		const { user } = requireScope(c, "write");
 		const input = validate(createWorkEntryInputSchema, await c.req.json());
 		const { workspace } = await requireWorkspaceAccess(c, input.workspaceId);
 		await requireProjectInWorkspace(c, input.projectId, input.workspaceId);
@@ -80,10 +81,12 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		return c.json(entry, 201);
 	})
 	.get("/:id", async (c) => {
+		requireScope(c, "read");
 		const entry = await requireEntryAccess(c, c.req.param("id"));
 		return c.json(entry);
 	})
 	.patch("/:id", async (c) => {
+		requireScope(c, "write");
 		const entry = await requireEntryAccess(c, c.req.param("id"));
 		requireAuthor(c, entry);
 		const input = validate(updateWorkEntryInputSchema, await c.req.json());
@@ -103,6 +106,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		return c.json(updated);
 	})
 	.delete("/:id", async (c) => {
+		requireScope(c, "write");
 		const entry = await requireEntryAccess(c, c.req.param("id"));
 		requireAuthor(c, entry);
 		await deleteWorkEntry(c.var.db, entry.id);
