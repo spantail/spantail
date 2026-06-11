@@ -49,7 +49,9 @@ export async function requireReportOwner(
 
 /**
  * Cross-workspace scopes are limited to the union of the caller's
- * memberships; the template must be builtin or reachable the same way.
+ * memberships. A custom template must belong to a workspace in the scope:
+ * its body ends up in snapshots, and snapshot reads re-check membership
+ * against the scope's workspace ids only.
  */
 async function validateScopeAndTemplate(
 	c: Context<AppEnv>,
@@ -67,6 +69,12 @@ async function validateScopeAndTemplate(
 	const template = await getReportTemplateById(c.var.db, templateId);
 	if (!template || !memberIds.has(template.workspaceId)) {
 		throw new AppError("not_found", "Report template not found");
+	}
+	if (!scope.workspaceIds.includes(template.workspaceId)) {
+		throw new AppError(
+			"bad_request",
+			"Template must belong to a workspace in the report scope",
+		);
 	}
 	return { workspaces, templateBody: template.body };
 }

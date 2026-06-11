@@ -164,6 +164,51 @@ it("hides workspace templates outside the caller's memberships", async () => {
 	expect(unknownTemplate.status).toBe(404);
 });
 
+it("requires a custom template to belong to a scope workspace", async () => {
+	const { admin, ws } = await setup();
+	const otherWs = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "labs", name: "Labs", timezone: "UTC" },
+			admin,
+		)
+	).json()) as { id: string };
+	const template = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${otherWs.id}/report-templates`,
+			{ name: "Labs only", body: "{{ report.name }}" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	// The caller is a member of both workspaces, but the template's
+	// workspace is not part of the report scope.
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{ ...baseReport(ws.id), templateId: template.id },
+		admin,
+	);
+	expect(res.status).toBe(400);
+	expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+		"bad_request",
+	);
+
+	const ok = await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			...baseReport(ws.id),
+			templateId: template.id,
+			scope: { workspaceIds: [ws.id, otherWs.id], dateRange: "today" },
+		},
+		admin,
+	);
+	expect(ok.status).toBe(201);
+});
+
 it("runs a report into an immutable snapshot", async () => {
 	const { admin, ws, project } = await setup();
 	await createEntry(admin, ws.id, project.id, "Wired the run endpoint", [
