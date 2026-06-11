@@ -1,5 +1,6 @@
 import { Liquid } from "liquidjs";
 
+import { todayInTimezone } from "./common";
 import { formatDuration } from "./duration";
 import type { DateRangePreset } from "./report";
 
@@ -175,6 +176,9 @@ export function buildReportContext(
 		period: input.period,
 		timezone: input.timezone,
 		generated_at: input.generatedAt.toISOString(),
+		// Local date of generation in the report timezone; the UTC date of
+		// generated_at can lag a day behind for ahead-of-UTC workspaces.
+		generated_date: todayInTimezone(input.timezone, input.generatedAt),
 		workspaces: input.workspaces.map((w) => ({
 			id: w.id,
 			slug: w.slug,

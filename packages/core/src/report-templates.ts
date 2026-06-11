@@ -11,7 +11,7 @@ const FOOTER = `{% if report.note -%}
 {% endif -%}
 ---
 
-_Generated {{ generated_at | format_date }}_
+_Generated {{ generated_date }}_
 `;
 
 const DAILY_BODY = `# {{ report.name }}
