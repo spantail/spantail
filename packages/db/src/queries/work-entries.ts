@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { workEntries } from "../schema/domain";
@@ -68,6 +68,34 @@ export async function listWorkEntries(
 		.orderBy(desc(workEntries.entryDate), desc(workEntries.createdAt))
 		.limit(query.limit)
 		.offset(query.offset);
+}
+
+/** Fetches entries for a resolved report scope; tags are filtered in core. */
+export async function listWorkEntriesForReport(
+	db: Database,
+	query: {
+		workspaceIds: string[];
+		projectIds?: string[];
+		userIds?: string[];
+		from: string;
+		to: string;
+	},
+): Promise<WorkEntryRow[]> {
+	const conditions = [
+		inArray(workEntries.workspaceId, query.workspaceIds),
+		gte(workEntries.entryDate, query.from),
+		lte(workEntries.entryDate, query.to),
+	];
+	if (query.projectIds?.length)
+		conditions.push(inArray(workEntries.projectId, query.projectIds));
+	if (query.userIds?.length)
+		conditions.push(inArray(workEntries.userId, query.userIds));
+
+	return db
+		.select()
+		.from(workEntries)
+		.where(and(...conditions))
+		.orderBy(asc(workEntries.entryDate), asc(workEntries.createdAt));
 }
 
 export async function updateWorkEntry(

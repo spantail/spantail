@@ -10,7 +10,7 @@ import {
 
 import { user } from "./auth";
 
-const createdAtMs = () =>
+export const createdAtMs = () =>
 	integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull();
