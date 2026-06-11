@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { AuthUser } from "@toxil/core";
-import { ClockIcon, HomeIcon, SettingsIcon } from "lucide-react";
+import { ClockIcon, FileTextIcon, HomeIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { NavUser } from "@/components/nav-user";
@@ -19,13 +19,14 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 interface NavItem {
 	key: string;
-	to: "/" | "/entries" | "/settings";
+	to: "/" | "/entries" | "/templates" | "/settings";
 	icon: React.ComponentType<{ className?: string }>;
 }
 
 const NAV_ITEMS: NavItem[] = [
 	{ key: "nav.home", to: "/", icon: HomeIcon },
 	{ key: "nav.entries", to: "/entries", icon: ClockIcon },
+	{ key: "nav.templates", to: "/templates", icon: FileTextIcon },
 	{ key: "nav.settings", to: "/settings", icon: SettingsIcon },
 ];
 

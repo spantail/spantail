@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedEntriesRouteImport } from './routes/_authed/entries'
 
@@ -27,6 +28,11 @@ const AuthedRoute = AuthedRouteImport.update({
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedTemplatesRoute = AuthedTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
@@ -45,11 +51,13 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/entries': typeof AuthedEntriesRoute
   '/settings': typeof AuthedSettingsRoute
+  '/templates': typeof AuthedTemplatesRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/entries': typeof AuthedEntriesRoute
   '/settings': typeof AuthedSettingsRoute
+  '/templates': typeof AuthedTemplatesRoute
   '/': typeof AuthedIndexRoute
 }
 export interface FileRoutesById {
@@ -58,19 +66,21 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authed/entries': typeof AuthedEntriesRoute
   '/_authed/settings': typeof AuthedSettingsRoute
+  '/_authed/templates': typeof AuthedTemplatesRoute
   '/_authed/': typeof AuthedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/entries' | '/settings'
+  fullPaths: '/' | '/login' | '/entries' | '/settings' | '/templates'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/entries' | '/settings' | '/'
+  to: '/login' | '/entries' | '/settings' | '/templates' | '/'
   id:
     | '__root__'
     | '/_authed'
     | '/login'
     | '/_authed/entries'
     | '/_authed/settings'
+    | '/_authed/templates'
     | '/_authed/'
   fileRoutesById: FileRoutesById
 }
@@ -102,6 +112,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/templates': {
+      id: '/_authed/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AuthedTemplatesRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
@@ -122,12 +139,14 @@ declare module '@tanstack/react-router' {
 interface AuthedRouteChildren {
   AuthedEntriesRoute: typeof AuthedEntriesRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
+  AuthedTemplatesRoute: typeof AuthedTemplatesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedEntriesRoute: AuthedEntriesRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
+  AuthedTemplatesRoute: AuthedTemplatesRoute,
   AuthedIndexRoute: AuthedIndexRoute,
 }
 

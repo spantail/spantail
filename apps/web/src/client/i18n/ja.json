@@ -23,6 +23,7 @@
 		"home": "ホーム",
 		"switchLanguage": "Switch to English",
 		"entries": "記録",
+		"templates": "テンプレート",
 		"settings": "設定"
 	},
 	"workspace": {
@@ -57,6 +58,25 @@
 		"editAction": "編集",
 		"deleteAction": "削除",
 		"empty": "まだ記録がありません。上のフォームから記録しましょう。"
+	},
+	"templates": {
+		"title": "レポートテンプレート",
+		"listTitle": "テンプレート",
+		"newTitle": "テンプレートを作成",
+		"editTitle": "テンプレートを編集",
+		"copyName": "{{name}} のコピー",
+		"name": "テンプレート名",
+		"description": "説明",
+		"body": "テンプレート本文",
+		"bodyHint": "Markdown + Liquid タグで記述します。利用できるデータ: report, period, entries, groups, totals / フィルタ: format_date, format_duration, sum, group_by。",
+		"builtin": "ビルトイン",
+		"createAction": "テンプレートを作成",
+		"saveAction": "保存",
+		"cancelAction": "キャンセル",
+		"editAction": "編集",
+		"deleteAction": "削除",
+		"duplicateAction": "複製",
+		"empty": "テンプレートはまだありません。"
 	},
 	"roles": {
 		"owner": "オーナー",
