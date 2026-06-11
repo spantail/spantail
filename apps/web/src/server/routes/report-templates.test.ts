@@ -144,3 +144,36 @@ it("keeps builtin templates read-only but fetchable", async () => {
 		(await apiGet("/api/v1/report-templates/builtin:nope", member)).status,
 	).toBe(404);
 });
+
+it("refuses to delete a template referenced by a report", async () => {
+	const { admin, ws } = await setup();
+	const template = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/report-templates`,
+			templateInput,
+			admin,
+		)
+	).json()) as { id: string };
+	await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			name: "Daily",
+			templateId: template.id,
+			scope: { workspaceIds: [ws.id], dateRange: "today" },
+		},
+		admin,
+	);
+
+	const res = await apiJson(
+		"DELETE",
+		`/api/v1/report-templates/${template.id}`,
+		undefined,
+		admin,
+	);
+	expect(res.status).toBe(409);
+	expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
+		"conflict",
+	);
+});

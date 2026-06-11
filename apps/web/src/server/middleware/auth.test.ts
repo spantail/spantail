@@ -149,4 +149,46 @@ it("enforces the scope matrix", async () => {
 	expect(
 		((await wsDenied.json()) as { error: { code: string } }).error.code,
 	).toBe("insufficient_scope");
+
+	// reports: read scope can list but neither create nor run.
+	expect((await bearerGet("/api/v1/reports", readToken)).status).toBe(200);
+	const reportInput = {
+		name: "Daily",
+		templateId: "builtin:daily",
+		scope: { workspaceIds: [ws.id], dateRange: "today" },
+	};
+	const reportDenied = await bearerJson(
+		"POST",
+		"/api/v1/reports",
+		reportInput,
+		readToken,
+	);
+	expect(reportDenied.status).toBe(403);
+	expect(
+		((await reportDenied.json()) as { error: { code: string } }).error.code,
+	).toBe("insufficient_scope");
+
+	const report = (await (
+		await bearerJson("POST", "/api/v1/reports", reportInput, writeToken)
+	).json()) as { id: string };
+	const runDenied = await bearerJson(
+		"POST",
+		`/api/v1/reports/${report.id}/run`,
+		undefined,
+		readToken,
+	);
+	expect(runDenied.status).toBe(403);
+	expect(
+		((await runDenied.json()) as { error: { code: string } }).error.code,
+	).toBe("insufficient_scope");
+	expect(
+		(
+			await bearerJson(
+				"POST",
+				`/api/v1/reports/${report.id}/run`,
+				undefined,
+				writeToken,
+			)
+		).status,
+	).toBe(201);
 });
