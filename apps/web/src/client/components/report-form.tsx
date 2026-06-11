@@ -112,6 +112,12 @@ export function ReportForm({
 		setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 	};
 
+	const toggleWorkspace = (id: string) => {
+		toggle(workspaceIds, setWorkspaceIds, id);
+		// The project filter belongs to the previous workspace selection.
+		setProjectIds([]);
+	};
+
 	return (
 		<Card>
 			<CardHeader>
@@ -166,9 +172,7 @@ export function ReportForm({
 									<Checkbox
 										id={`report-ws-${workspace.id}`}
 										checked={workspaceIds.includes(workspace.id)}
-										onCheckedChange={() =>
-											toggle(workspaceIds, setWorkspaceIds, workspace.id)
-										}
+										onCheckedChange={() => toggleWorkspace(workspace.id)}
 									/>
 									{workspace.name}
 								</label>
