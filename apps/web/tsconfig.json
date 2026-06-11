@@ -1,4 +1,11 @@
 {
+	// compilerOptions here exist only for tooling that reads the root tsconfig
+	// (shadcn CLI, editors); tsc runs against the referenced configs.
+	"compilerOptions": {
+		"paths": {
+			"@/*": ["./src/client/*"]
+		}
+	},
 	"files": [],
 	"references": [
 		{ "path": "./tsconfig.app.json" },
