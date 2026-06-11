@@ -5,6 +5,7 @@ import { errorResponse } from "./lib/errors";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
 import { meRoutes } from "./routes/me";
+import { projectRoutes } from "./routes/projects";
 import { workspaceRoutes } from "./routes/workspaces";
 import type { AppEnv } from "./types";
 
@@ -27,6 +28,7 @@ const v1 = new Hono<AppEnv>();
 v1.use(loadAuth);
 v1.route("/me", meRoutes);
 v1.route("/workspaces", workspaceRoutes);
+v1.route("/projects", projectRoutes);
 
 app.route("/api/v1", v1);
 
