@@ -1,0 +1,20 @@
+{
+	"name": "@toxil/db",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"generate": "drizzle-kit generate"
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.45.2"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260611.1",
+		"drizzle-kit": "^0.31.10"
+	}
+}
