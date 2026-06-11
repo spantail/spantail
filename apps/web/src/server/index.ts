@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { createAuth } from "./auth";
 import { errorResponse } from "./lib/errors";
+import { registerMcpRoute } from "./mcp";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
 import { meRoutes } from "./routes/me";
@@ -35,5 +36,8 @@ v1.route("/work-entries", workEntryRoutes);
 v1.route("/tokens", tokenRoutes);
 
 app.route("/api/v1", v1);
+
+// Registered last; closes over the finished app for loopback API calls.
+registerMcpRoute(app);
 
 export default app;
