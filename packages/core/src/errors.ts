@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+export const errorCodeSchema = z.enum([
+	"bad_request",
+	"unauthorized",
+	"forbidden",
+	"insufficient_scope",
+	"not_found",
+	"conflict",
+	"internal",
+]);
+export type ErrorCode = z.infer<typeof errorCodeSchema>;
+
 export const apiErrorSchema = z.object({
 	error: z.object({
 		code: z.string(),
