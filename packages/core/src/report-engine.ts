@@ -104,7 +104,9 @@ function createEngine(): Liquid {
 	return engine;
 }
 
-const engine = createEngine();
+// Created lazily: a module-level instance would be an import side effect
+// that drags liquidjs into bundles that never render reports (the SPA).
+let engine: Liquid | undefined;
 
 function groupEntries(
 	entries: ContextEntry[],
@@ -201,5 +203,6 @@ export async function renderReport(
 	templateBody: string,
 	input: ReportContextInput,
 ): Promise<string> {
+	engine ??= createEngine();
 	return engine.parseAndRender(templateBody, buildReportContext(input));
 }

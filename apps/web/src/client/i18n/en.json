@@ -23,6 +23,7 @@
 		"home": "Home",
 		"switchLanguage": "日本語に切り替え",
 		"entries": "Entries",
+		"reports": "Reports",
 		"templates": "Templates",
 		"settings": "Settings"
 	},
@@ -58,6 +59,48 @@
 		"editAction": "Edit",
 		"deleteAction": "Delete",
 		"empty": "No entries yet. Log your first one above."
+	},
+	"reports": {
+		"title": "Reports",
+		"listTitle": "Saved reports",
+		"newTitle": "New report",
+		"editTitle": "Edit report",
+		"name": "Report name",
+		"template": "Template",
+		"workspaces": "Workspaces",
+		"dateRange": "Date range",
+		"projects": "Projects",
+		"allProjects": "Leave all unchecked to include every project.",
+		"tags": "Tags",
+		"tagsPlaceholder": "api, design (any match)",
+		"note": "Note",
+		"notePlaceholder": "Free-form Markdown appended to the report output.",
+		"range": {
+			"today": "Today",
+			"yesterday": "Yesterday",
+			"this_week": "This week",
+			"last_week": "Last week",
+			"this_month": "This month",
+			"last_month": "Last month",
+			"custom": "Custom range"
+		},
+		"from": "From",
+		"to": "To",
+		"createAction": "Create report",
+		"saveAction": "Save",
+		"cancelAction": "Cancel",
+		"runAction": "Run",
+		"snapshotsAction": "Snapshots",
+		"editAction": "Edit",
+		"deleteAction": "Delete",
+		"empty": "No reports yet. Create one above and run it.",
+		"snapshots": {
+			"title": "Snapshots: {{name}}",
+			"viewAction": "View",
+			"downloadAction": "Download .md",
+			"deleteAction": "Delete",
+			"empty": "No snapshots yet. Run the report to create one."
+		}
 	},
 	"templates": {
 		"title": "Report templates",

@@ -14,6 +14,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
+import { Route as AuthedReportsRouteImport } from './routes/_authed/reports'
 import { Route as AuthedEntriesRouteImport } from './routes/_authed/entries'
 
 const LoginRoute = LoginRouteImport.update({
@@ -40,6 +41,11 @@ const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedReportsRoute = AuthedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedEntriesRoute = AuthedEntriesRouteImport.update({
   id: '/entries',
   path: '/entries',
@@ -50,12 +56,14 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/login': typeof LoginRoute
   '/entries': typeof AuthedEntriesRoute
+  '/reports': typeof AuthedReportsRoute
   '/settings': typeof AuthedSettingsRoute
   '/templates': typeof AuthedTemplatesRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/entries': typeof AuthedEntriesRoute
+  '/reports': typeof AuthedReportsRoute
   '/settings': typeof AuthedSettingsRoute
   '/templates': typeof AuthedTemplatesRoute
   '/': typeof AuthedIndexRoute
@@ -65,20 +73,28 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authed/entries': typeof AuthedEntriesRoute
+  '/_authed/reports': typeof AuthedReportsRoute
   '/_authed/settings': typeof AuthedSettingsRoute
   '/_authed/templates': typeof AuthedTemplatesRoute
   '/_authed/': typeof AuthedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/entries' | '/settings' | '/templates'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/entries'
+    | '/reports'
+    | '/settings'
+    | '/templates'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/entries' | '/settings' | '/templates' | '/'
+  to: '/login' | '/entries' | '/reports' | '/settings' | '/templates' | '/'
   id:
     | '__root__'
     | '/_authed'
     | '/login'
     | '/_authed/entries'
+    | '/_authed/reports'
     | '/_authed/settings'
     | '/_authed/templates'
     | '/_authed/'
@@ -126,6 +142,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/reports': {
+      id: '/_authed/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthedReportsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/entries': {
       id: '/_authed/entries'
       path: '/entries'
@@ -138,6 +161,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedEntriesRoute: typeof AuthedEntriesRoute
+  AuthedReportsRoute: typeof AuthedReportsRoute
   AuthedSettingsRoute: typeof AuthedSettingsRoute
   AuthedTemplatesRoute: typeof AuthedTemplatesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
@@ -145,6 +169,7 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedEntriesRoute: AuthedEntriesRoute,
+  AuthedReportsRoute: AuthedReportsRoute,
   AuthedSettingsRoute: AuthedSettingsRoute,
   AuthedTemplatesRoute: AuthedTemplatesRoute,
   AuthedIndexRoute: AuthedIndexRoute,
