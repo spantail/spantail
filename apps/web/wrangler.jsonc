@@ -1,0 +1,39 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "toxil",
+	"main": "src/server/index.ts",
+	"compatibility_date": "2026-06-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"not_found_handling": "single-page-application",
+		"run_worker_first": ["/api/*", "/mcp"]
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "toxil-db",
+			// Local development uses Miniflare's local SQLite; this ID is a placeholder.
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "../../packages/db/migrations"
+		}
+	],
+	"env": {
+		// Bindings are not inherited into named environments; production mirrors
+		// the defaults. Self-hosters: replace the placeholder IDs with the IDs of
+		// the resources created in your Cloudflare account.
+		"production": {
+			"assets": {
+				"not_found_handling": "single-page-application",
+				"run_worker_first": ["/api/*", "/mcp"]
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "toxil-db",
+					"database_id": "00000000-0000-0000-0000-000000000000",
+					"migrations_dir": "../../packages/db/migrations"
+				}
+			]
+		}
+	}
+}

@@ -1,0 +1,7 @@
+# Copy to .dev.vars (gitignored) and fill in the values.
+
+# Generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=
+
+# Base URL the app is served from during local development.
+BETTER_AUTH_URL=http://localhost:5173
