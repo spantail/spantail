@@ -20,6 +20,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@toxil/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      better-auth:
+        specifier: ^1.6.16
+        version: 1.6.16(@cloudflare/workers-types@4.20260611.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@cloudflare/workers-types@4.20260611.1)(kysely@0.29.2))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(vitest@4.1.8(@types/node@25.9.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.0)(tsx@4.22.4)))
       hono:
         specifier: ^4.12.25
         version: 4.12.25

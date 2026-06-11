@@ -13,7 +13,7 @@ const migrationsDir = path.join(
 export default defineConfig({
 	test: {
 		name: "web",
-		setupFiles: ["./test/apply-migrations.ts"],
+		setupFiles: ["./test/setup.ts"],
 	},
 	plugins: [
 		cloudflareTest(async () => ({
@@ -21,6 +21,9 @@ export default defineConfig({
 			miniflare: {
 				bindings: {
 					TEST_MIGRATIONS: await readD1Migrations(migrationsDir),
+					// Tests must not depend on .dev.vars (absent in CI).
+					BETTER_AUTH_SECRET: "vitest-only-secret-0123456789abcdefghijklmn",
+					BETTER_AUTH_URL: "https://example.com",
 				},
 			},
 		})),

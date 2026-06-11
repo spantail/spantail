@@ -8,4 +8,6 @@ export function createDb(d1: D1Database) {
 
 export type Database = ReturnType<typeof createDb>;
 
+export { authOptions } from "./auth-options";
+export * from "./queries/users";
 export * as schema from "./schema";
