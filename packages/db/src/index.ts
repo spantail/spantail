@@ -11,6 +11,7 @@ export type Database = ReturnType<typeof createDb>;
 export { authOptions } from "./auth-options";
 export * from "./queries/members";
 export * from "./queries/projects";
+export * from "./queries/tokens";
 export * from "./queries/users";
 export * from "./queries/work-entries";
 export * from "./queries/workspaces";
