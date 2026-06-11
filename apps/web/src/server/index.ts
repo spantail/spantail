@@ -7,6 +7,7 @@ import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
 import { meRoutes } from "./routes/me";
 import { projectRoutes } from "./routes/projects";
+import { reportTemplateRoutes } from "./routes/report-templates";
 import { tokenRoutes } from "./routes/tokens";
 import { workEntryRoutes } from "./routes/work-entries";
 import { workspaceRoutes } from "./routes/workspaces";
@@ -32,6 +33,7 @@ v1.use(loadAuth);
 v1.route("/me", meRoutes);
 v1.route("/workspaces", workspaceRoutes);
 v1.route("/projects", projectRoutes);
+v1.route("/report-templates", reportTemplateRoutes);
 v1.route("/work-entries", workEntryRoutes);
 v1.route("/tokens", tokenRoutes);
 
