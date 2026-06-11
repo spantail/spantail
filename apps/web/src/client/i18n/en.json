@@ -1,0 +1,9 @@
+{
+	"app": {
+		"name": "Toxil",
+		"loading": "Loading…"
+	},
+	"auth": {
+		"login": "Log in"
+	}
+}

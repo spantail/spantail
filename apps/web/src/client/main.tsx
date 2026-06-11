@@ -1,23 +1,28 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import "./index.css";
+import "./i18n";
+import { queryClient } from "./lib/query";
+import { routeTree } from "./routeTree.gen";
 
-function App() {
-	return (
-		<div className="flex min-h-svh items-center justify-center">
-			<h1 className="font-heading text-4xl font-semibold tracking-tight">
-				Toxil
-			</h1>
-		</div>
-	);
+const router = createRouter({ routeTree });
+
+declare module "@tanstack/react-router" {
+	interface Register {
+		router: typeof router;
+	}
 }
 
 const root = document.getElementById("root");
 if (root) {
 	createRoot(root).render(
 		<StrictMode>
-			<App />
+			<QueryClientProvider client={queryClient}>
+				<RouterProvider router={router} />
+			</QueryClientProvider>
 		</StrictMode>,
 	);
 }
