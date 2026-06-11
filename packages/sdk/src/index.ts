@@ -1,7 +1,9 @@
 import type {
 	AddWorkspaceMemberInputData,
+	ApiToken,
 	AuthUser,
 	CreateProjectInput,
+	CreateTokenInput,
 	CreateWorkEntryInputData,
 	CreateWorkspaceInput,
 	ListWorkEntriesQueryData,
@@ -168,5 +170,17 @@ export class ToxilClient {
 
 	deleteWorkEntry(id: string): Promise<void> {
 		return this.request("DELETE", `/work-entries/${id}`);
+	}
+
+	listTokens(): Promise<ApiToken[]> {
+		return this.request("GET", "/tokens");
+	}
+
+	createToken(input: CreateTokenInput): Promise<ApiToken & { token: string }> {
+		return this.request("POST", "/tokens", { body: input });
+	}
+
+	deleteToken(id: string): Promise<void> {
+		return this.request("DELETE", `/tokens/${id}`);
 	}
 }

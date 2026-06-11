@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { WorkspaceRole } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { TokensCard } from "@/components/tokens-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +57,7 @@ function SettingsPage() {
 			{current && canManage && <EditWorkspaceCard key={current.id} />}
 			{current && <ProjectsCard canManage={canManage} />}
 			{current && <MembersCard canManage={canManage} />}
+			<TokensCard />
 		</div>
 	);
 }

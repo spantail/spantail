@@ -94,6 +94,24 @@
 			"role": "Role",
 			"addAction": "Add member",
 			"removeAction": "Remove"
+		},
+		"tokens": {
+			"title": "API tokens",
+			"description": "Personal access tokens authenticate the CLI and MCP clients. The token is shown only once.",
+			"name": "Token name",
+			"namePlaceholder": "my-laptop",
+			"scopes": "Scopes",
+			"expiresInDays": "Expires in (days)",
+			"noExpiry": "No expiry",
+			"lastUsed": "Last used",
+			"expires": "Expires",
+			"never": "Never",
+			"createAction": "Create token",
+			"revokeAction": "Revoke",
+			"createdTitle": "Token created",
+			"createdDescription": "Copy this token now — it will not be shown again.",
+			"copyAction": "Copy",
+			"copied": "Copied to clipboard."
 		}
 	}
 }

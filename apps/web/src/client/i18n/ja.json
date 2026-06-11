@@ -94,6 +94,24 @@
 			"role": "ロール",
 			"addAction": "メンバーを追加",
 			"removeAction": "削除"
+		},
+		"tokens": {
+			"title": "API トークン",
+			"description": "CLI や MCP クライアントの認証に使うパーソナルアクセストークンです。トークンは作成時に一度だけ表示されます。",
+			"name": "トークン名",
+			"namePlaceholder": "my-laptop",
+			"scopes": "スコープ",
+			"expiresInDays": "有効期限(日数)",
+			"noExpiry": "無期限",
+			"lastUsed": "最終使用",
+			"expires": "有効期限",
+			"never": "未使用",
+			"createAction": "トークンを作成",
+			"revokeAction": "失効",
+			"createdTitle": "トークンを作成しました",
+			"createdDescription": "今すぐコピーしてください。二度と表示されません。",
+			"copyAction": "コピー",
+			"copied": "クリップボードにコピーしました。"
 		}
 	}
 }
