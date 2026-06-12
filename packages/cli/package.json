@@ -15,6 +15,7 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^1.29.0",
+		"@toxil/core": "workspace:*",
 		"@toxil/sdk": "workspace:*",
 		"zod": "^4.4.3"
 	},
