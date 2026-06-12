@@ -100,6 +100,32 @@
 			"downloadAction": ".md をダウンロード",
 			"deleteAction": "削除",
 			"empty": "スナップショットはまだありません。レポートを実行すると作成されます。"
+		},
+		"shares": {
+			"title": "スナップショットを共有 ({{date}})",
+			"shareAction": "共有",
+			"expiresIn": "有効期限",
+			"expiry": {
+				"d1": "1 日",
+				"d7": "7 日",
+				"d30": "30 日",
+				"none": "無期限"
+			},
+			"passcode": "パスコード(任意)",
+			"passcodePlaceholder": "4 文字以上",
+			"createAction": "共有リンクを作成",
+			"copyAction": "URL をコピー",
+			"copied": "コピーしました",
+			"revokeAction": "失効",
+			"status": {
+				"active": "有効",
+				"expired": "期限切れ",
+				"revoked": "失効済み"
+			},
+			"hasPasscode": "パスコード",
+			"expires": "期限 {{value}}",
+			"views": "閲覧数: {{value}}",
+			"empty": "共有リンクはまだありません。上のフォームから作成できます。"
 		}
 	},
 	"templates": {

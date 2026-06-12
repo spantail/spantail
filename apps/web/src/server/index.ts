@@ -7,9 +7,11 @@ import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
 import { meRoutes } from "./routes/me";
 import { projectRoutes } from "./routes/projects";
+import { reportShareRoutes } from "./routes/report-shares";
 import { reportSnapshotRoutes } from "./routes/report-snapshots";
 import { reportTemplateRoutes } from "./routes/report-templates";
 import { reportRoutes } from "./routes/reports";
+import { shareRoutes } from "./routes/share";
 import { tokenRoutes } from "./routes/tokens";
 import { workEntryRoutes } from "./routes/work-entries";
 import { workspaceRoutes } from "./routes/workspaces";
@@ -35,6 +37,7 @@ v1.use(loadAuth);
 v1.route("/me", meRoutes);
 v1.route("/workspaces", workspaceRoutes);
 v1.route("/projects", projectRoutes);
+v1.route("/report-shares", reportShareRoutes);
 v1.route("/report-snapshots", reportSnapshotRoutes);
 v1.route("/report-templates", reportTemplateRoutes);
 v1.route("/reports", reportRoutes);
@@ -42,6 +45,10 @@ v1.route("/work-entries", workEntryRoutes);
 v1.route("/tokens", tokenRoutes);
 
 app.route("/api/v1", v1);
+
+// Public share views: unauthenticated HTML, outside /api.
+app.use("/share/*", requestContext);
+app.route("/share", shareRoutes);
 
 // Registered last; closes over the finished app for loopback API calls.
 registerMcpRoute(app);

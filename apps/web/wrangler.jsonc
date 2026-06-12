@@ -6,7 +6,7 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"assets": {
 		"not_found_handling": "single-page-application",
-		"run_worker_first": ["/api/*", "/mcp"]
+		"run_worker_first": ["/api/*", "/mcp", "/share/*"]
 	},
 	"d1_databases": [
 		{
@@ -24,7 +24,7 @@
 		"production": {
 			"assets": {
 				"not_found_handling": "single-page-application",
-				"run_worker_first": ["/api/*", "/mcp"]
+				"run_worker_first": ["/api/*", "/mcp", "/share/*"]
 			},
 			"d1_databases": [
 				{
