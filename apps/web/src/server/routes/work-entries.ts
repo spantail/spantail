@@ -3,12 +3,14 @@ import {
 	listWorkEntriesQuerySchema,
 	todayInTimezone,
 	updateWorkEntryInputSchema,
+	workEntryStatsQuerySchema,
 } from "@toxil/core";
 import {
 	createWorkEntry,
 	deleteWorkEntry,
 	getProjectById,
 	getWorkEntryById,
+	getWorkEntryStats,
 	listWorkEntries,
 	updateWorkEntry,
 	type WorkEntryRow,
@@ -79,6 +81,13 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			tags: input.tags,
 		});
 		return c.json(entry, 201);
+	})
+	// Registered before "/:id" so "stats" is not captured as an entry id.
+	.get("/stats", async (c) => {
+		requireScope(c, "read");
+		const query = validate(workEntryStatsQuerySchema, c.req.query());
+		await requireWorkspaceAccess(c, query.workspaceId);
+		return c.json(await getWorkEntryStats(c.var.db, query));
 	})
 	.get("/:id", async (c) => {
 		requireScope(c, "read");
