@@ -22,6 +22,8 @@ import type {
 	UpdateWorkEntryInput,
 	UpdateWorkspaceInput,
 	WorkEntry,
+	WorkEntryStats,
+	WorkEntryStatsQuery,
 	Workspace,
 	WorkspaceMember,
 	WorkspaceWithRole,
@@ -164,6 +166,10 @@ export class ToxilClient {
 
 	listWorkEntries(query: ListWorkEntriesQueryData): Promise<WorkEntry[]> {
 		return this.request("GET", "/work-entries", { query });
+	}
+
+	getWorkEntryStats(query: WorkEntryStatsQuery): Promise<WorkEntryStats> {
+		return this.request("GET", "/work-entries/stats", { query });
 	}
 
 	createWorkEntry(input: CreateWorkEntryInputData): Promise<WorkEntry> {
