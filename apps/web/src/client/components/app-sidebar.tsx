@@ -1,7 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ClockIcon, FileTextIcon, HomeIcon, SettingsIcon } from "lucide-react";
+import {
+	ChevronRightIcon,
+	FileTextIcon,
+	FolderIcon,
+	HomeIcon,
+	SettingsIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -13,27 +24,29 @@ import {
 	SidebarContent,
 	SidebarFooter,
 	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarMenuSkeleton,
 	SidebarRail,
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { useProjects } from "@/hooks/use-projects";
+import { useWorkspace } from "@/lib/workspace";
 
 interface NavItem {
 	key: string;
-	to: "/" | "/entries" | "/templates" | "/settings";
+	to: "/" | "/templates" | "/settings";
 	icon: React.ComponentType<{ className?: string }>;
 }
 
 // The sidebar is workspace-scoped only; user-scoped surfaces (reports,
 // account, user menu) live in the header's top-right corner instead.
-const MAIN_ITEMS: NavItem[] = [
-	{ key: "nav.home", to: "/", icon: HomeIcon },
-	{ key: "nav.entries", to: "/entries", icon: ClockIcon },
-];
+const MAIN_ITEMS: NavItem[] = [{ key: "nav.home", to: "/", icon: HomeIcon }];
 
 // Rarely-used management screens hide behind a single cog button to keep
 // the sidebar quiet.
@@ -63,6 +76,68 @@ function NavItems({ items }: { items: NavItem[] }) {
 				</SidebarMenuItem>
 			))}
 		</SidebarMenu>
+	);
+}
+
+function ProjectsGroup() {
+	const { t } = useTranslation();
+	const { current } = useWorkspace();
+	const projects = useProjects();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+	if (!current) return null;
+	const active = (projects.data ?? [])
+		.filter((project) => project.status === "active")
+		.sort((a, b) => a.name.localeCompare(b.name));
+
+	return (
+		<Collapsible defaultOpen className="group/collapsible">
+			<SidebarGroup>
+				<SidebarGroupLabel asChild>
+					<CollapsibleTrigger>
+						{t("nav.projects")}
+						<ChevronRightIcon className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+					</CollapsibleTrigger>
+				</SidebarGroupLabel>
+				<CollapsibleContent>
+					<SidebarGroupContent>
+						{projects.isPending ? (
+							<SidebarMenu>
+								{[0, 1, 2].map((i) => (
+									<SidebarMenuItem key={i}>
+										<SidebarMenuSkeleton />
+									</SidebarMenuItem>
+								))}
+							</SidebarMenu>
+						) : active.length === 0 ? (
+							<p className="text-muted-foreground px-2 py-1 text-xs group-data-[collapsible=icon]:hidden">
+								{t("nav.projectsEmpty")}
+							</p>
+						) : (
+							<SidebarMenu>
+								{active.map((project) => (
+									<SidebarMenuItem key={project.id}>
+										<SidebarMenuButton
+											asChild
+											isActive={pathname === `/projects/${project.id}`}
+											tooltip={project.name}
+										>
+											<Link
+												to="/projects/$projectId"
+												params={{ projectId: project.id }}
+											>
+												<FolderIcon />
+												<span>{project.name}</span>
+											</Link>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								))}
+							</SidebarMenu>
+						)}
+					</SidebarGroupContent>
+				</CollapsibleContent>
+			</SidebarGroup>
+		</Collapsible>
 	);
 }
 
@@ -115,6 +190,7 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 				<SidebarGroup>
 					<NavItems items={MAIN_ITEMS} />
 				</SidebarGroup>
+				<ProjectsGroup />
 			</SidebarContent>
 			<SidebarFooter>
 				<ManageMenu />

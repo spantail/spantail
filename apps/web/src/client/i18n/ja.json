@@ -24,12 +24,18 @@
 		"home": "ホーム",
 		"switchLanguage": "Switch to English",
 		"logWork": "記録する",
-		"entries": "記録",
+		"projects": "プロジェクト",
+		"projectsEmpty": "稼働中のプロジェクトはありません",
 		"reports": "レポート",
 		"templates": "テンプレート",
 		"settings": "ワークスペース設定",
 		"groupManage": "管理",
 		"account": "アカウント"
+	},
+	"projects": {
+		"notFound": "このワークスペースにプロジェクトが見つかりません。",
+		"backHome": "ホームへ戻る",
+		"entriesTitle": "記録"
 	},
 	"workspace": {
 		"label": "ワークスペース",
@@ -58,7 +64,6 @@
 		"shortcutHint": "ヒント: どの画面でも C キーで記録できます。"
 	},
 	"entries": {
-		"title": "作業記録",
 		"newTitle": "作業を記録",
 		"editTitle": "記録を編集",
 		"project": "プロジェクト",

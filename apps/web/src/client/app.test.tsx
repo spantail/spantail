@@ -73,6 +73,15 @@ const zeroStats = {
 	byUser: [],
 };
 
+const projectPayload = {
+	slug: "website",
+	name: "Website",
+	description: null,
+	status: "active",
+	createdAt: NOW,
+	archivedAt: null,
+};
+
 beforeEach(() => {
 	vi.stubGlobal(
 		"fetch",
@@ -83,6 +92,10 @@ beforeEach(() => {
 					return json(mePayload);
 				case "/api/v1/work-entries/stats":
 					return json(zeroStats);
+				case "/api/v1/projects/p1":
+					return json({ ...projectPayload, id: "p1", workspaceId: "ws1" });
+				case "/api/v1/projects/p2":
+					return json({ ...projectPayload, id: "p2", workspaceId: "ws2" });
 				default:
 					return json([]);
 			}
@@ -148,6 +161,32 @@ it("renders the authed shell with sidebar for a session", async () => {
 	// "Reports" only exists in the header's user-scoped zone.
 	expect((await screen.findAllByText("Acme")).length).toBeGreaterThan(0);
 	expect((await screen.findAllByText("Reports")).length).toBeGreaterThan(0);
+	expect((await screen.findAllByText("Projects")).length).toBeGreaterThan(0);
+	expect(await screen.findByRole("button", { name: "Log work" })).toBeDefined();
+});
+
+it("redirects the removed entries route to home", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/entries");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/");
+});
+
+it("renders a project page for the current workspace", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/projects/p1");
+
+	expect(await screen.findByText("Website")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/projects/p1");
+});
+
+it("redirects a project of another workspace to home", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/projects/p2");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/");
 });
 
 it("renders the home dashboard and the empty timeline call to action", async () => {
