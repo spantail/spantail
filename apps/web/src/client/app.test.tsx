@@ -1,5 +1,11 @@
 import { createMemoryHistory } from "@tanstack/react-router";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { App, createAppRouter } from "./app";
@@ -94,6 +100,24 @@ it("redirects anonymous visitors to the login screen", async () => {
 	expect(await screen.findByRole("button", { name: "Log in" })).toBeDefined();
 	expect(await screen.findByLabelText("Email")).toBeDefined();
 	expect(router.state.location.pathname).toBe("/login");
+});
+
+it("opens the log-work dialog with the c shortcut", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	await renderApp("/");
+	await screen.findAllByText("Acme");
+
+	// Modified keypresses are left alone (e.g. browser shortcuts).
+	fireEvent.keyDown(window, { key: "c", metaKey: true });
+	expect(screen.queryByRole("dialog")).toBeNull();
+
+	fireEvent.keyDown(window, { key: "c" });
+	const dialog = await screen.findByRole("dialog");
+	expect(within(dialog).getByText("Log work")).toBeDefined();
+
+	// A second press while the dialog is open must not stack another one.
+	fireEvent.keyDown(window, { key: "c" });
+	expect(screen.getAllByRole("dialog")).toHaveLength(1);
 });
 
 it("renders the authed shell with sidebar for a session", async () => {

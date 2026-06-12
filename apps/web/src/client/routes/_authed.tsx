@@ -5,10 +5,11 @@ import {
 	Outlet,
 	redirect,
 } from "@tanstack/react-router";
-import { FileChartColumnIcon } from "lucide-react";
+import { FileChartColumnIcon, PlusIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { EntryDialogProvider, useEntryDialog } from "@/components/entry-dialog";
 import { NavUser } from "@/components/nav-user";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
-import { WorkspaceProvider } from "@/lib/workspace";
+import { useWorkspace, WorkspaceProvider } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed")({
 	beforeLoad: async () => {
@@ -52,33 +53,50 @@ function AuthedLayout() {
 
 	return (
 		<WorkspaceProvider workspaces={me.data.memberships}>
-			<SidebarProvider>
-				<AppSidebar isAdmin={me.data.user.isAdmin} />
-				<SidebarInset>
-					<header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-						<SidebarTrigger className="-ml-1" />
-						{/* Top-right corner is the user-scoped zone: reports span
-						    workspaces, so they live here, not in the sidebar. */}
-						<div className="ml-auto flex items-center gap-1">
-							<Button asChild variant="ghost" size="sm">
-								<Link
-									to="/reports"
-									activeProps={{
-										className: "bg-accent text-accent-foreground",
-									}}
-								>
-									<FileChartColumnIcon />
-									{t("nav.reports")}
-								</Link>
-							</Button>
-							<NavUser user={me.data.user} />
-						</div>
-					</header>
-					<main className="flex flex-1 flex-col gap-4 p-4">
-						<Outlet />
-					</main>
-				</SidebarInset>
-			</SidebarProvider>
+			<EntryDialogProvider>
+				<SidebarProvider>
+					<AppSidebar isAdmin={me.data.user.isAdmin} />
+					<SidebarInset>
+						<header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+							<SidebarTrigger className="-ml-1" />
+							{/* Top-right corner is the user-scoped zone: reports span
+							    workspaces, so they live here, not in the sidebar. */}
+							<div className="ml-auto flex items-center gap-1">
+								<LogWorkButton />
+								<Button asChild variant="ghost" size="sm">
+									<Link
+										to="/reports"
+										activeProps={{
+											className: "bg-accent text-accent-foreground",
+										}}
+									>
+										<FileChartColumnIcon />
+										{t("nav.reports")}
+									</Link>
+								</Button>
+								<NavUser user={me.data.user} />
+							</div>
+						</header>
+						<main className="flex flex-1 flex-col gap-4 p-4">
+							<Outlet />
+						</main>
+					</SidebarInset>
+				</SidebarProvider>
+			</EntryDialogProvider>
 		</WorkspaceProvider>
+	);
+}
+
+function LogWorkButton() {
+	const { t } = useTranslation();
+	const { current } = useWorkspace();
+	const { openCreate } = useEntryDialog();
+
+	if (!current) return null;
+	return (
+		<Button size="sm" onClick={() => openCreate()}>
+			<PlusIcon />
+			{t("nav.logWork")}
+		</Button>
 	);
 }

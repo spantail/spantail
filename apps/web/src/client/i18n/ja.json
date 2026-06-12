@@ -22,6 +22,7 @@
 	"nav": {
 		"home": "ホーム",
 		"switchLanguage": "Switch to English",
+		"logWork": "記録する",
 		"entries": "記録",
 		"reports": "レポート",
 		"templates": "テンプレート",
@@ -61,7 +62,14 @@
 		"cancelAction": "キャンセル",
 		"editAction": "編集",
 		"deleteAction": "削除",
-		"empty": "まだ記録がありません。上のフォームから記録しましょう。"
+		"empty": "まだ記録がありません。",
+		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
+		"goToSettings": "設定を開く",
+		"toast": {
+			"created": "作業を記録しました。",
+			"updated": "記録を更新しました。",
+			"deleted": "記録を削除しました。"
+		}
 	},
 	"reports": {
 		"title": "レポート",

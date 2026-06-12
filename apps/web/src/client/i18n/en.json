@@ -22,6 +22,7 @@
 	"nav": {
 		"home": "Home",
 		"switchLanguage": "日本語に切り替え",
+		"logWork": "Log work",
 		"entries": "Entries",
 		"reports": "Reports",
 		"templates": "Templates",
@@ -61,7 +62,14 @@
 		"cancelAction": "Cancel",
 		"editAction": "Edit",
 		"deleteAction": "Delete",
-		"empty": "No entries yet. Log your first one above."
+		"empty": "No entries yet.",
+		"noProjects": "No active projects. Create one in workspace settings first.",
+		"goToSettings": "Open settings",
+		"toast": {
+			"created": "Work entry logged.",
+			"updated": "Entry updated.",
+			"deleted": "Entry deleted."
+		}
 	},
 	"reports": {
 		"title": "Reports",
