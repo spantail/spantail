@@ -1,5 +1,6 @@
 import { ToxilApiError } from "@toxil/sdk";
 
+import { authLogin, authLogout, authStatus } from "./commands/auth";
 import { mcpCommand } from "./commands/mcp";
 import type { CliContext } from "./context";
 import { CliError, isParseArgsError, UsageError } from "./errors";
@@ -11,6 +12,7 @@ const commands: Record<
 	string,
 	CommandHandler | Record<string, CommandHandler>
 > = {
+	auth: { login: authLogin, status: authStatus, logout: authLogout },
 	mcp: mcpCommand,
 };
 
@@ -19,7 +21,10 @@ const USAGE = `toxil ${VERSION} — work logging for the command line
 Usage: toxil <command> [options]
 
 Commands:
-  mcp   Run a stdio MCP server bridging AI clients to a Toxil instance
+  auth login    Save credentials for a Toxil instance
+  auth status   Show the active connection and signed-in user
+  auth logout   Remove saved credentials
+  mcp           Run a stdio MCP server bridging AI clients to a Toxil instance
 
 Run \`toxil <command> --help\` for command options.
 `;
