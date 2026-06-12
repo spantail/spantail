@@ -1,9 +1,10 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import type { AuthUser } from "@toxil/core";
-import { ChevronsUpDownIcon, LanguagesIcon, LogOutIcon } from "lucide-react";
+import { LanguagesIcon, LogOutIcon, UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -13,17 +14,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	SidebarMenu,
-	SidebarMenuButton,
-	SidebarMenuItem,
-	useSidebar,
-} from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 
+// User-scoped menu in the header's top-right corner — deliberately outside
+// the workspace-scoped sidebar.
 export function NavUser({ user }: { user: AuthUser }) {
 	const { t, i18n } = useTranslation();
-	const { isMobile } = useSidebar();
 	const navigate = useNavigate();
 	const initials = user.name
 		.split(/\s+/)
@@ -33,69 +29,62 @@ export function NavUser({ user }: { user: AuthUser }) {
 		.toUpperCase();
 
 	return (
-		<SidebarMenu>
-			<SidebarMenuItem>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<SidebarMenuButton
-							size="lg"
-							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-						>
-							<Avatar className="size-8 rounded-lg">
-								<AvatarFallback className="rounded-lg">
-									{initials}
-								</AvatarFallback>
-							</Avatar>
-							<div className="grid flex-1 text-left text-sm leading-tight">
-								<span className="truncate font-medium">{user.name}</span>
-								<span className="truncate text-xs">{user.email}</span>
-							</div>
-							<ChevronsUpDownIcon className="ml-auto size-4" />
-						</SidebarMenuButton>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-						side={isMobile ? "bottom" : "right"}
-						align="end"
-						sideOffset={4}
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="rounded-full data-[state=open]:bg-accent"
+				>
+					<Avatar className="size-8 rounded-lg">
+						<AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+					</Avatar>
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent
+				className="min-w-56 rounded-lg"
+				align="end"
+				sideOffset={4}
+			>
+				<DropdownMenuLabel className="p-0 font-normal">
+					<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+						<Avatar className="size-8 rounded-lg">
+							<AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
+						</Avatar>
+						<div className="grid flex-1 text-left text-sm leading-tight">
+							<span className="truncate font-medium">{user.name}</span>
+							<span className="truncate text-xs">{user.email}</span>
+						</div>
+					</div>
+				</DropdownMenuLabel>
+				<DropdownMenuSeparator />
+				<DropdownMenuGroup>
+					<DropdownMenuItem asChild>
+						<Link to="/account">
+							<UserIcon />
+							{t("nav.account")}
+						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={() =>
+							i18n.changeLanguage(i18n.language === "ja" ? "en" : "ja")
+						}
 					>
-						<DropdownMenuLabel className="p-0 font-normal">
-							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-								<Avatar className="size-8 rounded-lg">
-									<AvatarFallback className="rounded-lg">
-										{initials}
-									</AvatarFallback>
-								</Avatar>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-medium">{user.name}</span>
-									<span className="truncate text-xs">{user.email}</span>
-								</div>
-							</div>
-						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-							<DropdownMenuItem
-								onClick={() =>
-									i18n.changeLanguage(i18n.language === "ja" ? "en" : "ja")
-								}
-							>
-								<LanguagesIcon />
-								{t("nav.switchLanguage")}
-							</DropdownMenuItem>
-						</DropdownMenuGroup>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem
-							onClick={async () => {
-								await authClient.signOut();
-								await navigate({ to: "/login" });
-							}}
-						>
-							<LogOutIcon />
-							{t("auth.logout")}
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</SidebarMenuItem>
-		</SidebarMenu>
+						<LanguagesIcon />
+						{t("nav.switchLanguage")}
+					</DropdownMenuItem>
+				</DropdownMenuGroup>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem
+					onClick={async () => {
+						await authClient.signOut();
+						await navigate({ to: "/login" });
+					}}
+				>
+					<LogOutIcon />
+					{t("auth.logout")}
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

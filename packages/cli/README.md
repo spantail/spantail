@@ -15,8 +15,9 @@ Requires Node.js 24 or later.
 
 ## Quick start
 
-1. In the Toxil web UI, create an API token under **Settings → API tokens**
-   (read and write scopes recommended).
+1. In the Toxil web UI, create an API token under **Account → API tokens**
+   (open the user menu in the top-right corner; read and write scopes
+   recommended).
 2. Log in and pick a default workspace:
 
 ```bash

@@ -34,11 +34,13 @@ const PRESETS: DateRangePreset[] = [
 
 export function ReportForm({
 	templates,
+	templatesReady,
 	editing,
 	onDone,
 	onCancel,
 }: {
 	templates: ReportTemplate[];
+	templatesReady: boolean;
 	editing: Report | null;
 	onDone: () => void;
 	onCancel: () => void;
@@ -52,11 +54,24 @@ export function ReportForm({
 	const [templateId, setTemplateId] = useState(
 		editing?.templateId ?? "builtin:daily",
 	);
-	const [workspaceIds, setWorkspaceIds] = useState<string[]>(
-		scope?.workspaceIds ?? (current ? [current.id] : []),
-	);
+	// A saved scope may reference workspaces the user has since left; those
+	// can be neither displayed nor saved, so drop them from the editable
+	// scope. The project filter belonged to the original workspace selection,
+	// so it is dropped with it — stale project ids would save fine but render
+	// an empty report.
+	const memberIds = new Set(workspaces.map((workspace) => workspace.id));
+	const keptWorkspaceIds =
+		scope?.workspaceIds.filter((id) => memberIds.has(id)) ?? [];
+	const scopeIntact =
+		!scope || keptWorkspaceIds.length === scope.workspaceIds.length;
+
+	const [workspaceIds, setWorkspaceIds] = useState<string[]>(() => {
+		const fallback = current ? [current.id] : [];
+		if (!scope) return fallback;
+		return keptWorkspaceIds.length > 0 ? keptWorkspaceIds : fallback;
+	});
 	const [projectIds, setProjectIds] = useState<string[]>(
-		scope?.projectIds ?? [],
+		scopeIntact ? (scope?.projectIds ?? []) : [],
 	);
 	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
 		typeof scope?.dateRange === "string" ? scope.dateRange : "custom",
@@ -70,6 +85,22 @@ export function ReportForm({
 	const [tags, setTags] = useState(scope?.tags?.join(", ") ?? "");
 	const [note, setNote] = useState(editing?.note ?? "");
 	const [error, setError] = useState<string | null>(null);
+
+	// A custom template must belong to a workspace in the scope (server rule);
+	// builtins are always available. Clamping at render also covers editing a
+	// report whose template's workspace is no longer selectable — but only
+	// once the template union is fully loaded, or a still-pending custom
+	// template would be silently replaced by the builtin.
+	const availableTemplates = templates.filter(
+		(template) =>
+			template.builtin ||
+			(template.workspaceId && workspaceIds.includes(template.workspaceId)),
+	);
+	const selectedTemplateId =
+		!templatesReady ||
+		availableTemplates.some((template) => template.id === templateId)
+			? templateId
+			: "builtin:daily";
 
 	// Per-project filtering only makes sense within a single workspace.
 	const singleWorkspaceId = workspaceIds.length === 1 ? workspaceIds[0] : null;
@@ -91,7 +122,12 @@ export function ReportForm({
 				...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
 				dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
 			};
-			const input = { name, templateId, scope: reportScope, note };
+			const input = {
+				name,
+				templateId: selectedTemplateId,
+				scope: reportScope,
+				note,
+			};
 			return editing
 				? api.updateReport(editing.id, input)
 				: api.createReport(input);
@@ -145,12 +181,12 @@ export function ReportForm({
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label>{t("reports.template")}</Label>
-							<Select value={templateId} onValueChange={setTemplateId}>
+							<Select value={selectedTemplateId} onValueChange={setTemplateId}>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									{templates.map((template) => (
+									{availableTemplates.map((template) => (
 										<SelectItem key={template.id} value={template.id}>
 											{template.name}
 										</SelectItem>
@@ -160,25 +196,27 @@ export function ReportForm({
 						</div>
 					</div>
 
-					<div className="flex flex-col gap-2">
-						<Label>{t("reports.workspaces")}</Label>
-						<div className="flex flex-wrap gap-4">
-							{workspaces.map((workspace) => (
-								<label
-									key={workspace.id}
-									htmlFor={`report-ws-${workspace.id}`}
-									className="flex items-center gap-2 text-sm"
-								>
-									<Checkbox
-										id={`report-ws-${workspace.id}`}
-										checked={workspaceIds.includes(workspace.id)}
-										onCheckedChange={() => toggleWorkspace(workspace.id)}
-									/>
-									{workspace.name}
-								</label>
-							))}
+					{workspaces.length > 1 && (
+						<div className="flex flex-col gap-2">
+							<Label>{t("reports.workspaces")}</Label>
+							<div className="flex flex-wrap gap-4">
+								{workspaces.map((workspace) => (
+									<label
+										key={workspace.id}
+										htmlFor={`report-ws-${workspace.id}`}
+										className="flex items-center gap-2 text-sm"
+									>
+										<Checkbox
+											id={`report-ws-${workspace.id}`}
+											checked={workspaceIds.includes(workspace.id)}
+											onCheckedChange={() => toggleWorkspace(workspace.id)}
+										/>
+										{workspace.name}
+									</label>
+								))}
+							</div>
 						</div>
-					</div>
+					)}
 
 					<div className="grid gap-4 sm:grid-cols-3">
 						<div className="flex flex-col gap-2">
@@ -282,7 +320,11 @@ export function ReportForm({
 					<div className="flex gap-2">
 						<Button
 							type="submit"
-							disabled={mutation.isPending || workspaceIds.length === 0}
+							disabled={
+								mutation.isPending ||
+								workspaceIds.length === 0 ||
+								!templatesReady
+							}
 						>
 							{editing ? t("reports.saveAction") : t("reports.createAction")}
 						</Button>

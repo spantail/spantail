@@ -3,7 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { WorkspaceRole } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TokensCard } from "@/components/tokens-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,109 +36,26 @@ export const Route = createFileRoute("/_authed/settings")({
 	component: SettingsPage,
 });
 
-function browserTimezone(): string {
-	return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
 function SettingsPage() {
 	const { t } = useTranslation();
 	const { current } = useWorkspace();
-	const { session } = Route.useRouteContext();
-	const isInstanceAdmin = Boolean(session.user.isAdmin);
 	const canManage = current?.role === "owner" || current?.role === "admin";
+
+	if (!current) {
+		return (
+			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
+		);
+	}
 
 	return (
 		<div className="flex max-w-3xl flex-col gap-4">
 			<h1 className="font-heading text-lg font-semibold">
 				{t("settings.title")}
 			</h1>
-			{isInstanceAdmin && <CreateWorkspaceCard />}
-			{current && canManage && <EditWorkspaceCard key={current.id} />}
-			{current && <ProjectsCard canManage={canManage} />}
-			{current && <MembersCard canManage={canManage} />}
-			<TokensCard />
+			{canManage && <EditWorkspaceCard key={current.id} />}
+			<ProjectsCard canManage={canManage} />
+			<MembersCard canManage={canManage} />
 		</div>
-	);
-}
-
-function CreateWorkspaceCard() {
-	const { t } = useTranslation();
-	const queryClient = useQueryClient();
-	const { setCurrentId } = useWorkspace();
-	const [slug, setSlug] = useState("");
-	const [name, setName] = useState("");
-	const [timezone, setTimezone] = useState(browserTimezone);
-	const [error, setError] = useState<string | null>(null);
-
-	const mutation = useMutation({
-		mutationFn: () => api.createWorkspace({ slug, name, timezone }),
-		onSuccess: async (workspace) => {
-			await queryClient.invalidateQueries({ queryKey: ["me"] });
-			setCurrentId(workspace.id);
-			setSlug("");
-			setName("");
-			setError(null);
-		},
-		onError: (err: Error) => setError(err.message),
-	});
-
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="font-heading text-base">
-					{t("settings.createWorkspace.title")}
-				</CardTitle>
-				<CardDescription>
-					{t("settings.createWorkspace.description")}
-				</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<form
-					className="grid gap-4 sm:grid-cols-3"
-					onSubmit={(e) => {
-						e.preventDefault();
-						mutation.mutate();
-					}}
-				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="ws-name">{t("settings.workspaceName")}</Label>
-						<Input
-							id="ws-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="ws-slug">{t("settings.slug")}</Label>
-						<Input
-							id="ws-slug"
-							value={slug}
-							onChange={(e) => setSlug(e.target.value)}
-							pattern="[a-z0-9][a-z0-9-]*"
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="ws-tz">{t("settings.timezone")}</Label>
-						<Input
-							id="ws-tz"
-							value={timezone}
-							onChange={(e) => setTimezone(e.target.value)}
-							required
-						/>
-					</div>
-					{error && (
-						<p className="text-destructive text-sm sm:col-span-3">{error}</p>
-					)}
-					<div className="sm:col-span-3">
-						<Button type="submit" disabled={mutation.isPending}>
-							{t("settings.createAction")}
-						</Button>
-					</div>
-				</form>
-			</CardContent>
-		</Card>
 	);
 }
 

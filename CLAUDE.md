@@ -49,8 +49,10 @@ pnpm deploy             # wrangler deploy (apps/web)
   `fetch`. UI state stays local; do not add a global state library. shadcn/ui components live in
   `src/client/components/ui` (generated; avoid hand-editing beyond theming).
 - **App shell.** The root layout is based on the shadcn/ui Sidebar block `sidebar-07` (collapses
-  to icons): workspace switcher at the top, collapsible project navigation, user menu at the
-  bottom. New screens render inside this shell.
+  to icons). The sidebar is workspace-scoped only: workspace switcher at the top, workspace
+  navigation, and a management group (templates, workspace settings) pinned at the bottom.
+  User-scoped surfaces — reports and the user menu (account, language, logout) — live in the
+  header's top-right corner, never in the sidebar. New screens render inside this shell.
 - **Dates and time.** `work_entries.entry_date` is a local date string (`YYYY-MM-DD`) in the
   workspace's timezone. All timestamps are UTC. Durations are integer minutes.
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report scopes

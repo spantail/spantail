@@ -25,14 +25,17 @@
 		"entries": "記録",
 		"reports": "レポート",
 		"templates": "テンプレート",
-		"settings": "設定"
+		"settings": "ワークスペース設定",
+		"groupManage": "管理",
+		"account": "アカウント"
 	},
 	"workspace": {
 		"label": "ワークスペース",
 		"none": "ワークスペースなし",
+		"createAction": "ワークスペースを作成",
 		"empty": {
 			"title": "ワークスペースがありません",
-			"admin": "設定からワークスペースを作成すると記録を開始できます。",
+			"admin": "最初のワークスペースを作成すると記録を開始できます。",
 			"member": "インスタンス管理者にワークスペースへの追加を依頼してください。"
 		}
 	},
@@ -62,6 +65,7 @@
 	},
 	"reports": {
 		"title": "レポート",
+		"description": "レポートは個人に紐づき、所属するすべてのワークスペースの記録を横断して集計できます。",
 		"listTitle": "保存済みレポート",
 		"newTitle": "レポートを作成",
 		"editTitle": "レポートを編集",
@@ -153,7 +157,7 @@
 		"member": "メンバー"
 	},
 	"settings": {
-		"title": "設定",
+		"title": "ワークスペース設定",
 		"slug": "スラッグ",
 		"timezone": "タイムゾーン",
 		"workspaceName": "ワークスペース名",
