@@ -1,0 +1,100 @@
+import { expect, it } from "vitest";
+
+import {
+	absoluteDateRangeSchema,
+	filterEntriesByTags,
+	isBuiltinTemplateId,
+	reportScopeSchema,
+	resolveDateRange,
+} from "./report";
+
+// 2026-06-07 is a Sunday; 16:30 UTC is already 2026-06-08 (Monday) in JST.
+const sundayUtcMondayJst = new Date("2026-06-07T16:30:00Z");
+
+it("resolves today and yesterday in the workspace timezone", () => {
+	expect(resolveDateRange("today", "UTC", sundayUtcMondayJst)).toEqual({
+		from: "2026-06-07",
+		to: "2026-06-07",
+	});
+	expect(resolveDateRange("today", "Asia/Tokyo", sundayUtcMondayJst)).toEqual({
+		from: "2026-06-08",
+		to: "2026-06-08",
+	});
+	expect(
+		resolveDateRange("yesterday", "Asia/Tokyo", sundayUtcMondayJst),
+	).toEqual({ from: "2026-06-07", to: "2026-06-07" });
+});
+
+it("resolves weeks starting on Monday", () => {
+	// Sunday in UTC belongs to the week starting the previous Monday.
+	expect(resolveDateRange("this_week", "UTC", sundayUtcMondayJst)).toEqual({
+		from: "2026-06-01",
+		to: "2026-06-07",
+	});
+	// Monday in JST starts a new week.
+	expect(
+		resolveDateRange("this_week", "Asia/Tokyo", sundayUtcMondayJst),
+	).toEqual({ from: "2026-06-08", to: "2026-06-14" });
+	expect(resolveDateRange("last_week", "UTC", sundayUtcMondayJst)).toEqual({
+		from: "2026-05-25",
+		to: "2026-05-31",
+	});
+});
+
+it("resolves months including the january boundary", () => {
+	expect(resolveDateRange("this_month", "UTC", sundayUtcMondayJst)).toEqual({
+		from: "2026-06-01",
+		to: "2026-06-30",
+	});
+	expect(resolveDateRange("last_month", "UTC", sundayUtcMondayJst)).toEqual({
+		from: "2026-05-01",
+		to: "2026-05-31",
+	});
+	const january = new Date("2026-01-15T00:00:00Z");
+	expect(resolveDateRange("last_month", "UTC", january)).toEqual({
+		from: "2025-12-01",
+		to: "2025-12-31",
+	});
+});
+
+it("passes absolute ranges through unchanged", () => {
+	const range = { from: "2026-01-01", to: "2026-01-31" };
+	expect(resolveDateRange(range, "Asia/Tokyo")).toEqual(range);
+});
+
+it("rejects an absolute range with from after to", () => {
+	expect(
+		absoluteDateRangeSchema.safeParse({ from: "2026-02-01", to: "2026-01-31" })
+			.success,
+	).toBe(false);
+});
+
+it("requires at least one workspace in a scope", () => {
+	expect(
+		reportScopeSchema.safeParse({ workspaceIds: [], dateRange: "today" })
+			.success,
+	).toBe(false);
+	const parsed = reportScopeSchema.parse({
+		workspaceIds: ["ws1"],
+		dateRange: { from: "2026-06-01", to: "2026-06-07" },
+	});
+	expect(parsed.tags).toBeUndefined();
+});
+
+it("filters entries by any matching tag", () => {
+	const entries = [
+		{ id: "a", tags: ["api", "review"] },
+		{ id: "b", tags: ["chore"] },
+		{ id: "c", tags: [] },
+	];
+	expect(filterEntriesByTags(entries)).toHaveLength(3);
+	expect(filterEntriesByTags(entries, [])).toHaveLength(3);
+	expect(
+		filterEntriesByTags(entries, ["api", "docs"]).map((e) => e.id),
+	).toEqual(["a"]);
+});
+
+it("recognizes builtin template ids", () => {
+	expect(isBuiltinTemplateId("builtin:daily")).toBe(true);
+	expect(isBuiltinTemplateId(crypto.randomUUID())).toBe(false);
+});

@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { count, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { user } from "../schema/auth";
@@ -22,4 +22,12 @@ export async function getUserById(
 	id: string,
 ): Promise<UserRow | undefined> {
 	return db.select().from(user).where(eq(user.id, id)).get();
+}
+
+export async function listUsersByIds(
+	db: Database,
+	ids: string[],
+): Promise<UserRow[]> {
+	if (ids.length === 0) return [];
+	return db.select().from(user).where(inArray(user.id, ids));
 }

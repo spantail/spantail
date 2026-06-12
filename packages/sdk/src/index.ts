@@ -3,12 +3,20 @@ import type {
 	ApiToken,
 	AuthUser,
 	CreateProjectInput,
+	CreateReportInput,
+	CreateReportTemplateInput,
 	CreateTokenInput,
 	CreateWorkEntryInputData,
 	CreateWorkspaceInput,
 	ListWorkEntriesQueryData,
 	Project,
+	Report,
+	ReportSnapshot,
+	ReportSnapshotMeta,
+	ReportTemplate,
 	UpdateProjectInput,
+	UpdateReportInput,
+	UpdateReportTemplateInput,
 	UpdateWorkEntryInput,
 	UpdateWorkspaceInput,
 	WorkEntry,
@@ -170,6 +178,70 @@ export class ToxilClient {
 
 	deleteWorkEntry(id: string): Promise<void> {
 		return this.request("DELETE", `/work-entries/${id}`);
+	}
+
+	listReportTemplates(workspaceId: string): Promise<ReportTemplate[]> {
+		return this.request("GET", `/workspaces/${workspaceId}/report-templates`);
+	}
+
+	createReportTemplate(
+		workspaceId: string,
+		input: CreateReportTemplateInput,
+	): Promise<ReportTemplate> {
+		return this.request("POST", `/workspaces/${workspaceId}/report-templates`, {
+			body: input,
+		});
+	}
+
+	getReportTemplate(id: string): Promise<ReportTemplate> {
+		return this.request("GET", `/report-templates/${id}`);
+	}
+
+	updateReportTemplate(
+		id: string,
+		input: UpdateReportTemplateInput,
+	): Promise<ReportTemplate> {
+		return this.request("PATCH", `/report-templates/${id}`, { body: input });
+	}
+
+	deleteReportTemplate(id: string): Promise<void> {
+		return this.request("DELETE", `/report-templates/${id}`);
+	}
+
+	listReports(): Promise<Report[]> {
+		return this.request("GET", "/reports");
+	}
+
+	createReport(input: CreateReportInput): Promise<Report> {
+		return this.request("POST", "/reports", { body: input });
+	}
+
+	getReport(id: string): Promise<Report> {
+		return this.request("GET", `/reports/${id}`);
+	}
+
+	updateReport(id: string, input: UpdateReportInput): Promise<Report> {
+		return this.request("PATCH", `/reports/${id}`, { body: input });
+	}
+
+	deleteReport(id: string): Promise<void> {
+		return this.request("DELETE", `/reports/${id}`);
+	}
+
+	runReport(id: string): Promise<ReportSnapshot> {
+		return this.request("POST", `/reports/${id}/run`);
+	}
+
+	listReportSnapshots(reportId: string): Promise<ReportSnapshotMeta[]> {
+		return this.request("GET", `/reports/${reportId}/snapshots`);
+	}
+
+	getReportSnapshot(id: string): Promise<ReportSnapshot> {
+		return this.request("GET", `/report-snapshots/${id}`);
+	}
+
+	deleteReportSnapshot(id: string): Promise<void> {
+		return this.request("DELETE", `/report-snapshots/${id}`);
 	}
 
 	listTokens(): Promise<ApiToken[]> {

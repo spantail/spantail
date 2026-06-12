@@ -2,6 +2,7 @@ import type { WorkspaceRole } from "@toxil/core";
 import {
 	getMembership,
 	getWorkspaceById,
+	listWorkspacesForUser,
 	type MembershipRow,
 	type WorkspaceRow,
 } from "@toxil/db";
@@ -39,4 +40,32 @@ export async function requireWorkspaceAccess(
 		throw new AppError("forbidden", `Requires workspace ${minRole} role`);
 	}
 	return { workspace, membership };
+}
+
+export type MemberWorkspace = Awaited<
+	ReturnType<typeof listWorkspacesForUser>
+>[number];
+
+/**
+ * Asserts every workspace id is within the union of the current user's
+ * memberships and returns those memberships. Used for report scopes at
+ * create/update/run time and re-checked when reading rendered snapshots,
+ * so removal from a workspace also cuts access to its frozen report data.
+ */
+export async function requireScopeWorkspaces(
+	c: Context<AppEnv>,
+	workspaceIds: string[],
+): Promise<MemberWorkspace[]> {
+	const { user } = requireAuth(c);
+	const workspaces = await listWorkspacesForUser(c.var.db, user.id);
+	const memberIds = new Set(workspaces.map((w) => w.id));
+	for (const workspaceId of workspaceIds) {
+		if (!memberIds.has(workspaceId)) {
+			throw new AppError(
+				"forbidden",
+				"Report scope includes a workspace outside your memberships",
+			);
+		}
+	}
+	return workspaces;
 }

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { projects } from "../schema/domain";
@@ -51,6 +51,14 @@ export async function listProjects(
 		.from(projects)
 		.where(eq(projects.workspaceId, workspaceId))
 		.orderBy(projects.createdAt);
+}
+
+export async function listProjectsByIds(
+	db: Database,
+	ids: string[],
+): Promise<ProjectRow[]> {
+	if (ids.length === 0) return [];
+	return db.select().from(projects).where(inArray(projects.id, ids));
 }
 
 export async function updateProject(

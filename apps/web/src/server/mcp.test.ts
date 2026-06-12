@@ -119,10 +119,14 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 	});
 	const tools = await rpcResult<{ tools: Array<{ name: string }> }>(toolsRes);
 	expect(tools.tools.map((tool) => tool.name).sort()).toEqual([
+		"get_report",
 		"list_entries",
 		"list_projects",
+		"list_report_templates",
+		"list_reports",
 		"list_workspaces",
 		"log_work",
+		"run_report",
 		"update_entry",
 	]);
 
@@ -159,6 +163,53 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 	expect(
 		listed.some((e) => e.id === entry.id && e.description === "Logged via MCP"),
 	).toBe(true);
+});
+
+it("runs a saved report end to end over mcp", async () => {
+	const { cookie, ws, project, token } = await setup();
+	await apiJson(
+		"POST",
+		"/api/v1/work-entries",
+		{
+			workspaceId: ws.id,
+			projectId: project.id,
+			durationMinutes: 45,
+			description: "Refined the report engine",
+		},
+		cookie,
+	);
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Daily via MCP",
+				templateId: "builtin:daily",
+				scope: { workspaceIds: [ws.id], dateRange: "today" },
+				note: "Generated through the MCP loopback",
+			},
+			cookie,
+		)
+	).json()) as { id: string };
+
+	const callRes = await rpc(token, {
+		jsonrpc: "2.0",
+		id: 5,
+		method: "tools/call",
+		params: { name: "run_report", arguments: { id: report.id } },
+	});
+	const call = await rpcResult<{
+		content: Array<{ type: string; text: string }>;
+		isError?: boolean;
+	}>(callRes);
+	expect(call.isError).toBeFalsy();
+	const snapshot = JSON.parse(call.content[0]?.text ?? "{}") as {
+		renderedMarkdown: string;
+	};
+	expect(snapshot.renderedMarkdown).toContain("Refined the report engine");
+	expect(snapshot.renderedMarkdown).toContain(
+		"Generated through the MCP loopback",
+	);
 });
 
 it("surfaces scope errors as tool errors", async () => {
