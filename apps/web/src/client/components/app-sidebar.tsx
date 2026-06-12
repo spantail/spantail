@@ -3,15 +3,22 @@ import { ClockIcon, FileTextIcon, HomeIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
 	Sidebar,
 	SidebarContent,
+	SidebarFooter,
 	SidebarGroup,
-	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarRail,
+	useSidebar,
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
@@ -28,6 +35,8 @@ const MAIN_ITEMS: NavItem[] = [
 	{ key: "nav.entries", to: "/entries", icon: ClockIcon },
 ];
 
+// Rarely-used management screens hide behind a single cog button to keep
+// the sidebar quiet.
 const MANAGE_ITEMS: NavItem[] = [
 	{ key: "nav.templates", to: "/templates", icon: FileTextIcon },
 	{ key: "nav.settings", to: "/settings", icon: SettingsIcon },
@@ -57,9 +66,46 @@ function NavItems({ items }: { items: NavItem[] }) {
 	);
 }
 
-export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
+function ManageMenu() {
 	const { t } = useTranslation();
+	const { isMobile } = useSidebar();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+	return (
+		<SidebarMenu>
+			<SidebarMenuItem>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<SidebarMenuButton
+							isActive={MANAGE_ITEMS.some((item) => item.to === pathname)}
+							tooltip={t("nav.groupManage")}
+						>
+							<SettingsIcon />
+							<span>{t("nav.groupManage")}</span>
+						</SidebarMenuButton>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent
+						className="min-w-48 rounded-lg"
+						align="end"
+						side={isMobile ? "bottom" : "right"}
+						sideOffset={4}
+					>
+						{MANAGE_ITEMS.map((item) => (
+							<DropdownMenuItem key={item.key} asChild>
+								<Link to={item.to}>
+									<item.icon />
+									{t(item.key)}
+								</Link>
+							</DropdownMenuItem>
+						))}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</SidebarMenuItem>
+		</SidebarMenu>
+	);
+}
+
+export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader>
@@ -69,11 +115,10 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 				<SidebarGroup>
 					<NavItems items={MAIN_ITEMS} />
 				</SidebarGroup>
-				<SidebarGroup className="mt-auto">
-					<SidebarGroupLabel>{t("nav.groupManage")}</SidebarGroupLabel>
-					<NavItems items={MANAGE_ITEMS} />
-				</SidebarGroup>
 			</SidebarContent>
+			<SidebarFooter>
+				<ManageMenu />
+			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
 	);
