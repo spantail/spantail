@@ -102,7 +102,8 @@ it("renders the authed shell with sidebar for a session", async () => {
 
 	// The workspace switcher shows the membership; the nav renders
 	// tooltip-enabled sidebar buttons, so this catches missing providers.
+	// "Reports" only exists in the header's user-scoped zone.
 	expect((await screen.findAllByText("Acme")).length).toBeGreaterThan(0);
 	expect((await screen.findAllByText("Entries")).length).toBeGreaterThan(0);
-	expect((await screen.findAllByText("Kato")).length).toBeGreaterThan(0);
+	expect((await screen.findAllByText("Reports")).length).toBeGreaterThan(0);
 });

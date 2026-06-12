@@ -1,11 +1,14 @@
-import { ChevronsUpDownIcon, ClockIcon } from "lucide-react";
+import { ChevronsUpDownIcon, ClockIcon, PlusIcon } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -16,10 +19,11 @@ import {
 } from "@/components/ui/sidebar";
 import { useWorkspace } from "@/lib/workspace";
 
-export function WorkspaceSwitcher() {
+export function WorkspaceSwitcher({ isAdmin }: { isAdmin: boolean }) {
 	const { t } = useTranslation();
 	const { isMobile } = useSidebar();
 	const { workspaces, current, setCurrentId } = useWorkspace();
+	const [createOpen, setCreateOpen] = useState(false);
 
 	return (
 		<SidebarMenu>
@@ -60,8 +64,21 @@ export function WorkspaceSwitcher() {
 								{workspace.name}
 							</DropdownMenuItem>
 						))}
+						{isAdmin && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									onClick={() => setCreateOpen(true)}
+									className="gap-2 p-2"
+								>
+									<PlusIcon className="size-4" />
+									{t("workspace.createAction")}
+								</DropdownMenuItem>
+							</>
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
+				<CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
 			</SidebarMenuItem>
 		</SidebarMenu>
 	);

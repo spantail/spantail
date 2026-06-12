@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
+import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/")({
@@ -11,6 +14,7 @@ function Home() {
 	const { t } = useTranslation();
 	const { current } = useWorkspace();
 	const { session } = Route.useRouteContext();
+	const [createOpen, setCreateOpen] = useState(false);
 
 	if (!current) {
 		const isAdmin = Boolean(session.user.isAdmin);
@@ -22,6 +26,17 @@ function Home() {
 				<p className="text-muted-foreground max-w-md text-sm">
 					{isAdmin ? t("workspace.empty.admin") : t("workspace.empty.member")}
 				</p>
+				{isAdmin && (
+					<>
+						<Button className="mt-2" onClick={() => setCreateOpen(true)}>
+							{t("workspace.createAction")}
+						</Button>
+						<CreateWorkspaceDialog
+							open={createOpen}
+							onOpenChange={setCreateOpen}
+						/>
+					</>
+				)}
 			</div>
 		);
 	}

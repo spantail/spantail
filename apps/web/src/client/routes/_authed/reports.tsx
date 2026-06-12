@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Report, ReportSnapshot } from "@toxil/core";
+import type { Report, ReportSnapshot, ReportTemplate } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
@@ -26,21 +26,35 @@ export const Route = createFileRoute("/_authed/reports")({
 
 function ReportsPage() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
+	const { workspaces } = useWorkspace();
 	const [editing, setEditing] = useState<Report | null>(null);
+	const [createdCount, setCreatedCount] = useState(0);
 	const [snapshotsFor, setSnapshotsFor] = useState<Report | null>(null);
 	const [viewing, setViewing] = useState<{
 		report: Report;
 		snapshot: ReportSnapshot;
 	} | null>(null);
 
-	const templates = useQuery({
-		queryKey: ["report-templates", current?.id],
-		queryFn: () => api.listReportTemplates(current?.id ?? ""),
-		enabled: Boolean(current),
+	// Reports are user-owned and can scope any membership workspace, so the
+	// template pool is the union across all of them.
+	const templateQueries = useQueries({
+		queries: workspaces.map((workspace) => ({
+			queryKey: ["report-templates", workspace.id],
+			queryFn: () => api.listReportTemplates(workspace.id),
+		})),
 	});
+	const seen = new Set<string>();
+	const templates: ReportTemplate[] = [];
+	for (const query of templateQueries) {
+		for (const template of query.data ?? []) {
+			// Builtins repeat in every per-workspace response.
+			if (seen.has(template.id)) continue;
+			seen.add(template.id);
+			templates.push(template);
+		}
+	}
 
-	if (!current) {
+	if (workspaces.length === 0) {
 		return (
 			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
 		);
@@ -51,17 +65,23 @@ function ReportsPage() {
 			<h1 className="font-heading text-lg font-semibold">
 				{t("reports.title")}
 			</h1>
+			<p className="text-muted-foreground text-sm">
+				{t("reports.description")}
+			</p>
 			<ReportForm
-				// Keyed by workspace too: the default scope is read once on
-				// mount and must not survive a sidebar workspace switch.
-				key={`${current.id}:${editing?.id ?? "new"}`}
-				templates={templates.data ?? []}
+				// A draft is personal, so it survives workspace switches; the
+				// counter resets the form after a successful create.
+				key={`${editing?.id ?? "new"}:${createdCount}`}
+				templates={templates}
 				editing={editing}
-				onDone={() => setEditing(null)}
+				onDone={() => {
+					if (!editing) setCreatedCount((count) => count + 1);
+					setEditing(null);
+				}}
 				onCancel={() => setEditing(null)}
 			/>
 			<ReportList
-				templates={templates.data ?? []}
+				templates={templates}
 				onEdit={setEditing}
 				onView={(report, snapshot) => setViewing({ report, snapshot })}
 				onSnapshots={setSnapshotsFor}

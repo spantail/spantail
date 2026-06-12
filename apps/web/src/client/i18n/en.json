@@ -25,14 +25,17 @@
 		"entries": "Entries",
 		"reports": "Reports",
 		"templates": "Templates",
-		"settings": "Settings"
+		"settings": "Workspace settings",
+		"groupManage": "Manage",
+		"account": "Account"
 	},
 	"workspace": {
 		"label": "Workspaces",
 		"none": "No workspace",
+		"createAction": "Create workspace",
 		"empty": {
 			"title": "No workspace yet",
-			"admin": "Create a workspace from Settings to start logging work.",
+			"admin": "Create your first workspace to start logging work.",
 			"member": "Ask an instance admin to add you to a workspace."
 		}
 	},
@@ -62,6 +65,7 @@
 	},
 	"reports": {
 		"title": "Reports",
+		"description": "Reports belong to you and can combine entries from any of your workspaces.",
 		"listTitle": "Saved reports",
 		"newTitle": "New report",
 		"editTitle": "Edit report",
@@ -153,7 +157,7 @@
 		"member": "Member"
 	},
 	"settings": {
-		"title": "Settings",
+		"title": "Workspace settings",
 		"slug": "Slug",
 		"timezone": "Timezone",
 		"workspaceName": "Workspace name",

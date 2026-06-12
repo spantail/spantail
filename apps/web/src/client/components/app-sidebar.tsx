@@ -1,20 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import type { AuthUser } from "@toxil/core";
-import {
-	ClockIcon,
-	FileChartColumnIcon,
-	FileTextIcon,
-	HomeIcon,
-	SettingsIcon,
-} from "lucide-react";
+import { ClockIcon, FileTextIcon, HomeIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { NavUser } from "@/components/nav-user";
 import {
 	Sidebar,
 	SidebarContent,
-	SidebarFooter,
 	SidebarGroup,
+	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
@@ -25,50 +17,63 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 interface NavItem {
 	key: string;
-	to: "/" | "/entries" | "/reports" | "/templates" | "/settings";
+	to: "/" | "/entries" | "/templates" | "/settings";
 	icon: React.ComponentType<{ className?: string }>;
 }
 
-const NAV_ITEMS: NavItem[] = [
+// The sidebar is workspace-scoped only; user-scoped surfaces (reports,
+// account, user menu) live in the header's top-right corner instead.
+const MAIN_ITEMS: NavItem[] = [
 	{ key: "nav.home", to: "/", icon: HomeIcon },
 	{ key: "nav.entries", to: "/entries", icon: ClockIcon },
-	{ key: "nav.reports", to: "/reports", icon: FileChartColumnIcon },
+];
+
+const MANAGE_ITEMS: NavItem[] = [
 	{ key: "nav.templates", to: "/templates", icon: FileTextIcon },
 	{ key: "nav.settings", to: "/settings", icon: SettingsIcon },
 ];
 
-export function AppSidebar({ user }: { user: AuthUser }) {
+function NavItems({ items }: { items: NavItem[] }) {
 	const { t } = useTranslation();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
 	return (
+		<SidebarMenu>
+			{items.map((item) => (
+				<SidebarMenuItem key={item.key}>
+					<SidebarMenuButton
+						asChild
+						isActive={pathname === item.to}
+						tooltip={t(item.key)}
+					>
+						<Link to={item.to}>
+							<item.icon />
+							<span>{t(item.key)}</span>
+						</Link>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+			))}
+		</SidebarMenu>
+	);
+}
+
+export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
+	const { t } = useTranslation();
+
+	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader>
-				<WorkspaceSwitcher />
+				<WorkspaceSwitcher isAdmin={isAdmin} />
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarMenu>
-						{NAV_ITEMS.map((item) => (
-							<SidebarMenuItem key={item.key}>
-								<SidebarMenuButton
-									asChild
-									isActive={pathname === item.to}
-									tooltip={t(item.key)}
-								>
-									<Link to={item.to}>
-										<item.icon />
-										<span>{t(item.key)}</span>
-									</Link>
-								</SidebarMenuButton>
-							</SidebarMenuItem>
-						))}
-					</SidebarMenu>
+					<NavItems items={MAIN_ITEMS} />
+				</SidebarGroup>
+				<SidebarGroup className="mt-auto">
+					<SidebarGroupLabel>{t("nav.groupManage")}</SidebarGroupLabel>
+					<NavItems items={MANAGE_ITEMS} />
 				</SidebarGroup>
 			</SidebarContent>
-			<SidebarFooter>
-				<NavUser user={user} />
-			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
 	);

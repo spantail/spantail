@@ -21,7 +21,8 @@ import { CliError, UsageError } from "../errors";
 const LOGIN_USAGE = `Usage: toxil auth login [options]
 
 Saves credentials for a Toxil instance. Create an API token in the web UI
-under Settings > API tokens (read and write scopes recommended).
+under Account > API tokens — open the user menu in the top-right corner
+(read and write scopes recommended).
 
 Options:
   --server <url>       Instance URL, e.g. https://toxil.example.com
@@ -39,7 +40,7 @@ credentials are configured or the server rejects them.
 const LOGOUT_USAGE = `Usage: toxil auth logout
 
 Removes the saved config file. The API token itself stays valid; revoke it
-in the web UI under Settings > API tokens if needed.
+in the web UI under Account > API tokens if needed.
 `;
 
 function maskToken(token: string): string {
