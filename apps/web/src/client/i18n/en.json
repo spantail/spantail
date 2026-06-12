@@ -100,6 +100,32 @@
 			"downloadAction": "Download .md",
 			"deleteAction": "Delete",
 			"empty": "No snapshots yet. Run the report to create one."
+		},
+		"shares": {
+			"title": "Share snapshot ({{date}})",
+			"shareAction": "Share",
+			"expiresIn": "Expires in",
+			"expiry": {
+				"d1": "1 day",
+				"d7": "7 days",
+				"d30": "30 days",
+				"none": "No expiry"
+			},
+			"passcode": "Passcode (optional)",
+			"passcodePlaceholder": "At least 4 characters",
+			"createAction": "Create share link",
+			"copyAction": "Copy URL",
+			"copied": "Copied",
+			"revokeAction": "Revoke",
+			"status": {
+				"active": "Active",
+				"expired": "Expired",
+				"revoked": "Revoked"
+			},
+			"hasPasscode": "Passcode",
+			"expires": "Expires {{value}}",
+			"views": "Views: {{value}}",
+			"empty": "No share links yet. Create one above to share this snapshot."
 		}
 	},
 	"templates": {

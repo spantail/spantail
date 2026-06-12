@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Report, ReportSnapshot } from "@toxil/core";
+import type { Report, ReportSnapshot, ReportSnapshotMeta } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ShareDialog } from "@/components/share-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -35,6 +36,7 @@ export function ReportSnapshotsDialog({
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
+	const [sharing, setSharing] = useState<ReportSnapshotMeta | null>(null);
 
 	const snapshots = useQuery({
 		queryKey: ["report-snapshots", report.id],
@@ -112,6 +114,13 @@ export function ReportSnapshotsDialog({
 									<Button
 										variant="ghost"
 										size="sm"
+										onClick={() => setSharing(snapshot)}
+									>
+										{t("reports.shares.shareAction")}
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
 										onClick={() => deleteMutation.mutate(snapshot.id)}
 									>
 										{t("reports.snapshots.deleteAction")}
@@ -122,6 +131,9 @@ export function ReportSnapshotsDialog({
 					</ul>
 				)}
 			</DialogContent>
+			{sharing && (
+				<ShareDialog snapshot={sharing} onClose={() => setSharing(null)} />
+			)}
 		</Dialog>
 	);
 }
