@@ -62,11 +62,19 @@ export const reportSnapshotRoutes = new Hono<AppEnv>()
 		requireScope(c, "write");
 		const snapshot = await requireSnapshotAccess(c, c.req.param("id"));
 		await requireScopeWorkspaces(c, snapshot.resolvedScope.workspaceIds);
-		// Every field is optional, so a body-less POST is legitimate.
-		const input = validate(
-			createReportShareInputSchema,
-			await c.req.json().catch(() => ({})),
-		);
+		// Every field is optional, so a body-less POST is legitimate — but a
+		// present, malformed body is rejected rather than silently minting a
+		// no-expiry public link.
+		const rawBody = await c.req.text();
+		let body: unknown = {};
+		if (rawBody !== "") {
+			try {
+				body = JSON.parse(rawBody);
+			} catch {
+				throw new AppError("bad_request", "Request body must be valid JSON");
+			}
+		}
+		const input = validate(createReportShareInputSchema, body);
 		const share = await createReportShare(c.var.db, {
 			snapshotId: snapshot.id,
 			token: generateShareToken(),

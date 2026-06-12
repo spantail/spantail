@@ -148,6 +148,17 @@ it("validates share inputs", async () => {
 			)
 		).status,
 	).toBe(400);
+
+	// A present but malformed body must not silently mint a no-expiry link.
+	const malformed = await appFetch(
+		`/api/v1/report-snapshots/${snapshotId}/shares`,
+		{
+			method: "POST",
+			headers: { "content-type": "application/json", cookie: admin },
+			body: "{not json",
+		},
+	);
+	expect(malformed.status).toBe(400);
 });
 
 it("hides shares from non-owners", async () => {
