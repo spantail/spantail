@@ -65,6 +65,14 @@ function json(body: unknown): Response {
 	});
 }
 
+const zeroStats = {
+	totalMinutes: 0,
+	entryCount: 0,
+	byDate: [],
+	byProject: [],
+	byUser: [],
+};
+
 beforeEach(() => {
 	vi.stubGlobal(
 		"fetch",
@@ -73,10 +81,21 @@ beforeEach(() => {
 			switch (url.pathname) {
 				case "/api/v1/me":
 					return json(mePayload);
+				case "/api/v1/work-entries/stats":
+					return json(zeroStats);
 				default:
 					return json([]);
 			}
 		}),
+	);
+	// happy-dom has no IntersectionObserver; the timeline sentinel needs one.
+	vi.stubGlobal(
+		"IntersectionObserver",
+		class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		},
 	);
 });
 
@@ -128,6 +147,16 @@ it("renders the authed shell with sidebar for a session", async () => {
 	// tooltip-enabled sidebar buttons, so this catches missing providers.
 	// "Reports" only exists in the header's user-scoped zone.
 	expect((await screen.findAllByText("Acme")).length).toBeGreaterThan(0);
-	expect((await screen.findAllByText("Entries")).length).toBeGreaterThan(0);
 	expect((await screen.findAllByText("Reports")).length).toBeGreaterThan(0);
+});
+
+it("renders the home dashboard and the empty timeline call to action", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	await renderApp("/");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(await screen.findByText("This month")).toBeDefined();
+	expect(
+		await screen.findByRole("button", { name: "Log your first entry" }),
+	).toBeDefined();
 });

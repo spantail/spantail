@@ -2,7 +2,8 @@
 	"app": {
 		"name": "Toxil",
 		"tagline": "時間の使いみちを知る。",
-		"loading": "読み込み中…"
+		"loading": "読み込み中…",
+		"loadingMore": "さらに読み込み中…"
 	},
 	"auth": {
 		"login": "ログイン",
@@ -40,8 +41,21 @@
 			"member": "インスタンス管理者にワークスペースへの追加を依頼してください。"
 		}
 	},
-	"home": {
-		"placeholder": "サイドバーから記録を選択して作業を記録します。"
+	"dashboard": {
+		"today": "今日",
+		"thisWeek": "今週",
+		"thisMonth": "今月",
+		"entryCount_other": "{{count}}件",
+		"last14Days": "直近14日",
+		"byProject": "プロジェクト別",
+		"byUser": "メンバー別",
+		"noData": "今月の記録はまだありません。"
+	},
+	"timeline": {
+		"title": "作業ログ",
+		"empty": "まだ記録がありません。",
+		"emptyCta": "最初の作業を記録する",
+		"shortcutHint": "ヒント: どの画面でも C キーで記録できます。"
 	},
 	"entries": {
 		"title": "作業記録",

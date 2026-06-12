@@ -2,7 +2,8 @@
 	"app": {
 		"name": "Toxil",
 		"tagline": "Know where your time goes.",
-		"loading": "Loading…"
+		"loading": "Loading…",
+		"loadingMore": "Loading more…"
 	},
 	"auth": {
 		"login": "Log in",
@@ -40,8 +41,22 @@
 			"member": "Ask an instance admin to add you to a workspace."
 		}
 	},
-	"home": {
-		"placeholder": "Select Entries from the sidebar to log work."
+	"dashboard": {
+		"today": "Today",
+		"thisWeek": "This week",
+		"thisMonth": "This month",
+		"entryCount_one": "{{count}} entry",
+		"entryCount_other": "{{count}} entries",
+		"last14Days": "Last 14 days",
+		"byProject": "By project",
+		"byUser": "By member",
+		"noData": "No activity yet this month."
+	},
+	"timeline": {
+		"title": "Your work log",
+		"empty": "No entries yet.",
+		"emptyCta": "Log your first entry",
+		"shortcutHint": "Tip: press C anywhere to log work."
 	},
 	"entries": {
 		"title": "Work entries",
