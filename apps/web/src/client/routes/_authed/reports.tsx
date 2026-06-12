@@ -53,6 +53,9 @@ function ReportsPage() {
 			templates.push(template);
 		}
 	}
+	// A partial union (some queries still pending) must not drive template
+	// validation in the form: a custom template would look unavailable.
+	const templatesReady = templateQueries.every((query) => !query.isPending);
 
 	if (workspaces.length === 0) {
 		return (
@@ -73,6 +76,7 @@ function ReportsPage() {
 				// counter resets the form after a successful create.
 				key={`${editing?.id ?? "new"}:${createdCount}`}
 				templates={templates}
+				templatesReady={templatesReady}
 				editing={editing}
 				onDone={() => {
 					if (!editing) setCreatedCount((count) => count + 1);

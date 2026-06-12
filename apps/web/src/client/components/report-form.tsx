@@ -34,11 +34,13 @@ const PRESETS: DateRangePreset[] = [
 
 export function ReportForm({
 	templates,
+	templatesReady,
 	editing,
 	onDone,
 	onCancel,
 }: {
 	templates: ReportTemplate[];
+	templatesReady: boolean;
 	editing: Report | null;
 	onDone: () => void;
 	onCancel: () => void;
@@ -86,17 +88,19 @@ export function ReportForm({
 
 	// A custom template must belong to a workspace in the scope (server rule);
 	// builtins are always available. Clamping at render also covers editing a
-	// report whose template's workspace is no longer selectable.
+	// report whose template's workspace is no longer selectable — but only
+	// once the template union is fully loaded, or a still-pending custom
+	// template would be silently replaced by the builtin.
 	const availableTemplates = templates.filter(
 		(template) =>
 			template.builtin ||
 			(template.workspaceId && workspaceIds.includes(template.workspaceId)),
 	);
-	const selectedTemplateId = availableTemplates.some(
-		(template) => template.id === templateId,
-	)
-		? templateId
-		: "builtin:daily";
+	const selectedTemplateId =
+		!templatesReady ||
+		availableTemplates.some((template) => template.id === templateId)
+			? templateId
+			: "builtin:daily";
 
 	// Per-project filtering only makes sense within a single workspace.
 	const singleWorkspaceId = workspaceIds.length === 1 ? workspaceIds[0] : null;
@@ -316,7 +320,11 @@ export function ReportForm({
 					<div className="flex gap-2">
 						<Button
 							type="submit"
-							disabled={mutation.isPending || workspaceIds.length === 0}
+							disabled={
+								mutation.isPending ||
+								workspaceIds.length === 0 ||
+								!templatesReady
+							}
 						>
 							{editing ? t("reports.saveAction") : t("reports.createAction")}
 						</Button>
