@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { workEntries } from "../schema/domain";
@@ -42,24 +42,32 @@ export async function getWorkEntryById(
 	return db.select().from(workEntries).where(eq(workEntries.id, id)).get();
 }
 
-export async function listWorkEntries(
-	db: Database,
-	query: {
-		workspaceId: string;
-		projectId?: string;
-		userId?: string;
-		from?: string;
-		to?: string;
-		limit: number;
-		offset: number;
-	},
-): Promise<WorkEntryRow[]> {
+interface WorkEntryFilter {
+	workspaceId: string;
+	projectId?: string;
+	userId?: string;
+	from?: string;
+	to?: string;
+}
+
+function workEntryConditions(query: WorkEntryFilter) {
 	const conditions = [eq(workEntries.workspaceId, query.workspaceId)];
 	if (query.projectId)
 		conditions.push(eq(workEntries.projectId, query.projectId));
 	if (query.userId) conditions.push(eq(workEntries.userId, query.userId));
 	if (query.from) conditions.push(gte(workEntries.entryDate, query.from));
 	if (query.to) conditions.push(lte(workEntries.entryDate, query.to));
+	return conditions;
+}
+
+export async function listWorkEntries(
+	db: Database,
+	query: WorkEntryFilter & {
+		limit: number;
+		offset: number;
+	},
+): Promise<WorkEntryRow[]> {
+	const conditions = workEntryConditions(query);
 
 	return db
 		.select()
@@ -68,6 +76,55 @@ export async function listWorkEntries(
 		.orderBy(desc(workEntries.entryDate), desc(workEntries.createdAt))
 		.limit(query.limit)
 		.offset(query.offset);
+}
+
+export interface WorkEntryStatsResult {
+	totalMinutes: number;
+	entryCount: number;
+	byDate: Array<{ date: string; minutes: number; count: number }>;
+	byProject: Array<{ projectId: string; minutes: number; count: number }>;
+	byUser: Array<{ userId: string; minutes: number; count: number }>;
+}
+
+/** Aggregates entries matching the same filters as `listWorkEntries`. */
+export async function getWorkEntryStats(
+	db: Database,
+	query: WorkEntryFilter,
+): Promise<WorkEntryStatsResult> {
+	const conditions = workEntryConditions(query);
+	const minutes = sql<number>`sum(${workEntries.durationMinutes})`.mapWith(
+		Number,
+	);
+	const count = sql<number>`count(*)`.mapWith(Number);
+
+	const [byDate, byProject, byUser] = await Promise.all([
+		db
+			.select({ date: workEntries.entryDate, minutes, count })
+			.from(workEntries)
+			.where(and(...conditions))
+			.groupBy(workEntries.entryDate)
+			.orderBy(asc(workEntries.entryDate)),
+		db
+			.select({ projectId: workEntries.projectId, minutes, count })
+			.from(workEntries)
+			.where(and(...conditions))
+			.groupBy(workEntries.projectId)
+			.orderBy(desc(minutes)),
+		db
+			.select({ userId: workEntries.userId, minutes, count })
+			.from(workEntries)
+			.where(and(...conditions))
+			.groupBy(workEntries.userId)
+			.orderBy(desc(minutes)),
+	]);
+
+	return {
+		totalMinutes: byDate.reduce((acc, row) => acc + row.minutes, 0),
+		entryCount: byDate.reduce((acc, row) => acc + row.count, 0),
+		byDate,
+		byProject,
+		byUser,
+	};
 }
 
 /** Fetches entries for a resolved report scope; tags are filtered in core. */
