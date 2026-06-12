@@ -5,6 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { ToxilClient } from "@toxil/sdk";
 import { registerToxilTools } from "@toxil/sdk/mcp";
 
+import { resolveConnection } from "../client";
 import type { CliContext } from "../context";
 import { CliError } from "../errors";
 import { VERSION } from "../version";
@@ -12,7 +13,8 @@ import { VERSION } from "../version";
 const USAGE = `Usage: toxil mcp
 
 Runs a stdio MCP server bridging AI clients to a Toxil instance.
-Requires the TOXIL_API_URL and TOXIL_API_TOKEN environment variables.
+Credentials come from the TOXIL_API_URL and TOXIL_API_TOKEN environment
+variables, or from the config file written by \`toxil auth login\`.
 `;
 
 export async function mcpCommand(
@@ -28,14 +30,18 @@ export async function mcpCommand(
 		return 0;
 	}
 
-	const baseUrl = ctx.env.TOXIL_API_URL;
-	const token = ctx.env.TOXIL_API_TOKEN;
-	if (!baseUrl || !token) {
-		throw new CliError("TOXIL_API_URL and TOXIL_API_TOKEN must be set");
+	const connection = resolveConnection(ctx);
+	if (!connection) {
+		throw new CliError(
+			"no credentials; set TOXIL_API_URL and TOXIL_API_TOKEN, or run `toxil auth login`",
+		);
 	}
 
 	const server = new McpServer({ name: "toxil", version: VERSION });
-	registerToxilTools(server, new ToxilClient({ baseUrl, token }));
+	registerToxilTools(
+		server,
+		new ToxilClient({ baseUrl: connection.baseUrl, token: connection.token }),
+	);
 	await server.connect(new StdioServerTransport());
 	return 0;
 }

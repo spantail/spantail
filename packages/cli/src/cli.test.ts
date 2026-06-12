@@ -48,4 +48,5 @@ it("fails mcp without credentials", async () => {
 	const { ctx, stderr } = createTestContext();
 	expect(await runCli(["mcp"], ctx)).toBe(1);
 	expect(stderr.text()).toContain("TOXIL_API_URL and TOXIL_API_TOKEN");
+	expect(stderr.text()).toContain("toxil auth login");
 });
