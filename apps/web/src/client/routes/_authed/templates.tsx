@@ -47,7 +47,6 @@ const EMPTY_DRAFT: TemplateDraft = {
 function TemplatesPage() {
 	const { t } = useTranslation();
 	const { current } = useWorkspace();
-	const [draft, setDraft] = useState<TemplateDraft>(EMPTY_DRAFT);
 
 	if (!current) {
 		return (
@@ -55,18 +54,27 @@ function TemplatesPage() {
 		);
 	}
 
+	// Keyed by workspace so a sidebar switch drops any in-progress draft
+	// instead of saving it into the newly selected workspace.
+	return <TemplatesContent key={current.id} workspaceId={current.id} />;
+}
+
+function TemplatesContent({ workspaceId }: { workspaceId: string }) {
+	const { t } = useTranslation();
+	const [draft, setDraft] = useState<TemplateDraft>(EMPTY_DRAFT);
+
 	return (
 		<div className="flex max-w-3xl flex-col gap-4">
 			<h1 className="font-heading text-lg font-semibold">
 				{t("templates.title")}
 			</h1>
 			<TemplateFormCard
-				workspaceId={current.id}
+				workspaceId={workspaceId}
 				draft={draft}
 				onDraftChange={setDraft}
 			/>
 			<TemplateListCard
-				workspaceId={current.id}
+				workspaceId={workspaceId}
 				onEdit={(template) =>
 					setDraft({
 						editingId: template.id,

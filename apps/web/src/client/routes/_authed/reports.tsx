@@ -52,7 +52,9 @@ function ReportsPage() {
 				{t("reports.title")}
 			</h1>
 			<ReportForm
-				key={editing?.id ?? "new"}
+				// Keyed by workspace too: the default scope is read once on
+				// mount and must not survive a sidebar workspace switch.
+				key={`${current.id}:${editing?.id ?? "new"}`}
 				templates={templates.data ?? []}
 				editing={editing}
 				onDone={() => setEditing(null)}
