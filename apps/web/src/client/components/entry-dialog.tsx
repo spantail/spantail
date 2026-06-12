@@ -1,3 +1,4 @@
+import { useRouterState } from "@tanstack/react-router";
 import type { WorkEntry } from "@toxil/core";
 import {
 	createContext,
@@ -25,7 +26,7 @@ type EntryDialogState =
 	| { mode: "edit"; entry: WorkEntry };
 
 interface EntryDialogContextValue {
-	openCreate: (defaults?: { projectId?: string }) => void;
+	openCreate: () => void;
 	openEdit: (entry: WorkEntry) => void;
 }
 
@@ -59,14 +60,23 @@ export function EntryDialogProvider({
 	const [instanceId, setInstanceId] = useState(0);
 	const hasWorkspace = Boolean(current);
 
-	const openCreate = useCallback(
-		(defaults?: { projectId?: string }) => {
-			if (!hasWorkspace) return;
-			setInstanceId((id) => id + 1);
-			setState({ mode: "create", defaultProjectId: defaults?.projectId });
-		},
-		[hasWorkspace],
-	);
+	// On a project page, creating pre-selects that project (only while it is
+	// active — the form's select lists active projects only).
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const routeProjectId = pathname.startsWith("/projects/")
+		? pathname.slice("/projects/".length)
+		: undefined;
+	const contextProjectId = (projects.data ?? []).some(
+		(project) => project.id === routeProjectId && project.status === "active",
+	)
+		? routeProjectId
+		: undefined;
+
+	const openCreate = useCallback(() => {
+		if (!hasWorkspace) return;
+		setInstanceId((id) => id + 1);
+		setState({ mode: "create", defaultProjectId: contextProjectId });
+	}, [hasWorkspace, contextProjectId]);
 	const openEdit = useCallback((entry: WorkEntry) => {
 		setInstanceId((id) => id + 1);
 		setState({ mode: "edit", entry });

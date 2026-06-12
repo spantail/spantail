@@ -92,6 +92,8 @@ beforeEach(() => {
 					return json(mePayload);
 				case "/api/v1/work-entries/stats":
 					return json(zeroStats);
+				case "/api/v1/workspaces/ws1/projects":
+					return json([{ ...projectPayload, id: "p1", workspaceId: "ws1" }]);
 				case "/api/v1/projects/p1":
 					return json({ ...projectPayload, id: "p1", workspaceId: "ws1" });
 				case "/api/v1/projects/p2":
@@ -145,7 +147,9 @@ it("opens the log-work dialog with the c shortcut", async () => {
 
 	fireEvent.keyDown(window, { key: "c" });
 	const dialog = await screen.findByRole("dialog");
-	expect(within(dialog).getByText("Log work")).toBeDefined();
+	expect(
+		within(dialog).getByRole("heading", { name: "Log work" }),
+	).toBeDefined();
 
 	// A second press while the dialog is open must not stack another one.
 	fireEvent.keyDown(window, { key: "c" });
@@ -177,8 +181,22 @@ it("renders a project page for the current workspace", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
 	const router = await renderApp("/projects/p1");
 
-	expect(await screen.findByText("Website")).toBeDefined();
+	expect((await screen.findAllByText("Website")).length).toBeGreaterThan(0);
 	expect(router.state.location.pathname).toBe("/projects/p1");
+});
+
+it("pre-selects the project when logging work from a project page", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	await renderApp("/projects/p1");
+	// Wait for the projects query so the contextual default can resolve.
+	await screen.findAllByText("Website");
+
+	fireEvent.keyDown(window, { key: "c" });
+	const dialog = await screen.findByRole("dialog");
+	// Matches the select's rendered value (and its hidden native option).
+	expect(
+		(await within(dialog).findAllByText("Website")).length,
+	).toBeGreaterThan(0);
 });
 
 it("redirects a project of another workspace to home", async () => {

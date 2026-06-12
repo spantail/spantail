@@ -1,11 +1,9 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PlusIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
-import { useEntryDialog } from "@/components/entry-dialog";
 import { EntryList } from "@/components/entry-list";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +22,6 @@ function ProjectPage() {
 	const { projectId } = Route.useParams();
 	const { current } = useWorkspace();
 	const navigate = Route.useNavigate();
-	const { openCreate } = useEntryDialog();
 
 	const workspaceId = current?.id;
 	const project = useQuery({
@@ -92,31 +89,22 @@ function ProjectPage() {
 
 	return (
 		<div className="flex flex-col gap-6">
-			<div className="flex flex-wrap items-start justify-between gap-2">
-				<div className="flex flex-col gap-1">
-					<div className="flex items-center gap-2">
-						<h1 className="font-heading text-lg font-semibold">
-							{project.data.name}
-						</h1>
-						<Badge
-							variant={
-								project.data.status === "active" ? "outline" : "secondary"
-							}
-						>
-							{t(`settings.projects.status.${project.data.status}`)}
-						</Badge>
-					</div>
-					{project.data.description && (
-						<p className="text-muted-foreground text-sm">
-							{project.data.description}
-						</p>
-					)}
+			{/* No page-level log button: the header one pre-selects this project. */}
+			<div className="flex flex-col gap-1">
+				<div className="flex items-center gap-2">
+					<h1 className="font-heading text-lg font-semibold">
+						{project.data.name}
+					</h1>
+					<Badge
+						variant={project.data.status === "active" ? "outline" : "secondary"}
+					>
+						{t(`settings.projects.status.${project.data.status}`)}
+					</Badge>
 				</div>
-				{project.data.status === "active" && (
-					<Button size="sm" onClick={() => openCreate({ projectId })}>
-						<PlusIcon />
-						{t("nav.logWork")}
-					</Button>
+				{project.data.description && (
+					<p className="text-muted-foreground text-sm">
+						{project.data.description}
+					</p>
 				)}
 			</div>
 			<DashboardStats
