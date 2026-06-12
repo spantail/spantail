@@ -11,6 +11,7 @@ import { reportShareRoutes } from "./routes/report-shares";
 import { reportSnapshotRoutes } from "./routes/report-snapshots";
 import { reportTemplateRoutes } from "./routes/report-templates";
 import { reportRoutes } from "./routes/reports";
+import { shareRoutes } from "./routes/share";
 import { tokenRoutes } from "./routes/tokens";
 import { workEntryRoutes } from "./routes/work-entries";
 import { workspaceRoutes } from "./routes/workspaces";
@@ -44,6 +45,10 @@ v1.route("/work-entries", workEntryRoutes);
 v1.route("/tokens", tokenRoutes);
 
 app.route("/api/v1", v1);
+
+// Public share views: unauthenticated HTML, outside /api.
+app.use("/share/*", requestContext);
+app.route("/share", shareRoutes);
 
 // Registered last; closes over the finished app for loopback API calls.
 registerMcpRoute(app);
