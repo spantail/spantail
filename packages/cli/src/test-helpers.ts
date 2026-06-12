@@ -2,6 +2,8 @@ import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import type { Project, WorkEntry, WorkspaceWithRole } from "@toxil/core";
+
 import type { CliContext } from "./context";
 import type { Prompter } from "./prompt";
 
@@ -82,6 +84,58 @@ export function fakeApi(routes: FakeRoute[]) {
 		});
 	}) as typeof fetch;
 	return { fetch: fetchImpl, calls };
+}
+
+export function workspaceFixture(
+	slug: string,
+	role: WorkspaceWithRole["role"] = "member",
+): WorkspaceWithRole {
+	return {
+		id: `ws-${slug}`,
+		slug,
+		name: slug.toUpperCase(),
+		timezone: "Asia/Tokyo",
+		settings: {},
+		createdAt: "2026-06-01T00:00:00Z",
+		archivedAt: null,
+		role,
+	};
+}
+
+export function projectFixture(
+	slug: string,
+	workspaceId: string,
+	status: Project["status"] = "active",
+): Project {
+	return {
+		id: `proj-${slug}`,
+		workspaceId,
+		slug,
+		name: slug.toUpperCase(),
+		description: null,
+		status,
+		createdAt: "2026-06-01T00:00:00Z",
+		archivedAt: null,
+	};
+}
+
+export function entryFixture(overrides: Partial<WorkEntry> = {}): WorkEntry {
+	return {
+		id: "entry-1",
+		workspaceId: "ws-acme",
+		projectId: "proj-api",
+		userId: "u1",
+		entryDate: "2026-06-12",
+		durationMinutes: 90,
+		startedAt: null,
+		endedAt: null,
+		description: "Did things",
+		note: null,
+		tags: [],
+		createdAt: "2026-06-12T00:00:00Z",
+		updatedAt: "2026-06-12T00:00:00Z",
+		...overrides,
+	};
 }
 
 export interface TestContextOptions {
