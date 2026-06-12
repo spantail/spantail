@@ -4,6 +4,7 @@ import type {
 	AuthUser,
 	CreateProjectInput,
 	CreateReportInput,
+	CreateReportShareInput,
 	CreateReportTemplateInput,
 	CreateTokenInput,
 	CreateWorkEntryInputData,
@@ -11,6 +12,7 @@ import type {
 	ListWorkEntriesQueryData,
 	Project,
 	Report,
+	ReportShare,
 	ReportSnapshot,
 	ReportSnapshotMeta,
 	ReportTemplate,
@@ -242,6 +244,23 @@ export class ToxilClient {
 
 	deleteReportSnapshot(id: string): Promise<void> {
 		return this.request("DELETE", `/report-snapshots/${id}`);
+	}
+
+	listReportShares(snapshotId: string): Promise<ReportShare[]> {
+		return this.request("GET", `/report-snapshots/${snapshotId}/shares`);
+	}
+
+	createReportShare(
+		snapshotId: string,
+		input: CreateReportShareInput = {},
+	): Promise<ReportShare> {
+		return this.request("POST", `/report-snapshots/${snapshotId}/shares`, {
+			body: input,
+		});
+	}
+
+	revokeReportShare(shareId: string): Promise<ReportShare> {
+		return this.request("POST", `/report-shares/${shareId}/revoke`);
 	}
 
 	listTokens(): Promise<ApiToken[]> {
