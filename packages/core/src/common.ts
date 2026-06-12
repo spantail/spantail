@@ -37,6 +37,14 @@ export const localDateSchema = z
 		return date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 	}, "must be a real calendar date");
 
+/** Shifts a `YYYY-MM-DD` date by whole days using UTC calendar math. */
+export function shiftDays(date: string, days: number): string {
+	const [y, m, d] = date.split("-").map(Number);
+	return new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, (d ?? 1) + days))
+		.toISOString()
+		.slice(0, 10);
+}
+
 /**
  * Returns today's local date (`YYYY-MM-DD`) in the given IANA timezone.
  * en-CA formats as YYYY-MM-DD.

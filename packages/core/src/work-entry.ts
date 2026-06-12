@@ -52,6 +52,23 @@ export const updateWorkEntryInputSchema = z
 	.partial();
 export type UpdateWorkEntryInput = z.infer<typeof updateWorkEntryInputSchema>;
 
+const statBucketFields = {
+	minutes: z.number().int().min(0),
+	count: z.number().int().min(0),
+};
+
+/** Aggregated work-entry stats for an arbitrary list-style filter. */
+export const workEntryStatsSchema = z.object({
+	totalMinutes: z.number().int().min(0),
+	entryCount: z.number().int().min(0),
+	// Ascending by date; only dates that have entries (clients zero-fill).
+	byDate: z.array(z.object({ date: localDateSchema, ...statBucketFields })),
+	// Descending by minutes.
+	byProject: z.array(z.object({ projectId: z.string(), ...statBucketFields })),
+	byUser: z.array(z.object({ userId: z.string(), ...statBucketFields })),
+});
+export type WorkEntryStats = z.infer<typeof workEntryStatsSchema>;
+
 export const listWorkEntriesQuerySchema = z.object({
 	workspaceId: z.string(),
 	projectId: z.string().optional(),
@@ -67,3 +84,10 @@ export type ListWorkEntriesQueryData = Omit<
 	z.input<typeof listWorkEntriesQuerySchema>,
 	"limit" | "offset"
 > & { limit?: number; offset?: number };
+
+export const workEntryStatsQuerySchema = listWorkEntriesQuerySchema.omit({
+	limit: true,
+	offset: true,
+});
+// No coerce fields remain after the omit, so infer doubles as the input type.
+export type WorkEntryStatsQuery = z.infer<typeof workEntryStatsQuerySchema>;

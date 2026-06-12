@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import {
 	localDateSchema,
+	shiftDays,
 	slugSchema,
 	timezoneSchema,
 	todayInTimezone,
@@ -41,6 +42,15 @@ it("validates local dates strictly", () => {
 	expect(localDateSchema.safeParse("2024-02-29").success).toBe(true);
 	expect(localDateSchema.safeParse("2026-13-01").success).toBe(false);
 	expect(localDateSchema.safeParse("2026-6-1").success).toBe(false);
+});
+
+it("shifts local dates across month and year boundaries", () => {
+	expect(shiftDays("2026-06-13", 1)).toBe("2026-06-14");
+	expect(shiftDays("2026-06-13", -13)).toBe("2026-05-31");
+	expect(shiftDays("2026-06-30", 1)).toBe("2026-07-01");
+	expect(shiftDays("2025-12-31", 1)).toBe("2026-01-01");
+	expect(shiftDays("2024-02-28", 1)).toBe("2024-02-29");
+	expect(shiftDays("2026-03-01", -1)).toBe("2026-02-28");
 });
 
 it("computes today in a timezone", () => {

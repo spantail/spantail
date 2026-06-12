@@ -1,5 +1,11 @@
 import { createMemoryHistory } from "@tanstack/react-router";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+	cleanup,
+	fireEvent,
+	render,
+	screen,
+	within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { App, createAppRouter } from "./app";
@@ -59,6 +65,23 @@ function json(body: unknown): Response {
 	});
 }
 
+const zeroStats = {
+	totalMinutes: 0,
+	entryCount: 0,
+	byDate: [],
+	byProject: [],
+	byUser: [],
+};
+
+const projectPayload = {
+	slug: "website",
+	name: "Website",
+	description: null,
+	status: "active",
+	createdAt: NOW,
+	archivedAt: null,
+};
+
 beforeEach(() => {
 	vi.stubGlobal(
 		"fetch",
@@ -67,10 +90,27 @@ beforeEach(() => {
 			switch (url.pathname) {
 				case "/api/v1/me":
 					return json(mePayload);
+				case "/api/v1/work-entries/stats":
+					return json(zeroStats);
+				case "/api/v1/workspaces/ws1/projects":
+					return json([{ ...projectPayload, id: "p1", workspaceId: "ws1" }]);
+				case "/api/v1/projects/p1":
+					return json({ ...projectPayload, id: "p1", workspaceId: "ws1" });
+				case "/api/v1/projects/p2":
+					return json({ ...projectPayload, id: "p2", workspaceId: "ws2" });
 				default:
 					return json([]);
 			}
 		}),
+	);
+	// happy-dom has no IntersectionObserver; the timeline sentinel needs one.
+	vi.stubGlobal(
+		"IntersectionObserver",
+		class {
+			observe() {}
+			unobserve() {}
+			disconnect() {}
+		},
 	);
 });
 
@@ -96,6 +136,26 @@ it("redirects anonymous visitors to the login screen", async () => {
 	expect(router.state.location.pathname).toBe("/login");
 });
 
+it("opens the log-work dialog with the c shortcut", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	await renderApp("/");
+	await screen.findAllByText("Acme");
+
+	// Modified keypresses are left alone (e.g. browser shortcuts).
+	fireEvent.keyDown(window, { key: "c", metaKey: true });
+	expect(screen.queryByRole("dialog")).toBeNull();
+
+	fireEvent.keyDown(window, { key: "c" });
+	const dialog = await screen.findByRole("dialog");
+	expect(
+		within(dialog).getByRole("heading", { name: "Log work" }),
+	).toBeDefined();
+
+	// A second press while the dialog is open must not stack another one.
+	fireEvent.keyDown(window, { key: "c" });
+	expect(screen.getAllByRole("dialog")).toHaveLength(1);
+});
+
 it("renders the authed shell with sidebar for a session", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
 	await renderApp("/");
@@ -104,6 +164,56 @@ it("renders the authed shell with sidebar for a session", async () => {
 	// tooltip-enabled sidebar buttons, so this catches missing providers.
 	// "Reports" only exists in the header's user-scoped zone.
 	expect((await screen.findAllByText("Acme")).length).toBeGreaterThan(0);
-	expect((await screen.findAllByText("Entries")).length).toBeGreaterThan(0);
 	expect((await screen.findAllByText("Reports")).length).toBeGreaterThan(0);
+	expect((await screen.findAllByText("Projects")).length).toBeGreaterThan(0);
+	expect(await screen.findByRole("button", { name: "Log work" })).toBeDefined();
+});
+
+it("redirects the removed entries route to home", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/entries");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/");
+});
+
+it("renders a project page for the current workspace", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/projects/p1");
+
+	expect((await screen.findAllByText("Website")).length).toBeGreaterThan(0);
+	expect(router.state.location.pathname).toBe("/projects/p1");
+});
+
+it("pre-selects the project when logging work from a project page", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	await renderApp("/projects/p1");
+	// Wait for the projects query so the contextual default can resolve.
+	await screen.findAllByText("Website");
+
+	fireEvent.keyDown(window, { key: "c" });
+	const dialog = await screen.findByRole("dialog");
+	// Matches the select's rendered value (and its hidden native option).
+	expect(
+		(await within(dialog).findAllByText("Website")).length,
+	).toBeGreaterThan(0);
+});
+
+it("redirects a project of another workspace to home", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/projects/p2");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/");
+});
+
+it("renders the home dashboard and the empty timeline call to action", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	await renderApp("/");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(await screen.findByText("This month")).toBeDefined();
+	expect(
+		await screen.findByRole("button", { name: "Log your first entry" }),
+	).toBeDefined();
 });

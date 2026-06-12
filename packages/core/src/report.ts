@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { localDateSchema, todayInTimezone } from "./common";
+import { localDateSchema, shiftDays, todayInTimezone } from "./common";
 import { tagSchema } from "./work-entry";
 
 export const dateRangePresetSchema = z.enum([
@@ -125,14 +125,6 @@ export const BUILTIN_TEMPLATE_ID_PREFIX = "builtin:";
 
 export function isBuiltinTemplateId(id: string): boolean {
 	return id.startsWith(BUILTIN_TEMPLATE_ID_PREFIX);
-}
-
-/** Shifts a `YYYY-MM-DD` date by whole days using UTC calendar math. */
-function shiftDays(date: string, days: number): string {
-	const [y, m, d] = date.split("-").map(Number);
-	return new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, (d ?? 1) + days))
-		.toISOString()
-		.slice(0, 10);
 }
 
 function lastDayOfMonth(year: number, monthIndex: number): string {

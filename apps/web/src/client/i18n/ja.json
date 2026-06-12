@@ -2,7 +2,8 @@
 	"app": {
 		"name": "Toxil",
 		"tagline": "時間の使いみちを知る。",
-		"loading": "読み込み中…"
+		"loading": "読み込み中…",
+		"loadingMore": "さらに読み込み中…"
 	},
 	"auth": {
 		"login": "ログイン",
@@ -22,12 +23,19 @@
 	"nav": {
 		"home": "ホーム",
 		"switchLanguage": "Switch to English",
-		"entries": "記録",
+		"logWork": "記録する",
+		"projects": "プロジェクト",
+		"projectsEmpty": "稼働中のプロジェクトはありません",
 		"reports": "レポート",
 		"templates": "テンプレート",
 		"settings": "ワークスペース設定",
 		"groupManage": "管理",
 		"account": "アカウント"
+	},
+	"projects": {
+		"notFound": "このワークスペースにプロジェクトが見つかりません。",
+		"backHome": "ホームへ戻る",
+		"entriesTitle": "記録"
 	},
 	"workspace": {
 		"label": "ワークスペース",
@@ -39,11 +47,23 @@
 			"member": "インスタンス管理者にワークスペースへの追加を依頼してください。"
 		}
 	},
-	"home": {
-		"placeholder": "サイドバーから記録を選択して作業を記録します。"
+	"dashboard": {
+		"today": "今日",
+		"thisWeek": "今週",
+		"thisMonth": "今月",
+		"entryCount_other": "{{count}}件",
+		"last14Days": "直近14日",
+		"byProject": "プロジェクト別",
+		"byUser": "メンバー別",
+		"noData": "今月の記録はまだありません。"
+	},
+	"timeline": {
+		"title": "作業ログ",
+		"empty": "まだ記録がありません。",
+		"emptyCta": "最初の作業を記録する",
+		"shortcutHint": "ヒント: どの画面でも C キーで記録できます。"
 	},
 	"entries": {
-		"title": "作業記録",
 		"newTitle": "作業を記録",
 		"editTitle": "記録を編集",
 		"project": "プロジェクト",
@@ -61,7 +81,14 @@
 		"cancelAction": "キャンセル",
 		"editAction": "編集",
 		"deleteAction": "削除",
-		"empty": "まだ記録がありません。上のフォームから記録しましょう。"
+		"empty": "まだ記録がありません。",
+		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
+		"goToSettings": "設定を開く",
+		"toast": {
+			"created": "作業を記録しました。",
+			"updated": "記録を更新しました。",
+			"deleted": "記録を削除しました。"
+		}
 	},
 	"reports": {
 		"title": "レポート",

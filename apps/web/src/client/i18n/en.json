@@ -2,7 +2,8 @@
 	"app": {
 		"name": "Toxil",
 		"tagline": "Know where your time goes.",
-		"loading": "Loading…"
+		"loading": "Loading…",
+		"loadingMore": "Loading more…"
 	},
 	"auth": {
 		"login": "Log in",
@@ -22,12 +23,19 @@
 	"nav": {
 		"home": "Home",
 		"switchLanguage": "日本語に切り替え",
-		"entries": "Entries",
+		"logWork": "Log work",
+		"projects": "Projects",
+		"projectsEmpty": "No active projects yet",
 		"reports": "Reports",
 		"templates": "Templates",
 		"settings": "Workspace settings",
 		"groupManage": "Manage",
 		"account": "Account"
+	},
+	"projects": {
+		"notFound": "Project not found in this workspace.",
+		"backHome": "Back to home",
+		"entriesTitle": "Entries"
 	},
 	"workspace": {
 		"label": "Workspaces",
@@ -39,11 +47,24 @@
 			"member": "Ask an instance admin to add you to a workspace."
 		}
 	},
-	"home": {
-		"placeholder": "Select Entries from the sidebar to log work."
+	"dashboard": {
+		"today": "Today",
+		"thisWeek": "This week",
+		"thisMonth": "This month",
+		"entryCount_one": "{{count}} entry",
+		"entryCount_other": "{{count}} entries",
+		"last14Days": "Last 14 days",
+		"byProject": "By project",
+		"byUser": "By member",
+		"noData": "No activity yet this month."
+	},
+	"timeline": {
+		"title": "Your work log",
+		"empty": "No entries yet.",
+		"emptyCta": "Log your first entry",
+		"shortcutHint": "Tip: press C anywhere to log work."
 	},
 	"entries": {
-		"title": "Work entries",
 		"newTitle": "Log work",
 		"editTitle": "Edit entry",
 		"project": "Project",
@@ -61,7 +82,14 @@
 		"cancelAction": "Cancel",
 		"editAction": "Edit",
 		"deleteAction": "Delete",
-		"empty": "No entries yet. Log your first one above."
+		"empty": "No entries yet.",
+		"noProjects": "No active projects. Create one in workspace settings first.",
+		"goToSettings": "Open settings",
+		"toast": {
+			"created": "Work entry logged.",
+			"updated": "Entry updated.",
+			"deleted": "Entry deleted."
+		}
 	},
 	"reports": {
 		"title": "Reports",

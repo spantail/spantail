@@ -5,6 +5,7 @@ import {
 	RouterProvider,
 } from "@tanstack/react-router";
 
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/query";
 import { routeTree } from "@/routeTree.gen";
@@ -31,6 +32,7 @@ export function App({
 		<QueryClientProvider client={queryClient}>
 			<TooltipProvider>
 				<RouterProvider router={router} />
+				<Toaster />
 			</TooltipProvider>
 		</QueryClientProvider>
 	);

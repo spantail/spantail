@@ -1,11 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Project, WorkEntry, WorkspaceMember } from "@toxil/core";
 import { formatDuration } from "@toxil/core";
-import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { EntryActions } from "@/components/entry-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
 	Table,
 	TableBody,
@@ -14,39 +12,26 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { api } from "@/lib/api";
 
 interface EntryListProps {
-	workspaceId: string;
 	entries: WorkEntry[];
 	projects: Project[];
 	members: WorkspaceMember[];
-	currentUserId: string;
-	onEdit: (entry: WorkEntry) => void;
+	showProject?: boolean;
 }
 
+/** Tabular all-members entry list (author column, own-row actions). */
 export function EntryList({
-	workspaceId,
 	entries,
 	projects,
 	members,
-	currentUserId,
-	onEdit,
+	showProject = true,
 }: EntryListProps) {
 	const { t } = useTranslation();
-	const queryClient = useQueryClient();
 	const projectName = (id: string) =>
 		projects.find((p) => p.id === id)?.name ?? id;
 	const memberName = (id: string) =>
 		members.find((m) => m.userId === id)?.name ?? id;
-
-	const deleteMutation = useMutation({
-		mutationFn: (id: string) => api.deleteWorkEntry(id),
-		onSuccess: () =>
-			queryClient.invalidateQueries({
-				queryKey: ["work-entries", workspaceId],
-			}),
-	});
 
 	if (entries.length === 0) {
 		return (
@@ -61,7 +46,7 @@ export function EntryList({
 			<TableHeader>
 				<TableRow>
 					<TableHead>{t("entries.date")}</TableHead>
-					<TableHead>{t("entries.project")}</TableHead>
+					{showProject && <TableHead>{t("entries.project")}</TableHead>}
 					<TableHead>{t("entries.author")}</TableHead>
 					<TableHead className="text-right">{t("entries.duration")}</TableHead>
 					<TableHead className="w-full">{t("entries.description")}</TableHead>
@@ -74,9 +59,11 @@ export function EntryList({
 						<TableCell className="whitespace-nowrap">
 							{entry.entryDate}
 						</TableCell>
-						<TableCell className="whitespace-nowrap">
-							{projectName(entry.projectId)}
-						</TableCell>
+						{showProject && (
+							<TableCell className="whitespace-nowrap">
+								{projectName(entry.projectId)}
+							</TableCell>
+						)}
 						<TableCell className="whitespace-nowrap">
 							{memberName(entry.userId)}
 						</TableCell>
@@ -94,26 +81,7 @@ export function EntryList({
 							</div>
 						</TableCell>
 						<TableCell className="whitespace-nowrap">
-							{entry.userId === currentUserId && (
-								<div className="flex justify-end gap-1">
-									<Button
-										variant="ghost"
-										size="icon"
-										aria-label={t("entries.editAction")}
-										onClick={() => onEdit(entry)}
-									>
-										<PencilIcon />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										aria-label={t("entries.deleteAction")}
-										onClick={() => deleteMutation.mutate(entry.id)}
-									>
-										<Trash2Icon />
-									</Button>
-								</div>
-							)}
+							<EntryActions entry={entry} />
 						</TableCell>
 					</TableRow>
 				))}
