@@ -1,6 +1,7 @@
 import { ToxilApiError } from "@toxil/sdk";
 
 import { authLogin, authLogout, authStatus } from "./commands/auth";
+import { entriesList } from "./commands/entries";
 import { logCommand } from "./commands/log";
 import { mcpCommand } from "./commands/mcp";
 import { projectsList } from "./commands/projects";
@@ -19,6 +20,7 @@ const commands: Record<
 	workspaces: { list: workspacesList },
 	projects: { list: projectsList },
 	log: logCommand,
+	entries: { list: entriesList },
 	mcp: mcpCommand,
 };
 
@@ -33,6 +35,7 @@ Commands:
   workspaces list   List the workspaces you belong to
   projects list     List the projects in a workspace
   log               Log a work entry
+  entries list      List recent work entries
   mcp               Run a stdio MCP server bridging AI clients to a Toxil instance
 
 Run \`toxil <command> --help\` for command options.
