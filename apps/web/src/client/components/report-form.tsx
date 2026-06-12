@@ -53,15 +53,23 @@ export function ReportForm({
 		editing?.templateId ?? "builtin:daily",
 	);
 	// A saved scope may reference workspaces the user has since left; those
-	// can be neither displayed nor saved, so drop them from the editable scope.
+	// can be neither displayed nor saved, so drop them from the editable
+	// scope. The project filter belonged to the original workspace selection,
+	// so it is dropped with it — stale project ids would save fine but render
+	// an empty report.
+	const memberIds = new Set(workspaces.map((workspace) => workspace.id));
+	const keptWorkspaceIds =
+		scope?.workspaceIds.filter((id) => memberIds.has(id)) ?? [];
+	const scopeIntact =
+		!scope || keptWorkspaceIds.length === scope.workspaceIds.length;
+
 	const [workspaceIds, setWorkspaceIds] = useState<string[]>(() => {
-		if (!scope) return current ? [current.id] : [];
-		const memberIds = new Set(workspaces.map((workspace) => workspace.id));
-		const kept = scope.workspaceIds.filter((id) => memberIds.has(id));
-		return kept.length > 0 ? kept : current ? [current.id] : [];
+		const fallback = current ? [current.id] : [];
+		if (!scope) return fallback;
+		return keptWorkspaceIds.length > 0 ? keptWorkspaceIds : fallback;
 	});
 	const [projectIds, setProjectIds] = useState<string[]>(
-		scope?.projectIds ?? [],
+		scopeIntact ? (scope?.projectIds ?? []) : [],
 	);
 	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
 		typeof scope?.dateRange === "string" ? scope.dateRange : "custom",
