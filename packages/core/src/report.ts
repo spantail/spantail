@@ -127,7 +127,8 @@ export function isBuiltinTemplateId(id: string): boolean {
 	return id.startsWith(BUILTIN_TEMPLATE_ID_PREFIX);
 }
 
-function lastDayOfMonth(year: number, monthIndex: number): string {
+/** Last day of the month as `YYYY-MM-DD`; monthIndex is 0-based (UTC math). */
+export function lastDayOfMonth(year: number, monthIndex: number): string {
 	return new Date(Date.UTC(year, monthIndex + 1, 0)).toISOString().slice(0, 10);
 }
 
