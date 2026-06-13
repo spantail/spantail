@@ -63,7 +63,16 @@ export function RunReportDialog({
 	const [error, setError] = useState<string | null>(null);
 
 	const mutation = useMutation({
-		mutationFn: () => api.runReport(report.id, { dateRange: { from, to } }),
+		// Accepting the preset's own current resolution runs without an
+		// override: the server resolves the same dates and templates keep
+		// seeing period.preset. Any other range is an explicit override.
+		mutationFn: () =>
+			api.runReport(
+				report.id,
+				presetNow && presetNow.from === from && presetNow.to === to
+					? undefined
+					: { dateRange: { from, to } },
+			),
 		onSuccess: async (snapshot) => {
 			await queryClient.invalidateQueries({
 				queryKey: ["report-snapshots", report.id],
