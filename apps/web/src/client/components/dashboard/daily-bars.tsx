@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 interface DailyBarsProps {
 	/** Ascending daily series; the longest window the toggle can show. */
 	daily: DailyBar[];
+	className?: string;
 }
 
 type Range = "14" | "28";
@@ -24,7 +25,7 @@ type Range = "14" | "28";
  * dimmed weekends, a hover focus state, and a 14d/28d window toggle so the
  * chart actually says something about *when* and *how steadily* work happens.
  */
-export function DailyBars({ daily }: DailyBarsProps) {
+export function DailyBars({ daily, className }: DailyBarsProps) {
 	const { t, i18n } = useTranslation();
 	const [range, setRange] = useState<Range>("14");
 	const [hover, setHover] = useState<number | null>(null);
@@ -37,7 +38,7 @@ export function DailyBars({ daily }: DailyBarsProps) {
 	const labelStep = days.length > 20 ? 4 : 2;
 
 	return (
-		<Card className="[--card-spacing:--spacing(5)]">
+		<Card className={cn("[--card-spacing:--spacing(5)]", className)}>
 			<CardHeader className="flex items-start justify-between gap-2 pb-2">
 				<div>
 					<CardTitle className="text-sm font-semibold">

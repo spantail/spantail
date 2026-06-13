@@ -203,22 +203,19 @@ export function DashboardStats({ scope, breakdown }: DashboardStatsProps) {
 		<div className="flex flex-col gap-7">
 			<StatCards cards={cards} />
 			<div className="grid gap-4 lg:grid-cols-5">
-				<div className="lg:col-span-3">
-					<DailyBars daily={daily} />
-				</div>
-				<div className="lg:col-span-2">
-					<BreakdownBars
-						title={t(
-							breakdown === "project"
-								? "dashboard.byProject"
-								: "dashboard.byUser",
-						)}
-						subtitle={t("dashboard.totalThisMonth", {
-							total: formatDuration(monthMinutes),
-						})}
-						items={items}
-					/>
-				</div>
+				<DailyBars daily={daily} className="lg:col-span-3" />
+				<BreakdownBars
+					className="lg:col-span-2"
+					title={t(
+						breakdown === "project"
+							? "dashboard.byProject"
+							: "dashboard.byUser",
+					)}
+					subtitle={t("dashboard.totalThisMonth", {
+						total: formatDuration(monthMinutes),
+					})}
+					items={items}
+				/>
 			</div>
 		</div>
 	);

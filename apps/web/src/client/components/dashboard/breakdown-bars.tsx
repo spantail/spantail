@@ -2,6 +2,7 @@ import { formatDuration } from "@toxil/core";
 import { useTranslation } from "react-i18next";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface BreakdownBarsProps {
 	title: string;
@@ -9,6 +10,7 @@ interface BreakdownBarsProps {
 	subtitle?: string;
 	/** Descending by minutes; rendered as a share-of-total ranking. */
 	items: Array<{ key: string; label: string; minutes: number }>;
+	className?: string;
 }
 
 /**
@@ -16,13 +18,18 @@ interface BreakdownBarsProps {
  * a bar scaled to the leader; the monochrome fill fades down the ranking so the
  * ordering reads at a glance without colour.
  */
-export function BreakdownBars({ title, subtitle, items }: BreakdownBarsProps) {
+export function BreakdownBars({
+	title,
+	subtitle,
+	items,
+	className,
+}: BreakdownBarsProps) {
 	const { t } = useTranslation();
 	const total = items.reduce((sum, item) => sum + item.minutes, 0);
 	const max = Math.max(1, ...items.map((item) => item.minutes));
 
 	return (
-		<Card className="[--card-spacing:--spacing(5)]">
+		<Card className={cn("[--card-spacing:--spacing(5)]", className)}>
 			<CardHeader className="flex items-center justify-between pb-2">
 				<CardTitle className="text-sm font-semibold">{title}</CardTitle>
 				{subtitle && (
