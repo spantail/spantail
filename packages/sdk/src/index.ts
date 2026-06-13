@@ -16,6 +16,7 @@ import type {
 	ReportSnapshot,
 	ReportSnapshotMeta,
 	ReportTemplate,
+	RunReportInput,
 	UpdateProjectInput,
 	UpdateReportInput,
 	UpdateReportTemplateInput,
@@ -236,8 +237,13 @@ export class ToxilClient {
 		return this.request("DELETE", `/reports/${id}`);
 	}
 
-	runReport(id: string): Promise<ReportSnapshot> {
-		return this.request("POST", `/reports/${id}/run`);
+	runReport(id: string, input?: RunReportInput): Promise<ReportSnapshot> {
+		// No input sends no body at all, keeping body-less callers unchanged.
+		return this.request(
+			"POST",
+			`/reports/${id}/run`,
+			input ? { body: input } : {},
+		);
 	}
 
 	listReportSnapshots(reportId: string): Promise<ReportSnapshotMeta[]> {
