@@ -139,6 +139,9 @@ export function DashboardStats({ scope, breakdown }: DashboardStatsProps) {
 		shiftDays(today, -7),
 	);
 	const monthMinutes = monthly.data.totalMinutes;
+	// Card value is the whole month; the delta compares to-date vs. to-date so
+	// future-dated entries (or a partway month) don't inflate it.
+	const monthToDate = sumWindow(monthly.data.byDate, month.from, today).minutes;
 	const elapsedDays = daysInclusive(month.from, today);
 	const lastMonthEnd = shiftDays(lastMonth.from, elapsedDays - 1);
 	const lastMonthToDate = sumWindow(
@@ -174,7 +177,7 @@ export function DashboardStats({ scope, breakdown }: DashboardStatsProps) {
 			label: t("dashboard.thisMonth"),
 			value: formatDuration(monthMinutes),
 			sub: t("dashboard.entryCount", { count: monthly.data.entryCount }),
-			delta: lastMonthly.data ? pctDelta(monthMinutes, lastMonthToDate) : null,
+			delta: lastMonthly.data ? pctDelta(monthToDate, lastMonthToDate) : null,
 			spark,
 		},
 	];

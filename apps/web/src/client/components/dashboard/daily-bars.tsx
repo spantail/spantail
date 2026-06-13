@@ -73,6 +73,7 @@ export function DailyBars({ daily }: DailyBarsProps) {
 								<TooltipTrigger asChild>
 									<button
 										type="button"
+										aria-label={`${formatEntryDate(day.date, i18n.language)} · ${formatDuration(day.minutes)}`}
 										className="flex h-full flex-1 flex-col justify-end"
 										onMouseEnter={() => setHover(i)}
 										onMouseLeave={() => setHover(null)}
