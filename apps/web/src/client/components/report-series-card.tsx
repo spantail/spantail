@@ -129,6 +129,9 @@ export function ReportSeriesCard({
 						variant="outline"
 						size="sm"
 						className="mr-1"
+						// The dialog captures `previous` on open; opening before the
+						// snapshot list resolves would suggest the wrong period.
+						disabled={snapshots.isPending}
 						onClick={() => setRunning(true)}
 					>
 						{t(`reports.createNext.${createNextKey(report)}`)}
