@@ -39,9 +39,12 @@ const STATUS_VARIANT: Record<
 
 export function ShareDialog({
 	snapshot,
+	title,
 	onClose,
 }: {
 	snapshot: ReportSnapshotMeta;
+	/** Derived snapshot display name, e.g. "Monthly report 2026-06". */
+	title: string;
 	onClose: () => void;
 }) {
 	const { t } = useTranslation();
@@ -96,9 +99,7 @@ export function ShareDialog({
 			<DialogContent className="max-w-lg">
 				<DialogHeader>
 					<DialogTitle>
-						{t("reports.shares.title", {
-							date: new Date(snapshot.generatedAt).toLocaleString(),
-						})}
+						{t("reports.shares.title", { name: title })}
 					</DialogTitle>
 				</DialogHeader>
 				<form
