@@ -20,6 +20,13 @@
 	"errors": {
 		"generic": "Something went wrong. Please try again."
 	},
+	"theme": {
+		"toDark": "Switch to dark mode",
+		"toLight": "Switch to light mode"
+	},
+	"home": {
+		"subtitle": "{{date}} · your time at a glance."
+	},
 	"nav": {
 		"home": "Home",
 		"switchLanguage": "日本語に切り替え",

@@ -22,7 +22,7 @@ export function BreakdownBars({ title, subtitle, items }: BreakdownBarsProps) {
 	const max = Math.max(1, ...items.map((item) => item.minutes));
 
 	return (
-		<Card>
+		<Card className="[--card-spacing:--spacing(5)]">
 			<CardHeader className="flex items-center justify-between pb-2">
 				<CardTitle className="text-sm font-semibold">{title}</CardTitle>
 				{subtitle && (

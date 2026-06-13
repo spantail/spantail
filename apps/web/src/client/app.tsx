@@ -4,6 +4,7 @@ import {
 	type RouterHistory,
 	RouterProvider,
 } from "@tanstack/react-router";
+import { ThemeProvider } from "next-themes";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -29,11 +30,18 @@ export function App({
 	router: ReturnType<typeof createAppRouter>;
 }) {
 	return (
-		<QueryClientProvider client={queryClient}>
-			<TooltipProvider>
-				<RouterProvider router={router} />
-				<Toaster />
-			</TooltipProvider>
-		</QueryClientProvider>
+		<ThemeProvider
+			attribute="class"
+			defaultTheme="light"
+			enableSystem={false}
+			disableTransitionOnChange
+		>
+			<QueryClientProvider client={queryClient}>
+				<TooltipProvider>
+					<RouterProvider router={router} />
+					<Toaster />
+				</TooltipProvider>
+			</QueryClientProvider>
+		</ThemeProvider>
 	);
 }

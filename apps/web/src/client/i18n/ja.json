@@ -20,6 +20,13 @@
 	"errors": {
 		"generic": "問題が発生しました。もう一度お試しください。"
 	},
+	"theme": {
+		"toDark": "ダークモードに切り替え",
+		"toLight": "ライトモードに切り替え"
+	},
+	"home": {
+		"subtitle": "{{date}} · あなたの時間をひと目で。"
+	},
 	"nav": {
 		"home": "ホーム",
 		"switchLanguage": "Switch to English",

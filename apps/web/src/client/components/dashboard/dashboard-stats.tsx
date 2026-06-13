@@ -105,7 +105,7 @@ export function DashboardStats({ scope, breakdown }: DashboardStatsProps) {
 
 	if (recent.isPending || monthly.isPending) {
 		return (
-			<div className="grid gap-4">
+			<div className="flex flex-col gap-7">
 				<div className="grid gap-4 sm:grid-cols-3">
 					<Skeleton className="h-24" />
 					<Skeleton className="h-24" />
@@ -200,7 +200,7 @@ export function DashboardStats({ scope, breakdown }: DashboardStatsProps) {
 				}));
 
 	return (
-		<div className="grid gap-4">
+		<div className="flex flex-col gap-7">
 			<StatCards cards={cards} />
 			<div className="grid gap-4 lg:grid-cols-5">
 				<div className="lg:col-span-3">

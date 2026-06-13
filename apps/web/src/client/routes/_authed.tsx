@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { EntryDialogProvider, useEntryDialog } from "@/components/entry-dialog";
+import { ModeToggle } from "@/components/mode-toggle";
 import { NavUser } from "@/components/nav-user";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,11 +75,14 @@ function AuthedLayout() {
 										{t("nav.reports")}
 									</Link>
 								</Button>
+								<ModeToggle />
 								<NavUser user={me.data.user} />
 							</div>
 						</header>
-						<main className="flex flex-1 flex-col gap-4 p-4">
-							<Outlet />
+						<main className="flex flex-1 flex-col">
+							<div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6 md:px-8 md:py-8">
+								<Outlet />
+							</div>
 						</main>
 					</SidebarInset>
 				</SidebarProvider>

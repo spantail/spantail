@@ -37,7 +37,7 @@ export function DailyBars({ daily }: DailyBarsProps) {
 	const labelStep = days.length > 20 ? 4 : 2;
 
 	return (
-		<Card>
+		<Card className="[--card-spacing:--spacing(5)]">
 			<CardHeader className="flex items-start justify-between gap-2 pb-2">
 				<div>
 					<CardTitle className="text-sm font-semibold">
