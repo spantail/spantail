@@ -9,7 +9,7 @@ export type ReportInsert = Omit<
 	"id" | "createdAt" | "updatedAt"
 >;
 export type ReportPatch = Partial<
-	Pick<ReportRow, "name" | "templateId" | "scope" | "note">
+	Pick<ReportRow, "name" | "templateId" | "filters" | "note">
 >;
 
 export async function createReport(

@@ -42,7 +42,7 @@ async function respondWithContent(c: Context<AppEnv>, view: ShareView) {
 		renderSharePage({
 			locale: pickShareLocale(c),
 			reportName: view.reportName,
-			dateRange: view.resolvedScope.dateRange,
+			dateRange: view.resolvedFilters.dateRange,
 			contentHtml: await renderMarkdownToHtml(view.renderedMarkdown),
 		}),
 	);

@@ -15,7 +15,7 @@ import {
 import { api } from "@/lib/api";
 
 function rangeLabel(report: Report, t: (key: string) => string): string {
-	const range = report.scope.dateRange;
+	const range = report.filters.dateRange;
 	if (typeof range === "string") return t(`reports.range.${range}`);
 	return `${range.from} – ${range.to}`;
 }

@@ -46,7 +46,7 @@ async function setup() {
 			{
 				name: "Daily <Report>",
 				templateId: "builtin:daily",
-				scope: { workspaceIds: [ws.id], dateRange: "today" },
+				filters: { workspaceIds: [ws.id], dateRange: "today" },
 				note: "<script>alert(1)</script> and [a link](javascript:alert(1))",
 			},
 			admin,

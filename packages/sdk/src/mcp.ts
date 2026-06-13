@@ -143,7 +143,7 @@ export function registerToxilTools(
 			title: "List reports",
 			description:
 				"List the saved report definitions owned by the token owner, including " +
-				"each report's id, scope, template id, and note.",
+				"each report's id, filters, template id, and note.",
 		},
 		() => run(() => client.listReports()),
 	);
@@ -153,7 +153,7 @@ export function registerToxilTools(
 		{
 			title: "Get a report",
 			description:
-				"Get a saved report definition by id, including its scope, template id, " +
+				"Get a saved report definition by id, including its filters, template id, " +
 				"and free-form markdown note. Get ids from list_reports.",
 			inputSchema: {
 				id: z.string().describe("Report id from list_reports"),

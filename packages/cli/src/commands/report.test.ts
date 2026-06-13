@@ -11,7 +11,7 @@ function reportFixture(overrides: Partial<Report> = {}): Report {
 		name: "Weekly",
 		ownerUserId: "u1",
 		templateId: "builtin:weekly",
-		scope: { workspaceIds: ["ws-acme"], dateRange: "this_week" },
+		filters: { workspaceIds: ["ws-acme"], dateRange: "this_week" },
 		note: null,
 		createdAt: "2026-06-01T00:00:00Z",
 		updatedAt: "2026-06-01T00:00:00Z",
@@ -23,7 +23,7 @@ const snapshot: ReportSnapshot = {
 	id: "snap-1",
 	reportId: "rep-1",
 	renderedMarkdown: "# Weekly report\n\n- did things\n",
-	resolvedScope: {
+	resolvedFilters: {
 		workspaceIds: ["ws-acme"],
 		dateRange: { from: "2026-06-08", to: "2026-06-14" },
 	},
@@ -46,7 +46,7 @@ it("lists reports with full ids and ranges", async () => {
 				reportFixture({
 					id: "rep-2",
 					name: "June",
-					scope: {
+					filters: {
 						workspaceIds: ["ws-acme"],
 						dateRange: { from: "2026-06-01", to: "2026-06-30" },
 					},

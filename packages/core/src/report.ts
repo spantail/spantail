@@ -27,20 +27,20 @@ export const reportDateRangeSchema = z.union([
 ]);
 export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 
-export const reportScopeSchema = z.object({
+export const reportFiltersSchema = z.object({
 	workspaceIds: z.array(z.string()).min(1).max(20),
 	projectIds: z.array(z.string()).max(50).optional(),
 	userIds: z.array(z.string()).max(50).optional(),
 	tags: z.array(tagSchema).max(20).optional(),
 	dateRange: reportDateRangeSchema,
 });
-export type ReportScope = z.infer<typeof reportScopeSchema>;
+export type ReportFilters = z.infer<typeof reportFiltersSchema>;
 
-/** Scope as stored on a snapshot: the date range is frozen to absolute dates. */
-export const resolvedReportScopeSchema = reportScopeSchema.extend({
+/** Filters as stored on a snapshot: the date range is frozen to absolute dates. */
+export const resolvedReportFiltersSchema = reportFiltersSchema.extend({
 	dateRange: absoluteDateRangeSchema,
 });
-export type ResolvedReportScope = z.infer<typeof resolvedReportScopeSchema>;
+export type ResolvedReportFilters = z.infer<typeof resolvedReportFiltersSchema>;
 
 export const reportTemplateSchema = z.object({
 	id: z.string(),
@@ -81,7 +81,7 @@ export const reportSchema = z.object({
 	name: z.string().min(1).max(100),
 	ownerUserId: z.string(),
 	templateId: z.string(),
-	scope: reportScopeSchema,
+	filters: reportFiltersSchema,
 	// Free-form markdown appended to the rendered output via {{ report.note }}.
 	note: z.string().max(20000).nullable(),
 	createdAt: z.string(),
@@ -92,7 +92,7 @@ export type Report = z.infer<typeof reportSchema>;
 export const createReportInputSchema = z.object({
 	name: z.string().min(1).max(100),
 	templateId: z.string().min(1),
-	scope: reportScopeSchema,
+	filters: reportFiltersSchema,
 	note: z.string().max(20000).optional(),
 });
 export type CreateReportInput = z.infer<typeof createReportInputSchema>;
@@ -101,7 +101,7 @@ export const updateReportInputSchema = z
 	.object({
 		name: z.string().min(1).max(100),
 		templateId: z.string().min(1),
-		scope: reportScopeSchema,
+		filters: reportFiltersSchema,
 		note: z.string().max(20000).nullable(),
 	})
 	.partial();
@@ -111,7 +111,7 @@ export const reportSnapshotSchema = z.object({
 	id: z.string(),
 	reportId: z.string(),
 	renderedMarkdown: z.string(),
-	resolvedScope: resolvedReportScopeSchema,
+	resolvedFilters: resolvedReportFiltersSchema,
 	generatedAt: z.string(),
 });
 export type ReportSnapshot = z.infer<typeof reportSnapshotSchema>;
@@ -171,7 +171,7 @@ export function resolveDateRange(
 	}
 }
 
-/** Keeps entries that carry at least one of the scope tags (no tags = all). */
+/** Keeps entries that carry at least one of the filter tags (no tags = all). */
 export function filterEntriesByTags<T extends { tags: string[] }>(
 	entries: T[],
 	tags?: string[],

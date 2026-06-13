@@ -43,7 +43,7 @@ export async function listReportSnapshots(
 		.select({
 			id: reportSnapshots.id,
 			reportId: reportSnapshots.reportId,
-			resolvedScope: reportSnapshots.resolvedScope,
+			resolvedFilters: reportSnapshots.resolvedFilters,
 			generatedAt: reportSnapshots.generatedAt,
 		})
 		.from(reportSnapshots)

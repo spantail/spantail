@@ -92,8 +92,8 @@ export function ReportSnapshotsDialog({
 									{new Date(snapshot.generatedAt).toLocaleString()}
 									<span className="text-muted-foreground">
 										{" "}
-										({snapshot.resolvedScope.dateRange.from} –{" "}
-										{snapshot.resolvedScope.dateRange.to})
+										({snapshot.resolvedFilters.dateRange.from} –{" "}
+										{snapshot.resolvedFilters.dateRange.to})
 									</span>
 								</span>
 								<span className="whitespace-nowrap">

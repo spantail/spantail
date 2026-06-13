@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
 	DateRangePreset,
 	Report,
-	ReportScope,
+	ReportFilters,
 	ReportTemplate,
 } from "@toxil/core";
 import { useState } from "react";
@@ -48,45 +48,45 @@ export function ReportForm({
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const { workspaces, current } = useWorkspace();
-	const scope = editing?.scope;
+	const filters = editing?.filters;
 
 	const [name, setName] = useState(editing?.name ?? "");
 	const [templateId, setTemplateId] = useState(
 		editing?.templateId ?? "builtin:daily",
 	);
-	// A saved scope may reference workspaces the user has since left; those
+	// Saved filters may reference workspaces the user has since left; those
 	// can be neither displayed nor saved, so drop them from the editable
-	// scope. The project filter belonged to the original workspace selection,
+	// filters. The project filter belonged to the original workspace selection,
 	// so it is dropped with it — stale project ids would save fine but render
 	// an empty report.
 	const memberIds = new Set(workspaces.map((workspace) => workspace.id));
 	const keptWorkspaceIds =
-		scope?.workspaceIds.filter((id) => memberIds.has(id)) ?? [];
-	const scopeIntact =
-		!scope || keptWorkspaceIds.length === scope.workspaceIds.length;
+		filters?.workspaceIds.filter((id) => memberIds.has(id)) ?? [];
+	const filtersIntact =
+		!filters || keptWorkspaceIds.length === filters.workspaceIds.length;
 
 	const [workspaceIds, setWorkspaceIds] = useState<string[]>(() => {
 		const fallback = current ? [current.id] : [];
-		if (!scope) return fallback;
+		if (!filters) return fallback;
 		return keptWorkspaceIds.length > 0 ? keptWorkspaceIds : fallback;
 	});
 	const [projectIds, setProjectIds] = useState<string[]>(
-		scopeIntact ? (scope?.projectIds ?? []) : [],
+		filtersIntact ? (filters?.projectIds ?? []) : [],
 	);
 	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
-		typeof scope?.dateRange === "string" ? scope.dateRange : "custom",
+		typeof filters?.dateRange === "string" ? filters.dateRange : "custom",
 	);
 	const [from, setFrom] = useState(
-		typeof scope?.dateRange === "object" ? scope.dateRange.from : "",
+		typeof filters?.dateRange === "object" ? filters.dateRange.from : "",
 	);
 	const [to, setTo] = useState(
-		typeof scope?.dateRange === "object" ? scope.dateRange.to : "",
+		typeof filters?.dateRange === "object" ? filters.dateRange.to : "",
 	);
-	const [tags, setTags] = useState(scope?.tags?.join(", ") ?? "");
+	const [tags, setTags] = useState(filters?.tags?.join(", ") ?? "");
 	const [note, setNote] = useState(editing?.note ?? "");
 	const [error, setError] = useState<string | null>(null);
 
-	// A custom template must belong to a workspace in the scope (server rule);
+	// A custom template must belong to a filtered workspace (server rule);
 	// builtins are always available. Clamping at render also covers editing a
 	// report whose template's workspace is no longer selectable — but only
 	// once the template union is fully loaded, or a still-pending custom
@@ -116,7 +116,7 @@ export function ReportForm({
 				.split(",")
 				.map((tag) => tag.trim())
 				.filter(Boolean);
-			const reportScope: ReportScope = {
+			const reportFilters: ReportFilters = {
 				workspaceIds,
 				...(singleWorkspaceId && projectIds.length > 0 ? { projectIds } : {}),
 				...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
@@ -125,7 +125,7 @@ export function ReportForm({
 			const input = {
 				name,
 				templateId: selectedTemplateId,
-				scope: reportScope,
+				filters: reportFilters,
 				note,
 			};
 			return editing

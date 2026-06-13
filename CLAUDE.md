@@ -55,7 +55,7 @@ pnpm deploy             # wrangler deploy (apps/web)
   header's top-right corner, never in the sidebar. New screens render inside this shell.
 - **Dates and time.** `work_entries.entry_date` is a local date string (`YYYY-MM-DD`) in the
   workspace's timezone. All timestamps are UTC. Durations are integer minutes.
-- **Permissions.** Every query is scoped by workspace membership. Cross-workspace report scopes
+- **Permissions.** Every query is scoped by workspace membership. Cross-workspace report filters
   must be validated against the union of the user's workspaces.
 - **Report templates are user input.** LiquidJS rendering must keep the safety settings
   (own-property access only, strict filters, parse/render/memory limits, file tags disabled).
@@ -77,7 +77,7 @@ pnpm deploy             # wrangler deploy (apps/web)
 
 - Unit tests colocated as `*.test.ts`; integration tests for routes run in the Workers pool
   (`@cloudflare/vitest-pool-workers`) against local D1.
-- The report engine must keep golden tests: scope + fixture entries → expected Markdown.
+- The report engine must keep golden tests: filters + fixture entries → expected Markdown.
 
 ## Definition of done
 

@@ -15,11 +15,11 @@ Lists your saved reports. The ID column is the input to \`toxil report run\`.
 
 const RUN_USAGE = `Usage: toxil report run <id>
 
-Runs a report: the server resolves the scope, renders the template, stores
+Runs a report: the server resolves the filters, renders the template, stores
 a snapshot, and the markdown is printed to stdout (pipe or redirect it).
 `;
 
-function describeRange(range: Report["scope"]["dateRange"]): string {
+function describeRange(range: Report["filters"]["dateRange"]): string {
 	return typeof range === "string" ? range : `${range.from}..${range.to}`;
 }
 
@@ -49,7 +49,7 @@ export async function reportList(
 				report.id,
 				report.name,
 				report.templateId,
-				describeRange(report.scope.dateRange),
+				describeRange(report.filters.dateRange),
 			]),
 		)}\n`,
 	);
@@ -91,7 +91,7 @@ export async function reportRun(
 	ctx.stdout.write(snapshot.renderedMarkdown);
 	if (!snapshot.renderedMarkdown.endsWith("\n")) ctx.stdout.write("\n");
 	ctx.stderr.write(
-		`Generated snapshot ${snapshot.id} (${snapshot.resolvedScope.dateRange.from} – ${snapshot.resolvedScope.dateRange.to})\n`,
+		`Generated snapshot ${snapshot.id} (${snapshot.resolvedFilters.dateRange.from} – ${snapshot.resolvedFilters.dateRange.to})\n`,
 	);
 	return 0;
 }

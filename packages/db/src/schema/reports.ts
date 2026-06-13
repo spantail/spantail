@@ -1,4 +1,4 @@
-import type { ReportScope, ResolvedReportScope } from "@toxil/core";
+import type { ReportFilters, ResolvedReportFilters } from "@toxil/core";
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -43,7 +43,7 @@ export const reports = sqliteTable(
 			.references(() => user.id, { onDelete: "cascade" }),
 		// Either a "builtin:*" id or a report_templates id; intentionally no FK.
 		templateId: text("template_id").notNull(),
-		scope: text("scope", { mode: "json" }).$type<ReportScope>().notNull(),
+		filters: text("filters", { mode: "json" }).$type<ReportFilters>().notNull(),
 		// Free-form markdown rendered into the report output.
 		note: text("note"),
 		createdAt: createdAtMs(),
@@ -60,8 +60,8 @@ export const reportSnapshots = sqliteTable(
 			.notNull()
 			.references(() => reports.id, { onDelete: "cascade" }),
 		renderedMarkdown: text("rendered_markdown").notNull(),
-		resolvedScope: text("resolved_scope", { mode: "json" })
-			.$type<ResolvedReportScope>()
+		resolvedFilters: text("resolved_filters", { mode: "json" })
+			.$type<ResolvedReportFilters>()
 			.notNull(),
 		generatedAt: integer("generated_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
