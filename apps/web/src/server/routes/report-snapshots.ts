@@ -45,9 +45,9 @@ export const reportSnapshotRoutes = new Hono<AppEnv>()
 		requireScope(c, "read");
 		const snapshot = await requireSnapshotAccess(c, c.req.param("id"));
 		// The rendered markdown is workspace data: losing membership in any
-		// scoped workspace also revokes access to the frozen snapshot content.
+		// filtered workspace also revokes access to the frozen snapshot content.
 		// Deletion stays owner-only — removing data needs no membership.
-		await requireScopeWorkspaces(c, snapshot.resolvedScope.workspaceIds);
+		await requireScopeWorkspaces(c, snapshot.resolvedFilters.workspaceIds);
 		return c.json(snapshot);
 	})
 	.delete("/:id", async (c) => {
@@ -61,7 +61,7 @@ export const reportSnapshotRoutes = new Hono<AppEnv>()
 	.post("/:id/shares", async (c) => {
 		requireScope(c, "write");
 		const snapshot = await requireSnapshotAccess(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, snapshot.resolvedScope.workspaceIds);
+		await requireScopeWorkspaces(c, snapshot.resolvedFilters.workspaceIds);
 		// Every field is optional, so a body-less POST is legitimate — but a
 		// present, malformed body is rejected rather than silently minting a
 		// no-expiry public link.
@@ -92,7 +92,7 @@ export const reportSnapshotRoutes = new Hono<AppEnv>()
 	.get("/:id/shares", async (c) => {
 		requireScope(c, "read");
 		const snapshot = await requireSnapshotAccess(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, snapshot.resolvedScope.workspaceIds);
+		await requireScopeWorkspaces(c, snapshot.resolvedFilters.workspaceIds);
 		const shares = await listReportSharesBySnapshot(c.var.db, snapshot.id);
 		return c.json(shares.map(toApiShare));
 	});

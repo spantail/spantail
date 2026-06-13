@@ -185,7 +185,7 @@ it("runs a saved report end to end over mcp", async () => {
 			{
 				name: "Daily via MCP",
 				templateId: "builtin:daily",
-				scope: { workspaceIds: [ws.id], dateRange: "today" },
+				filters: { workspaceIds: [ws.id], dateRange: "today" },
 				note: "Generated through the MCP loopback",
 			},
 			cookie,

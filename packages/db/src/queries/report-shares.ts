@@ -50,7 +50,7 @@ export async function getShareViewByToken(
 			share: ReportShareRow;
 			reportName: string;
 			renderedMarkdown: string;
-			resolvedScope: typeof reportSnapshots.$inferSelect.resolvedScope;
+			resolvedFilters: typeof reportSnapshots.$inferSelect.resolvedFilters;
 			generatedAt: Date;
 	  }
 	| undefined
@@ -60,7 +60,7 @@ export async function getShareViewByToken(
 			share: reportShares,
 			reportName: reports.name,
 			renderedMarkdown: reportSnapshots.renderedMarkdown,
-			resolvedScope: reportSnapshots.resolvedScope,
+			resolvedFilters: reportSnapshots.resolvedFilters,
 			generatedAt: reportSnapshots.generatedAt,
 		})
 		.from(reportShares)

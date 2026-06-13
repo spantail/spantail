@@ -4,7 +4,7 @@ import {
 	absoluteDateRangeSchema,
 	filterEntriesByTags,
 	isBuiltinTemplateId,
-	reportScopeSchema,
+	reportFiltersSchema,
 	resolveDateRange,
 } from "./report";
 
@@ -69,12 +69,12 @@ it("rejects an absolute range with from after to", () => {
 	).toBe(false);
 });
 
-it("requires at least one workspace in a scope", () => {
+it("requires at least one workspace in report filters", () => {
 	expect(
-		reportScopeSchema.safeParse({ workspaceIds: [], dateRange: "today" })
+		reportFiltersSchema.safeParse({ workspaceIds: [], dateRange: "today" })
 			.success,
 	).toBe(false);
-	const parsed = reportScopeSchema.parse({
+	const parsed = reportFiltersSchema.parse({
 		workspaceIds: ["ws1"],
 		dateRange: { from: "2026-06-01", to: "2026-06-07" },
 	});

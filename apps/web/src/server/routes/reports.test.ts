@@ -50,7 +50,7 @@ async function createEntry(
 const baseReport = (wsId: string) => ({
 	name: "Daily standup",
 	templateId: "builtin:daily",
-	scope: { workspaceIds: [wsId], tags: ["api"], dateRange: "today" },
+	filters: { workspaceIds: [wsId], tags: ["api"], dateRange: "today" },
 	note: "Reviewed by QA",
 });
 
@@ -108,7 +108,7 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 	);
 });
 
-it("rejects scopes outside the caller's workspace memberships", async () => {
+it("rejects filters outside the caller's workspace memberships", async () => {
 	const { admin, other, ws } = await setup();
 
 	const direct = await apiJson(
@@ -148,11 +148,11 @@ it("hides workspace templates outside the caller's memberships", async () => {
 		{
 			name: "R",
 			templateId: template.id,
-			scope: { workspaceIds: [ws.id], dateRange: "today" },
+			filters: { workspaceIds: [ws.id], dateRange: "today" },
 		},
 		other,
 	);
-	// Scope check fires first (403); a template-only leak would be 404 anyway.
+	// Membership check fires first (403); a template-only leak would be 404 anyway.
 	expect([403, 404]).toContain(res.status);
 
 	const unknownTemplate = await apiJson(
@@ -164,7 +164,7 @@ it("hides workspace templates outside the caller's memberships", async () => {
 	expect(unknownTemplate.status).toBe(404);
 });
 
-it("requires a custom template to belong to a scope workspace", async () => {
+it("requires a custom template to belong to a filtered workspace", async () => {
 	const { admin, ws } = await setup();
 	const otherWs = (await (
 		await apiJson(
@@ -184,7 +184,7 @@ it("requires a custom template to belong to a scope workspace", async () => {
 	).json()) as { id: string };
 
 	// The caller is a member of both workspaces, but the template's
-	// workspace is not part of the report scope.
+	// workspace is not part of the report filters.
 	const res = await apiJson(
 		"POST",
 		"/api/v1/reports",
@@ -202,7 +202,7 @@ it("requires a custom template to belong to a scope workspace", async () => {
 		{
 			...baseReport(ws.id),
 			templateId: template.id,
-			scope: { workspaceIds: [ws.id, otherWs.id], dateRange: "today" },
+			filters: { workspaceIds: [ws.id, otherWs.id], dateRange: "today" },
 		},
 		admin,
 	);
@@ -230,13 +230,16 @@ it("runs a report into an immutable snapshot", async () => {
 	const snapshot = (await run.json()) as {
 		id: string;
 		renderedMarkdown: string;
-		resolvedScope: { dateRange: { from: string; to: string } };
+		resolvedFilters: { dateRange: { from: string; to: string } };
 	};
 	expect(snapshot.renderedMarkdown).toContain("Wired the run endpoint");
 	expect(snapshot.renderedMarkdown).not.toContain("Tidied the desk");
 	expect(snapshot.renderedMarkdown).toContain("Reviewed by QA");
 	const today = todayInTimezone("Asia/Tokyo");
-	expect(snapshot.resolvedScope.dateRange).toEqual({ from: today, to: today });
+	expect(snapshot.resolvedFilters.dateRange).toEqual({
+		from: today,
+		to: today,
+	});
 
 	const metaList = (await (
 		await apiGet(`/api/v1/reports/${report.id}/snapshots`, admin)
@@ -295,7 +298,7 @@ it("revokes snapshot content access when workspace membership is lost", async ()
 			{
 				name: "Mine",
 				templateId: "builtin:daily",
-				scope: { workspaceIds: [ws.id], dateRange: "today" },
+				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			other,
 		)

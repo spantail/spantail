@@ -3,7 +3,7 @@ import {
 	filterEntriesByTags,
 	getBuiltinTemplate,
 	isBuiltinTemplateId,
-	type ReportScope,
+	type ReportFilters,
 	renderReport,
 	resolveDateRange,
 	updateReportInputSchema,
@@ -48,17 +48,17 @@ export async function requireReportOwner(
 }
 
 /**
- * Cross-workspace scopes are limited to the union of the caller's
- * memberships. A custom template must belong to a workspace in the scope:
+ * Cross-workspace filters are limited to the union of the caller's
+ * memberships. A custom template must belong to a workspace in the filters:
  * its body ends up in snapshots, and snapshot reads re-check membership
- * against the scope's workspace ids only.
+ * against the filters' workspace ids only.
  */
-async function validateScopeAndTemplate(
+async function validateFiltersAndTemplate(
 	c: Context<AppEnv>,
-	scope: ReportScope,
+	filters: ReportFilters,
 	templateId: string,
 ): Promise<{ workspaces: MemberWorkspace[]; templateBody: string }> {
-	const workspaces = await requireScopeWorkspaces(c, scope.workspaceIds);
+	const workspaces = await requireScopeWorkspaces(c, filters.workspaceIds);
 	const memberIds = new Set(workspaces.map((w) => w.id));
 
 	if (isBuiltinTemplateId(templateId)) {
@@ -70,10 +70,10 @@ async function validateScopeAndTemplate(
 	if (!template || !memberIds.has(template.workspaceId)) {
 		throw new AppError("not_found", "Report template not found");
 	}
-	if (!scope.workspaceIds.includes(template.workspaceId)) {
+	if (!filters.workspaceIds.includes(template.workspaceId)) {
 		throw new AppError(
 			"bad_request",
-			"Template must belong to a workspace in the report scope",
+			"Template must belong to a workspace in the report filters",
 		);
 	}
 	return { workspaces, templateBody: template.body };
@@ -92,12 +92,12 @@ export const reportRoutes = new Hono<AppEnv>()
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
-		await validateScopeAndTemplate(c, input.scope, input.templateId);
+		await validateFiltersAndTemplate(c, input.filters, input.templateId);
 		const report = await createReport(c.var.db, {
 			name: input.name,
 			ownerUserId: user.id,
 			templateId: input.templateId,
-			scope: input.scope,
+			filters: input.filters,
 			note: normalizeNote(input.note ?? null),
 		});
 		return c.json(report, 201);
@@ -110,10 +110,10 @@ export const reportRoutes = new Hono<AppEnv>()
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		const input = validate(updateReportInputSchema, await c.req.json());
-		if (input.scope !== undefined || input.templateId !== undefined) {
-			await validateScopeAndTemplate(
+		if (input.filters !== undefined || input.templateId !== undefined) {
+			await validateFiltersAndTemplate(
 				c,
-				input.scope ?? report.scope,
+				input.filters ?? report.filters,
 				input.templateId ?? report.templateId,
 			);
 		}
@@ -132,26 +132,28 @@ export const reportRoutes = new Hono<AppEnv>()
 	.post("/:id/run", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		const scope = report.scope;
-		const { workspaces, templateBody } = await validateScopeAndTemplate(
+		const filters = report.filters;
+		const { workspaces, templateBody } = await validateFiltersAndTemplate(
 			c,
-			scope,
+			filters,
 			report.templateId,
 		);
 
-		const scoped = workspaces.filter((w) => scope.workspaceIds.includes(w.id));
-		const anchor = scoped.find((w) => w.id === scope.workspaceIds[0]);
-		if (!anchor) throw new AppError("internal", "Scope workspace missing");
-		const range = resolveDateRange(scope.dateRange, anchor.timezone);
+		const scoped = workspaces.filter((w) =>
+			filters.workspaceIds.includes(w.id),
+		);
+		const anchor = scoped.find((w) => w.id === filters.workspaceIds[0]);
+		if (!anchor) throw new AppError("internal", "Filter workspace missing");
+		const range = resolveDateRange(filters.dateRange, anchor.timezone);
 
 		const rows = await listWorkEntriesForReport(c.var.db, {
-			workspaceIds: scope.workspaceIds,
-			projectIds: scope.projectIds,
-			userIds: scope.userIds,
+			workspaceIds: filters.workspaceIds,
+			projectIds: filters.projectIds,
+			userIds: filters.userIds,
 			from: range.from,
 			to: range.to,
 		});
-		const entries = filterEntriesByTags(rows, scope.tags);
+		const entries = filterEntriesByTags(rows, filters.tags);
 		const [projects, users] = await Promise.all([
 			listProjectsByIds(c.var.db, [
 				...new Set(entries.map((e) => e.projectId)),
@@ -165,7 +167,8 @@ export const reportRoutes = new Hono<AppEnv>()
 				report: { name: report.name, note: report.note },
 				period: {
 					...range,
-					preset: typeof scope.dateRange === "string" ? scope.dateRange : null,
+					preset:
+						typeof filters.dateRange === "string" ? filters.dateRange : null,
 				},
 				timezone: anchor.timezone,
 				generatedAt: new Date(),
@@ -190,7 +193,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		const snapshot = await createReportSnapshot(c.var.db, {
 			reportId: report.id,
 			renderedMarkdown,
-			resolvedScope: { ...scope, dateRange: range },
+			resolvedFilters: { ...filters, dateRange: range },
 		});
 		return c.json(snapshot, 201);
 	})

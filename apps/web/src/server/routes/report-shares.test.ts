@@ -52,7 +52,7 @@ async function createSnapshot(
 			{
 				name: "Daily",
 				templateId: "builtin:daily",
-				scope: { workspaceIds: [wsId], dateRange: "today" },
+				filters: { workspaceIds: [wsId], dateRange: "today" },
 			},
 			cookie,
 		)

@@ -155,7 +155,7 @@ it("enforces the scope matrix", async () => {
 	const reportInput = {
 		name: "Daily",
 		templateId: "builtin:daily",
-		scope: { workspaceIds: [ws.id], dateRange: "today" },
+		filters: { workspaceIds: [ws.id], dateRange: "today" },
 	};
 	const reportDenied = await bearerJson(
 		"POST",

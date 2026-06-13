@@ -161,7 +161,7 @@ it("refuses to delete a template referenced by a report", async () => {
 		{
 			name: "Daily",
 			templateId: template.id,
-			scope: { workspaceIds: [ws.id], dateRange: "today" },
+			filters: { workspaceIds: [ws.id], dateRange: "today" },
 		},
 		admin,
 	);
