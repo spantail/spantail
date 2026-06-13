@@ -107,6 +107,15 @@ export const updateReportInputSchema = z
 	.partial();
 export type UpdateReportInput = z.infer<typeof updateReportInputSchema>;
 
+/**
+ * Optional body of POST /reports/{id}/run. An absolute dateRange overrides
+ * the report's own date range for this run only (the snapshot freezes it).
+ */
+export const runReportInputSchema = z.object({
+	dateRange: absoluteDateRangeSchema.optional(),
+});
+export type RunReportInput = z.infer<typeof runReportInputSchema>;
+
 export const reportSnapshotSchema = z.object({
 	id: z.string(),
 	reportId: z.string(),
