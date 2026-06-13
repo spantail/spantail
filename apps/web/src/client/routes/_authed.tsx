@@ -64,7 +64,12 @@ function AuthedLayout() {
 							    workspaces, so they live here, not in the sidebar. */}
 							<div className="ml-auto flex items-center gap-1">
 								<LogWorkButton />
-								<Button asChild variant="ghost" size="sm">
+								<Button
+									asChild
+									variant="ghost"
+									size="sm"
+									className="text-muted-foreground text-xs"
+								>
 									<Link
 										to="/reports"
 										activeProps={{
@@ -98,7 +103,7 @@ function LogWorkButton() {
 
 	if (!current) return null;
 	return (
-		<Button size="sm" onClick={() => openCreate()}>
+		<Button size="sm" className="text-xs" onClick={() => openCreate()}>
 			<PlusIcon />
 			{t("nav.logWork")}
 		</Button>

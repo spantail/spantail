@@ -47,14 +47,14 @@ export function DailyBars({ daily }: DailyBarsProps) {
 						{t("dashboard.dailyFocusAvg", { avg: formatDuration(avg) })}
 					</p>
 				</div>
-				<div className="bg-muted/50 inline-flex items-center rounded-lg border p-0.5 text-xs">
+				<div className="bg-muted/50 inline-flex items-center gap-1 rounded-lg border p-1 text-sm">
 					{(["14", "28"] as const).map((value) => (
 						<button
 							key={value}
 							type="button"
 							onClick={() => setRange(value)}
 							className={cn(
-								"rounded-md px-2.5 py-1 font-medium transition-colors",
+								"rounded-md px-3 py-1 font-medium transition-colors",
 								range === value
 									? "bg-card text-foreground shadow-sm"
 									: "text-muted-foreground hover:text-foreground",

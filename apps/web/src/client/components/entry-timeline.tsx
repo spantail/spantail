@@ -65,7 +65,7 @@ export function EntryTimeline({ entries, projects }: EntryTimelineProps) {
 								className="flex items-center gap-3 border-b py-2 last:border-b-0"
 							>
 								<div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-									<span>{entry.description}</span>
+									<span className="text-sm">{entry.description}</span>
 									<Badge variant="outline">
 										{projectName(entry.projectId)}
 									</Badge>

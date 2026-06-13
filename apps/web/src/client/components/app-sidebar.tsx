@@ -61,20 +61,24 @@ function NavItems({ items }: { items: NavItem[] }) {
 
 	return (
 		<SidebarMenu>
-			{items.map((item) => (
-				<SidebarMenuItem key={item.key}>
-					<SidebarMenuButton
-						asChild
-						isActive={pathname === item.to}
-						tooltip={t(item.key)}
-					>
-						<Link to={item.to}>
-							<item.icon />
-							<span>{t(item.key)}</span>
-						</Link>
-					</SidebarMenuButton>
-				</SidebarMenuItem>
-			))}
+			{items.map((item) => {
+				const isActive = pathname === item.to;
+				return (
+					<SidebarMenuItem key={item.key}>
+						<SidebarMenuButton
+							asChild
+							isActive={isActive}
+							tooltip={t(item.key)}
+							className={isActive ? undefined : "text-sidebar-foreground/70"}
+						>
+							<Link to={item.to}>
+								<item.icon />
+								<span>{t(item.key)}</span>
+							</Link>
+						</SidebarMenuButton>
+					</SidebarMenuItem>
+				);
+			})}
 		</SidebarMenu>
 	);
 }
@@ -115,23 +119,29 @@ function ProjectsGroup() {
 							</p>
 						) : (
 							<SidebarMenu>
-								{active.map((project) => (
-									<SidebarMenuItem key={project.id}>
-										<SidebarMenuButton
-											asChild
-											isActive={pathname === `/projects/${project.id}`}
-											tooltip={project.name}
-										>
-											<Link
-												to="/projects/$projectId"
-												params={{ projectId: project.id }}
+								{active.map((project) => {
+									const isActive = pathname === `/projects/${project.id}`;
+									return (
+										<SidebarMenuItem key={project.id}>
+											<SidebarMenuButton
+												asChild
+												isActive={isActive}
+												tooltip={project.name}
+												className={
+													isActive ? undefined : "text-sidebar-foreground/70"
+												}
 											>
-												<FolderIcon />
-												<span>{project.name}</span>
-											</Link>
-										</SidebarMenuButton>
-									</SidebarMenuItem>
-								))}
+												<Link
+													to="/projects/$projectId"
+													params={{ projectId: project.id }}
+												>
+													<FolderIcon />
+													<span>{project.name}</span>
+												</Link>
+											</SidebarMenuButton>
+										</SidebarMenuItem>
+									);
+								})}
 							</SidebarMenu>
 						)}
 					</SidebarGroupContent>
@@ -145,6 +155,7 @@ function ManageMenu() {
 	const { t } = useTranslation();
 	const { isMobile } = useSidebar();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const isActive = MANAGE_ITEMS.some((item) => item.to === pathname);
 
 	return (
 		<SidebarMenu>
@@ -152,8 +163,9 @@ function ManageMenu() {
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<SidebarMenuButton
-							isActive={MANAGE_ITEMS.some((item) => item.to === pathname)}
+							isActive={isActive}
 							tooltip={t("nav.groupManage")}
+							className={isActive ? undefined : "text-sidebar-foreground/70"}
 						>
 							<SettingsIcon />
 							<span>{t("nav.groupManage")}</span>
