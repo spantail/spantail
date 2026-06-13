@@ -4,8 +4,10 @@ import {
 	getBuiltinTemplate,
 	isBuiltinTemplateId,
 	type ReportFilters,
+	type RunReportInput,
 	renderReport,
 	resolveDateRange,
+	runReportInputSchema,
 	updateReportInputSchema,
 } from "@toxil/core";
 import {
@@ -139,12 +141,27 @@ export const reportRoutes = new Hono<AppEnv>()
 			report.templateId,
 		);
 
+		// The body is optional (CLI/MCP post none), but a present, malformed
+		// body is rejected rather than silently running the saved range.
+		const rawBody = await c.req.text();
+		let override: RunReportInput["dateRange"];
+		if (rawBody.trim() !== "") {
+			let body: unknown;
+			try {
+				body = JSON.parse(rawBody);
+			} catch {
+				throw new AppError("bad_request", "Request body must be valid JSON");
+			}
+			override = validate(runReportInputSchema, body).dateRange;
+		}
+
 		const scoped = workspaces.filter((w) =>
 			filters.workspaceIds.includes(w.id),
 		);
 		const anchor = scoped.find((w) => w.id === filters.workspaceIds[0]);
 		if (!anchor) throw new AppError("internal", "Filter workspace missing");
-		const range = resolveDateRange(filters.dateRange, anchor.timezone);
+		const range =
+			override ?? resolveDateRange(filters.dateRange, anchor.timezone);
 
 		const rows = await listWorkEntriesForReport(c.var.db, {
 			workspaceIds: filters.workspaceIds,
@@ -165,10 +182,14 @@ export const reportRoutes = new Hono<AppEnv>()
 		try {
 			renderedMarkdown = await renderReport(templateBody, {
 				report: { name: report.name, note: report.note },
+				// An overridden run is no longer "the preset's" period, so the
+				// template must not see a preset it didn't use.
 				period: {
 					...range,
 					preset:
-						typeof filters.dateRange === "string" ? filters.dateRange : null,
+						!override && typeof filters.dateRange === "string"
+							? filters.dateRange
+							: null,
 				},
 				timezone: anchor.timezone,
 				generatedAt: new Date(),

@@ -107,6 +107,15 @@ export const updateReportInputSchema = z
 	.partial();
 export type UpdateReportInput = z.infer<typeof updateReportInputSchema>;
 
+/**
+ * Optional body of POST /reports/{id}/run. An absolute dateRange overrides
+ * the report's own date range for this run only (the snapshot freezes it).
+ */
+export const runReportInputSchema = z.object({
+	dateRange: absoluteDateRangeSchema.optional(),
+});
+export type RunReportInput = z.infer<typeof runReportInputSchema>;
+
 export const reportSnapshotSchema = z.object({
 	id: z.string(),
 	reportId: z.string(),
@@ -127,7 +136,8 @@ export function isBuiltinTemplateId(id: string): boolean {
 	return id.startsWith(BUILTIN_TEMPLATE_ID_PREFIX);
 }
 
-function lastDayOfMonth(year: number, monthIndex: number): string {
+/** Last day of the month as `YYYY-MM-DD`; monthIndex is 0-based (UTC math). */
+export function lastDayOfMonth(year: number, monthIndex: number): string {
 	return new Date(Date.UTC(year, monthIndex + 1, 0)).toISOString().slice(0, 10);
 }
 

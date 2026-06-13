@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type {
-	DateRangePreset,
-	Report,
-	ReportFilters,
-	ReportTemplate,
+import {
+	type DateRangePreset,
+	type Report,
+	type ReportFilters,
+	type ReportSnapshot,
+	type ReportTemplate,
+	resolveDateRange,
 } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,17 +34,25 @@ const PRESETS: DateRangePreset[] = [
 	"last_month",
 ];
 
+/**
+ * Create/edit form for a report definition, rendered inside a dialog.
+ * Creating also runs the report immediately, so submitting lands the user
+ * on the first snapshot instead of an inert definition.
+ */
 export function ReportForm({
 	templates,
 	templatesReady,
 	editing,
-	onDone,
+	onComplete,
 	onCancel,
 }: {
 	templates: ReportTemplate[];
 	templatesReady: boolean;
 	editing: Report | null;
-	onDone: () => void;
+	/** Called after save; carries the first snapshot when one was created. */
+	onComplete: (
+		viewing?: { report: Report; snapshot: ReportSnapshot } | undefined,
+	) => void;
 	onCancel: () => void;
 }) {
 	const { t } = useTranslation();
@@ -110,8 +120,18 @@ export function ReportForm({
 		enabled: Boolean(singleWorkspaceId),
 	});
 
+	// Same anchor the server uses to resolve presets at run time.
+	const anchorTimezone =
+		workspaces.find((w) => w.id === workspaceIds[0])?.timezone ??
+		current?.timezone ??
+		"UTC";
+
 	const mutation = useMutation({
-		mutationFn: () => {
+		mutationFn: async (): Promise<{
+			report: Report;
+			snapshot: ReportSnapshot | null;
+			runError: string | null;
+		} | null> => {
 			const parsedTags = tags
 				.split(",")
 				.map((tag) => tag.trim())
@@ -128,14 +148,43 @@ export function ReportForm({
 				filters: reportFilters,
 				note,
 			};
-			return editing
-				? api.updateReport(editing.id, input)
-				: api.createReport(input);
+			if (editing) {
+				await api.updateReport(editing.id, input);
+				return null;
+			}
+			const report = await api.createReport(input);
+			// A failed first run (e.g. a template error) must not look like a
+			// failed create: the definition exists and can be fixed and re-run.
+			try {
+				return {
+					report,
+					snapshot: await api.runReport(report.id),
+					runError: null,
+				};
+			} catch (err) {
+				return {
+					report,
+					snapshot: null,
+					runError: err instanceof Error ? err.message : String(err),
+				};
+			}
 		},
-		onSuccess: async () => {
+		onSuccess: async (result) => {
 			await queryClient.invalidateQueries({ queryKey: ["reports"] });
+			if (result?.snapshot) {
+				await queryClient.invalidateQueries({
+					queryKey: ["report-snapshots", result.report.id],
+				});
+			}
 			setError(null);
-			onDone();
+			if (result?.runError) {
+				toast.error(t("reports.form.runFailed", { message: result.runError }));
+			}
+			onComplete(
+				result?.snapshot
+					? { report: result.report, snapshot: result.snapshot }
+					: undefined,
+			);
 		},
 		onError: (err: Error) => setError(err.message),
 	});
@@ -155,187 +204,182 @@ export function ReportForm({
 	};
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="font-heading text-base">
-					{editing ? t("reports.editTitle") : t("reports.newTitle")}
-				</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<form
-					className="flex flex-col gap-4"
-					onSubmit={(e) => {
-						e.preventDefault();
-						mutation.mutate();
-					}}
-				>
-					<div className="grid gap-4 sm:grid-cols-2">
+		<form
+			className="flex flex-col gap-4"
+			onSubmit={(e) => {
+				e.preventDefault();
+				mutation.mutate();
+			}}
+		>
+			<div className="grid gap-4 sm:grid-cols-2">
+				<div className="flex flex-col gap-2">
+					<Label htmlFor="report-name">{t("reports.name")}</Label>
+					<Input
+						id="report-name"
+						value={name}
+						onChange={(e) => setName(e.target.value)}
+						required
+					/>
+				</div>
+				<div className="flex flex-col gap-2">
+					<Label>{t("reports.template")}</Label>
+					<Select value={selectedTemplateId} onValueChange={setTemplateId}>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{availableTemplates.map((template) => (
+								<SelectItem key={template.id} value={template.id}>
+									{template.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+			</div>
+
+			{workspaces.length > 1 && (
+				<div className="flex flex-col gap-2">
+					<Label>{t("reports.workspaces")}</Label>
+					<div className="flex flex-wrap gap-4">
+						{workspaces.map((workspace) => (
+							<label
+								key={workspace.id}
+								htmlFor={`report-ws-${workspace.id}`}
+								className="flex items-center gap-2 text-sm"
+							>
+								<Checkbox
+									id={`report-ws-${workspace.id}`}
+									checked={workspaceIds.includes(workspace.id)}
+									onCheckedChange={() => toggleWorkspace(workspace.id)}
+								/>
+								{workspace.name}
+							</label>
+						))}
+					</div>
+				</div>
+			)}
+
+			<div className="grid gap-4 sm:grid-cols-3">
+				<div className="flex flex-col gap-2">
+					<Label>{t("reports.dateRange")}</Label>
+					<Select
+						value={rangeChoice}
+						onValueChange={(v) =>
+							setRangeChoice(v as DateRangePreset | "custom")
+						}
+					>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{PRESETS.map((preset) => (
+								<SelectItem key={preset} value={preset}>
+									{t(`reports.range.${preset}`)}
+								</SelectItem>
+							))}
+							<SelectItem value="custom">
+								{t("reports.range.custom")}
+							</SelectItem>
+						</SelectContent>
+					</Select>
+					{rangeChoice !== "custom" && (
+						<p className="text-muted-foreground text-xs">
+							{t(
+								"reports.form.presetPreview",
+								resolveDateRange(rangeChoice, anchorTimezone),
+							)}
+						</p>
+					)}
+				</div>
+				{rangeChoice === "custom" && (
+					<>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="report-name">{t("reports.name")}</Label>
+							<Label htmlFor="report-from">{t("reports.from")}</Label>
 							<Input
-								id="report-name"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
+								id="report-from"
+								type="date"
+								value={from}
+								onChange={(e) => setFrom(e.target.value)}
 								required
 							/>
 						</div>
 						<div className="flex flex-col gap-2">
-							<Label>{t("reports.template")}</Label>
-							<Select value={selectedTemplateId} onValueChange={setTemplateId}>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{availableTemplates.map((template) => (
-										<SelectItem key={template.id} value={template.id}>
-											{template.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<Label htmlFor="report-to">{t("reports.to")}</Label>
+							<Input
+								id="report-to"
+								type="date"
+								value={to}
+								onChange={(e) => setTo(e.target.value)}
+								required
+							/>
 						</div>
-					</div>
+					</>
+				)}
+			</div>
 
-					{workspaces.length > 1 && (
-						<div className="flex flex-col gap-2">
-							<Label>{t("reports.workspaces")}</Label>
-							<div className="flex flex-wrap gap-4">
-								{workspaces.map((workspace) => (
-									<label
-										key={workspace.id}
-										htmlFor={`report-ws-${workspace.id}`}
-										className="flex items-center gap-2 text-sm"
-									>
-										<Checkbox
-											id={`report-ws-${workspace.id}`}
-											checked={workspaceIds.includes(workspace.id)}
-											onCheckedChange={() => toggleWorkspace(workspace.id)}
-										/>
-										{workspace.name}
-									</label>
-								))}
-							</div>
-						</div>
-					)}
-
-					<div className="grid gap-4 sm:grid-cols-3">
-						<div className="flex flex-col gap-2">
-							<Label>{t("reports.dateRange")}</Label>
-							<Select
-								value={rangeChoice}
-								onValueChange={(v) =>
-									setRangeChoice(v as DateRangePreset | "custom")
-								}
+			{singleWorkspaceId && (projects.data?.length ?? 0) > 0 && (
+				<div className="flex flex-col gap-2">
+					<Label>{t("reports.projects")}</Label>
+					<div className="flex flex-wrap gap-4">
+						{(projects.data ?? []).map((project) => (
+							<label
+								key={project.id}
+								htmlFor={`report-prj-${project.id}`}
+								className="flex items-center gap-2 text-sm"
 							>
-								<SelectTrigger>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{PRESETS.map((preset) => (
-										<SelectItem key={preset} value={preset}>
-											{t(`reports.range.${preset}`)}
-										</SelectItem>
-									))}
-									<SelectItem value="custom">
-										{t("reports.range.custom")}
-									</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-						{rangeChoice === "custom" && (
-							<>
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="report-from">{t("reports.from")}</Label>
-									<Input
-										id="report-from"
-										type="date"
-										value={from}
-										onChange={(e) => setFrom(e.target.value)}
-										required
-									/>
-								</div>
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="report-to">{t("reports.to")}</Label>
-									<Input
-										id="report-to"
-										type="date"
-										value={to}
-										onChange={(e) => setTo(e.target.value)}
-										required
-									/>
-								</div>
-							</>
-						)}
+								<Checkbox
+									id={`report-prj-${project.id}`}
+									checked={projectIds.includes(project.id)}
+									onCheckedChange={() =>
+										toggle(projectIds, setProjectIds, project.id)
+									}
+								/>
+								{project.name}
+							</label>
+						))}
 					</div>
+					<p className="text-muted-foreground text-xs">
+						{t("reports.allProjects")}
+					</p>
+				</div>
+			)}
 
-					{singleWorkspaceId && (projects.data?.length ?? 0) > 0 && (
-						<div className="flex flex-col gap-2">
-							<Label>{t("reports.projects")}</Label>
-							<div className="flex flex-wrap gap-4">
-								{(projects.data ?? []).map((project) => (
-									<label
-										key={project.id}
-										htmlFor={`report-prj-${project.id}`}
-										className="flex items-center gap-2 text-sm"
-									>
-										<Checkbox
-											id={`report-prj-${project.id}`}
-											checked={projectIds.includes(project.id)}
-											onCheckedChange={() =>
-												toggle(projectIds, setProjectIds, project.id)
-											}
-										/>
-										{project.name}
-									</label>
-								))}
-							</div>
-							<p className="text-muted-foreground text-xs">
-								{t("reports.allProjects")}
-							</p>
-						</div>
-					)}
+			<div className="flex flex-col gap-2">
+				<Label htmlFor="report-tags">{t("reports.tags")}</Label>
+				<Input
+					id="report-tags"
+					value={tags}
+					onChange={(e) => setTags(e.target.value)}
+					placeholder={t("reports.tagsPlaceholder")}
+				/>
+			</div>
 
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="report-tags">{t("reports.tags")}</Label>
-						<Input
-							id="report-tags"
-							value={tags}
-							onChange={(e) => setTags(e.target.value)}
-							placeholder={t("reports.tagsPlaceholder")}
-						/>
-					</div>
+			<div className="flex flex-col gap-2">
+				<Label htmlFor="report-note">{t("reports.note")}</Label>
+				<Textarea
+					id="report-note"
+					value={note}
+					onChange={(e) => setNote(e.target.value)}
+					rows={6}
+					placeholder={t("reports.notePlaceholder")}
+				/>
+			</div>
 
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="report-note">{t("reports.note")}</Label>
-						<Textarea
-							id="report-note"
-							value={note}
-							onChange={(e) => setNote(e.target.value)}
-							rows={6}
-							placeholder={t("reports.notePlaceholder")}
-						/>
-					</div>
-
-					{error && <p className="text-destructive text-sm">{error}</p>}
-					<div className="flex gap-2">
-						<Button
-							type="submit"
-							disabled={
-								mutation.isPending ||
-								workspaceIds.length === 0 ||
-								!templatesReady
-							}
-						>
-							{editing ? t("reports.saveAction") : t("reports.createAction")}
-						</Button>
-						{editing && (
-							<Button type="button" variant="ghost" onClick={onCancel}>
-								{t("reports.cancelAction")}
-							</Button>
-						)}
-					</div>
-				</form>
-			</CardContent>
-		</Card>
+			{error && <p className="text-destructive text-sm">{error}</p>}
+			<div className="flex gap-2">
+				<Button
+					type="submit"
+					disabled={
+						mutation.isPending || workspaceIds.length === 0 || !templatesReady
+					}
+				>
+					{editing ? t("reports.saveAction") : t("reports.createAction")}
+				</Button>
+				<Button type="button" variant="ghost" onClick={onCancel}>
+					{t("reports.cancelAction")}
+				</Button>
+			</div>
+		</form>
 	);
 }

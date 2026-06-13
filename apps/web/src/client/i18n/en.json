@@ -93,8 +93,8 @@
 	},
 	"reports": {
 		"title": "Reports",
+		"newAction": "New report",
 		"description": "Reports belong to you and can combine entries from any of your workspaces.",
-		"listTitle": "Saved reports",
 		"newTitle": "New report",
 		"editTitle": "Edit report",
 		"name": "Report name",
@@ -121,20 +121,40 @@
 		"createAction": "Create report",
 		"saveAction": "Save",
 		"cancelAction": "Cancel",
-		"runAction": "Run",
-		"snapshotsAction": "Snapshots",
 		"editAction": "Edit",
 		"deleteAction": "Delete",
-		"empty": "No reports yet. Create one above and run it.",
+		"empty": "No reports yet. Create one to get started.",
+		"tabs": {
+			"all": "All",
+			"day": "Daily",
+			"week": "Weekly",
+			"month": "Monthly",
+			"custom": "Custom"
+		},
+		"createNext": {
+			"today": "Create today's report",
+			"yesterday": "Create yesterday's report",
+			"week": "Create this week's report",
+			"month": "Create next month's report",
+			"custom": "Create next period"
+		},
+		"runNext": {
+			"title": "Create report: {{name}}",
+			"suggested": "Suggested",
+			"createAction": "Create"
+		},
+		"form": {
+			"presetPreview": "Currently resolves to {{from}} – {{to}}",
+			"runFailed": "Report saved, but the first run failed: {{message}}"
+		},
 		"snapshots": {
-			"title": "Snapshots: {{name}}",
 			"viewAction": "View",
 			"downloadAction": "Download .md",
 			"deleteAction": "Delete",
 			"empty": "No snapshots yet. Run the report to create one."
 		},
 		"shares": {
-			"title": "Share snapshot ({{date}})",
+			"title": "Share: {{name}}",
 			"shareAction": "Share",
 			"expiresIn": "Expires in",
 			"expiry": {

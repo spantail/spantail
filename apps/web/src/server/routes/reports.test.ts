@@ -1,7 +1,7 @@
 import { todayInTimezone } from "@toxil/core";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
@@ -253,6 +253,108 @@ it("runs a report into an immutable snapshot", async () => {
 	expect(
 		((await full.json()) as { renderedMarkdown: string }).renderedMarkdown,
 	).toContain("Wired the run endpoint");
+});
+
+it("runs a report with a date range override", async () => {
+	const { admin, ws, project } = await setup();
+	// Entry dated outside today, only reachable through the override window.
+	const res = await apiJson(
+		"POST",
+		"/api/v1/work-entries",
+		{
+			workspaceId: ws.id,
+			projectId: project.id,
+			entryDate: "2026-01-15",
+			durationMinutes: 30,
+			description: "Backfilled work",
+			tags: ["api"],
+		},
+		admin,
+	);
+	expect(res.status).toBe(201);
+	const report = (await (
+		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
+	).json()) as { id: string };
+
+	const run = await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/run`,
+		{ dateRange: { from: "2026-01-01", to: "2026-01-31" } },
+		admin,
+	);
+	expect(run.status).toBe(201);
+	const snapshot = (await run.json()) as {
+		renderedMarkdown: string;
+		resolvedFilters: { dateRange: { from: string; to: string } };
+	};
+	expect(snapshot.renderedMarkdown).toContain("Backfilled work");
+	expect(snapshot.resolvedFilters.dateRange).toEqual({
+		from: "2026-01-01",
+		to: "2026-01-31",
+	});
+});
+
+it("hides the preset from templates when the range is overridden", async () => {
+	const { admin, ws } = await setup();
+	const template = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/report-templates`,
+			{ name: "Preset probe", body: "[{{ period.preset }}]{{ period.from }}" },
+			admin,
+		)
+	).json()) as { id: string };
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{ ...baseReport(ws.id), templateId: template.id },
+			admin,
+		)
+	).json()) as { id: string };
+
+	const plain = (await (
+		await apiJson("POST", `/api/v1/reports/${report.id}/run`, undefined, admin)
+	).json()) as { renderedMarkdown: string };
+	expect(plain.renderedMarkdown).toContain("[today]");
+
+	const overridden = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/reports/${report.id}/run`,
+			{ dateRange: { from: "2026-02-01", to: "2026-02-28" } },
+			admin,
+		)
+	).json()) as { renderedMarkdown: string };
+	expect(overridden.renderedMarkdown).toBe("[]2026-02-01");
+});
+
+it("rejects malformed run bodies", async () => {
+	const { admin, ws } = await setup();
+	const report = (await (
+		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
+	).json()) as { id: string };
+
+	for (const body of [
+		{ dateRange: { from: "2026-02-01", to: "2026-01-31" } }, // from > to
+		{ dateRange: { from: "not-a-date", to: "2026-01-31" } },
+	]) {
+		const run = await apiJson(
+			"POST",
+			`/api/v1/reports/${report.id}/run`,
+			body,
+			admin,
+		);
+		expect(run.status).toBe(400);
+	}
+
+	// Raw garbage that is not JSON at all.
+	const garbage = await appFetch(`/api/v1/reports/${report.id}/run`, {
+		method: "POST",
+		headers: { "content-type": "application/json", cookie: admin },
+		body: "not json",
+	});
+	expect(garbage.status).toBe(400);
 });
 
 it("guards snapshots by report ownership and supports delete", async () => {

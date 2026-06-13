@@ -1,15 +1,18 @@
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Report, ReportSnapshot, ReportTemplate } from "@toxil/core";
+import {
+	formatPeriodLabel,
+	type PeriodUnit,
+	periodUnitOf,
+	type Report,
+	type ReportSnapshot,
+	type ReportTemplate,
+} from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportForm } from "@/components/report-form";
-import { ReportList } from "@/components/report-list";
-import {
-	downloadMarkdown,
-	ReportSnapshotsDialog,
-} from "@/components/report-snapshots-dialog";
+import { ReportSeriesCard } from "@/components/report-series-card";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -17,25 +20,31 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { downloadSnapshotMarkdown } from "@/lib/report-download";
 import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/reports")({
 	component: ReportsPage,
 });
 
+const UNIT_ORDER: PeriodUnit[] = ["day", "week", "month", "custom"];
+
 function ReportsPage() {
 	const { t } = useTranslation();
 	const { workspaces } = useWorkspace();
+	const [formOpen, setFormOpen] = useState(false);
 	const [editing, setEditing] = useState<Report | null>(null);
-	const [createdCount, setCreatedCount] = useState(0);
-	const [snapshotsFor, setSnapshotsFor] = useState<Report | null>(null);
+	// Remount key so the form re-derives its initial state on every open.
+	const [instanceId, setInstanceId] = useState(0);
+	const [tab, setTab] = useState<string>("all");
 	const [viewing, setViewing] = useState<{
 		report: Report;
 		snapshot: ReportSnapshot;
 	} | null>(null);
 
-	// Reports are user-owned and can scope any membership workspace, so the
+	// Reports are user-owned and can filter any membership workspace, so the
 	// template pool is the union across all of them.
 	const templateQueries = useQueries({
 		queries: workspaces.map((workspace) => ({
@@ -57,57 +66,127 @@ function ReportsPage() {
 	// validation in the form: a custom template would look unavailable.
 	const templatesReady = templateQueries.every((query) => !query.isPending);
 
+	const reports = useQuery({
+		queryKey: ["reports"],
+		queryFn: () => api.listReports(),
+	});
+	const rows = reports.data ?? [];
+	const presentUnits = UNIT_ORDER.filter((unit) =>
+		rows.some((report) => periodUnitOf(report.filters.dateRange) === unit),
+	);
+	// Deleting the last series of a unit removes its tab; fall back to All.
+	const activeTab =
+		tab === "all" || presentUnits.includes(tab as PeriodUnit) ? tab : "all";
+
+	const openCreate = () => {
+		setEditing(null);
+		setInstanceId((id) => id + 1);
+		setFormOpen(true);
+	};
+	const openEdit = (report: Report) => {
+		setEditing(report);
+		setInstanceId((id) => id + 1);
+		setFormOpen(true);
+	};
+	const closeForm = () => {
+		setFormOpen(false);
+		setEditing(null);
+	};
+
 	if (workspaces.length === 0) {
 		return (
 			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
 		);
 	}
 
+	const seriesList = (unit: PeriodUnit | "all") => (
+		<div className="flex flex-col gap-4">
+			{rows
+				.filter(
+					(report) =>
+						unit === "all" || periodUnitOf(report.filters.dateRange) === unit,
+				)
+				.map((report) => (
+					<ReportSeriesCard
+						key={report.id}
+						report={report}
+						templates={templates}
+						onEdit={openEdit}
+						onView={(report, snapshot) => setViewing({ report, snapshot })}
+					/>
+				))}
+		</div>
+	);
+
 	return (
 		<div className="flex max-w-3xl flex-col gap-4">
-			<h1 className="font-heading text-lg font-semibold">
-				{t("reports.title")}
-			</h1>
+			<div className="flex items-center justify-between gap-2">
+				<h1 className="font-heading text-lg font-semibold">
+					{t("reports.title")}
+				</h1>
+				<Button onClick={openCreate}>{t("reports.newAction")}</Button>
+			</div>
 			<p className="text-muted-foreground text-sm">
 				{t("reports.description")}
 			</p>
-			<ReportForm
-				// A draft is personal, so it survives workspace switches; the
-				// counter resets the form after a successful create.
-				key={`${editing?.id ?? "new"}:${createdCount}`}
-				templates={templates}
-				templatesReady={templatesReady}
-				editing={editing}
-				onDone={() => {
-					if (!editing) setCreatedCount((count) => count + 1);
-					setEditing(null);
-				}}
-				onCancel={() => setEditing(null)}
-			/>
-			<ReportList
-				templates={templates}
-				onEdit={setEditing}
-				onView={(report, snapshot) => setViewing({ report, snapshot })}
-				onSnapshots={setSnapshotsFor}
-			/>
-			{snapshotsFor && (
-				<ReportSnapshotsDialog
-					report={snapshotsFor}
-					onClose={() => setSnapshotsFor(null)}
-					onView={(snapshot) => setViewing({ report: snapshotsFor, snapshot })}
-				/>
+
+			{rows.length === 0 && !reports.isPending ? (
+				<p className="text-muted-foreground text-sm">{t("reports.empty")}</p>
+			) : (
+				<Tabs value={activeTab} onValueChange={setTab}>
+					<TabsList>
+						<TabsTrigger value="all">{t("reports.tabs.all")}</TabsTrigger>
+						{presentUnits.map((unit) => (
+							<TabsTrigger key={unit} value={unit}>
+								{t(`reports.tabs.${unit}`)}
+							</TabsTrigger>
+						))}
+					</TabsList>
+					<TabsContent value="all">{seriesList("all")}</TabsContent>
+					{presentUnits.map((unit) => (
+						<TabsContent key={unit} value={unit}>
+							{seriesList(unit)}
+						</TabsContent>
+					))}
+				</Tabs>
 			)}
+
+			<Dialog open={formOpen} onOpenChange={(open) => !open && closeForm()}>
+				<DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+					<DialogHeader>
+						<DialogTitle className="font-heading">
+							{editing ? t("reports.editTitle") : t("reports.newTitle")}
+						</DialogTitle>
+					</DialogHeader>
+					<ReportForm
+						key={`${editing?.id ?? "new"}:${instanceId}`}
+						templates={templates}
+						templatesReady={templatesReady}
+						editing={editing}
+						onComplete={(next) => {
+							closeForm();
+							if (next) setViewing(next);
+						}}
+						onCancel={closeForm}
+					/>
+				</DialogContent>
+			</Dialog>
+
 			{viewing && (
 				<Dialog open onOpenChange={(open) => !open && setViewing(null)}>
 					<DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
 						<DialogHeader>
 							<DialogTitle className="flex items-center justify-between gap-2 pr-6">
-								{viewing.report.name}
+								{viewing.report.name}{" "}
+								{formatPeriodLabel(viewing.snapshot.resolvedFilters.dateRange)}
 								<Button
 									variant="outline"
 									size="sm"
 									onClick={() =>
-										downloadMarkdown(viewing.report, viewing.snapshot)
+										downloadSnapshotMarkdown(
+											viewing.report.name,
+											viewing.snapshot,
+										)
 									}
 								>
 									{t("reports.snapshots.downloadAction")}
