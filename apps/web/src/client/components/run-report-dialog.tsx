@@ -65,14 +65,21 @@ export function RunReportDialog({
 	const mutation = useMutation({
 		// Accepting the preset's own current resolution runs without an
 		// override: the server resolves the same dates and templates keep
-		// seeing period.preset. Any other range is an explicit override.
-		mutationFn: () =>
-			api.runReport(
+		// seeing period.preset. Any other range — including dates that were
+		// the preset's resolution when the dialog opened but no longer are
+		// at submit time (midnight passed) — sends the displayed absolute
+		// dates, so what the user confirmed is exactly what runs.
+		mutationFn: () => {
+			const presetAtSubmit = preset ? resolveDateRange(preset, timezone) : null;
+			return api.runReport(
 				report.id,
-				presetNow && presetNow.from === from && presetNow.to === to
+				presetAtSubmit &&
+					presetAtSubmit.from === from &&
+					presetAtSubmit.to === to
 					? undefined
 					: { dateRange: { from, to } },
-			),
+			);
+		},
 		onSuccess: async (snapshot) => {
 			await queryClient.invalidateQueries({
 				queryKey: ["report-snapshots", report.id],
