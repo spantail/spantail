@@ -108,7 +108,15 @@ export function zonedDateTimeToUtc(
 		timeZone,
 		new Date(guess - offset1 * 60000),
 	);
-	return new Date(guess - offset2 * 60000).toISOString();
+	const instant = new Date(guess - offset2 * 60000);
+	// A spring-forward gap time does not exist: offset2 lands it before the gap,
+	// so it round-trips to a different wall clock. Normalize forward to the first
+	// real instant (using the pre-transition offset) so the value is stable.
+	const want = `${String(h ?? 0).padStart(2, "0")}:${String(mi ?? 0).padStart(2, "0")}`;
+	if (utcToZonedTime(instant.toISOString(), timeZone) !== want) {
+		return new Date(guess - offset1 * 60000).toISOString();
+	}
+	return instant.toISOString();
 }
 
 /** Wall-clock time (`HH:MM`) of a UTC timestamp in the given IANA timezone. */

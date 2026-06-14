@@ -106,6 +106,17 @@ it("resolves DST-transition times against the actual instant", () => {
 	);
 });
 
+it("normalizes a non-existent spring-forward gap time forward", () => {
+	// 02:30 does not exist on 2026-03-08 in New York (02:00→03:00). Normalize to
+	// 03:30 EDT (07:30Z) rather than rolling back to 01:30.
+	expect(zonedDateTimeToUtc("2026-03-08", "02:30", "America/New_York")).toBe(
+		"2026-03-08T07:30:00.000Z",
+	);
+	expect(utcToZonedTime("2026-03-08T07:30:00.000Z", "America/New_York")).toBe(
+		"03:30",
+	);
+});
+
 it("round-trips zoned time through UTC", () => {
 	for (const tz of ["UTC", "Asia/Tokyo", "America/New_York"]) {
 		for (const time of ["00:00", "09:30", "23:45"]) {
