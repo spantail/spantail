@@ -71,7 +71,7 @@ export function EntryList({
 					<TableRow key={entry.id}>
 						<TableCell className="text-muted-foreground whitespace-nowrap">
 							{formatEntryDate(entry.entryDate, i18n.language, {
-								year: "numeric",
+								weekday: "short",
 								month: "short",
 								day: "numeric",
 							})}
