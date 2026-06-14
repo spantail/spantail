@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { todayInTimezone } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +12,7 @@ import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
+import { formatEntryDate } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
@@ -60,8 +62,15 @@ function Timeline({
 	workspaceId: string;
 	userId: string;
 }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const { current } = useWorkspace();
 	const { openCreate } = useEntryDialog();
+	const today = todayInTimezone(current?.timezone ?? "UTC");
+	const dateLabel = formatEntryDate(today, i18n.language, {
+		weekday: "long",
+		month: "long",
+		day: "numeric",
+	});
 	const projects = useProjects();
 	const entries = useInfiniteQuery({
 		queryKey: ["work-entries", workspaceId, "timeline", userId],
@@ -79,7 +88,15 @@ function Timeline({
 	const allEntries = entries.data?.pages.flat() ?? [];
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="flex flex-col gap-7">
+			<div>
+				<h1 className="font-heading text-xl font-semibold tracking-tight">
+					{t("nav.home")}
+				</h1>
+				<p className="text-muted-foreground mt-0.5 text-sm">
+					{t("home.subtitle", { date: dateLabel })}
+				</p>
+			</div>
 			<DashboardStats scope={{ workspaceId, userId }} breakdown="project" />
 			<section className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold">

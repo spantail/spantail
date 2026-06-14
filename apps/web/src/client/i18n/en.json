@@ -20,6 +20,13 @@
 	"errors": {
 		"generic": "Something went wrong. Please try again."
 	},
+	"theme": {
+		"toDark": "Switch to dark mode",
+		"toLight": "Switch to light mode"
+	},
+	"home": {
+		"subtitle": "{{date}} · your time at a glance."
+	},
 	"nav": {
 		"home": "Home",
 		"switchLanguage": "日本語に切り替え",
@@ -53,9 +60,15 @@
 		"thisMonth": "This month",
 		"entryCount_one": "{{count}} entry",
 		"entryCount_other": "{{count}} entries",
-		"last14Days": "Last 14 days",
+		"vsLastWeek": "vs last week {{duration}}",
+		"activity": "Activity",
+		"dailyFocusAvg": "Daily focus · avg {{avg}}/day",
+		"avgLabel": "avg {{value}}",
+		"range14": "14d",
+		"range28": "28d",
 		"byProject": "By project",
 		"byUser": "By member",
+		"totalThisMonth": "{{total}} · this month",
 		"noData": "No activity yet this month."
 	},
 	"timeline": {

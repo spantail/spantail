@@ -20,6 +20,13 @@
 	"errors": {
 		"generic": "問題が発生しました。もう一度お試しください。"
 	},
+	"theme": {
+		"toDark": "ダークモードに切り替え",
+		"toLight": "ライトモードに切り替え"
+	},
+	"home": {
+		"subtitle": "{{date}} · あなたの時間をひと目で。"
+	},
 	"nav": {
 		"home": "ホーム",
 		"switchLanguage": "Switch to English",
@@ -52,9 +59,15 @@
 		"thisWeek": "今週",
 		"thisMonth": "今月",
 		"entryCount_other": "{{count}}件",
-		"last14Days": "直近14日",
+		"vsLastWeek": "先週比 {{duration}}",
+		"activity": "アクティビティ",
+		"dailyFocusAvg": "日々の集中 · 平均 {{avg}}/日",
+		"avgLabel": "平均 {{value}}",
+		"range14": "14日",
+		"range28": "28日",
 		"byProject": "プロジェクト別",
 		"byUser": "メンバー別",
+		"totalThisMonth": "{{total}} · 今月",
 		"noData": "今月の記録はまだありません。"
 	},
 	"timeline": {
