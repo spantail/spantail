@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { Project, WorkEntry } from "@toxil/core";
 import {
 	formatDuration,
+	shiftDays,
 	todayInTimezone,
 	utcToZonedTime,
 	zonedDateTimeToUtc,
@@ -35,27 +36,42 @@ interface EntryFormProps {
 	onCancel: () => void;
 }
 
-/** Minutes between two `HH:MM` times, wrapping past midnight; null if unset. */
-function minutesBetween(start: string, end: string): number | null {
-	if (!start || !end) return null;
-	const [sh = NaN, sm = NaN] = start.split(":").map(Number);
-	const [eh = NaN, em = NaN] = end.split(":").map(Number);
-	if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return null;
-	let mins = eh * 60 + em - (sh * 60 + sm);
-	if (mins < 0) mins += 24 * 60;
-	return mins;
+/**
+ * True elapsed minutes between two `HH:MM` wall times on `date` in the given
+ * timezone. An end clock at or before the start is treated as the next day.
+ * Uses zoned instants, so DST transitions within the range are counted.
+ */
+function rangeMinutes(
+	date: string,
+	startTime: string,
+	endTime: string,
+	timeZone: string,
+): number | null {
+	if (!startTime || !endTime) return null;
+	const startMs = new Date(
+		zonedDateTimeToUtc(date, startTime, timeZone),
+	).getTime();
+	const endDate = timeBefore(endTime, startTime) ? shiftDays(date, 1) : date;
+	const endMs = new Date(
+		zonedDateTimeToUtc(endDate, endTime, timeZone),
+	).getTime();
+	return Math.round((endMs - startMs) / 60000);
 }
 
-/** Adds whole minutes to an `HH:MM` time, wrapping past midnight. */
-function addMinutes(time: string, mins: number): string {
-	if (!time || !mins) return "";
-	const [hh = NaN, mm = NaN] = time.split(":").map(Number);
-	if (Number.isNaN(hh) || Number.isNaN(mm)) return "";
-	let total = (hh * 60 + mm + mins) % (24 * 60);
-	if (total < 0) total += 24 * 60;
-	return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
-		total % 60,
-	).padStart(2, "0")}`;
+/** The `HH:MM` end clock `mins` after `startTime` on `date` (in `timeZone`). */
+function endClock(
+	date: string,
+	startTime: string,
+	mins: number,
+	timeZone: string,
+): string {
+	const startMs = new Date(
+		zonedDateTimeToUtc(date, startTime, timeZone),
+	).getTime();
+	return utcToZonedTime(
+		new Date(startMs + mins * 60000).toISOString(),
+		timeZone,
+	);
 }
 
 /** True when `HH:MM` time `a` is earlier in the day than `b`. */
@@ -100,24 +116,25 @@ export function EntryForm({
 	const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
 	const [error, setError] = useState<string | null>(null);
 
-	// Start/end times drive the duration, but minutes can still be entered
-	// directly (and editing them nudges the end time).
-	const derived = minutesBetween(startTime, endTime);
+	// Start/end times drive the duration (counted across DST transitions), but
+	// minutes can still be entered directly, which nudges the end time.
+	const derived = rangeMinutes(entryDate, startTime, endTime, timezone);
 	const endsNextDay =
 		Boolean(startTime && endTime) && timeBefore(endTime, startTime);
 	const handleStartTime = (value: string) => {
 		setStartTime(value);
-		const mins = minutesBetween(value, endTime);
+		const mins = rangeMinutes(entryDate, value, endTime, timezone);
 		if (mins != null) setDuration(String(mins));
 	};
 	const handleEndTime = (value: string) => {
 		setEndTime(value);
-		const mins = minutesBetween(startTime, value);
+		const mins = rangeMinutes(entryDate, startTime, value, timezone);
 		if (mins != null) setDuration(String(mins));
 	};
 	const handleDuration = (value: string) => {
 		setDuration(value);
-		if (startTime && value) setEndTime(addMinutes(startTime, Number(value)));
+		if (startTime && value)
+			setEndTime(endClock(entryDate, startTime, Number(value), timezone));
 	};
 
 	const mutation = useMutation({
