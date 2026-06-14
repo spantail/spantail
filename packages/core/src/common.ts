@@ -101,22 +101,24 @@ export function zonedDateTimeToUtc(
 	const [y, mo, d] = date.split("-").map(Number);
 	const [h, mi] = time.split(":").map(Number);
 	const guess = Date.UTC(y ?? 0, (mo ?? 1) - 1, d ?? 1, h ?? 0, mi ?? 0);
-	// Two passes: the first offset is sampled at the naive guess, the second at
-	// the resulting instant, so the result is correct across DST transitions.
+	// Sample the offset at the naive guess, then at the resulting instant, giving
+	// two candidate instants that bracket any nearby DST transition.
 	const offset1 = timeZoneOffsetMinutes(timeZone, new Date(guess));
-	const offset2 = timeZoneOffsetMinutes(
-		timeZone,
-		new Date(guess - offset1 * 60000),
-	);
-	const instant = new Date(guess - offset2 * 60000);
-	// A spring-forward gap time does not exist: offset2 lands it before the gap,
-	// so it round-trips to a different wall clock. Normalize forward to the first
-	// real instant (using the pre-transition offset) so the value is stable.
+	const utc1 = guess - offset1 * 60000;
+	const offset2 = timeZoneOffsetMinutes(timeZone, new Date(utc1));
+	const utc2 = guess - offset2 * 60000;
 	const want = `${String(h ?? 0).padStart(2, "0")}:${String(mi ?? 0).padStart(2, "0")}`;
-	if (utcToZonedTime(instant.toISOString(), timeZone) !== want) {
-		return new Date(guess - offset1 * 60000).toISOString();
+	// Prefer the candidate whose wall clock matches the request; this resolves
+	// normal times and transitions in either direction.
+	if (utcToZonedTime(new Date(utc2).toISOString(), timeZone) === want) {
+		return new Date(utc2).toISOString();
 	}
-	return instant.toISOString();
+	if (utcToZonedTime(new Date(utc1).toISOString(), timeZone) === want) {
+		return new Date(utc1).toISOString();
+	}
+	// A non-existent spring-forward gap time matches neither candidate; normalize
+	// forward to the first real instant (the later candidate), in any zone.
+	return new Date(Math.max(utc1, utc2)).toISOString();
 }
 
 /** Wall-clock time (`HH:MM`) of a UTC timestamp in the given IANA timezone. */

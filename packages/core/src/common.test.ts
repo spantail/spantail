@@ -115,6 +115,14 @@ it("normalizes a non-existent spring-forward gap time forward", () => {
 	expect(utcToZonedTime("2026-03-08T07:30:00.000Z", "America/New_York")).toBe(
 		"03:30",
 	);
+	// Same gap in a zone whose transition precedes the naive UTC guess: Berlin
+	// jumps 02:00→03:00 at 01:00Z, so 02:30 normalizes forward to 03:30 (01:30Z).
+	expect(zonedDateTimeToUtc("2026-03-29", "02:30", "Europe/Berlin")).toBe(
+		"2026-03-29T01:30:00.000Z",
+	);
+	expect(utcToZonedTime("2026-03-29T01:30:00.000Z", "Europe/Berlin")).toBe(
+		"03:30",
+	);
 });
 
 it("round-trips zoned time through UTC", () => {
