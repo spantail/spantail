@@ -75,6 +75,14 @@ function endClock(
 	);
 }
 
+/** Parses the minutes field to a positive integer, or null if not finite. */
+function parseMinutes(value: string): number | null {
+	const minutes = Number(value);
+	return value !== "" && Number.isFinite(minutes) && minutes > 0
+		? Math.floor(minutes)
+		: null;
+}
+
 /** True when `HH:MM` time `a` is earlier in the day than `b`. */
 function timeBefore(a: string, b: string): boolean {
 	const [ah, am] = a.split(":").map(Number);
@@ -134,8 +142,9 @@ export function EntryForm({
 	};
 	const handleDuration = (value: string) => {
 		setDuration(value);
-		if (startTime && value)
-			setEndTime(endClock(entryDate, startTime, Number(value), timezone));
+		const mins = parseMinutes(value);
+		if (startTime && mins != null)
+			setEndTime(endClock(entryDate, startTime, mins, timezone));
 	};
 	// Changing the date re-derives the duration: elapsed minutes depend on the
 	// date when the range spans a DST transition.
@@ -151,13 +160,14 @@ export function EntryForm({
 			// Start is the entry date at the start clock in the workspace timezone.
 			// The end instant is the start plus the (authoritative) duration, so it
 			// stays correct past midnight and for entries of 24h or longer.
+			const minutes = parseMinutes(duration);
 			const startedAt = startTime
 				? zonedDateTimeToUtc(entryDate, startTime, timezone)
 				: undefined;
 			const endedAt =
-				startedAt && duration
+				startedAt && minutes != null
 					? new Date(
-							new Date(startedAt).getTime() + Number(duration) * 60000,
+							new Date(startedAt).getTime() + minutes * 60000,
 						).toISOString()
 					: endTime
 						? zonedDateTimeToUtc(entryDate, endTime, timezone)
