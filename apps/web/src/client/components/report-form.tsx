@@ -261,63 +261,59 @@ export function ReportForm({
 				</div>
 			)}
 
-			<div className="grid gap-5 sm:grid-cols-3">
-				<div className="flex flex-col gap-2">
-					<Label>{t("reports.dateRange")}</Label>
-					<Select
-						value={rangeChoice}
-						onValueChange={(v) =>
-							setRangeChoice(v as DateRangePreset | "custom")
-						}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{PRESETS.map((preset) => (
-								<SelectItem key={preset} value={preset}>
-									{t(`reports.range.${preset}`)}
-								</SelectItem>
-							))}
-							<SelectItem value="custom">
-								{t("reports.range.custom")}
+			<div className="flex flex-col gap-2">
+				<Label>{t("reports.dateRange")}</Label>
+				<Select
+					value={rangeChoice}
+					onValueChange={(v) => setRangeChoice(v as DateRangePreset | "custom")}
+				>
+					<SelectTrigger>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{PRESETS.map((preset) => (
+							<SelectItem key={preset} value={preset}>
+								{t(`reports.range.${preset}`)}
 							</SelectItem>
-						</SelectContent>
-					</Select>
-					{rangeChoice !== "custom" && (
-						<p className="text-muted-foreground text-xs">
-							{t(
-								"reports.form.presetPreview",
-								resolveDateRange(rangeChoice, anchorTimezone),
-							)}
-						</p>
-					)}
-				</div>
-				{rangeChoice === "custom" && (
-					<>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="report-from">{t("reports.from")}</Label>
-							<Input
-								id="report-from"
-								type="date"
-								value={from}
-								onChange={(e) => setFrom(e.target.value)}
-								required
-							/>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="report-to">{t("reports.to")}</Label>
-							<Input
-								id="report-to"
-								type="date"
-								value={to}
-								onChange={(e) => setTo(e.target.value)}
-								required
-							/>
-						</div>
-					</>
+						))}
+						<SelectItem value="custom">{t("reports.range.custom")}</SelectItem>
+					</SelectContent>
+				</Select>
+				{rangeChoice !== "custom" && (
+					<p className="text-muted-foreground text-xs">
+						{t(
+							"reports.form.presetPreview",
+							resolveDateRange(rangeChoice, anchorTimezone),
+						)}
+					</p>
 				)}
 			</div>
+			{rangeChoice === "custom" && (
+				<div className="grid gap-5 sm:grid-cols-2">
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="report-from">{t("reports.from")}</Label>
+						<Input
+							id="report-from"
+							type="date"
+							className="[color-scheme:light] dark:[color-scheme:dark]"
+							value={from}
+							onChange={(e) => setFrom(e.target.value)}
+							required
+						/>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="report-to">{t("reports.to")}</Label>
+						<Input
+							id="report-to"
+							type="date"
+							className="[color-scheme:light] dark:[color-scheme:dark]"
+							value={to}
+							onChange={(e) => setTo(e.target.value)}
+							required
+						/>
+					</div>
+				</div>
+			)}
 
 			{singleWorkspaceId && (projects.data?.length ?? 0) > 0 && (
 				<div className="flex flex-col gap-2">

@@ -120,6 +120,7 @@ export function RunReportDialog({
 							<Input
 								id="run-from"
 								type="date"
+								className="[color-scheme:light] dark:[color-scheme:dark]"
 								value={from}
 								onChange={(e) => setFrom(e.target.value)}
 								required
@@ -130,6 +131,7 @@ export function RunReportDialog({
 							<Input
 								id="run-to"
 								type="date"
+								className="[color-scheme:light] dark:[color-scheme:dark]"
 								value={to}
 								onChange={(e) => setTo(e.target.value)}
 								required
