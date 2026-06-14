@@ -38,9 +38,9 @@ interface EntryFormProps {
 
 /**
  * True elapsed minutes between two `HH:MM` wall times on `date` in the given
- * timezone. An end clock strictly before the start is treated as the next day;
- * equal times are a zero-length range. Uses zoned instants, so DST transitions
- * within the range are counted.
+ * timezone, using zoned instants (so DST transitions are counted). An end
+ * instant at or before the start rolls to the next day, which keeps overnight
+ * ranges — and starts a DST gap normalizes forward — non-negative.
  */
 function rangeMinutes(
 	date: string,
@@ -52,10 +52,12 @@ function rangeMinutes(
 	const startMs = new Date(
 		zonedDateTimeToUtc(date, startTime, timeZone),
 	).getTime();
-	const endDate = timeBefore(endTime, startTime) ? shiftDays(date, 1) : date;
-	const endMs = new Date(
-		zonedDateTimeToUtc(endDate, endTime, timeZone),
-	).getTime();
+	let endMs = new Date(zonedDateTimeToUtc(date, endTime, timeZone)).getTime();
+	if (endMs < startMs) {
+		endMs = new Date(
+			zonedDateTimeToUtc(shiftDays(date, 1), endTime, timeZone),
+		).getTime();
+	}
 	return Math.round((endMs - startMs) / 60000);
 }
 
