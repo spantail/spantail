@@ -356,6 +356,7 @@ export function ReportForm({
 				<Label htmlFor="report-note">{t("reports.note")}</Label>
 				<Textarea
 					id="report-note"
+					className="field-sizing-fixed"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
 					rows={4}

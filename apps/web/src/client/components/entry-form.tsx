@@ -280,6 +280,7 @@ export function EntryForm({
 				<Label htmlFor="entry-note">{t("entries.note")}</Label>
 				<Textarea
 					id="entry-note"
+					className="field-sizing-fixed"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
 					rows={4}
