@@ -88,6 +88,7 @@
 		"startTime": "Start time",
 		"endTime": "End time",
 		"endsNextDay": "Ends next day",
+		"sameAsStart": "Same as start time",
 		"duration": "Minutes",
 		"minutesFromRange": "Calculated from start and end ({{duration}}) — edit to override.",
 		"minutesManual": "Or enter minutes directly.",

@@ -38,8 +38,9 @@ interface EntryFormProps {
 
 /**
  * True elapsed minutes between two `HH:MM` wall times on `date` in the given
- * timezone. An end clock at or before the start is treated as the next day.
- * Uses zoned instants, so DST transitions within the range are counted.
+ * timezone. An end clock strictly before the start is treated as the next day;
+ * equal times are a zero-length range. Uses zoned instants, so DST transitions
+ * within the range are counted.
  */
 function rangeMinutes(
 	date: string,
@@ -136,6 +137,14 @@ export function EntryForm({
 		if (startTime && value)
 			setEndTime(endClock(entryDate, startTime, Number(value), timezone));
 	};
+	// Changing the date re-derives the duration: elapsed minutes depend on the
+	// date when the range spans a DST transition.
+	const handleDate = (value: string) => {
+		setEntryDate(value);
+		const mins = rangeMinutes(value, startTime, endTime, timezone);
+		if (mins != null) setDuration(String(mins));
+	};
+	const sameAsStart = Boolean(startTime && endTime) && derived === 0;
 
 	const mutation = useMutation({
 		mutationFn: () => {
@@ -226,7 +235,7 @@ export function EntryForm({
 					type="date"
 					className="[color-scheme:light] dark:[color-scheme:dark]"
 					value={entryDate}
-					onChange={(e) => setEntryDate(e.target.value)}
+					onChange={(e) => handleDate(e.target.value)}
 					required
 				/>
 			</div>
@@ -249,11 +258,15 @@ export function EntryForm({
 					value={endTime}
 					onChange={(e) => handleEndTime(e.target.value)}
 				/>
-				{endsNextDay && (
+				{sameAsStart ? (
+					<p className="text-muted-foreground text-xs">
+						{t("entries.sameAsStart")}
+					</p>
+				) : endsNextDay ? (
 					<p className="text-muted-foreground text-xs">
 						{t("entries.endsNextDay")}
 					</p>
-				)}
+				) : null}
 			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
 				<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
