@@ -225,7 +225,7 @@ export function ReportForm({
 				<div className="flex flex-col gap-2">
 					<Label>{t("reports.template")}</Label>
 					<Select value={selectedTemplateId} onValueChange={setTemplateId}>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -267,7 +267,7 @@ export function ReportForm({
 					value={rangeChoice}
 					onValueChange={(v) => setRangeChoice(v as DateRangePreset | "custom")}
 				>
-					<SelectTrigger>
+					<SelectTrigger className="w-full">
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
@@ -358,7 +358,7 @@ export function ReportForm({
 					id="report-note"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
-					rows={6}
+					rows={4}
 					placeholder={t("reports.notePlaceholder")}
 				/>
 			</div>
