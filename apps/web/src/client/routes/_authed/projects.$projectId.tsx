@@ -88,11 +88,11 @@ function ProjectPage() {
 	const allEntries = entries.data?.pages.flat() ?? [];
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="flex flex-col gap-7">
 			{/* No page-level log button: the header one pre-selects this project. */}
-			<div className="flex flex-col gap-1">
+			<div className="flex flex-col gap-1.5">
 				<div className="flex items-center gap-2">
-					<h1 className="font-heading text-lg font-semibold">
+					<h1 className="font-heading text-xl font-semibold tracking-tight">
 						{project.data.name}
 					</h1>
 					<Badge
@@ -112,7 +112,7 @@ function ProjectPage() {
 				breakdown="user"
 			/>
 			<section className="flex flex-col gap-3">
-				<h2 className="font-heading text-base font-semibold">
+				<h2 className="font-heading text-lg font-semibold">
 					{t("projects.entriesTitle")}
 				</h2>
 				{entries.isPending ? (

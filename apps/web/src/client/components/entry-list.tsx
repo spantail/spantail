@@ -45,18 +45,30 @@ export function EntryList({
 		<Table>
 			<TableHeader>
 				<TableRow>
-					<TableHead>{t("entries.date")}</TableHead>
-					{showProject && <TableHead>{t("entries.project")}</TableHead>}
-					<TableHead>{t("entries.author")}</TableHead>
-					<TableHead className="text-right">{t("entries.duration")}</TableHead>
-					<TableHead className="w-full">{t("entries.description")}</TableHead>
+					<TableHead className="text-muted-foreground text-xs">
+						{t("entries.date")}
+					</TableHead>
+					{showProject && (
+						<TableHead className="text-muted-foreground text-xs">
+							{t("entries.project")}
+						</TableHead>
+					)}
+					<TableHead className="text-muted-foreground text-xs">
+						{t("entries.author")}
+					</TableHead>
+					<TableHead className="text-muted-foreground text-right text-xs">
+						{t("entries.duration")}
+					</TableHead>
+					<TableHead className="text-muted-foreground w-full text-xs">
+						{t("entries.description")}
+					</TableHead>
 					<TableHead />
 				</TableRow>
 			</TableHeader>
 			<TableBody>
 				{entries.map((entry) => (
-					<TableRow key={entry.id}>
-						<TableCell className="whitespace-nowrap">
+					<TableRow key={entry.id} className="group">
+						<TableCell className="text-muted-foreground whitespace-nowrap">
 							{entry.entryDate}
 						</TableCell>
 						{showProject && (
@@ -67,11 +79,11 @@ export function EntryList({
 						<TableCell className="whitespace-nowrap">
 							{memberName(entry.userId)}
 						</TableCell>
-						<TableCell className="text-right whitespace-nowrap tabular-nums">
+						<TableCell className="text-muted-foreground text-right whitespace-nowrap tabular-nums">
 							{formatDuration(entry.durationMinutes)}
 						</TableCell>
 						<TableCell>
-							<div className="flex flex-wrap items-center gap-1">
+							<div className="flex flex-wrap items-center gap-1.5">
 								<span>{entry.description}</span>
 								{entry.tags.map((tag) => (
 									<Badge key={tag} variant="secondary">
@@ -81,7 +93,9 @@ export function EntryList({
 							</div>
 						</TableCell>
 						<TableCell className="whitespace-nowrap">
-							<EntryActions entry={entry} />
+							<div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+								<EntryActions entry={entry} />
+							</div>
 						</TableCell>
 					</TableRow>
 				))}
