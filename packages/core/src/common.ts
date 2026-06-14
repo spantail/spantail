@@ -101,9 +101,14 @@ export function zonedDateTimeToUtc(
 	const [y, mo, d] = date.split("-").map(Number);
 	const [h, mi] = time.split(":").map(Number);
 	const guess = Date.UTC(y ?? 0, (mo ?? 1) - 1, d ?? 1, h ?? 0, mi ?? 0);
-	// Offset at the guessed instant; correct outside the DST transition hour.
-	const offset = timeZoneOffsetMinutes(timeZone, new Date(guess));
-	return new Date(guess - offset * 60000).toISOString();
+	// Two passes: the first offset is sampled at the naive guess, the second at
+	// the resulting instant, so the result is correct across DST transitions.
+	const offset1 = timeZoneOffsetMinutes(timeZone, new Date(guess));
+	const offset2 = timeZoneOffsetMinutes(
+		timeZone,
+		new Date(guess - offset1 * 60000),
+	);
+	return new Date(guess - offset2 * 60000).toISOString();
 }
 
 /** Wall-clock time (`HH:MM`) of a UTC timestamp in the given IANA timezone. */

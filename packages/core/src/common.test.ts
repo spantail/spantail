@@ -95,6 +95,17 @@ it("extracts the zoned wall-clock time of a UTC instant", () => {
 	);
 });
 
+it("resolves DST-transition times against the actual instant", () => {
+	// 2026-03-08 is US spring-forward; 03:30 is already EDT (UTC-4) → 07:30Z,
+	// not the EST (UTC-5) offset sampled at the naive guess.
+	expect(zonedDateTimeToUtc("2026-03-08", "03:30", "America/New_York")).toBe(
+		"2026-03-08T07:30:00.000Z",
+	);
+	expect(utcToZonedTime("2026-03-08T07:30:00.000Z", "America/New_York")).toBe(
+		"03:30",
+	);
+});
+
 it("round-trips zoned time through UTC", () => {
 	for (const tz of ["UTC", "Asia/Tokyo", "America/New_York"]) {
 		for (const time of ["00:00", "09:30", "23:45"]) {

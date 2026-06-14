@@ -3,7 +3,6 @@ import { Link } from "@tanstack/react-router";
 import type { Project, WorkEntry } from "@toxil/core";
 import {
 	formatDuration,
-	shiftDays,
 	todayInTimezone,
 	utcToZonedTime,
 	zonedDateTimeToUtc,
@@ -123,18 +122,20 @@ export function EntryForm({
 
 	const mutation = useMutation({
 		mutationFn: () => {
-			// entry_date is the local start date; an entry crossing midnight ends
-			// on the next calendar day. Times are in the workspace timezone.
+			// Start is the entry date at the start clock in the workspace timezone.
+			// The end instant is the start plus the (authoritative) duration, so it
+			// stays correct past midnight and for entries of 24h or longer.
 			const startedAt = startTime
 				? zonedDateTimeToUtc(entryDate, startTime, timezone)
 				: undefined;
-			const endedAt = endTime
-				? zonedDateTimeToUtc(
-						endsNextDay ? shiftDays(entryDate, 1) : entryDate,
-						endTime,
-						timezone,
-					)
-				: undefined;
+			const endedAt =
+				startedAt && duration
+					? new Date(
+							new Date(startedAt).getTime() + Number(duration) * 60000,
+						).toISOString()
+					: endTime
+						? zonedDateTimeToUtc(entryDate, endTime, timezone)
+						: undefined;
 			const payload = {
 				projectId,
 				entryDate,
