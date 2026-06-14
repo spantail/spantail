@@ -1,7 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { Project, WorkEntry } from "@toxil/core";
-import { todayInTimezone } from "@toxil/core";
+import {
+	formatDuration,
+	shiftDays,
+	todayInTimezone,
+	utcToZonedTime,
+	zonedDateTimeToUtc,
+} from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,6 +36,36 @@ interface EntryFormProps {
 	onCancel: () => void;
 }
 
+/** Minutes between two `HH:MM` times, wrapping past midnight; null if unset. */
+function minutesBetween(start: string, end: string): number | null {
+	if (!start || !end) return null;
+	const [sh = NaN, sm = NaN] = start.split(":").map(Number);
+	const [eh = NaN, em = NaN] = end.split(":").map(Number);
+	if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return null;
+	let mins = eh * 60 + em - (sh * 60 + sm);
+	if (mins < 0) mins += 24 * 60;
+	return mins;
+}
+
+/** Adds whole minutes to an `HH:MM` time, wrapping past midnight. */
+function addMinutes(time: string, mins: number): string {
+	if (!time || !mins) return "";
+	const [hh = NaN, mm = NaN] = time.split(":").map(Number);
+	if (Number.isNaN(hh) || Number.isNaN(mm)) return "";
+	let total = (hh * 60 + mm + mins) % (24 * 60);
+	if (total < 0) total += 24 * 60;
+	return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(
+		total % 60,
+	).padStart(2, "0")}`;
+}
+
+/** True when `HH:MM` time `a` is earlier in the day than `b`. */
+function timeBefore(a: string, b: string): boolean {
+	const [ah, am] = a.split(":").map(Number);
+	const [bh, bm] = b.split(":").map(Number);
+	return (ah ?? 0) * 60 + (am ?? 0) < (bh ?? 0) * 60 + (bm ?? 0);
+}
+
 /**
  * Create/edit form hosted by the entry dialog. Mounted fresh per open (the
  * dialog keys it), so all state derives from props in the initializers.
@@ -54,13 +90,51 @@ export function EntryForm({
 	const [duration, setDuration] = useState(
 		initial ? String(initial.durationMinutes) : "",
 	);
+	const [startTime, setStartTime] = useState(
+		initial?.startedAt ? utcToZonedTime(initial.startedAt, timezone) : "",
+	);
+	const [endTime, setEndTime] = useState(
+		initial?.endedAt ? utcToZonedTime(initial.endedAt, timezone) : "",
+	);
 	const [description, setDescription] = useState(initial?.description ?? "");
 	const [note, setNote] = useState(initial?.note ?? "");
 	const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
 	const [error, setError] = useState<string | null>(null);
 
+	// Start/end times drive the duration, but minutes can still be entered
+	// directly (and editing them nudges the end time).
+	const derived = minutesBetween(startTime, endTime);
+	const endsNextDay =
+		Boolean(startTime && endTime) && timeBefore(endTime, startTime);
+	const handleStartTime = (value: string) => {
+		setStartTime(value);
+		const mins = minutesBetween(value, endTime);
+		if (mins != null) setDuration(String(mins));
+	};
+	const handleEndTime = (value: string) => {
+		setEndTime(value);
+		const mins = minutesBetween(startTime, value);
+		if (mins != null) setDuration(String(mins));
+	};
+	const handleDuration = (value: string) => {
+		setDuration(value);
+		if (startTime && value) setEndTime(addMinutes(startTime, Number(value)));
+	};
+
 	const mutation = useMutation({
 		mutationFn: () => {
+			// entry_date is the local start date; an entry crossing midnight ends
+			// on the next calendar day. Times are in the workspace timezone.
+			const startedAt = startTime
+				? zonedDateTimeToUtc(entryDate, startTime, timezone)
+				: undefined;
+			const endedAt = endTime
+				? zonedDateTimeToUtc(
+						endsNextDay ? shiftDays(entryDate, 1) : entryDate,
+						endTime,
+						timezone,
+					)
+				: undefined;
 			const payload = {
 				projectId,
 				entryDate,
@@ -76,8 +150,10 @@ export function EntryForm({
 				? api.updateWorkEntry(initial.id, {
 						...payload,
 						note: payload.note ?? null,
+						startedAt: startedAt ?? null,
+						endedAt: endedAt ?? null,
 					})
-				: api.createWorkEntry({ workspaceId, ...payload });
+				: api.createWorkEntry({ workspaceId, ...payload, startedAt, endedAt });
 		},
 		onSuccess: () => {
 			invalidateWorkEntryData(queryClient, workspaceId);
@@ -130,12 +206,38 @@ export function EntryForm({
 				<Input
 					id="entry-date"
 					type="date"
+					className="[color-scheme:light] dark:[color-scheme:dark]"
 					value={entryDate}
 					onChange={(e) => setEntryDate(e.target.value)}
 					required
 				/>
 			</div>
 			<div className="flex flex-col gap-2">
+				<Label htmlFor="entry-start">{t("entries.startTime")}</Label>
+				<Input
+					id="entry-start"
+					type="time"
+					className="[color-scheme:light] dark:[color-scheme:dark]"
+					value={startTime}
+					onChange={(e) => handleStartTime(e.target.value)}
+				/>
+			</div>
+			<div className="flex flex-col gap-2">
+				<Label htmlFor="entry-end">{t("entries.endTime")}</Label>
+				<Input
+					id="entry-end"
+					type="time"
+					className="[color-scheme:light] dark:[color-scheme:dark]"
+					value={endTime}
+					onChange={(e) => handleEndTime(e.target.value)}
+				/>
+				{endsNextDay && (
+					<p className="text-muted-foreground text-xs">
+						{t("entries.endsNextDay")}
+					</p>
+				)}
+			</div>
+			<div className="flex flex-col gap-2 sm:col-span-2">
 				<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
 				<Input
 					id="entry-duration"
@@ -144,11 +246,18 @@ export function EntryForm({
 					step={1}
 					placeholder="60"
 					value={duration}
-					onChange={(e) => setDuration(e.target.value)}
+					onChange={(e) => handleDuration(e.target.value)}
 					required
 				/>
+				<p className="text-muted-foreground text-xs">
+					{derived != null
+						? t("entries.minutesFromRange", {
+								duration: formatDuration(derived),
+							})
+						: t("entries.minutesManual")}
+				</p>
 			</div>
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-col gap-2 sm:col-span-2">
 				<Label htmlFor="entry-tags">{t("entries.tags")}</Label>
 				<Input
 					id="entry-tags"

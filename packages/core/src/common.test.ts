@@ -6,6 +6,8 @@ import {
 	slugSchema,
 	timezoneSchema,
 	todayInTimezone,
+	utcToZonedTime,
+	zonedDateTimeToUtc,
 } from "./common";
 
 it("accepts valid slugs", () => {
@@ -60,4 +62,45 @@ it("computes today in a timezone", () => {
 	expect(todayInTimezone("UTC", now)).toBe("2026-06-11");
 	// ...and still 2026-06-11 in Honolulu (UTC-10).
 	expect(todayInTimezone("Pacific/Honolulu", now)).toBe("2026-06-11");
+});
+
+it("converts a zoned date-time to a UTC instant", () => {
+	expect(zonedDateTimeToUtc("2026-06-14", "09:00", "UTC")).toBe(
+		"2026-06-14T09:00:00.000Z",
+	);
+	// Tokyo is UTC+9 year-round.
+	expect(zonedDateTimeToUtc("2026-06-14", "09:00", "Asia/Tokyo")).toBe(
+		"2026-06-14T00:00:00.000Z",
+	);
+	// New York: EDT (UTC-4) in summer, EST (UTC-5) in winter.
+	expect(zonedDateTimeToUtc("2026-07-01", "09:00", "America/New_York")).toBe(
+		"2026-07-01T13:00:00.000Z",
+	);
+	expect(zonedDateTimeToUtc("2026-01-15", "09:00", "America/New_York")).toBe(
+		"2026-01-15T14:00:00.000Z",
+	);
+});
+
+it("extracts the zoned wall-clock time of a UTC instant", () => {
+	expect(utcToZonedTime("2026-06-14T09:00:00.000Z", "UTC")).toBe("09:00");
+	expect(utcToZonedTime("2026-06-14T00:00:00.000Z", "Asia/Tokyo")).toBe(
+		"09:00",
+	);
+	expect(utcToZonedTime("2026-07-01T13:00:00.000Z", "America/New_York")).toBe(
+		"09:00",
+	);
+	// Midnight must render as 00:00, not 24:00.
+	expect(utcToZonedTime("2026-06-13T15:00:00.000Z", "Asia/Tokyo")).toBe(
+		"00:00",
+	);
+});
+
+it("round-trips zoned time through UTC", () => {
+	for (const tz of ["UTC", "Asia/Tokyo", "America/New_York"]) {
+		for (const time of ["00:00", "09:30", "23:45"]) {
+			expect(
+				utcToZonedTime(zonedDateTimeToUtc("2026-06-14", time, tz), tz),
+			).toBe(time);
+		}
+	}
 });
