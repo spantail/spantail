@@ -173,7 +173,7 @@ export function EntryForm({
 					id="entry-note"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
-					rows={2}
+					rows={4}
 				/>
 			</div>
 			{error && (
