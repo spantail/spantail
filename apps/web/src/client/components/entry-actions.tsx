@@ -1,16 +1,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import type { WorkEntry } from "@toxil/core";
-import { PencilIcon, Trash2Icon } from "lucide-react";
+import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { useEntryDialog } from "@/components/entry-dialog";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { invalidateWorkEntryData } from "@/lib/query";
 
-/** Edit/delete buttons for the viewer's own entries; null for others'. */
+/** Kebab edit/delete menu for the viewer's own entries; null for others'. */
 export function EntryActions({ entry }: { entry: WorkEntry }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
@@ -28,23 +34,30 @@ export function EntryActions({ entry }: { entry: WorkEntry }) {
 	if (entry.userId !== session.user.id) return null;
 
 	return (
-		<div className="flex justify-end gap-1">
-			<Button
-				variant="ghost"
-				size="icon"
-				aria-label={t("entries.editAction")}
-				onClick={() => openEdit(entry)}
-			>
-				<PencilIcon />
-			</Button>
-			<Button
-				variant="ghost"
-				size="icon"
-				aria-label={t("entries.deleteAction")}
-				onClick={() => deleteMutation.mutate()}
-			>
-				<Trash2Icon />
-			</Button>
-		</div>
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="text-muted-foreground size-7"
+					aria-label={t("entries.actionsMenu")}
+				>
+					<MoreHorizontalIcon />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				<DropdownMenuItem onClick={() => openEdit(entry)}>
+					<PencilIcon />
+					{t("entries.editAction")}
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					variant="destructive"
+					onClick={() => deleteMutation.mutate()}
+				>
+					<Trash2Icon />
+					{t("entries.deleteAction")}
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }

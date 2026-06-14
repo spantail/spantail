@@ -12,6 +12,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { formatEntryDate } from "@/lib/format";
 
 interface EntryListProps {
 	entries: WorkEntry[];
@@ -27,7 +28,7 @@ export function EntryList({
 	members,
 	showProject = true,
 }: EntryListProps) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const projectName = (id: string) =>
 		projects.find((p) => p.id === id)?.name ?? id;
 	const memberName = (id: string) =>
@@ -56,20 +57,24 @@ export function EntryList({
 					<TableHead className="text-muted-foreground text-xs">
 						{t("entries.author")}
 					</TableHead>
-					<TableHead className="text-muted-foreground text-right text-xs">
-						{t("entries.duration")}
-					</TableHead>
 					<TableHead className="text-muted-foreground w-full text-xs">
 						{t("entries.description")}
+					</TableHead>
+					<TableHead className="text-muted-foreground text-right text-xs">
+						{t("entries.durationColumn")}
 					</TableHead>
 					<TableHead />
 				</TableRow>
 			</TableHeader>
 			<TableBody>
 				{entries.map((entry) => (
-					<TableRow key={entry.id} className="group">
+					<TableRow key={entry.id}>
 						<TableCell className="text-muted-foreground whitespace-nowrap">
-							{entry.entryDate}
+							{formatEntryDate(entry.entryDate, i18n.language, {
+								year: "numeric",
+								month: "short",
+								day: "numeric",
+							})}
 						</TableCell>
 						{showProject && (
 							<TableCell className="whitespace-nowrap">
@@ -78,9 +83,6 @@ export function EntryList({
 						)}
 						<TableCell className="whitespace-nowrap">
 							{memberName(entry.userId)}
-						</TableCell>
-						<TableCell className="text-muted-foreground text-right whitespace-nowrap tabular-nums">
-							{formatDuration(entry.durationMinutes)}
 						</TableCell>
 						<TableCell>
 							<div className="flex flex-wrap items-center gap-1.5">
@@ -92,10 +94,11 @@ export function EntryList({
 								))}
 							</div>
 						</TableCell>
+						<TableCell className="text-muted-foreground text-right whitespace-nowrap tabular-nums">
+							{formatDuration(entry.durationMinutes)}
+						</TableCell>
 						<TableCell className="whitespace-nowrap">
-							<div className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-								<EntryActions entry={entry} />
-							</div>
+							<EntryActions entry={entry} />
 						</TableCell>
 					</TableRow>
 				))}
