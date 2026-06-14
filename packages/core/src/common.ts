@@ -60,3 +60,77 @@ export function todayInTimezone(
 		day: "2-digit",
 	}).format(now);
 }
+
+/**
+ * Offset of an IANA timezone at a given instant, in minutes
+ * (local wall-clock − UTC). `Asia/Tokyo` → 540; New York in summer → −240.
+ */
+function timeZoneOffsetMinutes(timeZone: string, instant: Date): number {
+	const parts = new Intl.DateTimeFormat("en-US", {
+		timeZone,
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+		hour12: false,
+	}).formatToParts(instant);
+	const get = (type: string) =>
+		Number(parts.find((p) => p.type === type)?.value);
+	const asUtc = Date.UTC(
+		get("year"),
+		get("month") - 1,
+		get("day"),
+		get("hour") % 24, // some engines emit 24 for midnight
+		get("minute"),
+		get("second"),
+	);
+	return Math.round((asUtc - instant.getTime()) / 60000);
+}
+
+/**
+ * Combines a local date (`YYYY-MM-DD`) and wall-clock time (`HH:MM`)
+ * interpreted in the given IANA timezone into a UTC ISO-8601 timestamp.
+ */
+export function zonedDateTimeToUtc(
+	date: string,
+	time: string,
+	timeZone: string,
+): string {
+	const [y, mo, d] = date.split("-").map(Number);
+	const [h, mi] = time.split(":").map(Number);
+	const guess = Date.UTC(y ?? 0, (mo ?? 1) - 1, d ?? 1, h ?? 0, mi ?? 0);
+	// Sample the offset at the naive guess, then at the resulting instant, giving
+	// two candidate instants that bracket any nearby DST transition.
+	const offset1 = timeZoneOffsetMinutes(timeZone, new Date(guess));
+	const utc1 = guess - offset1 * 60000;
+	const offset2 = timeZoneOffsetMinutes(timeZone, new Date(utc1));
+	const utc2 = guess - offset2 * 60000;
+	const want = `${String(h ?? 0).padStart(2, "0")}:${String(mi ?? 0).padStart(2, "0")}`;
+	// Prefer the candidate whose wall clock matches the request; this resolves
+	// normal times and transitions in either direction.
+	if (utcToZonedTime(new Date(utc2).toISOString(), timeZone) === want) {
+		return new Date(utc2).toISOString();
+	}
+	if (utcToZonedTime(new Date(utc1).toISOString(), timeZone) === want) {
+		return new Date(utc1).toISOString();
+	}
+	// A non-existent spring-forward gap time matches neither candidate; normalize
+	// forward to the first real instant (the later candidate), in any zone.
+	return new Date(Math.max(utc1, utc2)).toISOString();
+}
+
+/** Wall-clock time (`HH:MM`) of a UTC timestamp in the given IANA timezone. */
+export function utcToZonedTime(instant: string, timeZone: string): string {
+	const parts = new Intl.DateTimeFormat("en-GB", {
+		timeZone,
+		hour: "2-digit",
+		minute: "2-digit",
+		hour12: false,
+	}).formatToParts(new Date(instant));
+	const get = (type: string) =>
+		parts.find((p) => p.type === type)?.value ?? "00";
+	const hour = String(Number(get("hour")) % 24).padStart(2, "0");
+	return `${hour}:${get("minute")}`;
+}

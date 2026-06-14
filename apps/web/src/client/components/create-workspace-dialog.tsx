@@ -7,6 +7,7 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -49,7 +50,7 @@ export function CreateWorkspaceDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent>
+			<DialogContent size="lg">
 				<DialogHeader>
 					<DialogTitle>{t("settings.createWorkspace.title")}</DialogTitle>
 					<DialogDescription>
@@ -57,7 +58,7 @@ export function CreateWorkspaceDialog({
 					</DialogDescription>
 				</DialogHeader>
 				<form
-					className="flex flex-col gap-4"
+					className="flex flex-col gap-5"
 					onSubmit={(e) => {
 						e.preventDefault();
 						mutation.mutate();
@@ -94,11 +95,18 @@ export function CreateWorkspaceDialog({
 						/>
 					</div>
 					{error && <p className="text-destructive text-sm">{error}</p>}
-					<div>
+					<DialogFooter>
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => onOpenChange(false)}
+						>
+							{t("settings.cancelAction")}
+						</Button>
 						<Button type="submit" disabled={mutation.isPending}>
 							{t("settings.createAction")}
 						</Button>
-					</div>
+					</DialogFooter>
 				</form>
 			</DialogContent>
 		</Dialog>

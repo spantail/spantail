@@ -1,11 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { Project, WorkEntry } from "@toxil/core";
-import { todayInTimezone } from "@toxil/core";
+import {
+	formatDuration,
+	shiftDays,
+	todayInTimezone,
+	utcToZonedTime,
+	zonedDateTimeToUtc,
+} from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,6 +34,62 @@ interface EntryFormProps {
 	defaultProjectId?: string;
 	onSuccess: () => void;
 	onCancel: () => void;
+}
+
+/**
+ * True elapsed minutes between two `HH:MM` wall times on `date` in the given
+ * timezone, using zoned instants (so DST transitions are counted). An end
+ * instant at or before the start rolls to the next day, which keeps overnight
+ * ranges — and starts a DST gap normalizes forward — non-negative.
+ */
+function rangeMinutes(
+	date: string,
+	startTime: string,
+	endTime: string,
+	timeZone: string,
+): number | null {
+	if (!startTime || !endTime) return null;
+	const startMs = new Date(
+		zonedDateTimeToUtc(date, startTime, timeZone),
+	).getTime();
+	let endMs = new Date(zonedDateTimeToUtc(date, endTime, timeZone)).getTime();
+	if (endMs < startMs) {
+		endMs = new Date(
+			zonedDateTimeToUtc(shiftDays(date, 1), endTime, timeZone),
+		).getTime();
+	}
+	return Math.round((endMs - startMs) / 60000);
+}
+
+/** The `HH:MM` end clock `mins` after `startTime` on `date` (in `timeZone`). */
+function endClock(
+	date: string,
+	startTime: string,
+	mins: number,
+	timeZone: string,
+): string {
+	const startMs = new Date(
+		zonedDateTimeToUtc(date, startTime, timeZone),
+	).getTime();
+	return utcToZonedTime(
+		new Date(startMs + mins * 60000).toISOString(),
+		timeZone,
+	);
+}
+
+/** Parses the minutes field to a positive integer, or null if not finite. */
+function parseMinutes(value: string): number | null {
+	const minutes = Number(value);
+	return value !== "" && Number.isFinite(minutes) && minutes > 0
+		? Math.floor(minutes)
+		: null;
+}
+
+/** True when `HH:MM` time `a` is earlier in the day than `b`. */
+function timeBefore(a: string, b: string): boolean {
+	const [ah, am] = a.split(":").map(Number);
+	const [bh, bm] = b.split(":").map(Number);
+	return (ah ?? 0) * 60 + (am ?? 0) < (bh ?? 0) * 60 + (bm ?? 0);
 }
 
 /**
@@ -53,13 +116,64 @@ export function EntryForm({
 	const [duration, setDuration] = useState(
 		initial ? String(initial.durationMinutes) : "",
 	);
+	const [startTime, setStartTime] = useState(
+		initial?.startedAt ? utcToZonedTime(initial.startedAt, timezone) : "",
+	);
+	const [endTime, setEndTime] = useState(
+		initial?.endedAt ? utcToZonedTime(initial.endedAt, timezone) : "",
+	);
 	const [description, setDescription] = useState(initial?.description ?? "");
 	const [note, setNote] = useState(initial?.note ?? "");
 	const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
 	const [error, setError] = useState<string | null>(null);
 
+	// Start/end times drive the duration (counted across DST transitions), but
+	// minutes can still be entered directly, which nudges the end time.
+	const derived = rangeMinutes(entryDate, startTime, endTime, timezone);
+	const endsNextDay =
+		Boolean(startTime && endTime) && timeBefore(endTime, startTime);
+	const handleStartTime = (value: string) => {
+		setStartTime(value);
+		const mins = rangeMinutes(entryDate, value, endTime, timezone);
+		if (mins != null) setDuration(String(mins));
+	};
+	const handleEndTime = (value: string) => {
+		setEndTime(value);
+		const mins = rangeMinutes(entryDate, startTime, value, timezone);
+		if (mins != null) setDuration(String(mins));
+	};
+	const handleDuration = (value: string) => {
+		setDuration(value);
+		const mins = parseMinutes(value);
+		if (startTime && mins != null)
+			setEndTime(endClock(entryDate, startTime, mins, timezone));
+	};
+	// Changing the date re-derives the duration: elapsed minutes depend on the
+	// date when the range spans a DST transition.
+	const handleDate = (value: string) => {
+		setEntryDate(value);
+		const mins = rangeMinutes(value, startTime, endTime, timezone);
+		if (mins != null) setDuration(String(mins));
+	};
+	const sameAsStart = Boolean(startTime && endTime) && derived === 0;
+
 	const mutation = useMutation({
 		mutationFn: () => {
+			// Start is the entry date at the start clock in the workspace timezone.
+			// The end instant is the start plus the (authoritative) duration, so it
+			// stays correct past midnight and for entries of 24h or longer.
+			const minutes = parseMinutes(duration);
+			const startedAt = startTime
+				? zonedDateTimeToUtc(entryDate, startTime, timezone)
+				: undefined;
+			const endedAt =
+				startedAt && minutes != null
+					? new Date(
+							new Date(startedAt).getTime() + minutes * 60000,
+						).toISOString()
+					: endTime
+						? zonedDateTimeToUtc(entryDate, endTime, timezone)
+						: undefined;
 			const payload = {
 				projectId,
 				entryDate,
@@ -75,8 +189,10 @@ export function EntryForm({
 				? api.updateWorkEntry(initial.id, {
 						...payload,
 						note: payload.note ?? null,
+						startedAt: startedAt ?? null,
+						endedAt: endedAt ?? null,
 					})
-				: api.createWorkEntry({ workspaceId, ...payload });
+				: api.createWorkEntry({ workspaceId, ...payload, startedAt, endedAt });
 		},
 		onSuccess: () => {
 			invalidateWorkEntryData(queryClient, workspaceId);
@@ -102,7 +218,7 @@ export function EntryForm({
 
 	return (
 		<form
-			className="grid gap-4 sm:grid-cols-2"
+			className="grid gap-5 sm:grid-cols-2"
 			onSubmit={(e) => {
 				e.preventDefault();
 				setError(null);
@@ -129,12 +245,42 @@ export function EntryForm({
 				<Input
 					id="entry-date"
 					type="date"
+					className="[color-scheme:light] dark:[color-scheme:dark]"
 					value={entryDate}
-					onChange={(e) => setEntryDate(e.target.value)}
+					onChange={(e) => handleDate(e.target.value)}
 					required
 				/>
 			</div>
 			<div className="flex flex-col gap-2">
+				<Label htmlFor="entry-start">{t("entries.startTime")}</Label>
+				<Input
+					id="entry-start"
+					type="time"
+					className="[color-scheme:light] dark:[color-scheme:dark]"
+					value={startTime}
+					onChange={(e) => handleStartTime(e.target.value)}
+				/>
+			</div>
+			<div className="flex flex-col gap-2">
+				<Label htmlFor="entry-end">{t("entries.endTime")}</Label>
+				<Input
+					id="entry-end"
+					type="time"
+					className="[color-scheme:light] dark:[color-scheme:dark]"
+					value={endTime}
+					onChange={(e) => handleEndTime(e.target.value)}
+				/>
+				{sameAsStart ? (
+					<p className="text-muted-foreground text-xs">
+						{t("entries.sameAsStart")}
+					</p>
+				) : endsNextDay ? (
+					<p className="text-muted-foreground text-xs">
+						{t("entries.endsNextDay")}
+					</p>
+				) : null}
+			</div>
+			<div className="flex flex-col gap-2 sm:col-span-2">
 				<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
 				<Input
 					id="entry-duration"
@@ -143,11 +289,18 @@ export function EntryForm({
 					step={1}
 					placeholder="60"
 					value={duration}
-					onChange={(e) => setDuration(e.target.value)}
+					onChange={(e) => handleDuration(e.target.value)}
 					required
 				/>
+				<p className="text-muted-foreground text-xs">
+					{derived != null
+						? t("entries.minutesFromRange", {
+								duration: formatDuration(derived),
+							})
+						: t("entries.minutesManual")}
+				</p>
 			</div>
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-col gap-2 sm:col-span-2">
 				<Label htmlFor="entry-tags">{t("entries.tags")}</Label>
 				<Input
 					id="entry-tags"
@@ -170,22 +323,23 @@ export function EntryForm({
 				<Label htmlFor="entry-note">{t("entries.note")}</Label>
 				<Textarea
 					id="entry-note"
+					className="field-sizing-fixed"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
-					rows={2}
+					rows={4}
 				/>
 			</div>
 			{error && (
 				<p className="text-destructive text-sm sm:col-span-2">{error}</p>
 			)}
-			<div className="flex justify-end gap-2 sm:col-span-2">
+			<DialogFooter className="sm:col-span-2">
 				<Button type="button" variant="outline" onClick={onCancel}>
 					{t("entries.cancelAction")}
 				</Button>
 				<Button type="submit" disabled={mutation.isPending || !projectId}>
 					{initial ? t("entries.saveAction") : t("entries.logAction")}
 				</Button>
-			</div>
+			</DialogFooter>
 		</form>
 	);
 }

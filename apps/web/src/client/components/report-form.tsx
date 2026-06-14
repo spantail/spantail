@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -205,13 +206,13 @@ export function ReportForm({
 
 	return (
 		<form
-			className="flex flex-col gap-4"
+			className="flex flex-col gap-5"
 			onSubmit={(e) => {
 				e.preventDefault();
 				mutation.mutate();
 			}}
 		>
-			<div className="grid gap-4 sm:grid-cols-2">
+			<div className="grid gap-5 sm:grid-cols-2">
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="report-name">{t("reports.name")}</Label>
 					<Input
@@ -224,7 +225,7 @@ export function ReportForm({
 				<div className="flex flex-col gap-2">
 					<Label>{t("reports.template")}</Label>
 					<Select value={selectedTemplateId} onValueChange={setTemplateId}>
-						<SelectTrigger>
+						<SelectTrigger className="w-full">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -260,63 +261,59 @@ export function ReportForm({
 				</div>
 			)}
 
-			<div className="grid gap-4 sm:grid-cols-3">
-				<div className="flex flex-col gap-2">
-					<Label>{t("reports.dateRange")}</Label>
-					<Select
-						value={rangeChoice}
-						onValueChange={(v) =>
-							setRangeChoice(v as DateRangePreset | "custom")
-						}
-					>
-						<SelectTrigger>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{PRESETS.map((preset) => (
-								<SelectItem key={preset} value={preset}>
-									{t(`reports.range.${preset}`)}
-								</SelectItem>
-							))}
-							<SelectItem value="custom">
-								{t("reports.range.custom")}
+			<div className="flex flex-col gap-2">
+				<Label>{t("reports.dateRange")}</Label>
+				<Select
+					value={rangeChoice}
+					onValueChange={(v) => setRangeChoice(v as DateRangePreset | "custom")}
+				>
+					<SelectTrigger className="w-full">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{PRESETS.map((preset) => (
+							<SelectItem key={preset} value={preset}>
+								{t(`reports.range.${preset}`)}
 							</SelectItem>
-						</SelectContent>
-					</Select>
-					{rangeChoice !== "custom" && (
-						<p className="text-muted-foreground text-xs">
-							{t(
-								"reports.form.presetPreview",
-								resolveDateRange(rangeChoice, anchorTimezone),
-							)}
-						</p>
-					)}
-				</div>
-				{rangeChoice === "custom" && (
-					<>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="report-from">{t("reports.from")}</Label>
-							<Input
-								id="report-from"
-								type="date"
-								value={from}
-								onChange={(e) => setFrom(e.target.value)}
-								required
-							/>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="report-to">{t("reports.to")}</Label>
-							<Input
-								id="report-to"
-								type="date"
-								value={to}
-								onChange={(e) => setTo(e.target.value)}
-								required
-							/>
-						</div>
-					</>
+						))}
+						<SelectItem value="custom">{t("reports.range.custom")}</SelectItem>
+					</SelectContent>
+				</Select>
+				{rangeChoice !== "custom" && (
+					<p className="text-muted-foreground text-xs">
+						{t(
+							"reports.form.presetPreview",
+							resolveDateRange(rangeChoice, anchorTimezone),
+						)}
+					</p>
 				)}
 			</div>
+			{rangeChoice === "custom" && (
+				<div className="grid gap-5 sm:grid-cols-2">
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="report-from">{t("reports.from")}</Label>
+						<Input
+							id="report-from"
+							type="date"
+							className="[color-scheme:light] dark:[color-scheme:dark]"
+							value={from}
+							onChange={(e) => setFrom(e.target.value)}
+							required
+						/>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="report-to">{t("reports.to")}</Label>
+						<Input
+							id="report-to"
+							type="date"
+							className="[color-scheme:light] dark:[color-scheme:dark]"
+							value={to}
+							onChange={(e) => setTo(e.target.value)}
+							required
+						/>
+					</div>
+				</div>
+			)}
 
 			{singleWorkspaceId && (projects.data?.length ?? 0) > 0 && (
 				<div className="flex flex-col gap-2">
@@ -359,15 +356,19 @@ export function ReportForm({
 				<Label htmlFor="report-note">{t("reports.note")}</Label>
 				<Textarea
 					id="report-note"
+					className="field-sizing-fixed"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
-					rows={6}
+					rows={4}
 					placeholder={t("reports.notePlaceholder")}
 				/>
 			</div>
 
 			{error && <p className="text-destructive text-sm">{error}</p>}
-			<div className="flex gap-2">
+			<DialogFooter>
+				<Button type="button" variant="outline" onClick={onCancel}>
+					{t("reports.cancelAction")}
+				</Button>
 				<Button
 					type="submit"
 					disabled={
@@ -376,10 +377,7 @@ export function ReportForm({
 				>
 					{editing ? t("reports.saveAction") : t("reports.createAction")}
 				</Button>
-				<Button type="button" variant="ghost" onClick={onCancel}>
-					{t("reports.cancelAction")}
-				</Button>
-			</div>
+			</DialogFooter>
 		</form>
 	);
 }
