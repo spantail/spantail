@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -96,14 +97,17 @@ export function ShareDialog({
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-w-lg">
+			<DialogContent size="2xl">
 				<DialogHeader>
 					<DialogTitle>
 						{t("reports.shares.title", { name: title })}
 					</DialogTitle>
+					<DialogDescription>
+						{t("reports.shares.description")}
+					</DialogDescription>
 				</DialogHeader>
 				<form
-					className="grid gap-4 sm:grid-cols-2"
+					className="grid gap-5 sm:grid-cols-2"
 					onSubmit={(e) => {
 						e.preventDefault();
 						createMutation.mutate();

@@ -16,8 +16,10 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -203,7 +205,7 @@ export function TokensCard() {
 				open={createdToken !== null}
 				onOpenChange={(open) => !open && setCreatedToken(null)}
 			>
-				<DialogContent>
+				<DialogContent size="lg">
 					<DialogHeader>
 						<DialogTitle>{t("settings.tokens.createdTitle")}</DialogTitle>
 						<DialogDescription>
@@ -233,6 +235,11 @@ export function TokensCard() {
 							{t("settings.tokens.copied")}
 						</p>
 					)}
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button>{t("settings.tokens.doneAction")}</Button>
+						</DialogClose>
+					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</Card>

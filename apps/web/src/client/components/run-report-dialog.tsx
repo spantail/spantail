@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -96,20 +98,23 @@ export function RunReportDialog({
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-w-md">
+			<DialogContent size="lg">
 				<DialogHeader>
 					<DialogTitle>
 						{t("reports.runNext.title", { name: report.name })}
 					</DialogTitle>
+					<DialogDescription>
+						{t("reports.runNext.description")}
+					</DialogDescription>
 				</DialogHeader>
 				<form
-					className="flex flex-col gap-4"
+					className="flex flex-col gap-5"
 					onSubmit={(e) => {
 						e.preventDefault();
 						mutation.mutate();
 					}}
 				>
-					<div className="grid gap-4 sm:grid-cols-2">
+					<div className="grid gap-5 sm:grid-cols-2">
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="run-from">{t("reports.from")}</Label>
 							<Input
@@ -155,14 +160,14 @@ export function RunReportDialog({
 							)}
 					</div>
 					{error && <p className="text-destructive text-sm">{error}</p>}
-					<div className="flex gap-2">
+					<DialogFooter>
+						<Button type="button" variant="outline" onClick={onClose}>
+							{t("reports.cancelAction")}
+						</Button>
 						<Button type="submit" disabled={mutation.isPending}>
 							{t("reports.runNext.createAction")}
 						</Button>
-						<Button type="button" variant="ghost" onClick={onClose}>
-							{t("reports.cancelAction")}
-						</Button>
-					</div>
+					</DialogFooter>
 				</form>
 			</DialogContent>
 		</Dialog>

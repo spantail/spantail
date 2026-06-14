@@ -80,6 +80,8 @@
 	"entries": {
 		"newTitle": "Log work",
 		"editTitle": "Edit entry",
+		"newDescription": "Record what you worked on and for how long.",
+		"editDescription": "Update the details of this work entry.",
 		"project": "Project",
 		"selectProject": "Select a project",
 		"date": "Date",
@@ -110,6 +112,7 @@
 		"description": "Reports belong to you and can combine entries from any of your workspaces.",
 		"newTitle": "New report",
 		"editTitle": "Edit report",
+		"formDescription": "Define filters and a template; creating runs it once immediately.",
 		"name": "Report name",
 		"template": "Template",
 		"workspaces": "Workspaces",
@@ -153,6 +156,7 @@
 		},
 		"runNext": {
 			"title": "Create report: {{name}}",
+			"description": "Confirm the period before adding the next snapshot to this series.",
 			"suggested": "Suggested",
 			"createAction": "Create"
 		},
@@ -162,12 +166,15 @@
 		},
 		"snapshots": {
 			"viewAction": "View",
+			"viewerDescription": "Generated snapshot — Markdown output.",
 			"downloadAction": "Download .md",
+			"closeAction": "Close",
 			"deleteAction": "Delete",
 			"empty": "No snapshots yet. Run the report to create one."
 		},
 		"shares": {
 			"title": "Share: {{name}}",
+			"description": "Create a read-only link to this snapshot.",
 			"shareAction": "Share",
 			"expiresIn": "Expires in",
 			"expiry": {
@@ -225,6 +232,7 @@
 		"status": "Status",
 		"createAction": "Create",
 		"saveAction": "Save",
+		"cancelAction": "Cancel",
 		"createWorkspace": {
 			"title": "Create workspace",
 			"description": "Workspaces group projects and members, e.g. a department or client."
@@ -265,7 +273,8 @@
 			"createdTitle": "Token created",
 			"createdDescription": "Copy this token now — it will not be shown again.",
 			"copyAction": "Copy",
-			"copied": "Copied to clipboard."
+			"copied": "Copied to clipboard.",
+			"doneAction": "Done"
 		}
 	}
 }

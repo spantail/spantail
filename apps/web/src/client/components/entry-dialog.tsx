@@ -15,6 +15,7 @@ import { EntryForm } from "@/components/entry-form";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -108,13 +109,18 @@ export function EntryDialogProvider({
 			{children}
 			{current && (
 				<Dialog open={state !== null} onOpenChange={(open) => !open && close()}>
-					<DialogContent className="sm:max-w-lg">
+					<DialogContent size="2xl">
 						<DialogHeader>
-							<DialogTitle className="font-heading">
+							<DialogTitle>
 								{state?.mode === "edit"
 									? t("entries.editTitle")
 									: t("entries.newTitle")}
 							</DialogTitle>
+							<DialogDescription>
+								{state?.mode === "edit"
+									? t("entries.editDescription")
+									: t("entries.newDescription")}
+							</DialogDescription>
 						</DialogHeader>
 						{state && (
 							<EntryForm

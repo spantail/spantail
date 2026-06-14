@@ -16,7 +16,10 @@ import { ReportSeriesCard } from "@/components/report-series-card";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
+	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -120,15 +123,17 @@ function ReportsPage() {
 
 	return (
 		<div className="flex max-w-3xl flex-col gap-4">
-			<div className="flex items-center justify-between gap-2">
-				<h1 className="font-heading text-lg font-semibold">
-					{t("reports.title")}
-				</h1>
+			<div className="flex items-start justify-between gap-2">
+				<div>
+					<h1 className="font-heading text-xl font-semibold tracking-tight">
+						{t("reports.title")}
+					</h1>
+					<p className="text-muted-foreground mt-0.5 text-sm">
+						{t("reports.description")}
+					</p>
+				</div>
 				<Button onClick={openCreate}>{t("reports.newAction")}</Button>
 			</div>
-			<p className="text-muted-foreground text-sm">
-				{t("reports.description")}
-			</p>
 
 			{rows.length === 0 && !reports.isPending ? (
 				<p className="text-muted-foreground text-sm">{t("reports.empty")}</p>
@@ -152,11 +157,14 @@ function ReportsPage() {
 			)}
 
 			<Dialog open={formOpen} onOpenChange={(open) => !open && closeForm()}>
-				<DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+				<DialogContent size="2xl">
 					<DialogHeader>
-						<DialogTitle className="font-heading">
+						<DialogTitle>
 							{editing ? t("reports.editTitle") : t("reports.newTitle")}
 						</DialogTitle>
+						<DialogDescription>
+							{t("reports.formDescription")}
+						</DialogDescription>
 					</DialogHeader>
 					<ReportForm
 						key={`${editing?.id ?? "new"}:${instanceId}`}
@@ -174,26 +182,33 @@ function ReportsPage() {
 
 			{viewing && (
 				<Dialog open onOpenChange={(open) => !open && setViewing(null)}>
-					<DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+					<DialogContent size="3xl">
 						<DialogHeader>
-							<DialogTitle className="flex items-center justify-between gap-2 pr-6">
+							<DialogTitle className="pr-10">
 								{viewing.report.name}{" "}
 								{formatPeriodLabel(viewing.snapshot.resolvedFilters.dateRange)}
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() =>
-										downloadSnapshotMarkdown(
-											viewing.report.name,
-											viewing.snapshot,
-										)
-									}
-								>
-									{t("reports.snapshots.downloadAction")}
-								</Button>
 							</DialogTitle>
+							<DialogDescription>
+								{t("reports.snapshots.viewerDescription")}
+							</DialogDescription>
 						</DialogHeader>
 						<MarkdownView markdown={viewing.snapshot.renderedMarkdown} />
+						<DialogFooter>
+							<Button
+								variant="outline"
+								onClick={() =>
+									downloadSnapshotMarkdown(
+										viewing.report.name,
+										viewing.snapshot,
+									)
+								}
+							>
+								{t("reports.snapshots.downloadAction")}
+							</Button>
+							<DialogClose asChild>
+								<Button>{t("reports.snapshots.closeAction")}</Button>
+							</DialogClose>
+						</DialogFooter>
 					</DialogContent>
 				</Dialog>
 			)}

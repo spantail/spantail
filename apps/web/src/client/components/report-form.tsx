@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -205,13 +206,13 @@ export function ReportForm({
 
 	return (
 		<form
-			className="flex flex-col gap-4"
+			className="flex flex-col gap-5"
 			onSubmit={(e) => {
 				e.preventDefault();
 				mutation.mutate();
 			}}
 		>
-			<div className="grid gap-4 sm:grid-cols-2">
+			<div className="grid gap-5 sm:grid-cols-2">
 				<div className="flex flex-col gap-2">
 					<Label htmlFor="report-name">{t("reports.name")}</Label>
 					<Input
@@ -260,7 +261,7 @@ export function ReportForm({
 				</div>
 			)}
 
-			<div className="grid gap-4 sm:grid-cols-3">
+			<div className="grid gap-5 sm:grid-cols-3">
 				<div className="flex flex-col gap-2">
 					<Label>{t("reports.dateRange")}</Label>
 					<Select
@@ -367,7 +368,10 @@ export function ReportForm({
 			</div>
 
 			{error && <p className="text-destructive text-sm">{error}</p>}
-			<div className="flex gap-2">
+			<DialogFooter>
+				<Button type="button" variant="outline" onClick={onCancel}>
+					{t("reports.cancelAction")}
+				</Button>
 				<Button
 					type="submit"
 					disabled={
@@ -376,10 +380,7 @@ export function ReportForm({
 				>
 					{editing ? t("reports.saveAction") : t("reports.createAction")}
 				</Button>
-				<Button type="button" variant="ghost" onClick={onCancel}>
-					{t("reports.cancelAction")}
-				</Button>
-			</div>
+			</DialogFooter>
 		</form>
 	);
 }

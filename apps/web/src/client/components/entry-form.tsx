@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -102,7 +103,7 @@ export function EntryForm({
 
 	return (
 		<form
-			className="grid gap-4 sm:grid-cols-2"
+			className="grid gap-5 sm:grid-cols-2"
 			onSubmit={(e) => {
 				e.preventDefault();
 				setError(null);
@@ -178,14 +179,14 @@ export function EntryForm({
 			{error && (
 				<p className="text-destructive text-sm sm:col-span-2">{error}</p>
 			)}
-			<div className="flex justify-end gap-2 sm:col-span-2">
+			<DialogFooter className="sm:col-span-2">
 				<Button type="button" variant="outline" onClick={onCancel}>
 					{t("entries.cancelAction")}
 				</Button>
 				<Button type="submit" disabled={mutation.isPending || !projectId}>
 					{initial ? t("entries.saveAction") : t("entries.logAction")}
 				</Button>
-			</div>
+			</DialogFooter>
 		</form>
 	);
 }

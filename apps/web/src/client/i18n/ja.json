@@ -79,6 +79,8 @@
 	"entries": {
 		"newTitle": "作業を記録",
 		"editTitle": "記録を編集",
+		"newDescription": "取り組んだ作業とその時間を記録します。",
+		"editDescription": "この作業記録の内容を更新します。",
 		"project": "プロジェクト",
 		"selectProject": "プロジェクトを選択",
 		"date": "日付",
@@ -109,6 +111,7 @@
 		"description": "レポートは個人に紐づき、所属するすべてのワークスペースの記録を横断して集計できます。",
 		"newTitle": "レポートを作成",
 		"editTitle": "レポートを編集",
+		"formDescription": "フィルタとテンプレートを設定します。作成すると同時に一度実行されます。",
 		"name": "レポート名",
 		"template": "テンプレート",
 		"workspaces": "ワークスペース",
@@ -152,6 +155,7 @@
 		},
 		"runNext": {
 			"title": "レポートを作成: {{name}}",
+			"description": "次のスナップショットをこのシリーズに追加する前に期間を確認します。",
 			"suggested": "推奨",
 			"createAction": "作成"
 		},
@@ -161,12 +165,15 @@
 		},
 		"snapshots": {
 			"viewAction": "表示",
+			"viewerDescription": "生成されたスナップショット — Markdown 出力。",
 			"downloadAction": ".md をダウンロード",
+			"closeAction": "閉じる",
 			"deleteAction": "削除",
 			"empty": "スナップショットはまだありません。レポートを実行すると作成されます。"
 		},
 		"shares": {
 			"title": "共有: {{name}}",
+			"description": "このスナップショットへの読み取り専用リンクを作成します。",
 			"shareAction": "共有",
 			"expiresIn": "有効期限",
 			"expiry": {
@@ -224,6 +231,7 @@
 		"status": "状態",
 		"createAction": "作成",
 		"saveAction": "保存",
+		"cancelAction": "キャンセル",
 		"createWorkspace": {
 			"title": "ワークスペースを作成",
 			"description": "ワークスペースはプロジェクトとメンバーをまとめる単位です(部署・クライアント等)。"
@@ -264,7 +272,8 @@
 			"createdTitle": "トークンを作成しました",
 			"createdDescription": "今すぐコピーしてください。二度と表示されません。",
 			"copyAction": "コピー",
-			"copied": "クリップボードにコピーしました。"
+			"copied": "クリップボードにコピーしました。",
+			"doneAction": "完了"
 		}
 	}
 }
