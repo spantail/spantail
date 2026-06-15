@@ -153,18 +153,12 @@ function ReportsPage() {
 	const [from, setFrom] = useState(() => shiftDays(todayInTimezone(tz), -13));
 	const [to, setTo] = useState(() => todayInTimezone(tz));
 	const [projectFilter, setProjectFilter] = useState("all");
-	const [tagFilter, setTagFilter] = useState("all");
 
-	// Options derive from all loaded reports so they stay stable across tab and
-	// filter changes.
-	const projectOptions = [
-		...new Set(rows.flatMap((report) => report.filters.projectIds ?? [])),
-	]
-		.map((id) => ({ id, name: projectById.get(id) ?? id }))
+	// Project options come from the workspace project catalog so the filter is
+	// always usable, regardless of whether reports declare a project scope.
+	const projectOptions = [...projectById.entries()]
+		.map(([id, name]) => ({ id, name }))
 		.sort((a, b) => a.name.localeCompare(b.name));
-	const tagOptions = [
-		...new Set(rows.flatMap((report) => report.filters.tags ?? [])),
-	].sort((a, b) => a.localeCompare(b));
 
 	// One tab per enabled template, plus archived (disabled) templates that
 	// still have reports so no document is ever orphaned.
@@ -295,9 +289,9 @@ function ReportsPage() {
 		const range = report.filters.dateRange;
 		// Period overlap (inclusive). ISO date strings compare lexicographically.
 		if (!(range.from <= to && range.to >= from)) return false;
-		// Project/tag are inclusive: a report with no project/tag scope covers
-		// everything within its workspaces, so it matches any specific selection
-		// whose workspace it spans.
+		// The project filter is inclusive: a report with no project scope covers
+		// everything within its workspaces, so it matches any selection whose
+		// workspace it spans.
 		if (projectFilter !== "all") {
 			const ids = report.filters.projectIds;
 			if (ids?.length) {
@@ -308,10 +302,6 @@ function ReportsPage() {
 				const ws = projectWorkspaceById.get(projectFilter);
 				if (ws && !report.filters.workspaceIds.includes(ws)) return false;
 			}
-		}
-		if (tagFilter !== "all") {
-			const tags = report.filters.tags;
-			if (tags?.length && !tags.includes(tagFilter)) return false;
 		}
 		return true;
 	};
@@ -439,33 +429,6 @@ function ReportsPage() {
 										{projectOptions.map((project) => (
 											<SelectItem key={project.id} value={project.id}>
 												{project.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						)}
-						{tagOptions.length > 0 && (
-							<div className="flex flex-col gap-1.5">
-								<Label className="text-xs">{t("reports.filter.tag")}</Label>
-								<Select
-									// Real tags are prefixed so a literal "all" tag can't
-									// collide with the "All tags" sentinel.
-									value={tagFilter === "all" ? "all" : `tag:${tagFilter}`}
-									onValueChange={(v) =>
-										setTagFilter(v === "all" ? "all" : v.slice(4))
-									}
-								>
-									<SelectTrigger className="w-44">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">
-											{t("reports.filter.allTags")}
-										</SelectItem>
-										{tagOptions.map((tagOption) => (
-											<SelectItem key={tagOption} value={`tag:${tagOption}`}>
-												{tagOption}
 											</SelectItem>
 										))}
 									</SelectContent>

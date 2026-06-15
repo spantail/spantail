@@ -161,9 +161,7 @@
 		},
 		"filter": {
 			"project": "プロジェクト",
-			"tag": "タグ",
 			"allProjects": "すべてのプロジェクト",
-			"allTags": "すべてのタグ",
 			"empty": "条件に一致するレポートはありません。"
 		},
 		"delete": {

@@ -162,9 +162,7 @@
 		},
 		"filter": {
 			"project": "Project",
-			"tag": "Tag",
 			"allProjects": "All projects",
-			"allTags": "All tags",
 			"empty": "No reports match the current filters."
 		},
 		"delete": {
