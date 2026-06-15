@@ -8,7 +8,7 @@ import {
 	type ReportMeta,
 	type ReportTemplate,
 } from "@toxil/core";
-import { SlidersHorizontalIcon, XIcon } from "lucide-react";
+import { PlusIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
@@ -39,7 +39,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { downloadReportMarkdown } from "@/lib/report-download";
 import { useWorkspace } from "@/lib/workspace";
@@ -410,8 +409,8 @@ function ReportsPage() {
 	};
 
 	return (
-		<div className="flex max-w-3xl flex-col gap-4">
-			<div className="flex items-start justify-between gap-2">
+		<div className="flex flex-col gap-6">
+			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
 					<h1 className="font-heading text-xl font-semibold tracking-tight">
 						{t("reports.title")}
@@ -424,6 +423,7 @@ function ReportsPage() {
 					disabled={!createTarget}
 					onClick={() => createTarget && openCreate(createTarget)}
 				>
+					<PlusIcon />
 					{t("reports.newAction")}
 				</Button>
 			</div>
@@ -433,146 +433,163 @@ function ReportsPage() {
 					{t("reports.noTemplates")}
 				</p>
 			) : (
-				<Tabs value={activeTab ?? undefined} onValueChange={setTab}>
+				<>
 					{/* Template tabs scroll horizontally (names are arbitrary), while
-					    the filter trigger stays pinned to the right of the strip. */}
-					<div className="flex items-end gap-3 border-b">
-						<div className="-mb-px min-w-0 flex-1 overflow-x-auto">
-							<TabsList variant="line" className="w-max">
-								{tabs.map((tabItem) => (
-									<TabsTrigger key={tabItem.id} value={tabItem.id}>
-										{tabItem.label}
-										{tabItem.archived ? ` (${t("reports.archived")})` : ""}
-									</TabsTrigger>
-								))}
-							</TabsList>
-						</div>
-						<div className="shrink-0 pb-1.5">
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant={activeFilterCount ? "secondary" : "outline"}
-										size="sm"
-									>
-										<SlidersHorizontalIcon />
-										{t("reports.filterAction")}
-										{activeFilterCount > 0 && (
-											<span className="bg-foreground text-background ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
-												{activeFilterCount}
-											</span>
-										)}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent align="end" className="w-80">
-									<div className="flex flex-col gap-3.5">
-										<div className="grid grid-cols-2 gap-3">
-											<div className="flex flex-col gap-1.5">
-												<Label htmlFor="reports-from" className="text-xs">
-													{t("reports.from")}
-												</Label>
-												<Input
-													id="reports-from"
-													type="date"
-													className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
-													value={from}
-													max={to || undefined}
-													onChange={(e) => setFrom(e.target.value)}
-												/>
-											</div>
-											<div className="flex flex-col gap-1.5">
-												<Label htmlFor="reports-to" className="text-xs">
-													{t("reports.to")}
-												</Label>
-												<Input
-													id="reports-to"
-													type="date"
-													className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
-													value={to}
-													min={from || undefined}
-													onChange={(e) => setTo(e.target.value)}
-												/>
-											</div>
-										</div>
-										{projectOptions.length > 0 && (
-											<div className="flex flex-col gap-1.5">
-												<Label className="text-xs">
-													{t("reports.filter.project")}
-												</Label>
-												<Select
-													value={projectFilter}
-													onValueChange={setProjectFilter}
-												>
-													<SelectTrigger className="h-9 w-full">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="all">
-															{t("reports.filter.allProjects")}
-														</SelectItem>
-														{projectOptions.map((project) => (
-															<SelectItem key={project.id} value={project.id}>
-																{project.name}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-											</div>
-										)}
-									</div>
-									<div className="mt-4 flex items-center justify-between">
-										<Button
-											variant="ghost"
-											size="sm"
-											className="text-muted-foreground h-8 px-2"
-											disabled={!activeFilterCount}
-											onClick={clearFilters}
+					    the filter trigger stays pinned to the right of the strip. The
+					    underline sits inside the row (bottom-0) so the scroll area
+					    never overflows vertically and shows a stray scrollbar. */}
+					<div className="flex flex-col gap-3">
+						<div className="flex items-end gap-3 border-b">
+							<div className="-mb-px min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+								<div role="tablist" className="flex w-max items-center gap-1">
+									{tabs.map((tabItem) => (
+										<button
+											key={tabItem.id}
+											type="button"
+											role="tab"
+											aria-selected={activeTab === tabItem.id}
+											onClick={() => setTab(tabItem.id)}
+											className={`relative shrink-0 px-3 pt-1 pb-2.5 text-sm whitespace-nowrap transition-colors ${
+												activeTab === tabItem.id
+													? "text-foreground font-medium"
+													: "text-muted-foreground hover:text-foreground"
+											}`}
 										>
-											{t("reports.filter.clear")}
+											{tabItem.label}
+											{tabItem.archived ? ` (${t("reports.archived")})` : ""}
+											{activeTab === tabItem.id && (
+												<span className="bg-foreground absolute inset-x-2 bottom-0 h-0.5 rounded-full" />
+											)}
+										</button>
+									))}
+								</div>
+							</div>
+							<div className="shrink-0 pb-1.5">
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant={activeFilterCount ? "secondary" : "outline"}
+											size="sm"
+										>
+											<SlidersHorizontalIcon />
+											{t("reports.filterAction")}
+											{activeFilterCount > 0 && (
+												<span className="bg-foreground text-background ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+													{activeFilterCount}
+												</span>
+											)}
 										</Button>
-										<PopoverClose asChild>
-											<Button size="sm">{t("reports.filter.done")}</Button>
-										</PopoverClose>
-									</div>
-								</PopoverContent>
-							</Popover>
+									</PopoverTrigger>
+									<PopoverContent align="end" className="w-80">
+										<div className="flex flex-col gap-3.5">
+											<div className="grid grid-cols-2 gap-3">
+												<div className="flex flex-col gap-1.5">
+													<Label htmlFor="reports-from" className="text-xs">
+														{t("reports.from")}
+													</Label>
+													<Input
+														id="reports-from"
+														type="date"
+														className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
+														value={from}
+														max={to || undefined}
+														onChange={(e) => setFrom(e.target.value)}
+													/>
+												</div>
+												<div className="flex flex-col gap-1.5">
+													<Label htmlFor="reports-to" className="text-xs">
+														{t("reports.to")}
+													</Label>
+													<Input
+														id="reports-to"
+														type="date"
+														className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
+														value={to}
+														min={from || undefined}
+														onChange={(e) => setTo(e.target.value)}
+													/>
+												</div>
+											</div>
+											{projectOptions.length > 0 && (
+												<div className="flex flex-col gap-1.5">
+													<Label className="text-xs">
+														{t("reports.filter.project")}
+													</Label>
+													<Select
+														value={projectFilter}
+														onValueChange={setProjectFilter}
+													>
+														<SelectTrigger className="h-9 w-full">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="all">
+																{t("reports.filter.allProjects")}
+															</SelectItem>
+															{projectOptions.map((project) => (
+																<SelectItem key={project.id} value={project.id}>
+																	{project.name}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+											)}
+										</div>
+										<div className="mt-4 flex items-center justify-between">
+											<Button
+												variant="ghost"
+												size="sm"
+												className="text-muted-foreground h-8 px-2"
+												disabled={!activeFilterCount}
+												onClick={clearFilters}
+											>
+												{t("reports.filter.clear")}
+											</Button>
+											<PopoverClose asChild>
+												<Button size="sm">{t("reports.filter.done")}</Button>
+											</PopoverClose>
+										</div>
+									</PopoverContent>
+								</Popover>
+							</div>
 						</div>
+						{activeFilterCount > 0 && (
+							<div className="flex flex-wrap items-center gap-2">
+								{periodActive && (
+									<FilterChip
+										label={periodLabel}
+										removeLabel={t("reports.filter.remove")}
+										onClear={() => {
+											setFrom("");
+											setTo("");
+										}}
+									/>
+								)}
+								{projectActive && (
+									<FilterChip
+										label={projectById.get(projectFilter) ?? projectFilter}
+										removeLabel={t("reports.filter.remove")}
+										onClear={() => setProjectFilter("all")}
+									/>
+								)}
+								{activeFilterCount > 1 && (
+									<button
+										type="button"
+										onClick={clearFilters}
+										className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
+									>
+										{t("reports.filter.clear")}
+									</button>
+								)}
+							</div>
+						)}
 					</div>
-					{activeFilterCount > 0 && (
-						<div className="flex flex-wrap items-center gap-2">
-							{periodActive && (
-								<FilterChip
-									label={periodLabel}
-									removeLabel={t("reports.filter.remove")}
-									onClear={() => {
-										setFrom("");
-										setTo("");
-									}}
-								/>
-							)}
-							{projectActive && (
-								<FilterChip
-									label={projectById.get(projectFilter) ?? projectFilter}
-									removeLabel={t("reports.filter.remove")}
-									onClear={() => setProjectFilter("all")}
-								/>
-							)}
-							{activeFilterCount > 1 && (
-								<button
-									type="button"
-									onClick={clearFilters}
-									className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
-								>
-									{t("reports.filter.clear")}
-								</button>
-							)}
-						</div>
-					)}
-					{tabs.map((tabItem) => (
-						<TabsContent key={tabItem.id} value={tabItem.id}>
-							{tabBody(tabItem)}
-						</TabsContent>
-					))}
-				</Tabs>
+					{(() => {
+						const active = tabs.find((x) => x.id === activeTab);
+						return active ? tabBody(active) : null;
+					})()}
+				</>
 			)}
 
 			{form && (

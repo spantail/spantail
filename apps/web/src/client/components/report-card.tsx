@@ -59,7 +59,7 @@ export function ReportCard({
 	onEdit: (report: ReportMeta) => void;
 	onDuplicate: (report: ReportMeta) => void;
 }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
 	const [sharing, setSharing] = useState(false);
@@ -119,7 +119,10 @@ export function ReportCard({
 						<span className="text-muted-foreground mt-0.5 block truncate text-xs">
 							{templateName}
 							{" · "}
-							{new Date(report.updatedAt).toLocaleDateString()}
+							{new Date(report.updatedAt).toLocaleDateString(i18n.language, {
+								month: "short",
+								day: "numeric",
+							})}
 						</span>
 					</span>
 				</button>
