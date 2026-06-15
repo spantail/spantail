@@ -108,6 +108,13 @@
 		"empty": "No entries yet.",
 		"noProjects": "No active projects. Create one in workspace settings first.",
 		"goToSettings": "Open settings",
+		"filter": {
+			"member": "Member",
+			"allMembers": "All members",
+			"tag": "Tag",
+			"allTags": "All tags",
+			"empty": "No entries match these filters."
+		},
 		"toast": {
 			"created": "Work entry logged.",
 			"updated": "Entry updated.",

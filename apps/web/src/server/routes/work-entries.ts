@@ -4,6 +4,7 @@ import {
 	todayInTimezone,
 	updateWorkEntryInputSchema,
 	workEntryStatsQuerySchema,
+	workEntryTagsQuerySchema,
 } from "@toxil/core";
 import {
 	createWorkEntry,
@@ -12,6 +13,7 @@ import {
 	getWorkEntryById,
 	getWorkEntryStats,
 	listWorkEntries,
+	listWorkEntryTags,
 	updateWorkEntry,
 	type WorkEntryRow,
 } from "@toxil/db";
@@ -88,6 +90,13 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const query = validate(workEntryStatsQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
 		return c.json(await getWorkEntryStats(c.var.db, query));
+	})
+	// Likewise registered before "/:id" so "tags" is not captured as an entry id.
+	.get("/tags", async (c) => {
+		requireScope(c, "read");
+		const query = validate(workEntryTagsQuerySchema, c.req.query());
+		await requireWorkspaceAccess(c, query.workspaceId);
+		return c.json(await listWorkEntryTags(c.var.db, query));
 	})
 	.get("/:id", async (c) => {
 		requireScope(c, "read");

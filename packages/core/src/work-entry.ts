@@ -73,6 +73,7 @@ export const listWorkEntriesQuerySchema = z.object({
 	workspaceId: z.string(),
 	projectId: z.string().optional(),
 	userId: z.string().optional(),
+	tag: tagSchema.optional(),
 	from: localDateSchema.optional(),
 	to: localDateSchema.optional(),
 	limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -91,3 +92,10 @@ export const workEntryStatsQuerySchema = listWorkEntriesQuerySchema.omit({
 });
 // No coerce fields remain after the omit, so infer doubles as the input type.
 export type WorkEntryStatsQuery = z.infer<typeof workEntryStatsQuerySchema>;
+
+// Distinct tags in scope, for populating the tag filter dropdown.
+export const workEntryTagsQuerySchema = z.object({
+	workspaceId: z.string(),
+	projectId: z.string().optional(),
+});
+export type WorkEntryTagsQuery = z.infer<typeof workEntryTagsQuerySchema>;

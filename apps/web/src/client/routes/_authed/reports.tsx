@@ -8,9 +8,10 @@ import {
 	type ReportMeta,
 	type ReportTemplate,
 } from "@toxil/core";
-import { PlusIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
+import { PlusIcon, SlidersHorizontalIcon } from "lucide-react";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { FilterChip } from "@/components/filter-chip";
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportCard } from "@/components/report-card";
 import { ReportForm, type ReportFormSeed } from "@/components/report-form";
@@ -65,31 +66,6 @@ interface FormState {
 	editingId: string | null;
 	titleKey: string;
 	seed: ReportFormSeed;
-}
-
-/** Removable chip summarising one active filter, shown beneath the tab bar. */
-function FilterChip({
-	label,
-	removeLabel,
-	onClear,
-}: {
-	label: string;
-	removeLabel: string;
-	onClear: () => void;
-}) {
-	return (
-		<span className="border-border bg-muted/60 text-foreground inline-flex items-center gap-1 rounded-full border py-1 pr-1 pl-2.5 text-xs font-medium">
-			{label}
-			<button
-				type="button"
-				aria-label={removeLabel}
-				onClick={onClear}
-				className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground flex size-4 items-center justify-center rounded-full transition-colors"
-			>
-				<XIcon className="size-3" />
-			</button>
-		</span>
-	);
 }
 
 function ReportsPage() {

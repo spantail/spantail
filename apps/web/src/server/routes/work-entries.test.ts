@@ -123,6 +123,85 @@ it("filters the list by project, user, and date range", async () => {
 	expect(me).toHaveLength(1);
 });
 
+it("filters the list by tag", async () => {
+	const { admin, ws, project } = await setup();
+	const mk = (description: string, tags: string[]) =>
+		apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 60,
+				description,
+				tags,
+			},
+			admin,
+		);
+	await mk("a1", ["api", "bug"]);
+	await mk("a2", ["design"]);
+	await mk("a3", []);
+
+	const bug = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}&tag=bug`, admin)
+	).json()) as Array<{ description: string }>;
+	expect(bug.map((e) => e.description)).toEqual(["a1"]);
+
+	const design = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}&tag=design`, admin)
+	).json()) as unknown[];
+	expect(design).toHaveLength(1);
+
+	const none = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}&tag=missing`, admin)
+	).json()) as unknown[];
+	expect(none).toHaveLength(0);
+});
+
+it("lists distinct tags in scope, sorted", async () => {
+	const { admin, ws, project } = await setup();
+	const other = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "ops", name: "Ops" },
+			admin,
+		)
+	).json()) as { id: string };
+	const mk = (projectId: string, tags: string[]) =>
+		apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId,
+				durationMinutes: 30,
+				description: "x",
+				tags,
+			},
+			admin,
+		);
+	await mk(project.id, ["bug", "api"]);
+	await mk(project.id, ["api"]);
+	await mk(other.id, ["ops"]);
+
+	// Workspace-wide: distinct and sorted across both projects.
+	const all = (await (
+		await apiGet(`/api/v1/work-entries/tags?workspaceId=${ws.id}`, admin)
+	).json()) as string[];
+	expect(all).toEqual(["api", "bug", "ops"]);
+
+	// Project-scoped: only that project's tags. Also proves "/tags" is not
+	// captured by the "/:id" route.
+	const scoped = (await (
+		await apiGet(
+			`/api/v1/work-entries/tags?workspaceId=${ws.id}&projectId=${project.id}`,
+			admin,
+		)
+	).json()) as string[];
+	expect(scoped).toEqual(["api", "bug"]);
+});
+
 it("lets only the author update or delete an entry", async () => {
 	const { admin, member, ws, project } = await setup();
 	const entry = (await (
