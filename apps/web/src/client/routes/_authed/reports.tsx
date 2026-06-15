@@ -441,6 +441,7 @@ function ReportsPage() {
 					</p>
 				</div>
 				<Button
+					size="lg"
 					disabled={!createTarget}
 					onClick={() => createTarget && openCreate(createTarget)}
 				>
