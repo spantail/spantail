@@ -159,10 +159,15 @@
 		"tab": {
 			"all": "すべて"
 		},
+		"filterAction": "フィルター",
+		"moreActions": "その他の操作",
 		"filter": {
 			"project": "プロジェクト",
 			"allProjects": "すべてのプロジェクト",
-			"empty": "条件に一致するレポートはありません。"
+			"empty": "条件に一致するレポートはありません。",
+			"clear": "すべて解除",
+			"done": "完了",
+			"remove": "フィルターを削除"
 		},
 		"delete": {
 			"title": "このレポートを削除しますか?",
