@@ -123,6 +123,41 @@ it("filters the list by project, user, and date range", async () => {
 	expect(me).toHaveLength(1);
 });
 
+it("filters the list by tag", async () => {
+	const { admin, ws, project } = await setup();
+	const mk = (description: string, tags: string[]) =>
+		apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 60,
+				description,
+				tags,
+			},
+			admin,
+		);
+	await mk("a1", ["api", "bug"]);
+	await mk("a2", ["design"]);
+	await mk("a3", []);
+
+	const bug = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}&tag=bug`, admin)
+	).json()) as Array<{ description: string }>;
+	expect(bug.map((e) => e.description)).toEqual(["a1"]);
+
+	const design = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}&tag=design`, admin)
+	).json()) as unknown[];
+	expect(design).toHaveLength(1);
+
+	const none = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}&tag=missing`, admin)
+	).json()) as unknown[];
+	expect(none).toHaveLength(0);
+});
+
 it("lets only the author update or delete an entry", async () => {
 	const { admin, member, ws, project } = await setup();
 	const entry = (await (

@@ -46,6 +46,7 @@ interface WorkEntryFilter {
 	workspaceId: string;
 	projectId?: string;
 	userId?: string;
+	tag?: string;
 	from?: string;
 	to?: string;
 }
@@ -55,6 +56,11 @@ function workEntryConditions(query: WorkEntryFilter) {
 	if (query.projectId)
 		conditions.push(eq(workEntries.projectId, query.projectId));
 	if (query.userId) conditions.push(eq(workEntries.userId, query.userId));
+	// tags is a JSON array column; match a single tag via json_each.
+	if (query.tag)
+		conditions.push(
+			sql`exists (select 1 from json_each(${workEntries.tags}) where value = ${query.tag})`,
+		);
 	if (query.from) conditions.push(gte(workEntries.entryDate, query.from));
 	if (query.to) conditions.push(lte(workEntries.entryDate, query.to));
 	return conditions;

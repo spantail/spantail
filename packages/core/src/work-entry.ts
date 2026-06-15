@@ -73,6 +73,7 @@ export const listWorkEntriesQuerySchema = z.object({
 	workspaceId: z.string(),
 	projectId: z.string().optional(),
 	userId: z.string().optional(),
+	tag: tagSchema.optional(),
 	from: localDateSchema.optional(),
 	to: localDateSchema.optional(),
 	limit: z.coerce.number().int().min(1).max(200).default(50),
