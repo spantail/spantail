@@ -16,6 +16,7 @@ function reportFixture(overrides: Partial<Report> = {}): Report {
 			dateRange: { from: "2026-06-08", to: "2026-06-14" },
 		},
 		note: null,
+		totalMinutes: 750,
 		renderedMarkdown: "# Weekly report\n\n- did things\n",
 		createdAt: "2026-06-01T00:00:00Z",
 		updatedAt: "2026-06-01T00:00:00Z",

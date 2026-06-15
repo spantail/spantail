@@ -122,6 +122,9 @@ export const reportSchema = z.object({
 	filters: reportFiltersSchema,
 	// Free-form markdown appended to the rendered output via {{ report.note }}.
 	note: z.string().max(20000).nullable(),
+	// Total logged minutes across the report's entries, computed at render time.
+	// Null for reports generated before this was tracked (shown until re-rendered).
+	totalMinutes: z.number().int().nonnegative().nullable(),
 	// The rendered document, produced on create and refreshed on edit.
 	renderedMarkdown: z.string(),
 	createdAt: z.string(),

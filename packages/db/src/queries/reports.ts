@@ -13,7 +13,12 @@ export type ReportInsert = Omit<
 export type ReportPatch = Partial<
 	Pick<
 		ReportRow,
-		"name" | "templateId" | "filters" | "note" | "renderedMarkdown"
+		| "name"
+		| "templateId"
+		| "filters"
+		| "note"
+		| "totalMinutes"
+		| "renderedMarkdown"
 	>
 >;
 
@@ -50,6 +55,7 @@ export async function listReportMetaByOwner(
 			templateId: reports.templateId,
 			filters: reports.filters,
 			note: reports.note,
+			totalMinutes: reports.totalMinutes,
 			createdAt: reports.createdAt,
 			updatedAt: reports.updatedAt,
 		})

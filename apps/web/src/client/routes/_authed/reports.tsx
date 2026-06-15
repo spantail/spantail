@@ -7,10 +7,9 @@ import {
 	type Report,
 	type ReportMeta,
 	type ReportTemplate,
-	shiftDays,
-	todayInTimezone,
 } from "@toxil/core";
-import { useState } from "react";
+import { PlusIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
+import { type KeyboardEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportCard } from "@/components/report-card";
@@ -28,13 +27,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	Popover,
+	PopoverClose,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { downloadReportMarkdown } from "@/lib/report-download";
 import { useWorkspace } from "@/lib/workspace";
@@ -61,6 +65,31 @@ interface FormState {
 	editingId: string | null;
 	titleKey: string;
 	seed: ReportFormSeed;
+}
+
+/** Removable chip summarising one active filter, shown beneath the tab bar. */
+function FilterChip({
+	label,
+	removeLabel,
+	onClear,
+}: {
+	label: string;
+	removeLabel: string;
+	onClear: () => void;
+}) {
+	return (
+		<span className="border-border bg-muted/60 text-foreground inline-flex items-center gap-1 rounded-full border py-1 pr-1 pl-2.5 text-xs font-medium">
+			{label}
+			<button
+				type="button"
+				aria-label={removeLabel}
+				onClick={onClear}
+				className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground flex size-4 items-center justify-center rounded-full transition-colors"
+			>
+				<XIcon className="size-3" />
+			</button>
+		</span>
+	);
 }
 
 function ReportsPage() {
@@ -147,11 +176,10 @@ function ReportsPage() {
 		}
 	}
 
-	// Filters (local state, matching the rest of the app). Period defaults to the
-	// last 14 days and keeps any report whose period overlaps it.
-	const tz = current?.timezone ?? "UTC";
-	const [from, setFrom] = useState(() => shiftDays(todayInTimezone(tz), -13));
-	const [to, setTo] = useState(() => todayInTimezone(tz));
+	// Auxiliary filters (local state). They live in a popover and are off by
+	// default: an empty period keeps every report, a project of "all" keeps all.
+	const [from, setFrom] = useState("");
+	const [to, setTo] = useState("");
 	const [projectFilter, setProjectFilter] = useState("all");
 
 	// Project options come from the workspace project catalog so the filter is
@@ -159,6 +187,21 @@ function ReportsPage() {
 	const projectOptions = [...projectById.entries()]
 		.map(([id, name]) => ({ id, name }))
 		.sort((a, b) => a.name.localeCompare(b.name));
+
+	const periodActive = from !== "" || to !== "";
+	const projectActive = projectFilter !== "all";
+	const activeFilterCount = (periodActive ? 1 : 0) + (projectActive ? 1 : 0);
+	const periodLabel =
+		from && to
+			? formatPeriodLabel({ from, to })
+			: from
+				? `${t("reports.from")} ${from}`
+				: `${t("reports.to")} ${to}`;
+	const clearFilters = () => {
+		setFrom("");
+		setTo("");
+		setProjectFilter("all");
+	};
 
 	// One tab per enabled template, plus archived (disabled) templates that
 	// still have reports so no document is ever orphaned.
@@ -197,6 +240,27 @@ function ReportsPage() {
 	];
 	const activeTab =
 		tab && tabs.some((x) => x.id === tab) ? tab : (tabs[0]?.id ?? null);
+
+	// Roving-tabindex keyboard nav for the custom tab strip (ARIA tabs pattern):
+	// Left/Right move and activate, Home/End jump to the ends, focus follows.
+	const tablistRef = useRef<HTMLDivElement>(null);
+	const onTabKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+		const ids = tabs.map((x) => x.id);
+		const current = ids.indexOf(activeTab ?? "");
+		if (current < 0) return;
+		let next = current;
+		if (e.key === "ArrowRight") next = (current + 1) % ids.length;
+		else if (e.key === "ArrowLeft")
+			next = (current - 1 + ids.length) % ids.length;
+		else if (e.key === "Home") next = 0;
+		else if (e.key === "End") next = ids.length - 1;
+		else return;
+		e.preventDefault();
+		setTab(ids[next] ?? null);
+		tablistRef.current
+			?.querySelector<HTMLButtonElement>(`[data-tab-id="${ids[next]}"]`)
+			?.focus();
+	};
 
 	const newSeed = (template: ReportTemplate): ReportFormSeed => ({
 		name: "",
@@ -287,8 +351,10 @@ function ReportsPage() {
 
 	const matches = (report: ReportMeta) => {
 		const range = report.filters.dateRange;
-		// Period overlap (inclusive). ISO date strings compare lexicographically.
-		if (!(range.from <= to && range.to >= from)) return false;
+		// Period overlap (inclusive); an empty bound means "open" on that side.
+		// ISO date strings compare lexicographically.
+		if (from && range.to < from) return false;
+		if (to && range.from > to) return false;
 		// The project filter is inclusive: a report with no project scope covers
 		// everything within its workspaces, so it matches any selection whose
 		// workspace it spans.
@@ -344,7 +410,7 @@ function ReportsPage() {
 			);
 		}
 		return (
-			<div className="flex flex-col gap-4">
+			<div className="divide-y overflow-hidden rounded-xl border">
 				{list.map((report) => (
 					<ReportCard
 						key={report.id}
@@ -364,8 +430,8 @@ function ReportsPage() {
 	};
 
 	return (
-		<div className="flex max-w-3xl flex-col gap-4">
-			<div className="flex items-start justify-between gap-2">
+		<div className="flex flex-col gap-6">
+			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div>
 					<h1 className="font-heading text-xl font-semibold tracking-tight">
 						{t("reports.title")}
@@ -375,9 +441,11 @@ function ReportsPage() {
 					</p>
 				</div>
 				<Button
+					size="lg"
 					disabled={!createTarget}
 					onClick={() => createTarget && openCreate(createTarget)}
 				>
+					<PlusIcon />
 					{t("reports.newAction")}
 				</Button>
 			</div>
@@ -388,69 +456,180 @@ function ReportsPage() {
 				</p>
 			) : (
 				<>
-					<div className="flex flex-wrap items-end gap-3">
-						<div className="flex flex-col gap-1.5">
-							<Label htmlFor="reports-from" className="text-xs">
-								{t("reports.from")}
-							</Label>
-							<Input
-								id="reports-from"
-								type="date"
-								className="w-40 [color-scheme:light] dark:[color-scheme:dark]"
-								value={from}
-								max={to}
-								onChange={(e) => setFrom(e.target.value)}
-							/>
+					{/* Template tabs scroll horizontally (names are arbitrary), while
+					    the filter trigger stays pinned to the right of the strip. The
+					    underline sits inside the row (bottom-0) so the scroll area
+					    never overflows vertically and shows a stray scrollbar. */}
+					<div className="flex flex-col gap-3">
+						<div className="flex items-end gap-3 border-b">
+							<div className="-mb-px min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+								<div
+									ref={tablistRef}
+									role="tablist"
+									aria-orientation="horizontal"
+									onKeyDown={onTabKeyDown}
+									className="flex w-max items-center gap-1"
+								>
+									{tabs.map((tabItem) => {
+										const selected = activeTab === tabItem.id;
+										return (
+											<button
+												key={tabItem.id}
+												type="button"
+												role="tab"
+												id={`reports-tab-${tabItem.id}`}
+												data-tab-id={tabItem.id}
+												aria-selected={selected}
+												aria-controls="reports-tabpanel"
+												tabIndex={selected ? 0 : -1}
+												onClick={() => setTab(tabItem.id)}
+												className={`relative shrink-0 px-3 pt-1 pb-2.5 text-sm whitespace-nowrap transition-colors ${
+													selected
+														? "text-foreground font-medium"
+														: "text-muted-foreground hover:text-foreground"
+												}`}
+											>
+												{tabItem.label}
+												{tabItem.archived ? ` (${t("reports.archived")})` : ""}
+												{selected && (
+													<span className="bg-foreground absolute inset-x-2 bottom-0 h-0.5 rounded-full" />
+												)}
+											</button>
+										);
+									})}
+								</div>
+							</div>
+							<div className="shrink-0 pb-1.5">
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant={activeFilterCount ? "secondary" : "outline"}
+											size="sm"
+										>
+											<SlidersHorizontalIcon />
+											{t("reports.filterAction")}
+											{activeFilterCount > 0 && (
+												<span className="bg-foreground text-background ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+													{activeFilterCount}
+												</span>
+											)}
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent align="end" className="w-80">
+										<div className="flex flex-col gap-3.5">
+											<div className="grid grid-cols-2 gap-3">
+												<div className="flex flex-col gap-1.5">
+													<Label htmlFor="reports-from" className="text-xs">
+														{t("reports.from")}
+													</Label>
+													<Input
+														id="reports-from"
+														type="date"
+														className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
+														value={from}
+														max={to || undefined}
+														onChange={(e) => setFrom(e.target.value)}
+													/>
+												</div>
+												<div className="flex flex-col gap-1.5">
+													<Label htmlFor="reports-to" className="text-xs">
+														{t("reports.to")}
+													</Label>
+													<Input
+														id="reports-to"
+														type="date"
+														className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
+														value={to}
+														min={from || undefined}
+														onChange={(e) => setTo(e.target.value)}
+													/>
+												</div>
+											</div>
+											{projectOptions.length > 0 && (
+												<div className="flex flex-col gap-1.5">
+													<Label className="text-xs">
+														{t("reports.filter.project")}
+													</Label>
+													<Select
+														value={projectFilter}
+														onValueChange={setProjectFilter}
+													>
+														<SelectTrigger className="h-9 w-full">
+															<SelectValue />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="all">
+																{t("reports.filter.allProjects")}
+															</SelectItem>
+															{projectOptions.map((project) => (
+																<SelectItem key={project.id} value={project.id}>
+																	{project.name}
+																</SelectItem>
+															))}
+														</SelectContent>
+													</Select>
+												</div>
+											)}
+										</div>
+										<div className="mt-4 flex items-center justify-between">
+											<Button
+												variant="ghost"
+												size="sm"
+												className="text-muted-foreground h-8 px-2"
+												disabled={!activeFilterCount}
+												onClick={clearFilters}
+											>
+												{t("reports.filter.clear")}
+											</Button>
+											<PopoverClose asChild>
+												<Button size="sm">{t("reports.filter.done")}</Button>
+											</PopoverClose>
+										</div>
+									</PopoverContent>
+								</Popover>
+							</div>
 						</div>
-						<div className="flex flex-col gap-1.5">
-							<Label htmlFor="reports-to" className="text-xs">
-								{t("reports.to")}
-							</Label>
-							<Input
-								id="reports-to"
-								type="date"
-								className="w-40 [color-scheme:light] dark:[color-scheme:dark]"
-								value={to}
-								min={from}
-								onChange={(e) => setTo(e.target.value)}
-							/>
-						</div>
-						{projectOptions.length > 0 && (
-							<div className="flex flex-col gap-1.5">
-								<Label className="text-xs">{t("reports.filter.project")}</Label>
-								<Select value={projectFilter} onValueChange={setProjectFilter}>
-									<SelectTrigger className="w-44">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">
-											{t("reports.filter.allProjects")}
-										</SelectItem>
-										{projectOptions.map((project) => (
-											<SelectItem key={project.id} value={project.id}>
-												{project.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
+						{activeFilterCount > 0 && (
+							<div className="flex flex-wrap items-center gap-2">
+								{periodActive && (
+									<FilterChip
+										label={periodLabel}
+										removeLabel={t("reports.filter.remove")}
+										onClear={() => {
+											setFrom("");
+											setTo("");
+										}}
+									/>
+								)}
+								{projectActive && (
+									<FilterChip
+										label={projectById.get(projectFilter) ?? projectFilter}
+										removeLabel={t("reports.filter.remove")}
+										onClear={() => setProjectFilter("all")}
+									/>
+								)}
+								{activeFilterCount > 1 && (
+									<button
+										type="button"
+										onClick={clearFilters}
+										className="text-muted-foreground hover:text-foreground text-xs font-medium transition-colors"
+									>
+										{t("reports.filter.clear")}
+									</button>
+								)}
 							</div>
 						)}
 					</div>
-					<Tabs value={activeTab ?? undefined} onValueChange={setTab}>
-						<TabsList>
-							{tabs.map((tabItem) => (
-								<TabsTrigger key={tabItem.id} value={tabItem.id}>
-									{tabItem.label}
-									{tabItem.archived ? ` (${t("reports.archived")})` : ""}
-								</TabsTrigger>
-							))}
-						</TabsList>
-						{tabs.map((tabItem) => (
-							<TabsContent key={tabItem.id} value={tabItem.id}>
-								{tabBody(tabItem)}
-							</TabsContent>
-						))}
-					</Tabs>
+					<div
+						id="reports-tabpanel"
+						role="tabpanel"
+						aria-labelledby={activeTab ? `reports-tab-${activeTab}` : undefined}
+					>
+						{(() => {
+							const active = tabs.find((x) => x.id === activeTab);
+							return active ? tabBody(active) : null;
+						})()}
+					</div>
 				</>
 			)}
 

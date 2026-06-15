@@ -25,6 +25,7 @@ import {
 	listReportSharesByReport,
 	listUsersByIds,
 	listWorkEntriesForReport,
+	listWorkspacesForUser,
 	type ReportRow,
 	updateReport,
 } from "@toxil/db";
@@ -115,7 +116,11 @@ async function renderReportDocument(
 		filters: ReportFiltersInput;
 		note: string | null;
 	},
-): Promise<{ renderedMarkdown: string; resolvedFilters: ReportFilters }> {
+): Promise<{
+	renderedMarkdown: string;
+	resolvedFilters: ReportFilters;
+	totalMinutes: number;
+}> {
 	const { filters, templateId } = doc;
 	const { workspaces, templateBody, enabled } =
 		await validateFiltersAndTemplate(c, filters.workspaceIds, templateId);
@@ -173,9 +178,12 @@ async function renderReportDocument(
 		throw new AppError("bad_request", `Template rendering failed: ${message}`);
 	}
 
+	const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
+
 	return {
 		renderedMarkdown,
 		resolvedFilters: { ...filters, dateRange: range },
+		totalMinutes,
 	};
 }
 
@@ -193,27 +201,39 @@ export const reportRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
 		// Metadata only: the rendered body is fetched on demand via GET /:id.
-		return c.json(await listReportMetaByOwner(c.var.db, user.id));
+		const metas = await listReportMetaByOwner(c.var.db, user.id);
+		// totalMinutes is an aggregate of workspace entries (report content), so it
+		// is redacted for reports whose scope the owner no longer fully covers —
+		// mirroring the membership re-check that gates the full report read.
+		const memberIds = new Set(
+			(await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id),
+		);
+		return c.json(
+			metas.map((report) =>
+				report.filters.workspaceIds.every((id) => memberIds.has(id))
+					? report
+					: { ...report, totalMinutes: null },
+			),
+		);
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
 		const note = normalizeNote(input.note ?? null);
-		const { renderedMarkdown, resolvedFilters } = await renderReportDocument(
-			c,
-			{
+		const { renderedMarkdown, resolvedFilters, totalMinutes } =
+			await renderReportDocument(c, {
 				name: input.name,
 				templateId: input.templateId,
 				filters: input.filters,
 				note,
-			},
-		);
+			});
 		const report = await createReport(c.var.db, {
 			name: input.name,
 			ownerUserId: user.id,
 			templateId: input.templateId,
 			filters: resolvedFilters,
 			note,
+			totalMinutes,
 			renderedMarkdown,
 		});
 		return c.json(report, 201);
@@ -237,20 +257,19 @@ export const reportRoutes = new Hono<AppEnv>()
 		const filters = input.filters ?? report.filters;
 		const note =
 			input.note === undefined ? report.note : normalizeNote(input.note);
-		const { renderedMarkdown, resolvedFilters } = await renderReportDocument(
-			c,
-			{
+		const { renderedMarkdown, resolvedFilters, totalMinutes } =
+			await renderReportDocument(c, {
 				name,
 				templateId,
 				filters,
 				note,
-			},
-		);
+			});
 		const updated = await updateReport(c.var.db, report.id, {
 			name,
 			templateId,
 			filters: resolvedFilters,
 			note,
+			totalMinutes,
 			renderedMarkdown,
 		});
 		return c.json(updated);

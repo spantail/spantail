@@ -160,10 +160,15 @@
 		"tab": {
 			"all": "All"
 		},
+		"filterAction": "Filter",
+		"moreActions": "More actions",
 		"filter": {
 			"project": "Project",
 			"allProjects": "All projects",
-			"empty": "No reports match the current filters."
+			"empty": "No reports match the current filters.",
+			"clear": "Clear all",
+			"done": "Done",
+			"remove": "Remove filter"
 		},
 		"delete": {
 			"title": "Delete this report?",

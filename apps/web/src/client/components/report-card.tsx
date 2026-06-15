@@ -1,10 +1,21 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+	formatDuration,
 	formatPeriodLabel,
 	type Report,
 	type ReportMeta,
 	type ReportTemplate,
 } from "@toxil/core";
+import {
+	DownloadIcon,
+	EyeIcon,
+	FileTextIcon,
+	MoreHorizontalIcon,
+	PencilIcon,
+	PlusIcon,
+	Share2Icon,
+	Trash2Icon,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ShareDialog } from "@/components/share-dialog";
@@ -17,20 +28,22 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-	Card,
-	CardAction,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { downloadReportMarkdown } from "@/lib/report-download";
 
-/** One report document: a header with its period and the per-document actions. */
+/**
+ * One report document, rendered as a single row inside a divided list. Routine
+ * actions live in a hover overflow menu; the row itself opens the report.
+ */
 export function ReportCard({
 	report,
 	templates,
@@ -47,10 +60,11 @@ export function ReportCard({
 	onEdit: (report: ReportMeta) => void;
 	onDuplicate: (report: ReportMeta) => void;
 }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
 	const [sharing, setSharing] = useState(false);
+	const [deleting, setDeleting] = useState(false);
 
 	const templateName =
 		templates.find((tpl) => tpl.id === report.templateId)?.name ??
@@ -81,89 +95,124 @@ export function ReportCard({
 	});
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle className="font-heading text-base">
-					{report.name}{" "}
-					<span className="text-muted-foreground font-normal">
-						{formatPeriodLabel(report.filters.dateRange)}
+		<div>
+			{/* The row body is a button (keyboard-accessible "view"); the overflow
+			    menu is a sibling so buttons are never nested. */}
+			<div className="group hover:bg-muted/40 flex items-center transition-colors">
+				<button
+					type="button"
+					disabled={viewMutation.isPending}
+					onClick={() => viewMutation.mutate()}
+					className="flex min-w-0 flex-1 items-center gap-4 py-3.5 pl-4 text-left"
+				>
+					<span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
+						<FileTextIcon className="size-4" />
 					</span>
-				</CardTitle>
-				<CardDescription>
-					{templateName}
-					{" · "}
-					{new Date(report.updatedAt).toLocaleDateString()}
-				</CardDescription>
-				<CardAction className="whitespace-nowrap">
-					<Button
-						variant="ghost"
-						size="sm"
-						disabled={viewMutation.isPending}
-						onClick={() => viewMutation.mutate()}
-					>
-						{t("reports.view.openAction")}
-					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						disabled={downloadMutation.isPending}
-						onClick={() => downloadMutation.mutate()}
-					>
-						{t("reports.view.downloadAction")}
-					</Button>
-					<Button variant="ghost" size="sm" onClick={() => setSharing(true)}>
-						{t("reports.shares.shareAction")}
-					</Button>
-					{!readOnly && (
-						<>
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => onDuplicate(report)}
-							>
-								{t("reports.duplicateAction")}
-							</Button>
-							<Button variant="ghost" size="sm" onClick={() => onEdit(report)}>
-								{t("reports.editAction")}
-							</Button>
-						</>
+					<span className="min-w-0 flex-1">
+						<span className="flex items-baseline gap-2">
+							<span className="min-w-0 truncate text-sm font-medium">
+								{report.name}
+							</span>
+							<span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+								{formatPeriodLabel(report.filters.dateRange)}
+							</span>
+						</span>
+						<span className="text-muted-foreground mt-0.5 block truncate text-xs">
+							{templateName}
+							{" · "}
+							{new Date(report.updatedAt).toLocaleDateString(i18n.language, {
+								month: "short",
+								day: "numeric",
+							})}
+						</span>
+					</span>
+					{report.totalMinutes != null && (
+						<span className="text-muted-foreground hidden shrink-0 text-sm tabular-nums sm:block">
+							{formatDuration(report.totalMinutes)}
+						</span>
 					)}
-					<AlertDialog>
-						<AlertDialogTrigger asChild>
-							<Button variant="ghost" size="sm">
-								{t("reports.deleteAction")}
-							</Button>
-						</AlertDialogTrigger>
-						<AlertDialogContent>
-							<AlertDialogHeader>
-								<AlertDialogTitle>{t("reports.delete.title")}</AlertDialogTitle>
-								<AlertDialogDescription>
-									{t("reports.delete.description")}
-								</AlertDialogDescription>
-							</AlertDialogHeader>
-							<AlertDialogFooter>
-								<AlertDialogCancel>
-									{t("reports.delete.cancel")}
-								</AlertDialogCancel>
-								<AlertDialogAction
-									className={buttonVariants({ variant: "destructive" })}
-									onClick={() => deleteMutation.mutate()}
-								>
-									{t("reports.delete.confirm")}
-								</AlertDialogAction>
-							</AlertDialogFooter>
-						</AlertDialogContent>
-					</AlertDialog>
-				</CardAction>
-			</CardHeader>
-			{error && (
-				<CardDescription className="px-6 text-destructive">
-					{error}
-				</CardDescription>
-			)}
+				</button>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="ghost"
+							size="icon"
+							aria-label={t("reports.moreActions")}
+							// Hover-reveal only where hover exists; on touch/coarse
+							// pointers the trigger stays visible so actions aren't hidden.
+							className="text-muted-foreground mr-2 ml-1 size-8 shrink-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 [@media(hover:hover)]:opacity-0"
+						>
+							<MoreHorizontalIcon />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" className="w-48">
+						<DropdownMenuItem
+							disabled={viewMutation.isPending}
+							onClick={() => viewMutation.mutate()}
+						>
+							<EyeIcon />
+							{t("reports.view.openAction")}
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							disabled={downloadMutation.isPending}
+							onClick={() => downloadMutation.mutate()}
+						>
+							<DownloadIcon />
+							{t("reports.view.downloadAction")}
+						</DropdownMenuItem>
+						<DropdownMenuItem onSelect={() => setSharing(true)}>
+							<Share2Icon />
+							{t("reports.shares.shareAction")}
+						</DropdownMenuItem>
+						{!readOnly && (
+							<DropdownMenuItem onClick={() => onDuplicate(report)}>
+								<PlusIcon />
+								{t("reports.duplicateAction")}
+							</DropdownMenuItem>
+						)}
+						<DropdownMenuSeparator />
+						{!readOnly && (
+							<DropdownMenuItem onClick={() => onEdit(report)}>
+								<PencilIcon />
+								{t("reports.editAction")}
+							</DropdownMenuItem>
+						)}
+						<DropdownMenuItem
+							variant="destructive"
+							onSelect={() => setDeleting(true)}
+						>
+							<Trash2Icon />
+							{t("reports.deleteAction")}
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
+
+			{error && <p className="text-destructive px-4 pb-3 text-xs">{error}</p>}
+
+			<AlertDialog open={deleting} onOpenChange={setDeleting}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t("reports.delete.title")}</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("reports.delete.description")}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{t("reports.delete.cancel")}</AlertDialogCancel>
+						<AlertDialogAction
+							className={buttonVariants({ variant: "destructive" })}
+							onClick={() => deleteMutation.mutate()}
+						>
+							{t("reports.delete.confirm")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
 			{sharing && (
 				<ShareDialog report={report} onClose={() => setSharing(false)} />
 			)}
-		</Card>
+		</div>
 	);
 }
