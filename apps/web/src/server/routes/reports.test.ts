@@ -141,9 +141,19 @@ it("renders entries inline, scoped by tags and date", async () => {
 
 	const report = (await (
 		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
-	).json()) as { renderedMarkdown: string };
+	).json()) as { renderedMarkdown: string; totalMinutes: number };
 	expect(report.renderedMarkdown).toContain("Wired the endpoint");
 	expect(report.renderedMarkdown).not.toContain("Tidied the desk");
+	// Only the tag-matching entry counts toward the persisted total.
+	expect(report.totalMinutes).toBe(30);
+
+	// The total is metadata, so it rides along on the list payload too.
+	const list = (await (
+		await apiGet("/api/v1/reports", admin)
+	).json()) as Array<{
+		totalMinutes: number;
+	}>;
+	expect(list[0]?.totalMinutes).toBe(30);
 });
 
 it("stores a custom absolute period and renders that window", async () => {

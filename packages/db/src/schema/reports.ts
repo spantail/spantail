@@ -55,6 +55,9 @@ export const reports = sqliteTable(
 		filters: text("filters", { mode: "json" }).$type<ReportFilters>().notNull(),
 		// Free-form markdown rendered into the report output.
 		note: text("note"),
+		// Total logged minutes across the report's entries, computed at render time.
+		// Nullable: reports created before this column show no total until re-rendered.
+		totalMinutes: integer("total_minutes"),
 		// The rendered document, produced on create and refreshed on edit.
 		renderedMarkdown: text("rendered_markdown").notNull(),
 		createdAt: createdAtMs(),

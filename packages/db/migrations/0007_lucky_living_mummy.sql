@@ -1,0 +1,1 @@
+ALTER TABLE `reports` ADD `total_minutes` integer;

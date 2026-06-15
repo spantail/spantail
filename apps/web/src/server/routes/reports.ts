@@ -115,7 +115,11 @@ async function renderReportDocument(
 		filters: ReportFiltersInput;
 		note: string | null;
 	},
-): Promise<{ renderedMarkdown: string; resolvedFilters: ReportFilters }> {
+): Promise<{
+	renderedMarkdown: string;
+	resolvedFilters: ReportFilters;
+	totalMinutes: number;
+}> {
 	const { filters, templateId } = doc;
 	const { workspaces, templateBody, enabled } =
 		await validateFiltersAndTemplate(c, filters.workspaceIds, templateId);
@@ -173,9 +177,12 @@ async function renderReportDocument(
 		throw new AppError("bad_request", `Template rendering failed: ${message}`);
 	}
 
+	const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
+
 	return {
 		renderedMarkdown,
 		resolvedFilters: { ...filters, dateRange: range },
+		totalMinutes,
 	};
 }
 
@@ -199,21 +206,20 @@ export const reportRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
 		const note = normalizeNote(input.note ?? null);
-		const { renderedMarkdown, resolvedFilters } = await renderReportDocument(
-			c,
-			{
+		const { renderedMarkdown, resolvedFilters, totalMinutes } =
+			await renderReportDocument(c, {
 				name: input.name,
 				templateId: input.templateId,
 				filters: input.filters,
 				note,
-			},
-		);
+			});
 		const report = await createReport(c.var.db, {
 			name: input.name,
 			ownerUserId: user.id,
 			templateId: input.templateId,
 			filters: resolvedFilters,
 			note,
+			totalMinutes,
 			renderedMarkdown,
 		});
 		return c.json(report, 201);
@@ -237,20 +243,19 @@ export const reportRoutes = new Hono<AppEnv>()
 		const filters = input.filters ?? report.filters;
 		const note =
 			input.note === undefined ? report.note : normalizeNote(input.note);
-		const { renderedMarkdown, resolvedFilters } = await renderReportDocument(
-			c,
-			{
+		const { renderedMarkdown, resolvedFilters, totalMinutes } =
+			await renderReportDocument(c, {
 				name,
 				templateId,
 				filters,
 				note,
-			},
-		);
+			});
 		const updated = await updateReport(c.var.db, report.id, {
 			name,
 			templateId,
 			filters: resolvedFilters,
 			note,
+			totalMinutes,
 			renderedMarkdown,
 		});
 		return c.json(updated);

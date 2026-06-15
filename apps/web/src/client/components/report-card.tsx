@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+	formatDuration,
 	formatPeriodLabel,
 	type Report,
 	type ReportMeta,
@@ -125,6 +126,11 @@ export function ReportCard({
 							})}
 						</span>
 					</span>
+					{report.totalMinutes != null && (
+						<span className="text-muted-foreground hidden shrink-0 text-sm tabular-nums sm:block">
+							{formatDuration(report.totalMinutes)}
+						</span>
+					)}
 				</button>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
@@ -139,7 +145,7 @@ export function ReportCard({
 							<MoreHorizontalIcon />
 						</Button>
 					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
+					<DropdownMenuContent align="end" className="w-48">
 						<DropdownMenuItem
 							disabled={viewMutation.isPending}
 							onClick={() => viewMutation.mutate()}
