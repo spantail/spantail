@@ -129,7 +129,9 @@ export function ReportCard({
 							variant="ghost"
 							size="icon"
 							aria-label={t("reports.moreActions")}
-							className="text-muted-foreground mr-2 ml-1 size-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+							// Hover-reveal only where hover exists; on touch/coarse
+							// pointers the trigger stays visible so actions aren't hidden.
+							className="text-muted-foreground mr-2 ml-1 size-8 shrink-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 [@media(hover:hover)]:opacity-0"
 						>
 							<MoreHorizontalIcon />
 						</Button>
