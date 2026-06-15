@@ -1,4 +1,4 @@
-import type { Report, ReportSnapshot } from "@toxil/core";
+import type { Report } from "@toxil/core";
 import { expect, it } from "vitest";
 
 import { runCli } from "../cli";
@@ -11,24 +11,17 @@ function reportFixture(overrides: Partial<Report> = {}): Report {
 		name: "Weekly",
 		ownerUserId: "u1",
 		templateId: "builtin:weekly",
-		filters: { workspaceIds: ["ws-acme"], dateRange: "this_week" },
+		filters: {
+			workspaceIds: ["ws-acme"],
+			dateRange: { from: "2026-06-08", to: "2026-06-14" },
+		},
 		note: null,
+		renderedMarkdown: "# Weekly report\n\n- did things\n",
 		createdAt: "2026-06-01T00:00:00Z",
 		updatedAt: "2026-06-01T00:00:00Z",
 		...overrides,
 	};
 }
-
-const snapshot: ReportSnapshot = {
-	id: "snap-1",
-	reportId: "rep-1",
-	renderedMarkdown: "# Weekly report\n\n- did things\n",
-	resolvedFilters: {
-		workspaceIds: ["ws-acme"],
-		dateRange: { from: "2026-06-08", to: "2026-06-14" },
-	},
-	generatedAt: "2026-06-12T00:00:00Z",
-};
 
 function loggedIn(configDir: string): void {
 	saveConfig(configDir, {
@@ -61,39 +54,33 @@ it("lists reports with full ids and ranges", async () => {
 	const lines = stdout.text().trimEnd().split("\n");
 	expect(lines[0]).toMatch(/^ID\s+NAME\s+TEMPLATE\s+RANGE$/);
 	expect(lines[1]).toContain("rep-1");
-	expect(lines[1]).toContain("this_week");
+	expect(lines[1]).toContain("2026-06-08..2026-06-14");
 	expect(lines[2]).toContain("2026-06-01..2026-06-30");
 });
 
 it("prints exactly the rendered markdown on stdout", async () => {
-	const api = fakeApi([
-		{ method: "POST", path: "/reports/rep-1/run", status: 201, body: snapshot },
-	]);
+	const api = fakeApi([{ path: "/reports/rep-1", body: reportFixture() }]);
 	const { ctx, stdout, stderr, configDir } = createTestContext({
 		fetch: api.fetch,
 	});
 	loggedIn(configDir);
 
-	expect(await runCli(["report", "run", "rep-1"], ctx)).toBe(0);
-	expect(stdout.text()).toBe(snapshot.renderedMarkdown);
-	expect(stderr.text()).toBe(
-		"Generated snapshot snap-1 (2026-06-08 – 2026-06-14)\n",
-	);
+	expect(await runCli(["report", "view", "rep-1"], ctx)).toBe(0);
+	expect(stdout.text()).toBe(reportFixture().renderedMarkdown);
+	expect(stderr.text()).toBe("Report Weekly (2026-06-08 – 2026-06-14)\n");
 });
 
 it("appends a trailing newline when the markdown lacks one", async () => {
 	const api = fakeApi([
 		{
-			method: "POST",
-			path: "/reports/rep-1/run",
-			status: 201,
-			body: { ...snapshot, renderedMarkdown: "# No newline" },
+			path: "/reports/rep-1",
+			body: reportFixture({ renderedMarkdown: "# No newline" }),
 		},
 	]);
 	const { ctx, stdout, configDir } = createTestContext({ fetch: api.fetch });
 	loggedIn(configDir);
 
-	expect(await runCli(["report", "run", "rep-1"], ctx)).toBe(0);
+	expect(await runCli(["report", "view", "rep-1"], ctx)).toBe(0);
 	expect(stdout.text()).toBe("# No newline\n");
 });
 
@@ -102,15 +89,15 @@ it("hints at report list for unknown ids", async () => {
 	const { ctx, stderr, configDir } = createTestContext({ fetch: api.fetch });
 	loggedIn(configDir);
 
-	expect(await runCli(["report", "run", "nope"], ctx)).toBe(1);
+	expect(await runCli(["report", "view", "nope"], ctx)).toBe(1);
 	expect(stderr.text()).toContain('report "nope" not found');
 	expect(stderr.text()).toContain("toxil report list");
 });
 
 it("requires a single report id", async () => {
 	for (const argv of [
-		["report", "run"],
-		["report", "run", "a", "b"],
+		["report", "view"],
+		["report", "view", "a", "b"],
 	]) {
 		const { ctx, stderr, configDir } = createTestContext();
 		loggedIn(configDir);

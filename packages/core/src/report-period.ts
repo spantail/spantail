@@ -2,13 +2,12 @@ import { shiftDays } from "./common";
 import {
 	type AbsoluteDateRange,
 	lastDayOfMonth,
+	type PeriodUnit,
 	type ReportDateRange,
 	resolveDateRange,
 } from "./report";
 
-/** Cadence of a report series: presets map to a unit, absolute ranges are custom. */
-export type PeriodUnit = "day" | "week" | "month" | "custom";
-
+/** Maps a wire date range to a cadence: presets map to a unit, absolute = custom. */
 export function periodUnitOf(range: ReportDateRange): PeriodUnit {
 	if (typeof range !== "string") return "custom";
 	switch (range) {
@@ -45,24 +44,27 @@ function monthAfter(date: string): AbsoluteDateRange {
 }
 
 /**
- * Default period for the next snapshot of a report series.
+ * Default period for the NEXT report of a given cadence (used by Duplicate).
  *
- * Weekly/monthly series anchor on the previous snapshot's resolved range
- * (not on "now"), so generating July's report on August 1st still targets
- * July. Daily series anchor on now instead: skipped days (weekends) are
- * intentional gaps, not periods to backfill.
+ * Weekly/monthly anchor on the previous report's resolved range (not on
+ * "now"), so duplicating July's report on August 1st still targets August.
+ * Daily anchors on now instead: skipped days (weekends) are intentional gaps,
+ * not periods to backfill. Custom advances by its own length.
  */
 export function deriveNextPeriod(
-	range: ReportDateRange,
+	unit: PeriodUnit,
 	previous: AbsoluteDateRange | null,
 	timezone: string,
 	now: Date = new Date(),
 ): AbsoluteDateRange {
-	const unit = periodUnitOf(range);
-	// Without a previous snapshot there is nothing to advance from; absolute
-	// ranges pass through resolveDateRange unchanged.
-	if (unit === "day" || !previous)
-		return resolveDateRange(range, timezone, now);
+	if (unit === "day") return resolveDateRange("today", timezone, now);
+	// Without a previous period there is nothing to advance from; fall back to
+	// the current period for the cadence.
+	if (!previous) {
+		if (unit === "week") return resolveDateRange("this_week", timezone, now);
+		if (unit === "month") return resolveDateRange("this_month", timezone, now);
+		return resolveDateRange("today", timezone, now);
+	}
 	switch (unit) {
 		case "week":
 			// Shifts both endpoints, preserving the stored shape even when an

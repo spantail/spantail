@@ -1,7 +1,7 @@
 import { todayInTimezone } from "@toxil/core";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
 
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
@@ -31,6 +31,7 @@ async function createEntry(
 	project: string,
 	description: string,
 	tags: string[],
+	entryDate?: string,
 ) {
 	const res = await apiJson(
 		"POST",
@@ -41,6 +42,7 @@ async function createEntry(
 			durationMinutes: 30,
 			description,
 			tags,
+			...(entryDate ? { entryDate } : {}),
 		},
 		cookie,
 	);
@@ -64,14 +66,32 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 		admin,
 	);
 	expect(created.status).toBe(201);
-	const report = (await created.json()) as { id: string; note: string };
+	const report = (await created.json()) as {
+		id: string;
+		note: string;
+		renderedMarkdown: string;
+		filters: { dateRange: { from: string; to: string } };
+	};
 	expect(report.note).toBe("Reviewed by QA");
+	// Create renders inline; the period is stored as absolute dates.
+	expect(report.renderedMarkdown).toContain("Reviewed by QA");
+	const today = todayInTimezone("Asia/Tokyo");
+	expect(report.filters.dateRange).toEqual({ from: today, to: today });
 
-	const list = (await (
-		await apiGet("/api/v1/reports", admin)
-	).json()) as Array<{ id: string }>;
+	// The list payload is metadata only — no rendered body.
+	const list = (await (await apiGet("/api/v1/reports", admin)).json()) as Array<
+		Record<string, unknown>
+	>;
 	expect(list.map((r) => r.id)).toEqual([report.id]);
+	expect(list[0]).not.toHaveProperty("renderedMarkdown");
 	expect(await (await apiGet("/api/v1/reports", other)).json()).toEqual([]);
+
+	// The full report (with markdown) is fetched on demand.
+	const full = await apiGet(`/api/v1/reports/${report.id}`, admin);
+	expect(full.status).toBe(200);
+	expect(
+		((await full.json()) as { renderedMarkdown: string }).renderedMarkdown,
+	).toContain("Reviewed by QA");
 
 	// Other users get 404, not 403: existence stays hidden.
 	expect((await apiGet(`/api/v1/reports/${report.id}`, other)).status).toBe(
@@ -88,6 +108,7 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 		).status,
 	).toBe(404);
 
+	// Editing re-renders; a blank note collapses to null.
 	const updated = await apiJson(
 		"PATCH",
 		`/api/v1/reports/${report.id}`,
@@ -95,9 +116,14 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 		admin,
 	);
 	expect(updated.status).toBe(200);
-	const patched = (await updated.json()) as { name: string; note: null };
+	const patched = (await updated.json()) as {
+		name: string;
+		note: null;
+		renderedMarkdown: string;
+	};
 	expect(patched.name).toBe("Renamed");
 	expect(patched.note).toBeNull();
+	expect(patched.renderedMarkdown).not.toContain("Reviewed by QA");
 
 	expect(
 		(await apiJson("DELETE", `/api/v1/reports/${report.id}`, undefined, admin))
@@ -106,6 +132,93 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 	expect((await apiGet(`/api/v1/reports/${report.id}`, admin)).status).toBe(
 		404,
 	);
+});
+
+it("renders entries inline, scoped by tags and date", async () => {
+	const { admin, ws, project } = await setup();
+	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
+	await createEntry(admin, ws.id, project.id, "Tidied the desk", ["chore"]);
+
+	const report = (await (
+		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
+	).json()) as { renderedMarkdown: string };
+	expect(report.renderedMarkdown).toContain("Wired the endpoint");
+	expect(report.renderedMarkdown).not.toContain("Tidied the desk");
+});
+
+it("stores a custom absolute period and renders that window", async () => {
+	const { admin, ws, project } = await setup();
+	await createEntry(
+		admin,
+		ws.id,
+		project.id,
+		"Backfilled work",
+		["api"],
+		"2026-01-15",
+	);
+
+	const created = await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			...baseReport(ws.id),
+			filters: {
+				workspaceIds: [ws.id],
+				tags: ["api"],
+				dateRange: { from: "2026-01-01", to: "2026-01-31" },
+			},
+		},
+		admin,
+	);
+	expect(created.status).toBe(201);
+	const report = (await created.json()) as {
+		renderedMarkdown: string;
+		filters: { dateRange: { from: string; to: string } };
+	};
+	expect(report.renderedMarkdown).toContain("Backfilled work");
+	expect(report.filters.dateRange).toEqual({
+		from: "2026-01-01",
+		to: "2026-01-31",
+	});
+});
+
+it("passes the preset to templates only when one was chosen", async () => {
+	const { admin, ws } = await setup();
+	const template = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/report-templates`,
+			{ name: "Preset probe", body: "[{{ period.preset }}]{{ period.from }}" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	const preset = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{ ...baseReport(ws.id), templateId: template.id },
+			admin,
+		)
+	).json()) as { renderedMarkdown: string };
+	expect(preset.renderedMarkdown).toContain("[today]");
+
+	const absolute = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				...baseReport(ws.id),
+				templateId: template.id,
+				filters: {
+					workspaceIds: [ws.id],
+					dateRange: { from: "2026-02-01", to: "2026-02-28" },
+				},
+			},
+			admin,
+		)
+	).json()) as { renderedMarkdown: string };
+	expect(absolute.renderedMarkdown).toBe("[]2026-02-01");
 });
 
 it("rejects filters outside the caller's workspace memberships", async () => {
@@ -152,7 +265,7 @@ it("hides workspace templates outside the caller's memberships", async () => {
 		},
 		other,
 	);
-	// Membership check fires first (403); a template-only leak would be 404 anyway.
+	// Membership check fires first (403); a template-only leak would be 404.
 	expect([403, 404]).toContain(res.status);
 
 	const unknownTemplate = await apiJson(
@@ -183,8 +296,6 @@ it("requires a custom template to belong to a filtered workspace", async () => {
 		)
 	).json()) as { id: string };
 
-	// The caller is a member of both workspaces, but the template's
-	// workspace is not part of the report filters.
 	const res = await apiJson(
 		"POST",
 		"/api/v1/reports",
@@ -209,183 +320,25 @@ it("requires a custom template to belong to a filtered workspace", async () => {
 	expect(ok.status).toBe(201);
 });
 
-it("runs a report into an immutable snapshot", async () => {
-	const { admin, ws, project } = await setup();
-	await createEntry(admin, ws.id, project.id, "Wired the run endpoint", [
-		"api",
-	]);
-	await createEntry(admin, ws.id, project.id, "Tidied the desk", ["chore"]);
-
-	const report = (await (
-		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
-	).json()) as { id: string };
-
-	const run = await apiJson(
-		"POST",
-		`/api/v1/reports/${report.id}/run`,
-		undefined,
-		admin,
-	);
-	expect(run.status).toBe(201);
-	const snapshot = (await run.json()) as {
-		id: string;
-		renderedMarkdown: string;
-		resolvedFilters: { dateRange: { from: string; to: string } };
-	};
-	expect(snapshot.renderedMarkdown).toContain("Wired the run endpoint");
-	expect(snapshot.renderedMarkdown).not.toContain("Tidied the desk");
-	expect(snapshot.renderedMarkdown).toContain("Reviewed by QA");
-	const today = todayInTimezone("Asia/Tokyo");
-	expect(snapshot.resolvedFilters.dateRange).toEqual({
-		from: today,
-		to: today,
-	});
-
-	const metaList = (await (
-		await apiGet(`/api/v1/reports/${report.id}/snapshots`, admin)
-	).json()) as Array<Record<string, unknown>>;
-	expect(metaList).toHaveLength(1);
-	expect(metaList[0]?.id).toBe(snapshot.id);
-	expect(metaList[0]).not.toHaveProperty("renderedMarkdown");
-
-	const full = await apiGet(`/api/v1/report-snapshots/${snapshot.id}`, admin);
-	expect(full.status).toBe(200);
-	expect(
-		((await full.json()) as { renderedMarkdown: string }).renderedMarkdown,
-	).toContain("Wired the run endpoint");
-});
-
-it("runs a report with a date range override", async () => {
-	const { admin, ws, project } = await setup();
-	// Entry dated outside today, only reachable through the override window.
-	const res = await apiJson(
-		"POST",
-		"/api/v1/work-entries",
-		{
-			workspaceId: ws.id,
-			projectId: project.id,
-			entryDate: "2026-01-15",
-			durationMinutes: 30,
-			description: "Backfilled work",
-			tags: ["api"],
-		},
-		admin,
-	);
-	expect(res.status).toBe(201);
-	const report = (await (
-		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
-	).json()) as { id: string };
-
-	const run = await apiJson(
-		"POST",
-		`/api/v1/reports/${report.id}/run`,
-		{ dateRange: { from: "2026-01-01", to: "2026-01-31" } },
-		admin,
-	);
-	expect(run.status).toBe(201);
-	const snapshot = (await run.json()) as {
-		renderedMarkdown: string;
-		resolvedFilters: { dateRange: { from: string; to: string } };
-	};
-	expect(snapshot.renderedMarkdown).toContain("Backfilled work");
-	expect(snapshot.resolvedFilters.dateRange).toEqual({
-		from: "2026-01-01",
-		to: "2026-01-31",
-	});
-});
-
-it("hides the preset from templates when the range is overridden", async () => {
+it("rejects malformed or oversized date ranges at create", async () => {
 	const { admin, ws } = await setup();
-	const template = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
-			{ name: "Preset probe", body: "[{{ period.preset }}]{{ period.from }}" },
-			admin,
-		)
-	).json()) as { id: string };
-	const report = (await (
-		await apiJson(
+
+	for (const dateRange of [
+		{ from: "2026-02-01", to: "2026-01-31" }, // from > to
+		{ from: "not-a-date", to: "2026-01-31" },
+		{ from: "2024-01-01", to: "2025-06-01" }, // span > 366 days
+	]) {
+		const res = await apiJson(
 			"POST",
 			"/api/v1/reports",
-			{ ...baseReport(ws.id), templateId: template.id },
-			admin,
-		)
-	).json()) as { id: string };
-
-	const plain = (await (
-		await apiJson("POST", `/api/v1/reports/${report.id}/run`, undefined, admin)
-	).json()) as { renderedMarkdown: string };
-	expect(plain.renderedMarkdown).toContain("[today]");
-
-	const overridden = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/reports/${report.id}/run`,
-			{ dateRange: { from: "2026-02-01", to: "2026-02-28" } },
-			admin,
-		)
-	).json()) as { renderedMarkdown: string };
-	expect(overridden.renderedMarkdown).toBe("[]2026-02-01");
-});
-
-it("rejects malformed run bodies", async () => {
-	const { admin, ws } = await setup();
-	const report = (await (
-		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
-	).json()) as { id: string };
-
-	for (const body of [
-		{ dateRange: { from: "2026-02-01", to: "2026-01-31" } }, // from > to
-		{ dateRange: { from: "not-a-date", to: "2026-01-31" } },
-	]) {
-		const run = await apiJson(
-			"POST",
-			`/api/v1/reports/${report.id}/run`,
-			body,
+			{ ...baseReport(ws.id), filters: { workspaceIds: [ws.id], dateRange } },
 			admin,
 		);
-		expect(run.status).toBe(400);
+		expect(res.status).toBe(400);
 	}
-
-	// Raw garbage that is not JSON at all.
-	const garbage = await appFetch(`/api/v1/reports/${report.id}/run`, {
-		method: "POST",
-		headers: { "content-type": "application/json", cookie: admin },
-		body: "not json",
-	});
-	expect(garbage.status).toBe(400);
 });
 
-it("guards snapshots by report ownership and supports delete", async () => {
-	const { admin, other, ws, project } = await setup();
-	await createEntry(admin, ws.id, project.id, "Entry", ["api"]);
-	const report = (await (
-		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
-	).json()) as { id: string };
-	const snapshot = (await (
-		await apiJson("POST", `/api/v1/reports/${report.id}/run`, undefined, admin)
-	).json()) as { id: string };
-
-	expect(
-		(await apiGet(`/api/v1/report-snapshots/${snapshot.id}`, other)).status,
-	).toBe(404);
-	expect(
-		(
-			await apiJson(
-				"DELETE",
-				`/api/v1/report-snapshots/${snapshot.id}`,
-				undefined,
-				admin,
-			)
-		).status,
-	).toBe(204);
-	expect(
-		(await apiGet(`/api/v1/report-snapshots/${snapshot.id}`, admin)).status,
-	).toBe(404);
-});
-
-it("revokes snapshot content access when workspace membership is lost", async () => {
+it("revokes report content access when workspace membership is lost", async () => {
 	const { admin, other, ws } = await setup();
 	await apiJson(
 		"POST",
@@ -405,12 +358,9 @@ it("revokes snapshot content access when workspace membership is lost", async ()
 			other,
 		)
 	).json()) as { id: string };
-	const snapshot = (await (
-		await apiJson("POST", `/api/v1/reports/${report.id}/run`, undefined, other)
-	).json()) as { id: string };
-	expect(
-		(await apiGet(`/api/v1/report-snapshots/${snapshot.id}`, other)).status,
-	).toBe(200);
+	expect((await apiGet(`/api/v1/reports/${report.id}`, other)).status).toBe(
+		200,
+	);
 
 	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
 		user: { id: string };
@@ -426,33 +376,28 @@ it("revokes snapshot content access when workspace membership is lost", async ()
 		).status,
 	).toBe(204);
 
-	// Rendered content is gone with the membership; re-running is blocked too.
-	const denied = await apiGet(`/api/v1/report-snapshots/${snapshot.id}`, other);
-	expect(denied.status).toBe(403);
+	// Reading the rendered content and re-rendering both need membership.
+	expect((await apiGet(`/api/v1/reports/${report.id}`, other)).status).toBe(
+		403,
+	);
 	expect(
 		(
 			await apiJson(
-				"POST",
-				`/api/v1/reports/${report.id}/run`,
-				undefined,
+				"PATCH",
+				`/api/v1/reports/${report.id}`,
+				{ name: "Edited" },
 				other,
 			)
 		).status,
 	).toBe(403);
-	// The owner can still delete their own snapshot (no data exposure).
+	// The owner can still delete their own report (no data exposure).
 	expect(
-		(
-			await apiJson(
-				"DELETE",
-				`/api/v1/report-snapshots/${snapshot.id}`,
-				undefined,
-				other,
-			)
-		).status,
+		(await apiJson("DELETE", `/api/v1/reports/${report.id}`, undefined, other))
+			.status,
 	).toBe(204);
 });
 
-it("surfaces template rendering errors as bad_request", async () => {
+it("surfaces template rendering errors as bad_request and saves nothing", async () => {
 	const { admin, ws } = await setup();
 	const template = (await (
 		await apiJson(
@@ -462,22 +407,17 @@ it("surfaces template rendering errors as bad_request", async () => {
 			admin,
 		)
 	).json()) as { id: string };
-	const report = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/reports",
-			{ ...baseReport(ws.id), templateId: template.id },
-			admin,
-		)
-	).json()) as { id: string };
 
-	const run = await apiJson(
+	const res = await apiJson(
 		"POST",
-		`/api/v1/reports/${report.id}/run`,
-		undefined,
+		"/api/v1/reports",
+		{ ...baseReport(ws.id), templateId: template.id },
 		admin,
 	);
-	expect(run.status).toBe(400);
-	const body = (await run.json()) as { error: { message: string } };
+	expect(res.status).toBe(400);
+	const body = (await res.json()) as { error: { message: string } };
 	expect(body.error.message).toContain("Template rendering failed");
+
+	// Nothing was persisted.
+	expect(await (await apiGet("/api/v1/reports", admin)).json()).toEqual([]);
 });

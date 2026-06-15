@@ -27,11 +27,7 @@ function makeStub() {
 			{ id: "builtin:daily" },
 		]),
 		listReports: record("listReports", [{ id: "r1" }]),
-		getReport: record("getReport", { id: "r1" }),
-		runReport: record("runReport", {
-			id: "s1",
-			renderedMarkdown: "# Report",
-		}),
+		getReport: record("getReport", { id: "r1", renderedMarkdown: "# Report" }),
 	} as unknown as ToxilClient;
 	return { stub, calls };
 }
@@ -49,7 +45,7 @@ async function connect(client: ToxilClient) {
 	return mcpClient;
 }
 
-it("exposes the nine toxil tools", async () => {
+it("exposes the eight toxil tools", async () => {
 	const { stub } = makeStub();
 	const client = await connect(stub);
 
@@ -62,21 +58,20 @@ it("exposes the nine toxil tools", async () => {
 		"list_reports",
 		"list_workspaces",
 		"log_work",
-		"run_report",
 		"update_entry",
 	]);
 });
 
-it("routes run_report to the api client", async () => {
+it("routes get_report to the api client", async () => {
 	const { stub, calls } = makeStub();
 	const client = await connect(stub);
 
 	const result = await client.callTool({
-		name: "run_report",
+		name: "get_report",
 		arguments: { id: "r1" },
 	});
 
-	expect(calls.at(-1)?.method).toBe("runReport");
+	expect(calls.at(-1)?.method).toBe("getReport");
 	expect(calls.at(-1)?.args[0]).toBe("r1");
 	const content = result.content as Array<{ type: string; text: string }>;
 	expect(JSON.parse(content[0]?.text ?? "")).toMatchObject({

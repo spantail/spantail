@@ -6,8 +6,8 @@ import { expect, it } from "vitest";
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 /**
- * Builds a snapshot whose markdown carries injection attempts: the report
- * note flows verbatim into the builtin daily template's Notes section.
+ * Builds a report whose markdown carries injection attempts: the report note
+ * flows verbatim into the builtin daily template's Notes section.
  */
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
@@ -39,38 +39,30 @@ async function setup() {
 		admin,
 	);
 	expect(entry.status).toBe(201);
-	const report = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/reports",
-			{
-				name: "Daily <Report>",
-				templateId: "builtin:daily",
-				filters: { workspaceIds: [ws.id], dateRange: "today" },
-				note: "<script>alert(1)</script> and [a link](javascript:alert(1))",
-			},
-			admin,
-		)
-	).json()) as { id: string };
-	const run = await apiJson(
+	const report = await apiJson(
 		"POST",
-		`/api/v1/reports/${report.id}/run`,
-		undefined,
+		"/api/v1/reports",
+		{
+			name: "Daily <Report>",
+			templateId: "builtin:daily",
+			filters: { workspaceIds: [ws.id], dateRange: "today" },
+			note: "<script>alert(1)</script> and [a link](javascript:alert(1))",
+		},
 		admin,
 	);
-	expect(run.status).toBe(201);
-	const snapshot = (await run.json()) as { id: string };
-	return { admin, snapshotId: snapshot.id };
+	expect(report.status).toBe(201);
+	const reportId = ((await report.json()) as { id: string }).id;
+	return { admin, reportId };
 }
 
 async function createShare(
 	admin: string,
-	snapshotId: string,
+	reportId: string,
 	body: Record<string, unknown> = {},
 ): Promise<{ id: string; token: string }> {
 	const res = await apiJson(
 		"POST",
-		`/api/v1/report-snapshots/${snapshotId}/shares`,
+		`/api/v1/reports/${reportId}/shares`,
 		body,
 		admin,
 	);
@@ -78,9 +70,9 @@ async function createShare(
 	return (await res.json()) as { id: string; token: string };
 }
 
-async function listShares(admin: string, snapshotId: string) {
+async function listShares(admin: string, reportId: string) {
 	return (await (
-		await apiGet(`/api/v1/report-snapshots/${snapshotId}/shares`, admin)
+		await apiGet(`/api/v1/reports/${reportId}/shares`, admin)
 	).json()) as Array<{
 		id: string;
 		viewCount: number;
@@ -89,8 +81,8 @@ async function listShares(admin: string, snapshotId: string) {
 }
 
 it("serves shared content with hardening headers and sanitized markdown", async () => {
-	const { admin, snapshotId } = await setup();
-	const share = await createShare(admin, snapshotId);
+	const { admin, reportId } = await setup();
+	const share = await createShare(admin, reportId);
 
 	const res = await appFetch(`/share/${share.token}`);
 	expect(res.status).toBe(200);
@@ -114,20 +106,20 @@ it("serves shared content with hardening headers and sanitized markdown", async 
 });
 
 it("increments the view count on successful views only", async () => {
-	const { admin, snapshotId } = await setup();
-	const share = await createShare(admin, snapshotId);
+	const { admin, reportId } = await setup();
+	const share = await createShare(admin, reportId);
 
 	expect((await appFetch(`/share/${share.token}`)).status).toBe(200);
 	expect((await appFetch(`/share/${share.token}`)).status).toBe(200);
 
-	const [row] = await listShares(admin, snapshotId);
+	const [row] = await listShares(admin, reportId);
 	expect(row?.viewCount).toBe(2);
 	expect(row?.lastViewedAt).toBeTruthy();
 });
 
 it("guards passcode-protected shares", async () => {
-	const { admin, snapshotId } = await setup();
-	const share = await createShare(admin, snapshotId, {
+	const { admin, reportId } = await setup();
+	const share = await createShare(admin, reportId, {
 		passcode: "open sesame",
 	});
 
@@ -136,7 +128,7 @@ it("guards passcode-protected shares", async () => {
 	const formBody = await form.text();
 	expect(formBody).toContain('name="passcode"');
 	expect(formBody).not.toContain("Wired the share view");
-	expect((await listShares(admin, snapshotId))[0]?.viewCount).toBe(0);
+	expect((await listShares(admin, reportId))[0]?.viewCount).toBe(0);
 
 	const postForm = (passcode: string) =>
 		appFetch(`/share/${share.token}`, {
@@ -148,18 +140,18 @@ it("guards passcode-protected shares", async () => {
 	const wrong = await postForm("nope nope");
 	expect(wrong.status).toBe(401);
 	expect(await wrong.text()).toContain('name="passcode"');
-	expect((await listShares(admin, snapshotId))[0]?.viewCount).toBe(0);
+	expect((await listShares(admin, reportId))[0]?.viewCount).toBe(0);
 
 	const right = await postForm("open sesame");
 	expect(right.status).toBe(200);
 	expect(await right.text()).toContain("Wired the share view");
-	expect((await listShares(admin, snapshotId))[0]?.viewCount).toBe(1);
+	expect((await listShares(admin, reportId))[0]?.viewCount).toBe(1);
 });
 
 it("returns a uniform 404 for invalid, unknown, revoked, and expired links", async () => {
-	const { admin, snapshotId } = await setup();
+	const { admin, reportId } = await setup();
 
-	const revoked = await createShare(admin, snapshotId);
+	const revoked = await createShare(admin, reportId);
 	expect(
 		(
 			await apiJson(
@@ -171,10 +163,15 @@ it("returns a uniform 404 for invalid, unknown, revoked, and expired links", asy
 		).status,
 	).toBe(200);
 
-	// An expired share cannot be minted via the API; insert it directly.
+	// An expired share cannot be minted via the API; insert it directly. The
+	// expiry check fires before any R2 read, so no object is needed.
 	const expired = await createReportShare(createDb(env.DB), {
-		snapshotId,
+		reportId,
 		token: generateShareToken(),
+		r2Key: `shares/${generateShareToken()}`,
+		reportName: "Expired",
+		dateFrom: "2026-01-01",
+		dateTo: "2026-01-01",
 		passcodeHash: null,
 		expiresAt: new Date(Date.now() - 1000),
 	});
@@ -204,8 +201,8 @@ it("serves Japanese chrome for Accept-Language: ja", async () => {
 });
 
 it("returns the HTML 404 for deep paths and stray methods", async () => {
-	const { admin, snapshotId } = await setup();
-	const share = await createShare(admin, snapshotId);
+	const { admin, reportId } = await setup();
+	const share = await createShare(admin, reportId);
 
 	const deep = await appFetch("/share/a/b");
 	expect(deep.status).toBe(404);
@@ -214,5 +211,5 @@ it("returns the HTML 404 for deep paths and stray methods", async () => {
 	const patch = await appFetch(`/share/${share.token}`, { method: "PATCH" });
 	expect(patch.status).toBe(404);
 	expect(patch.headers.get("content-type")).toContain("text/html");
-	expect((await listShares(admin, snapshotId))[0]?.viewCount).toBe(0);
+	expect((await listShares(admin, reportId))[0]?.viewCount).toBe(0);
 });

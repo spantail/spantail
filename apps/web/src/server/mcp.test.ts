@@ -126,7 +126,6 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 		"list_reports",
 		"list_workspaces",
 		"log_work",
-		"run_report",
 		"update_entry",
 	]);
 
@@ -165,7 +164,7 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 	).toBe(true);
 });
 
-it("runs a saved report end to end over mcp", async () => {
+it("reads a rendered report end to end over mcp", async () => {
 	const { cookie, ws, project, token } = await setup();
 	await apiJson(
 		"POST",
@@ -178,6 +177,7 @@ it("runs a saved report end to end over mcp", async () => {
 		},
 		cookie,
 	);
+	// Creating renders inline, so the report already carries its markdown.
 	const report = (await (
 		await apiJson(
 			"POST",
@@ -196,18 +196,18 @@ it("runs a saved report end to end over mcp", async () => {
 		jsonrpc: "2.0",
 		id: 5,
 		method: "tools/call",
-		params: { name: "run_report", arguments: { id: report.id } },
+		params: { name: "get_report", arguments: { id: report.id } },
 	});
 	const call = await rpcResult<{
 		content: Array<{ type: string; text: string }>;
 		isError?: boolean;
 	}>(callRes);
 	expect(call.isError).toBeFalsy();
-	const snapshot = JSON.parse(call.content[0]?.text ?? "{}") as {
+	const fetched = JSON.parse(call.content[0]?.text ?? "{}") as {
 		renderedMarkdown: string;
 	};
-	expect(snapshot.renderedMarkdown).toContain("Refined the report engine");
-	expect(snapshot.renderedMarkdown).toContain(
+	expect(fetched.renderedMarkdown).toContain("Refined the report engine");
+	expect(fetched.renderedMarkdown).toContain(
 		"Generated through the MCP loopback",
 	);
 });

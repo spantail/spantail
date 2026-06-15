@@ -119,7 +119,8 @@
 		"description": "レポートは個人に紐づき、所属するすべてのワークスペースの記録を横断して集計できます。",
 		"newTitle": "レポートを作成",
 		"editTitle": "レポートを編集",
-		"formDescription": "フィルタとテンプレートを設定します。作成すると同時に一度実行されます。",
+		"duplicateTitle": "レポートを複製",
+		"formDescription": "フィルタとテンプレートを選びます。保存すると同時にレポートが生成されます。",
 		"name": "レポート名",
 		"template": "テンプレート",
 		"workspaces": "ワークスペース",
@@ -146,42 +147,33 @@
 		"cancelAction": "キャンセル",
 		"editAction": "編集",
 		"deleteAction": "削除",
+		"duplicateAction": "前回から作成",
 		"empty": "レポートはまだありません。[新規レポート] から作成しましょう。",
-		"tabs": {
-			"all": "すべて",
-			"day": "日次",
-			"week": "週次",
-			"month": "月次",
-			"custom": "カスタム"
+		"archived": "アーカイブ",
+		"noTemplates": "有効なレポートテンプレートがありません。ワークスペース管理者に有効化を依頼してください。",
+		"spanTooLong": "期間は 366 日以内にしてください。",
+		"blankState": {
+			"title": "{{template}} のレポートはまだありません。",
+			"createAction": "最初の {{template}} レポートを作成"
 		},
-		"createNext": {
-			"today": "今日の分を作成",
-			"yesterday": "昨日の分を作成",
-			"week": "今週分を作成",
-			"month": "翌月分を作成",
-			"custom": "次の期間を作成"
+		"delete": {
+			"title": "このレポートを削除しますか?",
+			"description": "レポートと共有リンクを完全に削除します。元に戻せません。",
+			"confirm": "削除",
+			"cancel": "キャンセル"
 		},
-		"runNext": {
-			"title": "レポートを作成: {{name}}",
-			"description": "次のスナップショットをこのシリーズに追加する前に期間を確認します。",
-			"suggested": "推奨",
-			"createAction": "作成"
+		"view": {
+			"description": "生成された Markdown 出力。",
+			"openAction": "表示",
+			"downloadAction": ".md をダウンロード",
+			"closeAction": "閉じる"
 		},
 		"form": {
-			"presetPreview": "現在の解決結果: {{from}} – {{to}}",
-			"runFailed": "レポートは保存されましたが、初回実行に失敗しました: {{message}}"
-		},
-		"snapshots": {
-			"viewAction": "表示",
-			"viewerDescription": "生成されたスナップショット — Markdown 出力。",
-			"downloadAction": ".md をダウンロード",
-			"closeAction": "閉じる",
-			"deleteAction": "削除",
-			"empty": "スナップショットはまだありません。レポートを実行すると作成されます。"
+			"presetPreview": "現在の解決結果: {{from}} – {{to}}"
 		},
 		"shares": {
 			"title": "共有: {{name}}",
-			"description": "このスナップショットへの読み取り専用リンクを作成します。",
+			"description": "このレポートへの読み取り専用リンクを作成します。",
 			"shareAction": "共有",
 			"expiresIn": "有効期限",
 			"expiry": {
@@ -204,7 +196,7 @@
 			"hasPasscode": "パスコード",
 			"expires": "期限 {{value}}",
 			"views": "閲覧数: {{value}}",
-			"empty": "共有リンクはまだありません。上のフォームから作成できます。"
+			"empty": "共有リンクはまだありません。上のフォームからこのレポートを共有できます。"
 		}
 	},
 	"templates": {
@@ -218,6 +210,17 @@
 		"body": "テンプレート本文",
 		"bodyHint": "Markdown + Liquid タグで記述します。利用できるデータ: report, period, entries, groups, totals / フィルタ: format_date, format_duration, sum, group_by。",
 		"builtin": "ビルトイン",
+		"periodUnit": "周期",
+		"cadence": {
+			"day": "日次",
+			"week": "週次",
+			"month": "月次",
+			"custom": "カスタム"
+		},
+		"disabledBadge": "無効",
+		"enableAction": "有効化",
+		"disableAction": "無効化",
+		"adminOnlyHint": "テンプレートの管理はワークスペース管理者のみ可能です。",
 		"createAction": "テンプレートを作成",
 		"saveAction": "保存",
 		"cancelAction": "キャンセル",

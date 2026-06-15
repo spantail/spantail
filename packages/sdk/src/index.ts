@@ -12,14 +12,13 @@ import type {
 	ListWorkEntriesQueryData,
 	Project,
 	Report,
+	ReportMeta,
 	ReportShare,
-	ReportSnapshot,
-	ReportSnapshotMeta,
 	ReportTemplate,
-	RunReportInput,
 	UpdateProjectInput,
 	UpdateReportInput,
 	UpdateReportTemplateInput,
+	UpdateReportTemplateStateInput,
 	UpdateWorkEntryInput,
 	UpdateWorkspaceInput,
 	WorkEntry,
@@ -213,11 +212,25 @@ export class ToxilClient {
 		return this.request("PATCH", `/report-templates/${id}`, { body: input });
 	}
 
+	/** Admin-only: toggle enabled / set cadence (builtin or custom template). */
+	updateReportTemplateState(
+		workspaceId: string,
+		templateId: string,
+		input: UpdateReportTemplateStateInput,
+	): Promise<ReportTemplate> {
+		return this.request(
+			"PATCH",
+			`/workspaces/${workspaceId}/report-templates/${templateId}/state`,
+			{ body: input },
+		);
+	}
+
 	deleteReportTemplate(id: string): Promise<void> {
 		return this.request("DELETE", `/report-templates/${id}`);
 	}
 
-	listReports(): Promise<Report[]> {
+	/** Metadata only (no rendered body); fetch the full report with getReport. */
+	listReports(): Promise<ReportMeta[]> {
 		return this.request("GET", "/reports");
 	}
 
@@ -237,36 +250,15 @@ export class ToxilClient {
 		return this.request("DELETE", `/reports/${id}`);
 	}
 
-	runReport(id: string, input?: RunReportInput): Promise<ReportSnapshot> {
-		// No input sends no body at all, keeping body-less callers unchanged.
-		return this.request(
-			"POST",
-			`/reports/${id}/run`,
-			input ? { body: input } : {},
-		);
-	}
-
-	listReportSnapshots(reportId: string): Promise<ReportSnapshotMeta[]> {
-		return this.request("GET", `/reports/${reportId}/snapshots`);
-	}
-
-	getReportSnapshot(id: string): Promise<ReportSnapshot> {
-		return this.request("GET", `/report-snapshots/${id}`);
-	}
-
-	deleteReportSnapshot(id: string): Promise<void> {
-		return this.request("DELETE", `/report-snapshots/${id}`);
-	}
-
-	listReportShares(snapshotId: string): Promise<ReportShare[]> {
-		return this.request("GET", `/report-snapshots/${snapshotId}/shares`);
+	listReportShares(reportId: string): Promise<ReportShare[]> {
+		return this.request("GET", `/reports/${reportId}/shares`);
 	}
 
 	createReportShare(
-		snapshotId: string,
+		reportId: string,
 		input: CreateReportShareInput = {},
 	): Promise<ReportShare> {
-		return this.request("POST", `/report-snapshots/${snapshotId}/shares`, {
+		return this.request("POST", `/reports/${reportId}/shares`, {
 			body: input,
 		});
 	}

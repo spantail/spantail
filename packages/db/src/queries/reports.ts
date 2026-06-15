@@ -1,15 +1,20 @@
-import { count, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { reports } from "../schema/reports";
 
 export type ReportRow = typeof reports.$inferSelect;
+/** A report without its (potentially large) rendered body, for list payloads. */
+export type ReportMetaRow = Omit<ReportRow, "renderedMarkdown">;
 export type ReportInsert = Omit<
 	typeof reports.$inferInsert,
 	"id" | "createdAt" | "updatedAt"
 >;
 export type ReportPatch = Partial<
-	Pick<ReportRow, "name" | "templateId" | "filters" | "note">
+	Pick<
+		ReportRow,
+		"name" | "templateId" | "filters" | "note" | "renderedMarkdown"
+	>
 >;
 
 export async function createReport(
@@ -32,15 +37,25 @@ export async function getReportById(
 	return db.select().from(reports).where(eq(reports.id, id)).get();
 }
 
-export async function listReportsByOwner(
+/** List metadata only (no rendered_markdown), newest first. */
+export async function listReportMetaByOwner(
 	db: Database,
 	ownerUserId: string,
-): Promise<ReportRow[]> {
+): Promise<ReportMetaRow[]> {
 	return db
-		.select()
+		.select({
+			id: reports.id,
+			name: reports.name,
+			ownerUserId: reports.ownerUserId,
+			templateId: reports.templateId,
+			filters: reports.filters,
+			note: reports.note,
+			createdAt: reports.createdAt,
+			updatedAt: reports.updatedAt,
+		})
 		.from(reports)
 		.where(eq(reports.ownerUserId, ownerUserId))
-		.orderBy(reports.createdAt);
+		.orderBy(desc(reports.createdAt));
 }
 
 export async function updateReport(

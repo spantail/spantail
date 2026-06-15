@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	formatPeriodLabel,
+	type ReportMeta,
 	type ReportShare,
-	type ReportSnapshotMeta,
 	type ShareStatus,
 	shareStatus,
 } from "@toxil/core";
@@ -39,13 +40,10 @@ const STATUS_VARIANT: Record<
 };
 
 export function ShareDialog({
-	snapshot,
-	title,
+	report,
 	onClose,
 }: {
-	snapshot: ReportSnapshotMeta;
-	/** Derived snapshot display name, e.g. "Monthly report 2026-06". */
-	title: string;
+	report: ReportMeta;
 	onClose: () => void;
 }) {
 	const { t } = useTranslation();
@@ -55,17 +53,20 @@ export function ShareDialog({
 	const [error, setError] = useState<string | null>(null);
 	const [copiedId, setCopiedId] = useState<string | null>(null);
 
+	// "Monthly report 2026-06" — the report name plus its period label.
+	const title = `${report.name} ${formatPeriodLabel(report.filters.dateRange)}`;
+
 	const shares = useQuery({
-		queryKey: ["report-shares", snapshot.id],
-		queryFn: () => api.listReportShares(snapshot.id),
+		queryKey: ["report-shares", report.id],
+		queryFn: () => api.listReportShares(report.id),
 	});
 
 	const invalidate = () =>
-		queryClient.invalidateQueries({ queryKey: ["report-shares", snapshot.id] });
+		queryClient.invalidateQueries({ queryKey: ["report-shares", report.id] });
 
 	const createMutation = useMutation({
 		mutationFn: () =>
-			api.createReportShare(snapshot.id, {
+			api.createReportShare(report.id, {
 				expiresInDays: expiry === "none" ? undefined : Number(expiry),
 				passcode: passcode === "" ? undefined : passcode,
 			}),

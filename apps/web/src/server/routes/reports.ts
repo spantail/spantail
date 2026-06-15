@@ -1,24 +1,27 @@
 import {
+	type AbsoluteDateRange,
 	createReportInputSchema,
+	createReportShareInputSchema,
 	filterEntriesByTags,
+	generateShareToken,
 	getBuiltinTemplate,
+	hashSharePasscode,
 	isBuiltinTemplateId,
 	type ReportFilters,
-	type RunReportInput,
+	type ReportFiltersInput,
 	renderReport,
 	resolveDateRange,
-	runReportInputSchema,
 	updateReportInputSchema,
 } from "@toxil/core";
 import {
 	createReport,
-	createReportSnapshot,
+	createReportShare,
 	deleteReport,
 	getReportById,
 	getReportTemplateById,
 	listProjectsByIds,
-	listReportSnapshots,
-	listReportsByOwner,
+	listReportMetaByOwner,
+	listReportSharesByReport,
 	listUsersByIds,
 	listWorkEntriesForReport,
 	type ReportRow,
@@ -32,9 +35,12 @@ import {
 	type MemberWorkspace,
 	requireScopeWorkspaces,
 } from "../lib/permissions";
+import { toApiShare } from "../lib/share-api";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Owner-only access; existence is not revealed to other users. */
 export async function requireReportOwner(
@@ -51,16 +57,16 @@ export async function requireReportOwner(
 
 /**
  * Cross-workspace filters are limited to the union of the caller's
- * memberships. A custom template must belong to a workspace in the filters:
- * its body ends up in snapshots, and snapshot reads re-check membership
- * against the filters' workspace ids only.
+ * memberships, and a custom template must belong to a filtered workspace (its
+ * body is baked into the rendered document). Returns the caller's memberships
+ * and the template body to render with.
  */
 async function validateFiltersAndTemplate(
 	c: Context<AppEnv>,
-	filters: ReportFilters,
+	workspaceIds: string[],
 	templateId: string,
 ): Promise<{ workspaces: MemberWorkspace[]; templateBody: string }> {
-	const workspaces = await requireScopeWorkspaces(c, filters.workspaceIds);
+	const workspaces = await requireScopeWorkspaces(c, workspaceIds);
 	const memberIds = new Set(workspaces.map((w) => w.id));
 
 	if (isBuiltinTemplateId(templateId)) {
@@ -72,7 +78,7 @@ async function validateFiltersAndTemplate(
 	if (!template || !memberIds.has(template.workspaceId)) {
 		throw new AppError("not_found", "Report template not found");
 	}
-	if (!filters.workspaceIds.includes(template.workspaceId)) {
+	if (!workspaceIds.includes(template.workspaceId)) {
 		throw new AppError(
 			"bad_request",
 			"Template must belong to a workspace in the report filters",
@@ -86,140 +92,218 @@ function normalizeNote(note: string | null): string | null {
 	return note && note.trim() !== "" ? note : null;
 }
 
+/**
+ * Validates membership + template, resolves the period to absolute dates, and
+ * renders the document synchronously. A template error surfaces as a 400 so a
+ * create/edit never persists an un-renderable report.
+ */
+async function renderReportDocument(
+	c: Context<AppEnv>,
+	doc: {
+		name: string;
+		templateId: string;
+		filters: ReportFiltersInput;
+		note: string | null;
+	},
+): Promise<{ renderedMarkdown: string; resolvedFilters: ReportFilters }> {
+	const { filters, templateId } = doc;
+	const { workspaces, templateBody } = await validateFiltersAndTemplate(
+		c,
+		filters.workspaceIds,
+		templateId,
+	);
+
+	const scoped = workspaces.filter((w) => filters.workspaceIds.includes(w.id));
+	const anchor = scoped.find((w) => w.id === filters.workspaceIds[0]);
+	if (!anchor) throw new AppError("internal", "Filter workspace missing");
+	const range: AbsoluteDateRange = resolveDateRange(
+		filters.dateRange,
+		anchor.timezone,
+	);
+
+	const rows = await listWorkEntriesForReport(c.var.db, {
+		workspaceIds: filters.workspaceIds,
+		projectIds: filters.projectIds,
+		userIds: filters.userIds,
+		from: range.from,
+		to: range.to,
+	});
+	const entries = filterEntriesByTags(rows, filters.tags);
+	const [projects, users] = await Promise.all([
+		listProjectsByIds(c.var.db, [...new Set(entries.map((e) => e.projectId))]),
+		listUsersByIds(c.var.db, [...new Set(entries.map((e) => e.userId))]),
+	]);
+
+	let renderedMarkdown: string;
+	try {
+		renderedMarkdown = await renderReport(templateBody, {
+			report: { name: doc.name, note: doc.note },
+			period: {
+				...range,
+				// The stored period is absolute; preset names are a wire convenience.
+				preset:
+					typeof filters.dateRange === "string" ? filters.dateRange : null,
+			},
+			timezone: anchor.timezone,
+			generatedAt: new Date(),
+			workspaces: scoped.map((w) => ({
+				id: w.id,
+				slug: w.slug,
+				name: w.name,
+				timezone: w.timezone,
+			})),
+			projects,
+			users: users.map((u) => ({ id: u.id, name: u.name })),
+			entries,
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		throw new AppError("bad_request", `Template rendering failed: ${message}`);
+	}
+
+	return {
+		renderedMarkdown,
+		resolvedFilters: { ...filters, dateRange: range },
+	};
+}
+
+async function parseOptionalJsonBody(c: Context<AppEnv>): Promise<unknown> {
+	const rawBody = await c.req.text();
+	if (rawBody.trim() === "") return {};
+	try {
+		return JSON.parse(rawBody);
+	} catch {
+		throw new AppError("bad_request", "Request body must be valid JSON");
+	}
+}
+
 export const reportRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
-		return c.json(await listReportsByOwner(c.var.db, user.id));
+		// Metadata only: the rendered body is fetched on demand via GET /:id.
+		return c.json(await listReportMetaByOwner(c.var.db, user.id));
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
-		await validateFiltersAndTemplate(c, input.filters, input.templateId);
+		const note = normalizeNote(input.note ?? null);
+		const { renderedMarkdown, resolvedFilters } = await renderReportDocument(
+			c,
+			{
+				name: input.name,
+				templateId: input.templateId,
+				filters: input.filters,
+				note,
+			},
+		);
 		const report = await createReport(c.var.db, {
 			name: input.name,
 			ownerUserId: user.id,
 			templateId: input.templateId,
-			filters: input.filters,
-			note: normalizeNote(input.note ?? null),
+			filters: resolvedFilters,
+			note,
+			renderedMarkdown,
 		});
 		return c.json(report, 201);
 	})
 	.get("/:id", async (c) => {
 		requireScope(c, "read");
-		return c.json(await requireReportOwner(c, c.req.param("id")));
+		const report = await requireReportOwner(c, c.req.param("id"));
+		// The rendered markdown is workspace data: losing membership in any
+		// filtered workspace also revokes access to the report's content.
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		return c.json(report);
 	})
 	.patch("/:id", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		const input = validate(updateReportInputSchema, await c.req.json());
-		if (input.filters !== undefined || input.templateId !== undefined) {
-			await validateFiltersAndTemplate(
-				c,
-				input.filters ?? report.filters,
-				input.templateId ?? report.templateId,
-			);
-		}
+		// Every edit re-renders against the merged definition, so a stale field
+		// is never persisted and membership is re-checked on every render.
+		const name = input.name ?? report.name;
+		const templateId = input.templateId ?? report.templateId;
+		const filters = input.filters ?? report.filters;
+		const note =
+			input.note === undefined ? report.note : normalizeNote(input.note);
+		const { renderedMarkdown, resolvedFilters } = await renderReportDocument(
+			c,
+			{
+				name,
+				templateId,
+				filters,
+				note,
+			},
+		);
 		const updated = await updateReport(c.var.db, report.id, {
-			...input,
-			...(input.note === undefined ? {} : { note: normalizeNote(input.note) }),
+			name,
+			templateId,
+			filters: resolvedFilters,
+			note,
+			renderedMarkdown,
 		});
 		return c.json(updated);
 	})
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
+		// Drop the frozen R2 copies before the rows cascade away with the report.
+		const shares = await listReportSharesByReport(c.var.db, report.id);
+		await Promise.all(
+			shares.map((share) => c.env.SHARE_BUCKET.delete(share.r2Key)),
+		);
 		await deleteReport(c.var.db, report.id);
 		return c.body(null, 204);
 	})
-	.post("/:id/run", async (c) => {
+	// Minting a public link is at least as sensitive as reading the report, so
+	// it carries the same membership re-check as GET /:id.
+	.post("/:id/shares", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		const filters = report.filters;
-		const { workspaces, templateBody } = await validateFiltersAndTemplate(
-			c,
-			filters,
-			report.templateId,
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const input = validate(
+			createReportShareInputSchema,
+			await parseOptionalJsonBody(c),
 		);
-
-		// The body is optional (CLI/MCP post none), but a present, malformed
-		// body is rejected rather than silently running the saved range.
-		const rawBody = await c.req.text();
-		let override: RunReportInput["dateRange"];
-		if (rawBody.trim() !== "") {
-			let body: unknown;
-			try {
-				body = JSON.parse(rawBody);
-			} catch {
-				throw new AppError("bad_request", "Request body must be valid JSON");
-			}
-			override = validate(runReportInputSchema, body).dateRange;
-		}
-
-		const scoped = workspaces.filter((w) =>
-			filters.workspaceIds.includes(w.id),
-		);
-		const anchor = scoped.find((w) => w.id === filters.workspaceIds[0]);
-		if (!anchor) throw new AppError("internal", "Filter workspace missing");
-		const range =
-			override ?? resolveDateRange(filters.dateRange, anchor.timezone);
-
-		const rows = await listWorkEntriesForReport(c.var.db, {
-			workspaceIds: filters.workspaceIds,
-			projectIds: filters.projectIds,
-			userIds: filters.userIds,
-			from: range.from,
-			to: range.to,
+		const token = generateShareToken();
+		const r2Key = `shares/${token}`;
+		// Freeze the body to R2 before the row exists, so a failed insert leaves
+		// only an unreachable object (no row points at it) rather than a row with
+		// no content.
+		await c.env.SHARE_BUCKET.put(r2Key, report.renderedMarkdown, {
+			httpMetadata: {
+				contentType: "text/plain; charset=utf-8",
+				cacheControl: "public, immutable, max-age=31536000",
+			},
 		});
-		const entries = filterEntriesByTags(rows, filters.tags);
-		const [projects, users] = await Promise.all([
-			listProjectsByIds(c.var.db, [
-				...new Set(entries.map((e) => e.projectId)),
-			]),
-			listUsersByIds(c.var.db, [...new Set(entries.map((e) => e.userId))]),
-		]);
-
-		let renderedMarkdown: string;
 		try {
-			renderedMarkdown = await renderReport(templateBody, {
-				report: { name: report.name, note: report.note },
-				// An overridden run is no longer "the preset's" period, so the
-				// template must not see a preset it didn't use.
-				period: {
-					...range,
-					preset:
-						!override && typeof filters.dateRange === "string"
-							? filters.dateRange
-							: null,
-				},
-				timezone: anchor.timezone,
-				generatedAt: new Date(),
-				workspaces: scoped.map((w) => ({
-					id: w.id,
-					slug: w.slug,
-					name: w.name,
-					timezone: w.timezone,
-				})),
-				projects,
-				users: users.map((u) => ({ id: u.id, name: u.name })),
-				entries,
+			const share = await createReportShare(c.var.db, {
+				reportId: report.id,
+				token,
+				r2Key,
+				// Title/period are frozen here too, so a later edit never changes a
+				// published page.
+				reportName: report.name,
+				dateFrom: report.filters.dateRange.from,
+				dateTo: report.filters.dateRange.to,
+				passcodeHash: input.passcode
+					? await hashSharePasscode(input.passcode)
+					: null,
+				expiresAt: input.expiresInDays
+					? new Date(Date.now() + input.expiresInDays * DAY_MS)
+					: null,
 			});
+			return c.json(toApiShare(share), 201);
 		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			throw new AppError(
-				"bad_request",
-				`Template rendering failed: ${message}`,
-			);
+			await c.env.SHARE_BUCKET.delete(r2Key).catch(() => {});
+			throw error;
 		}
-
-		const snapshot = await createReportSnapshot(c.var.db, {
-			reportId: report.id,
-			renderedMarkdown,
-			resolvedFilters: { ...filters, dateRange: range },
-		});
-		return c.json(snapshot, 201);
 	})
-	.get("/:id/snapshots", async (c) => {
+	// Listed shares include plaintext tokens (content capabilities), so the list
+	// needs the membership re-check too.
+	.get("/:id/shares", async (c) => {
 		requireScope(c, "read");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		return c.json(await listReportSnapshots(c.var.db, report.id));
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const shares = await listReportSharesByReport(c.var.db, report.id);
+		return c.json(shares.map(toApiShare));
 	});

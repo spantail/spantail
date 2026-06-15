@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import type { Report } from "@toxil/core";
+import type { AbsoluteDateRange } from "@toxil/core";
 import { ToxilApiError } from "@toxil/sdk";
 
 import { createClient, requireConnection } from "../client";
@@ -10,17 +10,17 @@ import { formatTable } from "../output";
 
 const LIST_USAGE = `Usage: toxil report list
 
-Lists your saved reports. The ID column is the input to \`toxil report run\`.
+Lists your reports. The ID column is the input to \`toxil report view\`.
 `;
 
-const RUN_USAGE = `Usage: toxil report run <id>
+const VIEW_USAGE = `Usage: toxil report view <id>
 
-Runs a report: the server resolves the filters, renders the template, stores
-a snapshot, and the markdown is printed to stdout (pipe or redirect it).
+Prints a report's rendered Markdown to stdout (pipe or redirect it). Reports
+are created and edited in the web UI.
 `;
 
-function describeRange(range: Report["filters"]["dateRange"]): string {
-	return typeof range === "string" ? range : `${range.from}..${range.to}`;
+function describeRange(range: AbsoluteDateRange): string {
+	return `${range.from}..${range.to}`;
 }
 
 export async function reportList(
@@ -56,7 +56,7 @@ export async function reportList(
 	return 0;
 }
 
-export async function reportRun(
+export async function reportView(
 	args: string[],
 	ctx: CliContext,
 ): Promise<number> {
@@ -66,7 +66,7 @@ export async function reportRun(
 		allowPositionals: true,
 	});
 	if (values.help) {
-		ctx.stdout.write(RUN_USAGE);
+		ctx.stdout.write(VIEW_USAGE);
 		return 0;
 	}
 	const id = positionals[0];
@@ -75,9 +75,9 @@ export async function reportRun(
 	}
 
 	const client = createClient(ctx, requireConnection(ctx));
-	let snapshot: Awaited<ReturnType<typeof client.runReport>>;
+	let report: Awaited<ReturnType<typeof client.getReport>>;
 	try {
-		snapshot = await client.runReport(id);
+		report = await client.getReport(id);
 	} catch (error) {
 		if (error instanceof ToxilApiError && error.status === 404) {
 			throw new CliError(
@@ -88,10 +88,10 @@ export async function reportRun(
 	}
 
 	// Only the markdown goes to stdout so redirection captures a clean file.
-	ctx.stdout.write(snapshot.renderedMarkdown);
-	if (!snapshot.renderedMarkdown.endsWith("\n")) ctx.stdout.write("\n");
+	ctx.stdout.write(report.renderedMarkdown);
+	if (!report.renderedMarkdown.endsWith("\n")) ctx.stdout.write("\n");
 	ctx.stderr.write(
-		`Generated snapshot ${snapshot.id} (${snapshot.resolvedFilters.dateRange.from} – ${snapshot.resolvedFilters.dateRange.to})\n`,
+		`Report ${report.name} (${report.filters.dateRange.from} – ${report.filters.dateRange.to})\n`,
 	);
 	return 0;
 }

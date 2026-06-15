@@ -27,12 +27,12 @@ async function setup() {
 	return { admin, other, ws, project };
 }
 
-/** Creates an entry + report and runs it; returns the snapshot id. */
-async function createSnapshot(
+/** Creates an entry + report (rendered inline); returns the report. */
+async function createReport(
 	cookie: string,
 	wsId: string,
 	projectId: string,
-): Promise<string> {
+): Promise<{ id: string; renderedMarkdown: string }> {
 	const entry = await apiJson(
 		"POST",
 		"/api/v1/work-entries",
@@ -45,26 +45,18 @@ async function createSnapshot(
 		cookie,
 	);
 	expect(entry.status).toBe(201);
-	const report = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/reports",
-			{
-				name: "Daily",
-				templateId: "builtin:daily",
-				filters: { workspaceIds: [wsId], dateRange: "today" },
-			},
-			cookie,
-		)
-	).json()) as { id: string };
-	const run = await apiJson(
+	const res = await apiJson(
 		"POST",
-		`/api/v1/reports/${report.id}/run`,
-		undefined,
+		"/api/v1/reports",
+		{
+			name: "Daily",
+			templateId: "builtin:daily",
+			filters: { workspaceIds: [wsId], dateRange: "today" },
+		},
 		cookie,
 	);
-	expect(run.status).toBe(201);
-	return ((await run.json()) as { id: string }).id;
+	expect(res.status).toBe(201);
+	return (await res.json()) as { id: string; renderedMarkdown: string };
 }
 
 async function mintToken(
@@ -85,27 +77,34 @@ async function mintToken(
 	return token;
 }
 
-it("creates and lists shares without exposing the passcode hash", async () => {
+it("creates and lists shares, freezing the body to R2", async () => {
 	const { admin, ws, project } = await setup();
-	const snapshotId = await createSnapshot(admin, ws.id, project.id);
+	const report = await createReport(admin, ws.id, project.id);
 
 	const created = await apiJson(
 		"POST",
-		`/api/v1/report-snapshots/${snapshotId}/shares`,
+		`/api/v1/reports/${report.id}/shares`,
 		{ expiresInDays: 7, passcode: "open sesame" },
 		admin,
 	);
 	expect(created.status).toBe(201);
 	const share = (await created.json()) as Record<string, unknown>;
-	expect(isShareTokenFormat(share.token as string)).toBe(true);
+	const token = share.token as string;
+	expect(isShareTokenFormat(token)).toBe(true);
 	expect(share.hasPasscode).toBe(true);
 	expect(share).not.toHaveProperty("passcodeHash");
+	expect(share).not.toHaveProperty("r2Key");
 	const expiresAt = new Date(share.expiresAt as string).getTime();
 	expect(expiresAt).toBeGreaterThan(Date.now() + 6 * 24 * 60 * 60 * 1000);
 	expect(expiresAt).toBeLessThan(Date.now() + 8 * 24 * 60 * 60 * 1000);
 
+	// The rendered markdown was frozen to R2 at mint time.
+	const object = await env.SHARE_BUCKET.get(`shares/${token}`);
+	expect(object).not.toBeNull();
+	expect(await object?.text()).toBe(report.renderedMarkdown);
+
 	// A body-less POST is fine: every field is optional.
-	const bare = await appFetch(`/api/v1/report-snapshots/${snapshotId}/shares`, {
+	const bare = await appFetch(`/api/v1/reports/${report.id}/shares`, {
 		method: "POST",
 		headers: { cookie: admin },
 	});
@@ -115,24 +114,45 @@ it("creates and lists shares without exposing the passcode hash", async () => {
 	expect(bareShare.expiresAt).toBeNull();
 
 	const list = (await (
-		await apiGet(`/api/v1/report-snapshots/${snapshotId}/shares`, admin)
+		await apiGet(`/api/v1/reports/${report.id}/shares`, admin)
 	).json()) as Array<Record<string, unknown>>;
 	expect(list).toHaveLength(2);
 	for (const row of list) {
 		expect(row).not.toHaveProperty("passcodeHash");
+		expect(row).not.toHaveProperty("r2Key");
 		expect(row.viewCount).toBe(0);
 	}
 });
 
+it("keeps a published share frozen when the report is edited", async () => {
+	const { admin, ws, project } = await setup();
+	const report = await createReport(admin, ws.id, project.id);
+	const share = (await (
+		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, admin)
+	).json()) as { token: string };
+
+	const edited = await apiJson(
+		"PATCH",
+		`/api/v1/reports/${report.id}`,
+		{ name: "Renamed" },
+		admin,
+	);
+	expect(edited.status).toBe(200);
+
+	// The frozen R2 copy is unchanged by the edit.
+	const object = await env.SHARE_BUCKET.get(`shares/${share.token}`);
+	expect(await object?.text()).toBe(report.renderedMarkdown);
+});
+
 it("validates share inputs", async () => {
 	const { admin, ws, project } = await setup();
-	const snapshotId = await createSnapshot(admin, ws.id, project.id);
+	const report = await createReport(admin, ws.id, project.id);
 
 	expect(
 		(
 			await apiJson(
 				"POST",
-				`/api/v1/report-snapshots/${snapshotId}/shares`,
+				`/api/v1/reports/${report.id}/shares`,
 				{ expiresInDays: 0 },
 				admin,
 			)
@@ -142,50 +162,34 @@ it("validates share inputs", async () => {
 		(
 			await apiJson(
 				"POST",
-				`/api/v1/report-snapshots/${snapshotId}/shares`,
+				`/api/v1/reports/${report.id}/shares`,
 				{ passcode: "abc" },
 				admin,
 			)
 		).status,
 	).toBe(400);
 
-	// A present but malformed body must not silently mint a no-expiry link.
-	const malformed = await appFetch(
-		`/api/v1/report-snapshots/${snapshotId}/shares`,
-		{
-			method: "POST",
-			headers: { "content-type": "application/json", cookie: admin },
-			body: "{not json",
-		},
-	);
+	const malformed = await appFetch(`/api/v1/reports/${report.id}/shares`, {
+		method: "POST",
+		headers: { "content-type": "application/json", cookie: admin },
+		body: "{not json",
+	});
 	expect(malformed.status).toBe(400);
 });
 
 it("hides shares from non-owners", async () => {
 	const { admin, other, ws, project } = await setup();
-	const snapshotId = await createSnapshot(admin, ws.id, project.id);
+	const report = await createReport(admin, ws.id, project.id);
 	const share = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/report-snapshots/${snapshotId}/shares`,
-			{},
-			admin,
-		)
+		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, admin)
 	).json()) as { id: string };
 
 	expect(
-		(
-			await apiJson(
-				"POST",
-				`/api/v1/report-snapshots/${snapshotId}/shares`,
-				{},
-				other,
-			)
-		).status,
+		(await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, other))
+			.status,
 	).toBe(404);
 	expect(
-		(await apiGet(`/api/v1/report-snapshots/${snapshotId}/shares`, other))
-			.status,
+		(await apiGet(`/api/v1/reports/${report.id}/shares`, other)).status,
 	).toBe(404);
 	expect(
 		(
@@ -201,14 +205,14 @@ it("hides shares from non-owners", async () => {
 
 it("enforces PAT scopes on share management", async () => {
 	const { admin, ws, project } = await setup();
-	const snapshotId = await createSnapshot(admin, ws.id, project.id);
+	const report = await createReport(admin, ws.id, project.id);
 	const readToken = await mintToken(admin, ["read"]);
 	const writeToken = await mintToken(admin, ["read", "write"]);
 
-	const denied = await appFetch(
-		`/api/v1/report-snapshots/${snapshotId}/shares`,
-		{ method: "POST", headers: { authorization: `Bearer ${readToken}` } },
-	);
+	const denied = await appFetch(`/api/v1/reports/${report.id}/shares`, {
+		method: "POST",
+		headers: { authorization: `Bearer ${readToken}` },
+	});
 	expect(denied.status).toBe(403);
 	expect(
 		((await denied.json()) as { error: { code: string } }).error.code,
@@ -216,14 +220,14 @@ it("enforces PAT scopes on share management", async () => {
 
 	expect(
 		(
-			await appFetch(`/api/v1/report-snapshots/${snapshotId}/shares`, {
+			await appFetch(`/api/v1/reports/${report.id}/shares`, {
 				headers: { authorization: `Bearer ${readToken}` },
 			})
 		).status,
 	).toBe(200);
 	expect(
 		(
-			await appFetch(`/api/v1/report-snapshots/${snapshotId}/shares`, {
+			await appFetch(`/api/v1/reports/${report.id}/shares`, {
 				method: "POST",
 				headers: { authorization: `Bearer ${writeToken}` },
 			})
@@ -239,15 +243,10 @@ it("blocks create and list after membership loss but still allows revoke", async
 		{ email: "other@example.com" },
 		admin,
 	);
-	const snapshotId = await createSnapshot(other, ws.id, project.id);
+	const report = await createReport(other, ws.id, project.id);
 	const share = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/report-snapshots/${snapshotId}/shares`,
-			{},
-			other,
-		)
-	).json()) as { id: string };
+		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, other)
+	).json()) as { id: string; token: string };
 
 	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
 		user: { id: string };
@@ -263,23 +262,14 @@ it("blocks create and list after membership loss but still allows revoke", async
 		).status,
 	).toBe(204);
 
-	// Tokens are content capabilities: with the membership gone, neither
-	// minting new links nor reading existing ones is allowed.
 	expect(
-		(
-			await apiJson(
-				"POST",
-				`/api/v1/report-snapshots/${snapshotId}/shares`,
-				{},
-				other,
-			)
-		).status,
-	).toBe(403);
-	expect(
-		(await apiGet(`/api/v1/report-snapshots/${snapshotId}/shares`, other))
+		(await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, other))
 			.status,
 	).toBe(403);
-	// Revoking only reduces exposure, so it still works.
+	expect(
+		(await apiGet(`/api/v1/reports/${report.id}/shares`, other)).status,
+	).toBe(403);
+	// Revoking only reduces exposure, so it still works and sweeps the R2 copy.
 	expect(
 		(
 			await apiJson(
@@ -290,18 +280,14 @@ it("blocks create and list after membership loss but still allows revoke", async
 			)
 		).status,
 	).toBe(200);
+	expect(await env.SHARE_BUCKET.get(`shares/${share.token}`)).toBeNull();
 });
 
 it("revokes idempotently, keeping the first timestamp", async () => {
 	const { admin, ws, project } = await setup();
-	const snapshotId = await createSnapshot(admin, ws.id, project.id);
+	const report = await createReport(admin, ws.id, project.id);
 	const share = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/report-snapshots/${snapshotId}/shares`,
-			{},
-			admin,
-		)
+		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, admin)
 	).json()) as { id: string };
 
 	const first = await apiJson(
@@ -326,27 +312,17 @@ it("revokes idempotently, keeping the first timestamp", async () => {
 	);
 });
 
-it("cascades share deletion with the snapshot", async () => {
+it("cascades share deletion with the report and sweeps R2", async () => {
 	const { admin, ws, project } = await setup();
-	const snapshotId = await createSnapshot(admin, ws.id, project.id);
+	const report = await createReport(admin, ws.id, project.id);
 	const share = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/report-snapshots/${snapshotId}/shares`,
-			{},
-			admin,
-		)
-	).json()) as { id: string };
+		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, admin)
+	).json()) as { id: string; token: string };
+	expect(await env.SHARE_BUCKET.get(`shares/${share.token}`)).not.toBeNull();
 
 	expect(
-		(
-			await apiJson(
-				"DELETE",
-				`/api/v1/report-snapshots/${snapshotId}`,
-				undefined,
-				admin,
-			)
-		).status,
+		(await apiJson("DELETE", `/api/v1/reports/${report.id}`, undefined, admin))
+			.status,
 	).toBe(204);
 	expect(
 		(
@@ -358,4 +334,5 @@ it("cascades share deletion with the snapshot", async () => {
 			)
 		).status,
 	).toBe(404);
+	expect(await env.SHARE_BUCKET.get(`shares/${share.token}`)).toBeNull();
 });

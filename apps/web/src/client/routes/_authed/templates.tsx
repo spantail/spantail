@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { ReportTemplate } from "@toxil/core";
+import type { PeriodUnit, ReportTemplate } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
 	Table,
 	TableBody,
 	TableCell,
@@ -26,6 +33,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 
+const PERIOD_UNITS: PeriodUnit[] = ["day", "week", "month", "custom"];
+
 export const Route = createFileRoute("/_authed/templates")({
 	component: TemplatesPage,
 });
@@ -35,6 +44,7 @@ interface TemplateDraft {
 	name: string;
 	description: string;
 	body: string;
+	periodUnit: PeriodUnit;
 }
 
 const EMPTY_DRAFT: TemplateDraft = {
@@ -42,6 +52,7 @@ const EMPTY_DRAFT: TemplateDraft = {
 	name: "",
 	description: "",
 	body: "",
+	periodUnit: "custom",
 };
 
 function TemplatesPage() {
@@ -61,26 +72,36 @@ function TemplatesPage() {
 
 function TemplatesContent({ workspaceId }: { workspaceId: string }) {
 	const { t } = useTranslation();
+	const { current } = useWorkspace();
 	const [draft, setDraft] = useState<TemplateDraft>(EMPTY_DRAFT);
+	const isAdmin = current?.role === "admin" || current?.role === "owner";
 
 	return (
 		<div className="flex max-w-3xl flex-col gap-4">
 			<h1 className="font-heading text-lg font-semibold">
 				{t("templates.title")}
 			</h1>
-			<TemplateFormCard
-				workspaceId={workspaceId}
-				draft={draft}
-				onDraftChange={setDraft}
-			/>
+			{isAdmin ? (
+				<TemplateFormCard
+					workspaceId={workspaceId}
+					draft={draft}
+					onDraftChange={setDraft}
+				/>
+			) : (
+				<p className="text-muted-foreground text-sm">
+					{t("templates.adminOnlyHint")}
+				</p>
+			)}
 			<TemplateListCard
 				workspaceId={workspaceId}
+				isAdmin={isAdmin}
 				onEdit={(template) =>
 					setDraft({
 						editingId: template.id,
 						name: template.name,
 						description: template.description ?? "",
 						body: template.body,
+						periodUnit: template.periodUnit,
 					})
 				}
 				onDuplicate={(template) =>
@@ -89,6 +110,7 @@ function TemplatesContent({ workspaceId }: { workspaceId: string }) {
 						name: t("templates.copyName", { name: template.name }),
 						description: template.description ?? "",
 						body: template.body,
+						periodUnit: template.periodUnit,
 					})
 				}
 			/>
@@ -111,18 +133,25 @@ function TemplateFormCard({
 	const editing = draft.editingId !== null;
 
 	const mutation = useMutation({
-		mutationFn: () => {
+		mutationFn: async () => {
 			const input = {
 				name: draft.name,
 				description: draft.description.trim() === "" ? null : draft.description,
 				body: draft.body,
 			};
-			return draft.editingId
-				? api.updateReportTemplate(draft.editingId, input)
-				: api.createReportTemplate(workspaceId, {
-						...input,
-						description: input.description ?? undefined,
-					});
+			if (draft.editingId) {
+				const updated = await api.updateReportTemplate(draft.editingId, input);
+				// Cadence is template state, set via the separate admin route.
+				await api.updateReportTemplateState(workspaceId, draft.editingId, {
+					periodUnit: draft.periodUnit,
+				});
+				return updated;
+			}
+			return api.createReportTemplate(workspaceId, {
+				...input,
+				description: input.description ?? undefined,
+				periodUnit: draft.periodUnit,
+			});
 		},
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({
@@ -176,6 +205,26 @@ function TemplateFormCard({
 						</div>
 					</div>
 					<div className="flex flex-col gap-2">
+						<Label>{t("templates.periodUnit")}</Label>
+						<Select
+							value={draft.periodUnit}
+							onValueChange={(v) =>
+								onDraftChange({ ...draft, periodUnit: v as PeriodUnit })
+							}
+						>
+							<SelectTrigger className="w-full sm:w-1/2">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{PERIOD_UNITS.map((unit) => (
+									<SelectItem key={unit} value={unit}>
+										{t(`templates.cadence.${unit}`)}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-2">
 						<Label htmlFor="tpl-body">{t("templates.body")}</Label>
 						<Textarea
 							id="tpl-body"
@@ -216,10 +265,12 @@ function TemplateFormCard({
 
 function TemplateListCard({
 	workspaceId,
+	isAdmin,
 	onEdit,
 	onDuplicate,
 }: {
 	workspaceId: string;
+	isAdmin: boolean;
 	onEdit: (template: ReportTemplate) => void;
 	onDuplicate: (template: ReportTemplate) => void;
 }) {
@@ -232,12 +283,25 @@ function TemplateListCard({
 		queryFn: () => api.listReportTemplates(workspaceId),
 	});
 
+	const invalidate = () =>
+		queryClient.invalidateQueries({
+			queryKey: ["report-templates", workspaceId],
+		});
+
 	const deleteMutation = useMutation({
 		mutationFn: (id: string) => api.deleteReportTemplate(id),
 		onSuccess: async () => {
-			await queryClient.invalidateQueries({
-				queryKey: ["report-templates", workspaceId],
-			});
+			await invalidate();
+			setError(null);
+		},
+		onError: (err: Error) => setError(err.message),
+	});
+
+	const enabledMutation = useMutation({
+		mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
+			api.updateReportTemplateState(workspaceId, id, { enabled }),
+		onSuccess: async () => {
+			await invalidate();
 			setError(null);
 		},
 		onError: (err: Error) => setError(err.message),
@@ -263,7 +327,7 @@ function TemplateListCard({
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("templates.name")}</TableHead>
-								<TableHead>{t("templates.description")}</TableHead>
+								<TableHead>{t("templates.periodUnit")}</TableHead>
 								<TableHead />
 							</TableRow>
 						</TableHeader>
@@ -271,43 +335,67 @@ function TemplateListCard({
 							{rows.map((template) => (
 								<TableRow key={template.id}>
 									<TableCell>
-										<span className="flex items-center gap-2">
+										<span className="flex flex-wrap items-center gap-2">
 											{template.name}
 											{template.builtin && (
 												<Badge variant="secondary">
 													{t("templates.builtin")}
 												</Badge>
 											)}
+											{!template.enabled && (
+												<Badge variant="outline">
+													{t("templates.disabledBadge")}
+												</Badge>
+											)}
 										</span>
 									</TableCell>
 									<TableCell className="text-muted-foreground">
-										{template.description}
+										{t(`templates.cadence.${template.periodUnit}`)}
 									</TableCell>
 									<TableCell className="text-right">
-										{template.builtin ? (
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => onDuplicate(template)}
-											>
-												{t("templates.duplicateAction")}
-											</Button>
-										) : (
+										{isAdmin && (
 											<>
 												<Button
 													variant="ghost"
 													size="sm"
-													onClick={() => onEdit(template)}
+													disabled={enabledMutation.isPending}
+													onClick={() =>
+														enabledMutation.mutate({
+															id: template.id,
+															enabled: !template.enabled,
+														})
+													}
 												>
-													{t("templates.editAction")}
+													{template.enabled
+														? t("templates.disableAction")
+														: t("templates.enableAction")}
 												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => deleteMutation.mutate(template.id)}
-												>
-													{t("templates.deleteAction")}
-												</Button>
+												{template.builtin ? (
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => onDuplicate(template)}
+													>
+														{t("templates.duplicateAction")}
+													</Button>
+												) : (
+													<>
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => onEdit(template)}
+														>
+															{t("templates.editAction")}
+														</Button>
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => deleteMutation.mutate(template.id)}
+														>
+															{t("templates.deleteAction")}
+														</Button>
+													</>
+												)}
 											</>
 										)}
 									</TableCell>

@@ -5,7 +5,7 @@ import { entriesList } from "./commands/entries";
 import { logCommand } from "./commands/log";
 import { mcpCommand } from "./commands/mcp";
 import { projectsList } from "./commands/projects";
-import { reportList, reportRun } from "./commands/report";
+import { reportList, reportView } from "./commands/report";
 import { workspacesList } from "./commands/workspaces";
 import type { CliContext } from "./context";
 import { CliError, isParseArgsError, UsageError } from "./errors";
@@ -22,7 +22,7 @@ const commands: Record<
 	projects: { list: projectsList },
 	log: logCommand,
 	entries: { list: entriesList },
-	report: { list: reportList, run: reportRun },
+	report: { list: reportList, view: reportView },
 	mcp: mcpCommand,
 };
 
@@ -38,8 +38,8 @@ Commands:
   projects list     List the projects in a workspace
   log               Log a work entry
   entries list      List recent work entries
-  report list       List your saved reports
-  report run        Run a report and print its markdown
+  report list       List your reports
+  report view       Print a report's rendered markdown
   mcp               Run a stdio MCP server bridging AI clients to a Toxil instance
 
 Run \`toxil <command> --help\` for command options.

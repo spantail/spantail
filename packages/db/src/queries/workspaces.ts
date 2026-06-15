@@ -66,7 +66,9 @@ export async function listWorkspacesForUser(
 export async function updateWorkspace(
 	db: Database,
 	id: string,
-	patch: Partial<Pick<WorkspaceRow, "name" | "timezone" | "archivedAt">>,
+	patch: Partial<
+		Pick<WorkspaceRow, "name" | "timezone" | "archivedAt" | "settings">
+	>,
 ): Promise<WorkspaceRow | undefined> {
 	const rows = await db
 		.update(workspaces)

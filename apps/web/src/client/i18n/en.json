@@ -120,7 +120,8 @@
 		"description": "Reports belong to you and can combine entries from any of your workspaces.",
 		"newTitle": "New report",
 		"editTitle": "Edit report",
-		"formDescription": "Define filters and a template; creating runs it once immediately.",
+		"duplicateTitle": "Duplicate report",
+		"formDescription": "Pick filters and a template; saving renders the report immediately.",
 		"name": "Report name",
 		"template": "Template",
 		"workspaces": "Workspaces",
@@ -147,42 +148,33 @@
 		"cancelAction": "Cancel",
 		"editAction": "Edit",
 		"deleteAction": "Delete",
+		"duplicateAction": "New from last",
 		"empty": "No reports yet. Create one to get started.",
-		"tabs": {
-			"all": "All",
-			"day": "Daily",
-			"week": "Weekly",
-			"month": "Monthly",
-			"custom": "Custom"
+		"archived": "Archived",
+		"noTemplates": "No report templates are enabled. Ask a workspace admin to enable one.",
+		"spanTooLong": "Date range must be 366 days or fewer.",
+		"blankState": {
+			"title": "No {{template}} reports yet.",
+			"createAction": "Create the first {{template}} report"
 		},
-		"createNext": {
-			"today": "Create today's report",
-			"yesterday": "Create yesterday's report",
-			"week": "Create this week's report",
-			"month": "Create next month's report",
-			"custom": "Create next period"
+		"delete": {
+			"title": "Delete this report?",
+			"description": "This permanently deletes the report and its share links. This cannot be undone.",
+			"confirm": "Delete",
+			"cancel": "Cancel"
 		},
-		"runNext": {
-			"title": "Create report: {{name}}",
-			"description": "Confirm the period before adding the next snapshot to this series.",
-			"suggested": "Suggested",
-			"createAction": "Create"
+		"view": {
+			"description": "Rendered Markdown output.",
+			"openAction": "View",
+			"downloadAction": "Download .md",
+			"closeAction": "Close"
 		},
 		"form": {
-			"presetPreview": "Currently resolves to {{from}} – {{to}}",
-			"runFailed": "Report saved, but the first run failed: {{message}}"
-		},
-		"snapshots": {
-			"viewAction": "View",
-			"viewerDescription": "Generated snapshot — Markdown output.",
-			"downloadAction": "Download .md",
-			"closeAction": "Close",
-			"deleteAction": "Delete",
-			"empty": "No snapshots yet. Run the report to create one."
+			"presetPreview": "Currently resolves to {{from}} – {{to}}"
 		},
 		"shares": {
 			"title": "Share: {{name}}",
-			"description": "Create a read-only link to this snapshot.",
+			"description": "Create a read-only link to this report.",
 			"shareAction": "Share",
 			"expiresIn": "Expires in",
 			"expiry": {
@@ -205,7 +197,7 @@
 			"hasPasscode": "Passcode",
 			"expires": "Expires {{value}}",
 			"views": "Views: {{value}}",
-			"empty": "No share links yet. Create one above to share this snapshot."
+			"empty": "No share links yet. Create one above to share this report."
 		}
 	},
 	"templates": {
@@ -219,6 +211,17 @@
 		"body": "Template body",
 		"bodyHint": "Markdown with Liquid tags. Available data: report, period, entries, groups, totals; filters: format_date, format_duration, sum, group_by.",
 		"builtin": "Built-in",
+		"periodUnit": "Cadence",
+		"cadence": {
+			"day": "Daily",
+			"week": "Weekly",
+			"month": "Monthly",
+			"custom": "Custom"
+		},
+		"disabledBadge": "Disabled",
+		"enableAction": "Enable",
+		"disableAction": "Disable",
+		"adminOnlyHint": "Only workspace admins can manage templates.",
 		"createAction": "Create template",
 		"saveAction": "Save",
 		"cancelAction": "Cancel",

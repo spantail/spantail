@@ -13,34 +13,56 @@ export const dateRangePresetSchema = z.enum([
 ]);
 export type DateRangePreset = z.infer<typeof dateRangePresetSchema>;
 
+/** Cadence of a report and of the template that produces it. */
+export const periodUnitSchema = z.enum(["day", "week", "month", "custom"]);
+export type PeriodUnit = z.infer<typeof periodUnitSchema>;
+
+/** Inclusive day count between two local dates (`YYYY-MM-DD`). */
+function dateRangeSpanDays(from: string, to: string): number {
+	const utcMs = (date: string) => {
+		const [y = 0, m = 1, d = 1] = date.split("-").map(Number);
+		return Date.UTC(y, m - 1, d);
+	};
+	return (utcMs(to) - utcMs(from)) / 86_400_000 + 1;
+}
+
+/** Reports render entries synchronously on write, so the period is bounded. */
+export const MAX_REPORT_SPAN_DAYS = 366;
+
 export const absoluteDateRangeSchema = z
 	.object({
 		from: localDateSchema,
 		to: localDateSchema,
 	})
-	.refine((range) => range.from <= range.to, "from must be on or before to");
+	.refine((range) => range.from <= range.to, "from must be on or before to")
+	.refine(
+		(range) => dateRangeSpanDays(range.from, range.to) <= MAX_REPORT_SPAN_DAYS,
+		`date range must span at most ${MAX_REPORT_SPAN_DAYS} days`,
+	);
 export type AbsoluteDateRange = z.infer<typeof absoluteDateRangeSchema>;
 
+/** A date range on the wire: a preset (resolved server-side) or absolute dates. */
 export const reportDateRangeSchema = z.union([
 	dateRangePresetSchema,
 	absoluteDateRangeSchema,
 ]);
 export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 
+/** Filters as stored on a report: the date range is always absolute. */
 export const reportFiltersSchema = z.object({
 	workspaceIds: z.array(z.string()).min(1).max(20),
 	projectIds: z.array(z.string()).max(50).optional(),
 	userIds: z.array(z.string()).max(50).optional(),
 	tags: z.array(tagSchema).max(20).optional(),
-	dateRange: reportDateRangeSchema,
+	dateRange: absoluteDateRangeSchema,
 });
 export type ReportFilters = z.infer<typeof reportFiltersSchema>;
 
-/** Filters as stored on a snapshot: the date range is frozen to absolute dates. */
-export const resolvedReportFiltersSchema = reportFiltersSchema.extend({
-	dateRange: absoluteDateRangeSchema,
+/** Filters on the create/update wire: the date range may still be a preset. */
+export const reportFiltersInputSchema = reportFiltersSchema.extend({
+	dateRange: reportDateRangeSchema,
 });
-export type ResolvedReportFilters = z.infer<typeof resolvedReportFiltersSchema>;
+export type ReportFiltersInput = z.infer<typeof reportFiltersInputSchema>;
 
 export const reportTemplateSchema = z.object({
 	id: z.string(),
@@ -50,6 +72,10 @@ export const reportTemplateSchema = z.object({
 	description: z.string().max(1000).nullable(),
 	body: z.string().min(1).max(50000),
 	builtin: z.boolean(),
+	// Admin-controlled: disabled templates are hidden from the report tabs.
+	enabled: z.boolean(),
+	// Cadence used to default a new report's period, name, and Duplicate step.
+	periodUnit: periodUnitSchema,
 	createdBy: z.string().nullable(),
 	createdAt: z.string().nullable(),
 	updatedAt: z.string().nullable(),
@@ -60,6 +86,7 @@ export const createReportTemplateInputSchema = z.object({
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).optional(),
 	body: z.string().min(1).max(50000),
+	periodUnit: periodUnitSchema.default("custom"),
 });
 export type CreateReportTemplateInput = z.infer<
 	typeof createReportTemplateInputSchema
@@ -72,6 +99,17 @@ export const updateReportTemplateInputSchema = z
 		body: z.string().min(1).max(50000),
 	})
 	.partial();
+
+/** State changes (enabled/cadence) are separate from body edits and admin-gated. */
+export const updateReportTemplateStateInputSchema = z
+	.object({
+		enabled: z.boolean(),
+		periodUnit: periodUnitSchema,
+	})
+	.partial();
+export type UpdateReportTemplateStateInput = z.infer<
+	typeof updateReportTemplateStateInputSchema
+>;
 export type UpdateReportTemplateInput = z.infer<
 	typeof updateReportTemplateInputSchema
 >;
@@ -84,15 +122,21 @@ export const reportSchema = z.object({
 	filters: reportFiltersSchema,
 	// Free-form markdown appended to the rendered output via {{ report.note }}.
 	note: z.string().max(20000).nullable(),
+	// The rendered document, produced on create and refreshed on edit.
+	renderedMarkdown: z.string(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });
 export type Report = z.infer<typeof reportSchema>;
 
+/** A report without its rendered body, for list payloads. */
+export const reportMetaSchema = reportSchema.omit({ renderedMarkdown: true });
+export type ReportMeta = z.infer<typeof reportMetaSchema>;
+
 export const createReportInputSchema = z.object({
 	name: z.string().min(1).max(100),
 	templateId: z.string().min(1),
-	filters: reportFiltersSchema,
+	filters: reportFiltersInputSchema,
 	note: z.string().max(20000).optional(),
 });
 export type CreateReportInput = z.infer<typeof createReportInputSchema>;
@@ -101,34 +145,11 @@ export const updateReportInputSchema = z
 	.object({
 		name: z.string().min(1).max(100),
 		templateId: z.string().min(1),
-		filters: reportFiltersSchema,
+		filters: reportFiltersInputSchema,
 		note: z.string().max(20000).nullable(),
 	})
 	.partial();
 export type UpdateReportInput = z.infer<typeof updateReportInputSchema>;
-
-/**
- * Optional body of POST /reports/{id}/run. An absolute dateRange overrides
- * the report's own date range for this run only (the snapshot freezes it).
- */
-export const runReportInputSchema = z.object({
-	dateRange: absoluteDateRangeSchema.optional(),
-});
-export type RunReportInput = z.infer<typeof runReportInputSchema>;
-
-export const reportSnapshotSchema = z.object({
-	id: z.string(),
-	reportId: z.string(),
-	renderedMarkdown: z.string(),
-	resolvedFilters: resolvedReportFiltersSchema,
-	generatedAt: z.string(),
-});
-export type ReportSnapshot = z.infer<typeof reportSnapshotSchema>;
-
-export const reportSnapshotMetaSchema = reportSnapshotSchema.omit({
-	renderedMarkdown: true,
-});
-export type ReportSnapshotMeta = z.infer<typeof reportSnapshotMetaSchema>;
 
 export const BUILTIN_TEMPLATE_ID_PREFIX = "builtin:";
 
