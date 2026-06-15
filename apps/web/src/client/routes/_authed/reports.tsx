@@ -7,6 +7,7 @@ import {
 	type Report,
 	type ReportMeta,
 	type ReportTemplate,
+	resolveBuiltinTemplateSettings,
 } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -75,7 +76,18 @@ function ReportsPage() {
 		for (const template of query.data ?? []) {
 			if (seen.has(template.id)) continue;
 			seen.add(template.id);
-			templates.push(template);
+			// Builtins repeat across workspaces with per-workspace enabled/cadence
+			// overrides; new reports anchor to the current workspace, so resolve
+			// builtin state against it (matching the server) instead of trusting
+			// whichever workspace's response surfaced first.
+			templates.push(
+				template.builtin && current
+					? {
+							...template,
+							...resolveBuiltinTemplateSettings(current.settings, template.id),
+						}
+					: template,
+			);
 		}
 	}
 	const templatesReady = templateQueries.every((query) => !query.isPending);
