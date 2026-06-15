@@ -109,7 +109,7 @@ export function ReportCard({
 					</span>
 					<span className="min-w-0 flex-1">
 						<span className="flex items-baseline gap-2">
-							<span className="truncate text-sm font-medium">
+							<span className="min-w-0 truncate text-sm font-medium">
 								{report.name}
 							</span>
 							<span className="text-muted-foreground shrink-0 text-xs tabular-nums">
