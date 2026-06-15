@@ -10,6 +10,7 @@ import {
 	type ReportFilters,
 	type ReportFiltersInput,
 	renderReport,
+	resolveBuiltinTemplateSettings,
 	resolveDateRange,
 	updateReportInputSchema,
 } from "@toxil/core";
@@ -58,21 +59,30 @@ export async function requireReportOwner(
 /**
  * Cross-workspace filters are limited to the union of the caller's
  * memberships, and a custom template must belong to a filtered workspace (its
- * body is baked into the rendered document). Returns the caller's memberships
- * and the template body to render with.
+ * body is baked into the rendered document). Returns the caller's memberships,
+ * the template body to render with, and whether the template is enabled in the
+ * report's anchor workspace (builtins read the workspace settings override).
  */
 async function validateFiltersAndTemplate(
 	c: Context<AppEnv>,
 	workspaceIds: string[],
 	templateId: string,
-): Promise<{ workspaces: MemberWorkspace[]; templateBody: string }> {
+): Promise<{
+	workspaces: MemberWorkspace[];
+	templateBody: string;
+	enabled: boolean;
+}> {
 	const workspaces = await requireScopeWorkspaces(c, workspaceIds);
 	const memberIds = new Set(workspaces.map((w) => w.id));
 
 	if (isBuiltinTemplateId(templateId)) {
 		const builtin = getBuiltinTemplate(templateId);
 		if (!builtin) throw new AppError("not_found", "Report template not found");
-		return { workspaces, templateBody: builtin.body };
+		const anchor = workspaces.find((w) => w.id === workspaceIds[0]);
+		const enabled = anchor
+			? resolveBuiltinTemplateSettings(anchor.settings, templateId).enabled
+			: builtin.enabled;
+		return { workspaces, templateBody: builtin.body, enabled };
 	}
 	const template = await getReportTemplateById(c.var.db, templateId);
 	if (!template || !memberIds.has(template.workspaceId)) {
@@ -84,7 +94,7 @@ async function validateFiltersAndTemplate(
 			"Template must belong to a workspace in the report filters",
 		);
 	}
-	return { workspaces, templateBody: template.body };
+	return { workspaces, templateBody: template.body, enabled: template.enabled };
 }
 
 /** Blank notes collapse to null so templates can truth-test them. */
@@ -107,11 +117,13 @@ async function renderReportDocument(
 	},
 ): Promise<{ renderedMarkdown: string; resolvedFilters: ReportFilters }> {
 	const { filters, templateId } = doc;
-	const { workspaces, templateBody } = await validateFiltersAndTemplate(
-		c,
-		filters.workspaceIds,
-		templateId,
-	);
+	const { workspaces, templateBody, enabled } =
+		await validateFiltersAndTemplate(c, filters.workspaceIds, templateId);
+	// A disabled (archived) template can't back a new or edited report; existing
+	// reports stay viewable/shareable, only re-rendering is blocked.
+	if (!enabled) {
+		throw new AppError("bad_request", "Report template is disabled");
+	}
 
 	const scoped = workspaces.filter((w) => filters.workspaceIds.includes(w.id));
 	const anchor = scoped.find((w) => w.id === filters.workspaceIds[0]);

@@ -235,6 +235,7 @@ function ReportsPage() {
 						key={report.id}
 						report={report}
 						templates={templates}
+						readOnly={tabItem.archived}
 						onView={setViewing}
 						onEdit={openEdit}
 						onDuplicate={openDuplicate}

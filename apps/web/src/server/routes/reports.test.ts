@@ -397,6 +397,73 @@ it("revokes report content access when workspace membership is lost", async () =
 	).toBe(204);
 });
 
+it("rejects report writes that use a disabled template", async () => {
+	const { admin, ws } = await setup();
+	const template = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/report-templates`,
+			{ name: "Active", body: "{{ report.name }}" },
+			admin,
+		)
+	).json()) as { id: string };
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{ ...baseReport(ws.id), templateId: template.id },
+			admin,
+		)
+	).json()) as { id: string };
+
+	// Disable the custom template; existing reports become read-only.
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/workspaces/${ws.id}/report-templates/${template.id}/state`,
+				{ enabled: false },
+				admin,
+			)
+		).status,
+	).toBe(200);
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/reports/${report.id}`,
+				{ name: "Edited" },
+				admin,
+			)
+		).status,
+	).toBe(400);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				"/api/v1/reports",
+				{ ...baseReport(ws.id), templateId: template.id },
+				admin,
+			)
+		).status,
+	).toBe(400);
+
+	// Builtins respect the per-workspace settings override too.
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/workspaces/${ws.id}/report-templates/builtin:daily/state`,
+				{ enabled: false },
+				admin,
+			)
+		).status,
+	).toBe(200);
+	expect(
+		(await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)).status,
+	).toBe(400);
+});
+
 it("surfaces template rendering errors as bad_request and saves nothing", async () => {
 	const { admin, ws } = await setup();
 	const template = (await (

@@ -34,12 +34,15 @@ import { downloadReportMarkdown } from "@/lib/report-download";
 export function ReportCard({
 	report,
 	templates,
+	readOnly = false,
 	onView,
 	onEdit,
 	onDuplicate,
 }: {
 	report: ReportMeta;
 	templates: ReportTemplate[];
+	/** Archived (disabled-template) reports: no create/edit, only view/share. */
+	readOnly?: boolean;
 	onView: (report: Report) => void;
 	onEdit: (report: ReportMeta) => void;
 	onDuplicate: (report: ReportMeta) => void;
@@ -111,12 +114,20 @@ export function ReportCard({
 					<Button variant="ghost" size="sm" onClick={() => setSharing(true)}>
 						{t("reports.shares.shareAction")}
 					</Button>
-					<Button variant="ghost" size="sm" onClick={() => onDuplicate(report)}>
-						{t("reports.duplicateAction")}
-					</Button>
-					<Button variant="ghost" size="sm" onClick={() => onEdit(report)}>
-						{t("reports.editAction")}
-					</Button>
+					{!readOnly && (
+						<>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => onDuplicate(report)}
+							>
+								{t("reports.duplicateAction")}
+							</Button>
+							<Button variant="ghost" size="sm" onClick={() => onEdit(report)}>
+								{t("reports.editAction")}
+							</Button>
+						</>
+					)}
 					<AlertDialog>
 						<AlertDialogTrigger asChild>
 							<Button variant="ghost" size="sm">
