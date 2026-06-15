@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type { PeriodUnit, ReportTemplate } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,8 +36,8 @@ import { useWorkspace } from "@/lib/workspace";
 
 const PERIOD_UNITS: PeriodUnit[] = ["day", "week", "month", "custom"];
 
-export const Route = createFileRoute("/_authed/templates")({
-	component: TemplatesPage,
+export const Route = createFileRoute("/_authed/settings/templates")({
+	component: TemplatesSection,
 });
 
 interface TemplateDraft {
@@ -55,7 +56,7 @@ const EMPTY_DRAFT: TemplateDraft = {
 	periodUnit: "custom",
 };
 
-function TemplatesPage() {
+function TemplatesSection() {
 	const { t } = useTranslation();
 	const { current } = useWorkspace();
 
@@ -77,10 +78,7 @@ function TemplatesContent({ workspaceId }: { workspaceId: string }) {
 	const isAdmin = current?.role === "admin" || current?.role === "owner";
 
 	return (
-		<div className="flex max-w-3xl flex-col gap-4">
-			<h1 className="font-heading text-lg font-semibold">
-				{t("templates.title")}
-			</h1>
+		<div className="flex flex-col gap-4">
 			{isAdmin ? (
 				<TemplateFormCard
 					workspaceId={workspaceId}
