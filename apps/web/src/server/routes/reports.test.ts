@@ -156,6 +156,53 @@ it("renders entries inline, scoped by tags and date", async () => {
 	expect(list[0]?.totalMinutes).toBe(30);
 });
 
+it("redacts totalMinutes once the report owner loses workspace membership", async () => {
+	const { admin, ws, project } = await setup();
+	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
+
+	// Bob joins, owns a report scoped to the workspace, then is removed.
+	const bob = await signUpUser("Bob", "bob@example.com");
+	const membership = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/members`,
+			{ email: "bob@example.com", role: "member" },
+			admin,
+		)
+	).json()) as { userId: string };
+
+	const report = (await (
+		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), bob)
+	).json()) as { id: string; totalMinutes: number };
+	expect(report.totalMinutes).toBe(30);
+
+	// While Bob is still a member, the list keeps the aggregate.
+	let list = (await (await apiGet("/api/v1/reports", bob)).json()) as Array<{
+		id: string;
+		totalMinutes: number | null;
+	}>;
+	expect(list[0]?.totalMinutes).toBe(30);
+
+	// After removal Bob still owns the report, but the workspace aggregate is
+	// redacted — mirroring the membership gate on the full report body.
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${ws.id}/members/${membership.userId}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+	list = (await (await apiGet("/api/v1/reports", bob)).json()) as Array<{
+		id: string;
+		totalMinutes: number | null;
+	}>;
+	expect(list.map((r) => r.id)).toEqual([report.id]);
+	expect(list[0]?.totalMinutes).toBeNull();
+});
+
 it("stores a custom absolute period and renders that window", async () => {
 	const { admin, ws, project } = await setup();
 	await createEntry(

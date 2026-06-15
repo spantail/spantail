@@ -25,6 +25,7 @@ import {
 	listReportSharesByReport,
 	listUsersByIds,
 	listWorkEntriesForReport,
+	listWorkspacesForUser,
 	type ReportRow,
 	updateReport,
 } from "@toxil/db";
@@ -200,7 +201,20 @@ export const reportRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
 		// Metadata only: the rendered body is fetched on demand via GET /:id.
-		return c.json(await listReportMetaByOwner(c.var.db, user.id));
+		const metas = await listReportMetaByOwner(c.var.db, user.id);
+		// totalMinutes is an aggregate of workspace entries (report content), so it
+		// is redacted for reports whose scope the owner no longer fully covers —
+		// mirroring the membership re-check that gates the full report read.
+		const memberIds = new Set(
+			(await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id),
+		);
+		return c.json(
+			metas.map((report) =>
+				report.filters.workspaceIds.every((id) => memberIds.has(id))
+					? report
+					: { ...report, totalMinutes: null },
+			),
+		);
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
