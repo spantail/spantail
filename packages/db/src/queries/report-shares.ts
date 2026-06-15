@@ -1,7 +1,6 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
-import { reportSnapshots, reports } from "../schema/reports";
 import { reportShares } from "../schema/shares";
 
 export type ReportShareRow = typeof reportShares.$inferSelect;
@@ -30,42 +29,29 @@ export async function getReportShareById(
 	return db.select().from(reportShares).where(eq(reportShares.id, id)).get();
 }
 
-export async function listReportSharesBySnapshot(
+export async function listReportSharesByReport(
 	db: Database,
-	snapshotId: string,
+	reportId: string,
 ): Promise<ReportShareRow[]> {
 	return db
 		.select()
 		.from(reportShares)
-		.where(eq(reportShares.snapshotId, snapshotId))
+		.where(eq(reportShares.reportId, reportId))
 		.orderBy(desc(reportShares.createdAt));
 }
 
-/** Everything the public share view needs, in a single round trip. */
-export async function getShareViewByToken(
+/**
+ * The public share view needs only the share row: title/period are frozen on
+ * it at mint and the body lives in R2 (keyed by r2Key), so a later report edit
+ * never changes a published link.
+ */
+export async function getReportShareByToken(
 	db: Database,
 	token: string,
-): Promise<
-	| {
-			share: ReportShareRow;
-			reportName: string;
-			renderedMarkdown: string;
-			resolvedFilters: typeof reportSnapshots.$inferSelect.resolvedFilters;
-			generatedAt: Date;
-	  }
-	| undefined
-> {
+): Promise<ReportShareRow | undefined> {
 	return db
-		.select({
-			share: reportShares,
-			reportName: reports.name,
-			renderedMarkdown: reportSnapshots.renderedMarkdown,
-			resolvedFilters: reportSnapshots.resolvedFilters,
-			generatedAt: reportSnapshots.generatedAt,
-		})
+		.select()
 		.from(reportShares)
-		.innerJoin(reportSnapshots, eq(reportShares.snapshotId, reportSnapshots.id))
-		.innerJoin(reports, eq(reportSnapshots.reportId, reports.id))
 		.where(eq(reportShares.token, token))
 		.get();
 }

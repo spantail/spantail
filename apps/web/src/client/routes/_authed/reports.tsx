@@ -1,18 +1,18 @@
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+	deriveNextPeriod,
 	formatPeriodLabel,
 	type PeriodUnit,
-	periodUnitOf,
 	type Report,
-	type ReportSnapshot,
+	type ReportMeta,
 	type ReportTemplate,
 } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
-import { ReportForm } from "@/components/report-form";
-import { ReportSeriesCard } from "@/components/report-series-card";
+import { ReportCard } from "@/components/report-card";
+import { ReportForm, type ReportFormSeed } from "@/components/report-form";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -25,27 +25,41 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
-import { downloadSnapshotMarkdown } from "@/lib/report-download";
+import { downloadReportMarkdown } from "@/lib/report-download";
 import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/reports")({
 	component: ReportsPage,
 });
 
-const UNIT_ORDER: PeriodUnit[] = ["day", "week", "month", "custom"];
+const UNIT_RANK: Record<PeriodUnit, number> = {
+	day: 0,
+	week: 1,
+	month: 2,
+	custom: 3,
+};
+
+const UNIT_PRESET: Record<PeriodUnit, ReportFormSeed["rangeChoice"]> = {
+	day: "today",
+	week: "this_week",
+	month: "this_month",
+	custom: "custom",
+};
+
+interface FormState {
+	editingId: string | null;
+	titleKey: string;
+	seed: ReportFormSeed;
+}
 
 function ReportsPage() {
 	const { t } = useTranslation();
-	const { workspaces } = useWorkspace();
-	const [formOpen, setFormOpen] = useState(false);
-	const [editing, setEditing] = useState<Report | null>(null);
+	const { workspaces, current } = useWorkspace();
+	const [form, setForm] = useState<FormState | null>(null);
 	// Remount key so the form re-derives its initial state on every open.
 	const [instanceId, setInstanceId] = useState(0);
-	const [tab, setTab] = useState<string>("all");
-	const [viewing, setViewing] = useState<{
-		report: Report;
-		snapshot: ReportSnapshot;
-	} | null>(null);
+	const [tab, setTab] = useState<string | null>(null);
+	const [viewing, setViewing] = useState<Report | null>(null);
 
 	// Reports are user-owned and can filter any membership workspace, so the
 	// template pool is the union across all of them.
@@ -57,44 +71,162 @@ function ReportsPage() {
 	});
 	const seen = new Set<string>();
 	const templates: ReportTemplate[] = [];
-	for (const query of templateQueries) {
-		for (const template of query.data ?? []) {
-			// Builtins repeat in every per-workspace response.
-			if (seen.has(template.id)) continue;
+	// Builtins repeat across workspaces with per-workspace enabled/cadence
+	// overrides. New reports anchor to the current workspace, so take builtins
+	// from its response (already resolved server-side, and kept fresh because
+	// the report-templates query is invalidated on a toggle — unlike me/settings).
+	const currentIndex = workspaces.findIndex((w) => w.id === current?.id);
+	const currentTemplates =
+		currentIndex >= 0 ? (templateQueries[currentIndex]?.data ?? []) : [];
+	for (const template of currentTemplates) {
+		if (template.builtin && !seen.has(template.id)) {
 			seen.add(template.id);
 			templates.push(template);
 		}
 	}
-	// A partial union (some queries still pending) must not drive template
-	// validation in the form: a custom template would look unavailable.
+	// Custom templates: union across all the user's workspaces (ids are unique).
+	for (const query of templateQueries) {
+		for (const template of query.data ?? []) {
+			if (template.builtin || seen.has(template.id)) continue;
+			seen.add(template.id);
+			templates.push(template);
+		}
+	}
 	const templatesReady = templateQueries.every((query) => !query.isPending);
+	const templateById = new Map(templates.map((tpl) => [tpl.id, tpl]));
+
+	// Builtin enabled/cadence is per-workspace, so an existing report's
+	// read-only state and Duplicate cadence must be resolved against the
+	// report's OWN anchor workspace (fresh from its report-templates response),
+	// not the current workspace. Custom rows are workspace-independent — fall
+	// back to the union when a report's anchor isn't the custom's workspace.
+	const stateByWorkspace = new Map<string, Map<string, ReportTemplate>>();
+	workspaces.forEach((workspace, i) => {
+		const byId = new Map<string, ReportTemplate>();
+		for (const tpl of templateQueries[i]?.data ?? []) byId.set(tpl.id, tpl);
+		stateByWorkspace.set(workspace.id, byId);
+	});
+	const reportTemplateState = (
+		report: ReportMeta,
+	): ReportTemplate | undefined =>
+		stateByWorkspace
+			.get(report.filters.workspaceIds[0] ?? "")
+			?.get(report.templateId) ?? templateById.get(report.templateId);
 
 	const reports = useQuery({
 		queryKey: ["reports"],
 		queryFn: () => api.listReports(),
 	});
 	const rows = reports.data ?? [];
-	const presentUnits = UNIT_ORDER.filter((unit) =>
-		rows.some((report) => periodUnitOf(report.filters.dateRange) === unit),
-	);
-	// Deleting the last series of a unit removes its tab; fall back to All.
-	const activeTab =
-		tab === "all" || presentUnits.includes(tab as PeriodUnit) ? tab : "all";
 
-	const openCreate = () => {
-		setEditing(null);
+	// One tab per enabled template, plus archived (disabled) templates that
+	// still have reports so no document is ever orphaned.
+	const enabledTabs = templates
+		.filter((tpl) => tpl.enabled)
+		.sort(
+			(a, b) =>
+				UNIT_RANK[a.periodUnit] - UNIT_RANK[b.periodUnit] ||
+				a.name.localeCompare(b.name),
+		);
+	const enabledIds = new Set(enabledTabs.map((tpl) => tpl.id));
+	const archivedIds = [
+		...new Set(
+			rows.map((r) => r.templateId).filter((id) => !enabledIds.has(id)),
+		),
+	];
+	const tabs = [
+		...enabledTabs.map((tpl) => ({
+			id: tpl.id,
+			label: tpl.name,
+			template: tpl,
+			archived: false,
+		})),
+		...archivedIds.map((id) => ({
+			id,
+			label: templateById.get(id)?.name ?? id,
+			template: templateById.get(id),
+			archived: true,
+		})),
+	];
+	const activeTab =
+		tab && tabs.some((x) => x.id === tab) ? tab : (tabs[0]?.id ?? null);
+
+	const newSeed = (template: ReportTemplate): ReportFormSeed => ({
+		name: "",
+		nameEdited: false,
+		templateId: template.id,
+		workspaceIds: template.workspaceId
+			? [template.workspaceId]
+			: current
+				? [current.id]
+				: [],
+		projectIds: [],
+		rangeChoice: UNIT_PRESET[template.periodUnit],
+		from: "",
+		to: "",
+		tags: "",
+		note: "",
+	});
+
+	const openCreate = (template: ReportTemplate) => {
+		setForm({
+			editingId: null,
+			titleKey: "reports.newTitle",
+			seed: newSeed(template),
+		});
 		setInstanceId((id) => id + 1);
-		setFormOpen(true);
 	};
-	const openEdit = (report: Report) => {
-		setEditing(report);
+
+	const openEdit = (report: ReportMeta) => {
+		setForm({
+			editingId: report.id,
+			titleKey: "reports.editTitle",
+			seed: {
+				name: report.name,
+				nameEdited: true,
+				templateId: report.templateId,
+				workspaceIds: report.filters.workspaceIds,
+				projectIds: report.filters.projectIds ?? [],
+				rangeChoice: "custom",
+				from: report.filters.dateRange.from,
+				to: report.filters.dateRange.to,
+				tags: (report.filters.tags ?? []).join(", "),
+				note: report.note ?? "",
+			},
+		});
 		setInstanceId((id) => id + 1);
-		setFormOpen(true);
 	};
-	const closeForm = () => {
-		setFormOpen(false);
-		setEditing(null);
+
+	const openDuplicate = (report: ReportMeta) => {
+		// Cadence comes from the report's anchor workspace (builtins vary by ws).
+		const unit = reportTemplateState(report)?.periodUnit ?? "custom";
+		const timezone =
+			workspaces.find((w) => w.id === report.filters.workspaceIds[0])
+				?.timezone ??
+			current?.timezone ??
+			"UTC";
+		const next = deriveNextPeriod(unit, report.filters.dateRange, timezone);
+		setForm({
+			editingId: null,
+			titleKey: "reports.duplicateTitle",
+			seed: {
+				name: "",
+				nameEdited: false,
+				templateId: report.templateId,
+				workspaceIds: report.filters.workspaceIds,
+				projectIds: report.filters.projectIds ?? [],
+				rangeChoice: "custom",
+				from: next.from,
+				to: next.to,
+				tags: (report.filters.tags ?? []).join(", "),
+				// Notes differ every period, so a duplicate starts with a blank one.
+				note: "",
+			},
+		});
+		setInstanceId((id) => id + 1);
 	};
+
+	const closeForm = () => setForm(null);
 
 	if (workspaces.length === 0) {
 		return (
@@ -102,24 +234,52 @@ function ReportsPage() {
 		);
 	}
 
-	const seriesList = (unit: PeriodUnit | "all") => (
-		<div className="flex flex-col gap-4">
-			{rows
-				.filter(
-					(report) =>
-						unit === "all" || periodUnitOf(report.filters.dateRange) === unit,
-				)
-				.map((report) => (
-					<ReportSeriesCard
+	const activeTemplate = tabs.find((x) => x.id === activeTab)?.template;
+	const createTarget =
+		activeTemplate?.enabled === true ? activeTemplate : enabledTabs[0];
+
+	const tabReports = (templateId: string) =>
+		rows.filter((report) => report.templateId === templateId);
+
+	const tabBody = (tabItem: (typeof tabs)[number]) => {
+		const list = tabReports(tabItem.id);
+		if (list.length === 0) {
+			return (
+				<div className="flex flex-col items-start gap-3">
+					<p className="text-muted-foreground text-sm">
+						{t("reports.blankState.title", { template: tabItem.label })}
+					</p>
+					{!tabItem.archived && tabItem.template && (
+						<Button
+							onClick={() => openCreate(tabItem.template as ReportTemplate)}
+						>
+							{t("reports.blankState.createAction", {
+								template: tabItem.label,
+							})}
+						</Button>
+					)}
+				</div>
+			);
+		}
+		return (
+			<div className="flex flex-col gap-4">
+				{list.map((report) => (
+					<ReportCard
 						key={report.id}
 						report={report}
 						templates={templates}
+						// Read-only when the template is disabled in THIS report's
+						// anchor workspace (matches the server's per-report check),
+						// independent of the tab's current-workspace create state.
+						readOnly={!(reportTemplateState(report)?.enabled ?? false)}
+						onView={setViewing}
 						onEdit={openEdit}
-						onView={(report, snapshot) => setViewing({ report, snapshot })}
+						onDuplicate={openDuplicate}
 					/>
 				))}
-		</div>
-	);
+			</div>
+		);
+	};
 
 	return (
 		<div className="flex max-w-3xl flex-col gap-4">
@@ -132,81 +292,82 @@ function ReportsPage() {
 						{t("reports.description")}
 					</p>
 				</div>
-				<Button onClick={openCreate}>{t("reports.newAction")}</Button>
+				<Button
+					disabled={!createTarget}
+					onClick={() => createTarget && openCreate(createTarget)}
+				>
+					{t("reports.newAction")}
+				</Button>
 			</div>
 
-			{rows.length === 0 && !reports.isPending ? (
-				<p className="text-muted-foreground text-sm">{t("reports.empty")}</p>
+			{tabs.length === 0 && templatesReady ? (
+				<p className="text-muted-foreground text-sm">
+					{t("reports.noTemplates")}
+				</p>
 			) : (
-				<Tabs value={activeTab} onValueChange={setTab}>
+				<Tabs value={activeTab ?? undefined} onValueChange={setTab}>
 					<TabsList>
-						<TabsTrigger value="all">{t("reports.tabs.all")}</TabsTrigger>
-						{presentUnits.map((unit) => (
-							<TabsTrigger key={unit} value={unit}>
-								{t(`reports.tabs.${unit}`)}
+						{tabs.map((tabItem) => (
+							<TabsTrigger key={tabItem.id} value={tabItem.id}>
+								{tabItem.label}
+								{tabItem.archived ? ` (${t("reports.archived")})` : ""}
 							</TabsTrigger>
 						))}
 					</TabsList>
-					<TabsContent value="all">{seriesList("all")}</TabsContent>
-					{presentUnits.map((unit) => (
-						<TabsContent key={unit} value={unit}>
-							{seriesList(unit)}
+					{tabs.map((tabItem) => (
+						<TabsContent key={tabItem.id} value={tabItem.id}>
+							{tabBody(tabItem)}
 						</TabsContent>
 					))}
 				</Tabs>
 			)}
 
-			<Dialog open={formOpen} onOpenChange={(open) => !open && closeForm()}>
-				<DialogContent size="2xl">
-					<DialogHeader>
-						<DialogTitle>
-							{editing ? t("reports.editTitle") : t("reports.newTitle")}
-						</DialogTitle>
-						<DialogDescription>
-							{t("reports.formDescription")}
-						</DialogDescription>
-					</DialogHeader>
-					<ReportForm
-						key={`${editing?.id ?? "new"}:${instanceId}`}
-						templates={templates}
-						templatesReady={templatesReady}
-						editing={editing}
-						onComplete={(next) => {
-							closeForm();
-							if (next) setViewing(next);
-						}}
-						onCancel={closeForm}
-					/>
-				</DialogContent>
-			</Dialog>
+			{form && (
+				<Dialog open onOpenChange={(open) => !open && closeForm()}>
+					<DialogContent size="2xl">
+						<DialogHeader>
+							<DialogTitle>{t(form.titleKey)}</DialogTitle>
+							<DialogDescription>
+								{t("reports.formDescription")}
+							</DialogDescription>
+						</DialogHeader>
+						<ReportForm
+							key={`${form.editingId ?? "new"}:${instanceId}`}
+							templates={templates}
+							templatesReady={templatesReady}
+							editingId={form.editingId}
+							seed={form.seed}
+							onComplete={(report) => {
+								closeForm();
+								setViewing(report);
+							}}
+							onCancel={closeForm}
+						/>
+					</DialogContent>
+				</Dialog>
+			)}
 
 			{viewing && (
 				<Dialog open onOpenChange={(open) => !open && setViewing(null)}>
 					<DialogContent size="3xl">
 						<DialogHeader>
 							<DialogTitle className="pr-10">
-								{viewing.report.name}{" "}
-								{formatPeriodLabel(viewing.snapshot.resolvedFilters.dateRange)}
+								{viewing.name} {formatPeriodLabel(viewing.filters.dateRange)}
 							</DialogTitle>
 							<DialogDescription>
-								{t("reports.snapshots.viewerDescription")}
+								{t("reports.view.description")}
 							</DialogDescription>
 						</DialogHeader>
-						<MarkdownView markdown={viewing.snapshot.renderedMarkdown} />
+						<MarkdownView markdown={viewing.renderedMarkdown} />
 						<DialogFooter>
 							<Button
 								variant="outline"
-								onClick={() =>
-									downloadSnapshotMarkdown(
-										viewing.report.name,
-										viewing.snapshot,
-									)
-								}
+								onClick={() => viewing && downloadReportMarkdown(viewing)}
 							>
-								{t("reports.snapshots.downloadAction")}
+								{t("reports.view.downloadAction")}
 							</Button>
 							<DialogClose asChild>
-								<Button>{t("reports.snapshots.closeAction")}</Button>
+								<Button>{t("reports.view.closeAction")}</Button>
 							</DialogClose>
 						</DialogFooter>
 					</DialogContent>

@@ -12,7 +12,6 @@ export { authOptions } from "./auth-options";
 export * from "./queries/members";
 export * from "./queries/projects";
 export * from "./queries/report-shares";
-export * from "./queries/report-snapshots";
 export * from "./queries/report-templates";
 export * from "./queries/reports";
 export * from "./queries/tokens";

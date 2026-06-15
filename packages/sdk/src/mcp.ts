@@ -142,8 +142,9 @@ export function registerToxilTools(
 		{
 			title: "List reports",
 			description:
-				"List the saved report definitions owned by the token owner, including " +
-				"each report's id, filters, template id, and note.",
+				"List the reports owned by the token owner (metadata only: each " +
+				"report's id, name, filters, template id, and note — not the rendered " +
+				"body). Fetch the rendered Markdown of one with get_report.",
 		},
 		() => run(() => client.listReports()),
 	);
@@ -153,28 +154,14 @@ export function registerToxilTools(
 		{
 			title: "Get a report",
 			description:
-				"Get a saved report definition by id, including its filters, template id, " +
-				"and free-form markdown note. Get ids from list_reports.",
+				"Get a report by id, including its rendered Markdown body, resolved " +
+				"period, filters, template id, and free-form note. Get ids from " +
+				"list_reports.",
 			inputSchema: {
 				id: z.string().describe("Report id from list_reports"),
 			},
 		},
 		({ id }) => run(() => client.getReport(id)),
-	);
-
-	server.registerTool(
-		"run_report",
-		{
-			title: "Run a report",
-			description:
-				"Run a saved report now: resolves its date range, renders the template, " +
-				"stores an immutable snapshot, and returns it including the rendered " +
-				"Markdown. Requires the write scope.",
-			inputSchema: {
-				id: z.string().describe("Report id from list_reports"),
-			},
-		},
-		({ id }) => run(() => client.runReport(id)),
 	);
 
 	server.registerTool(

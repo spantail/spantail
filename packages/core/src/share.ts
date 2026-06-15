@@ -89,7 +89,7 @@ export async function verifySharePasscode(
 /** Share as exposed by the API: the passcode hash never leaves the server. */
 export const reportShareSchema = z.object({
 	id: z.string(),
-	snapshotId: z.string(),
+	reportId: z.string(),
 	token: z.string(),
 	hasPasscode: z.boolean(),
 	expiresAt: z.string().nullable(),

@@ -1,15 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	type DateRangePreset,
+	formatPeriodLabel,
+	MAX_REPORT_SPAN_DAYS,
 	type Report,
-	type ReportFilters,
-	type ReportSnapshot,
+	type ReportFiltersInput,
 	type ReportTemplate,
 	resolveDateRange,
 } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DialogFooter } from "@/components/ui/dialog";
@@ -35,85 +35,103 @@ const PRESETS: DateRangePreset[] = [
 	"last_month",
 ];
 
+/** Initial field values; the route seeds these for create/edit/duplicate. */
+export interface ReportFormSeed {
+	name: string;
+	/** When false, the name auto-updates from period + user name until edited. */
+	nameEdited: boolean;
+	templateId: string;
+	workspaceIds: string[];
+	projectIds: string[];
+	rangeChoice: DateRangePreset | "custom";
+	from: string;
+	to: string;
+	tags: string;
+	note: string;
+}
+
+function spanDays(from: string, to: string): number {
+	const utcMs = (date: string) => {
+		const [y = 0, m = 1, d = 1] = date.split("-").map(Number);
+		return Date.UTC(y, m - 1, d);
+	};
+	return (utcMs(to) - utcMs(from)) / 86_400_000 + 1;
+}
+
 /**
- * Create/edit form for a report definition, rendered inside a dialog.
- * Creating also runs the report immediately, so submitting lands the user
- * on the first snapshot instead of an inert definition.
+ * Create/edit form for a report document. Submitting renders the report in one
+ * call (no separate run step); a template/validation error surfaces inline and
+ * keeps the dialog open so nothing half-saves.
  */
 export function ReportForm({
 	templates,
 	templatesReady,
-	editing,
+	editingId,
+	seed,
 	onComplete,
 	onCancel,
 }: {
 	templates: ReportTemplate[];
 	templatesReady: boolean;
-	editing: Report | null;
-	/** Called after save; carries the first snapshot when one was created. */
-	onComplete: (
-		viewing?: { report: Report; snapshot: ReportSnapshot } | undefined,
-	) => void;
+	editingId: string | null;
+	seed: ReportFormSeed;
+	/** Called after save with the rendered report so the viewer can open. */
+	onComplete: (report: Report) => void;
 	onCancel: () => void;
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const { workspaces, current } = useWorkspace();
-	const filters = editing?.filters;
+	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
+	const userName = me.data?.user.name ?? "";
 
-	const [name, setName] = useState(editing?.name ?? "");
-	const [templateId, setTemplateId] = useState(
-		editing?.templateId ?? "builtin:daily",
+	const memberIds = new Set(workspaces.map((w) => w.id));
+	const seededWorkspaceIds = seed.workspaceIds.filter((id) =>
+		memberIds.has(id),
 	);
-	// Saved filters may reference workspaces the user has since left; those
-	// can be neither displayed nor saved, so drop them from the editable
-	// filters. The project filter belonged to the original workspace selection,
-	// so it is dropped with it — stale project ids would save fine but render
-	// an empty report.
-	const memberIds = new Set(workspaces.map((workspace) => workspace.id));
-	const keptWorkspaceIds =
-		filters?.workspaceIds.filter((id) => memberIds.has(id)) ?? [];
-	const filtersIntact =
-		!filters || keptWorkspaceIds.length === filters.workspaceIds.length;
+	// If a seeded workspace was dropped (lost membership), its project filter
+	// belongs to a workspace that is no longer selected; keep projects only when
+	// the workspace set is intact so submit can't send a hidden, empty-rendering
+	// project filter.
+	const filtersIntact = seededWorkspaceIds.length === seed.workspaceIds.length;
 
-	const [workspaceIds, setWorkspaceIds] = useState<string[]>(() => {
-		const fallback = current ? [current.id] : [];
-		if (!filters) return fallback;
-		return keptWorkspaceIds.length > 0 ? keptWorkspaceIds : fallback;
-	});
+	const [name, setName] = useState(seed.name);
+	const [nameEdited, setNameEdited] = useState(seed.nameEdited);
+	const [templateId, setTemplateId] = useState(seed.templateId);
+	const [workspaceIds, setWorkspaceIds] = useState<string[]>(
+		seededWorkspaceIds.length > 0
+			? seededWorkspaceIds
+			: current
+				? [current.id]
+				: [],
+	);
 	const [projectIds, setProjectIds] = useState<string[]>(
-		filtersIntact ? (filters?.projectIds ?? []) : [],
+		filtersIntact ? seed.projectIds : [],
 	);
 	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
-		typeof filters?.dateRange === "string" ? filters.dateRange : "custom",
+		seed.rangeChoice,
 	);
-	const [from, setFrom] = useState(
-		typeof filters?.dateRange === "object" ? filters.dateRange.from : "",
-	);
-	const [to, setTo] = useState(
-		typeof filters?.dateRange === "object" ? filters.dateRange.to : "",
-	);
-	const [tags, setTags] = useState(filters?.tags?.join(", ") ?? "");
-	const [note, setNote] = useState(editing?.note ?? "");
+	const [from, setFrom] = useState(seed.from);
+	const [to, setTo] = useState(seed.to);
+	const [tags, setTags] = useState(seed.tags);
+	const [note, setNote] = useState(seed.note);
 	const [error, setError] = useState<string | null>(null);
 
-	// A custom template must belong to a filtered workspace (server rule);
-	// builtins are always available. Clamping at render also covers editing a
-	// report whose template's workspace is no longer selectable — but only
-	// once the template union is fully loaded, or a still-pending custom
-	// template would be silently replaced by the builtin.
+	// A custom template must belong to a filtered workspace, and disabled
+	// templates are archived — but always keep the current selection available.
 	const availableTemplates = templates.filter(
 		(template) =>
-			template.builtin ||
-			(template.workspaceId && workspaceIds.includes(template.workspaceId)),
+			(template.builtin ||
+				(template.workspaceId &&
+					workspaceIds.includes(template.workspaceId))) &&
+			(template.enabled || template.id === templateId),
 	);
 	const selectedTemplateId =
 		!templatesReady ||
 		availableTemplates.some((template) => template.id === templateId)
 			? templateId
-			: "builtin:daily";
+			: (availableTemplates[0]?.id ?? "builtin:daily");
 
-	// Per-project filtering only makes sense within a single workspace.
 	const singleWorkspaceId = workspaceIds.length === 1 ? workspaceIds[0] : null;
 	const projects = useQuery({
 		queryKey: ["projects", singleWorkspaceId],
@@ -121,71 +139,56 @@ export function ReportForm({
 		enabled: Boolean(singleWorkspaceId),
 	});
 
-	// Same anchor the server uses to resolve presets at run time.
 	const anchorTimezone =
 		workspaces.find((w) => w.id === workspaceIds[0])?.timezone ??
 		current?.timezone ??
 		"UTC";
 
+	// Resolved period label for the smart default name and span check.
+	const customValid =
+		rangeChoice !== "custom" || (from !== "" && to !== "" && from <= to);
+	const resolvedLabel =
+		rangeChoice === "custom"
+			? customValid && from !== "" && to !== ""
+				? formatPeriodLabel({ from, to })
+				: null
+			: formatPeriodLabel(resolveDateRange(rangeChoice, anchorTimezone));
+	const autoName = resolvedLabel ? `${resolvedLabel} ${userName}`.trim() : "";
+	const effectiveName = nameEdited ? name : autoName;
+	const spanTooLong =
+		rangeChoice === "custom" &&
+		from !== "" &&
+		to !== "" &&
+		from <= to &&
+		spanDays(from, to) > MAX_REPORT_SPAN_DAYS;
+
 	const mutation = useMutation({
-		mutationFn: async (): Promise<{
-			report: Report;
-			snapshot: ReportSnapshot | null;
-			runError: string | null;
-		} | null> => {
+		mutationFn: async (): Promise<Report> => {
 			const parsedTags = tags
 				.split(",")
 				.map((tag) => tag.trim())
 				.filter(Boolean);
-			const reportFilters: ReportFilters = {
+			const filters: ReportFiltersInput = {
 				workspaceIds,
 				...(singleWorkspaceId && projectIds.length > 0 ? { projectIds } : {}),
 				...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
 				dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
 			};
 			const input = {
-				name,
+				name: effectiveName,
 				templateId: selectedTemplateId,
-				filters: reportFilters,
+				filters,
 				note,
 			};
-			if (editing) {
-				await api.updateReport(editing.id, input);
-				return null;
-			}
-			const report = await api.createReport(input);
-			// A failed first run (e.g. a template error) must not look like a
-			// failed create: the definition exists and can be fixed and re-run.
-			try {
-				return {
-					report,
-					snapshot: await api.runReport(report.id),
-					runError: null,
-				};
-			} catch (err) {
-				return {
-					report,
-					snapshot: null,
-					runError: err instanceof Error ? err.message : String(err),
-				};
-			}
+			return editingId
+				? api.updateReport(editingId, input)
+				: api.createReport(input);
 		},
-		onSuccess: async (result) => {
+		onSuccess: async (report) => {
 			await queryClient.invalidateQueries({ queryKey: ["reports"] });
-			if (result?.snapshot) {
-				await queryClient.invalidateQueries({
-					queryKey: ["report-snapshots", result.report.id],
-				});
-			}
+			await queryClient.invalidateQueries({ queryKey: ["report", report.id] });
 			setError(null);
-			if (result?.runError) {
-				toast.error(t("reports.form.runFailed", { message: result.runError }));
-			}
-			onComplete(
-				result?.snapshot
-					? { report: result.report, snapshot: result.snapshot }
-					: undefined,
-			);
+			onComplete(report);
 		},
 		onError: (err: Error) => setError(err.message),
 	});
@@ -200,7 +203,6 @@ export function ReportForm({
 
 	const toggleWorkspace = (id: string) => {
 		toggle(workspaceIds, setWorkspaceIds, id);
-		// The project filter belongs to the previous workspace selection.
 		setProjectIds([]);
 	};
 
@@ -217,8 +219,11 @@ export function ReportForm({
 					<Label htmlFor="report-name">{t("reports.name")}</Label>
 					<Input
 						id="report-name"
-						value={name}
-						onChange={(e) => setName(e.target.value)}
+						value={effectiveName}
+						onChange={(e) => {
+							setName(e.target.value);
+							setNameEdited(true);
+						}}
 						required
 					/>
 				</div>
@@ -364,6 +369,9 @@ export function ReportForm({
 				/>
 			</div>
 
+			{spanTooLong && (
+				<p className="text-destructive text-sm">{t("reports.spanTooLong")}</p>
+			)}
 			{error && <p className="text-destructive text-sm">{error}</p>}
 			<DialogFooter>
 				<Button type="button" variant="outline" onClick={onCancel}>
@@ -372,10 +380,13 @@ export function ReportForm({
 				<Button
 					type="submit"
 					disabled={
-						mutation.isPending || workspaceIds.length === 0 || !templatesReady
+						mutation.isPending ||
+						workspaceIds.length === 0 ||
+						!templatesReady ||
+						spanTooLong
 					}
 				>
-					{editing ? t("reports.saveAction") : t("reports.createAction")}
+					{editingId ? t("reports.saveAction") : t("reports.createAction")}
 				</Button>
 			</DialogFooter>
 		</form>

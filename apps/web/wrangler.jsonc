@@ -17,6 +17,14 @@
 			"migrations_dir": "../../packages/db/migrations"
 		}
 	],
+	// Public share links freeze their rendered Markdown to R2 at mint time.
+	// Local development uses Miniflare's in-memory R2 automatically.
+	"r2_buckets": [
+		{
+			"binding": "SHARE_BUCKET",
+			"bucket_name": "toxil-shares"
+		}
+	],
 	"env": {
 		// Bindings are not inherited into named environments; production mirrors
 		// the defaults. Self-hosters: replace the placeholder IDs with the IDs of
@@ -32,6 +40,12 @@
 					"database_name": "toxil-db",
 					"database_id": "00000000-0000-0000-0000-000000000000",
 					"migrations_dir": "../../packages/db/migrations"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "SHARE_BUCKET",
+					"bucket_name": "toxil-shares"
 				}
 			]
 		}

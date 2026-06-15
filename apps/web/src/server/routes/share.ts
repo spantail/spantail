@@ -1,5 +1,6 @@
 import { isShareTokenFormat, verifySharePasscode } from "@toxil/core";
-import { getShareViewByToken, recordShareView } from "@toxil/db";
+import type { ReportShareRow } from "@toxil/db";
+import { getReportShareByToken, recordShareView } from "@toxil/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 
@@ -12,38 +13,44 @@ import {
 } from "../lib/share-page";
 import type { AppEnv } from "../types";
 
-type ShareView = NonNullable<Awaited<ReturnType<typeof getShareViewByToken>>>;
-
 /**
  * Resolves the token to a viewable share. Malformed, unknown, revoked, and
  * expired links all collapse to null so the public 404 page never reveals
  * whether a link once existed.
  */
-async function loadUsableShare(c: Context<AppEnv>): Promise<ShareView | null> {
+async function loadUsableShare(
+	c: Context<AppEnv>,
+): Promise<ReportShareRow | null> {
 	const token = c.req.param("token") ?? "";
 	if (!isShareTokenFormat(token)) return null;
-	const view = await getShareViewByToken(c.var.db, token);
-	if (!view) return null;
-	if (view.share.revokedAt) return null;
-	if (view.share.expiresAt && view.share.expiresAt.getTime() < Date.now()) {
+	const share = await getReportShareByToken(c.var.db, token);
+	if (!share) return null;
+	if (share.revokedAt) return null;
+	if (share.expiresAt && share.expiresAt.getTime() < Date.now()) {
 		return null;
 	}
-	return view;
+	return share;
 }
 
-async function respondWithContent(c: Context<AppEnv>, view: ShareView) {
+async function respondWithContent(c: Context<AppEnv>, share: ReportShareRow) {
+	// The body is the copy frozen to R2 at mint time, so later report edits never
+	// change a published page. A missing object (revoked-and-swept, or never
+	// written) collapses to the 404 page rather than revealing the share existed.
+	const object = await c.env.SHARE_BUCKET.get(share.r2Key);
+	if (!object) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
+	const markdown = await object.text();
 	// hono re-dispatches HEAD requests to the GET handler; link unfurlers
 	// probing the URL must not inflate the view count. Counting is awaited
 	// inline (not waitUntil) so the count is durable when the response lands.
 	if (c.req.method !== "HEAD") {
-		await recordShareView(c.var.db, view.share.id);
+		await recordShareView(c.var.db, share.id);
 	}
 	return c.html(
 		renderSharePage({
 			locale: pickShareLocale(c),
-			reportName: view.reportName,
-			dateRange: view.resolvedFilters.dateRange,
-			contentHtml: await renderMarkdownToHtml(view.renderedMarkdown),
+			reportName: share.reportName,
+			dateRange: { from: share.dateFrom, to: share.dateTo },
+			contentHtml: await renderMarkdownToHtml(markdown),
 		}),
 	);
 }
@@ -64,27 +71,27 @@ export const shareRoutes = new Hono<AppEnv>()
 		);
 	})
 	.get("/:token", async (c) => {
-		const view = await loadUsableShare(c);
-		if (!view) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
-		if (view.share.passcodeHash) {
+		const share = await loadUsableShare(c);
+		if (!share) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
+		if (share.passcodeHash) {
 			return c.html(renderPasscodePage({ locale: pickShareLocale(c) }));
 		}
-		return respondWithContent(c, view);
+		return respondWithContent(c, share);
 	})
 	.post("/:token", async (c) => {
-		const view = await loadUsableShare(c);
-		if (!view) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
-		if (view.share.passcodeHash) {
+		const share = await loadUsableShare(c);
+		if (!share) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
+		if (share.passcodeHash) {
 			const form = await c.req.parseBody();
 			const passcode = typeof form.passcode === "string" ? form.passcode : "";
-			if (!(await verifySharePasscode(passcode, view.share.passcodeHash))) {
+			if (!(await verifySharePasscode(passcode, share.passcodeHash))) {
 				return c.html(
 					renderPasscodePage({ locale: pickShareLocale(c), error: true }),
 					401,
 				);
 			}
 		}
-		return respondWithContent(c, view);
+		return respondWithContent(c, share);
 	})
 	// A sub-app's notFound handler is ignored when mounted via app.route, so
 	// stray paths and methods get the HTML 404 (not the API's JSON envelope)

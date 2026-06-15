@@ -4,6 +4,8 @@ import {
 	absoluteDateRangeSchema,
 	filterEntriesByTags,
 	isBuiltinTemplateId,
+	MAX_REPORT_SPAN_DAYS,
+	reportFiltersInputSchema,
 	reportFiltersSchema,
 	resolveDateRange,
 } from "./report";
@@ -71,14 +73,50 @@ it("rejects an absolute range with from after to", () => {
 
 it("requires at least one workspace in report filters", () => {
 	expect(
-		reportFiltersSchema.safeParse({ workspaceIds: [], dateRange: "today" })
-			.success,
+		reportFiltersSchema.safeParse({
+			workspaceIds: [],
+			dateRange: { from: "2026-06-01", to: "2026-06-07" },
+		}).success,
 	).toBe(false);
 	const parsed = reportFiltersSchema.parse({
 		workspaceIds: ["ws1"],
 		dateRange: { from: "2026-06-01", to: "2026-06-07" },
 	});
 	expect(parsed.tags).toBeUndefined();
+});
+
+it("stores absolute date ranges only, but accepts presets on the wire", () => {
+	// Stored filters reject a preset; the wire input accepts it.
+	expect(
+		reportFiltersSchema.safeParse({
+			workspaceIds: ["ws1"],
+			dateRange: "this_month",
+		}).success,
+	).toBe(false);
+	expect(
+		reportFiltersInputSchema.safeParse({
+			workspaceIds: ["ws1"],
+			dateRange: "this_month",
+		}).success,
+	).toBe(true);
+});
+
+it("caps an absolute range at the maximum span", () => {
+	expect(MAX_REPORT_SPAN_DAYS).toBe(366);
+	// 2026-01-01 .. 2026-12-31 is 365 days (inclusive 365 < 366) — allowed.
+	expect(
+		absoluteDateRangeSchema.safeParse({
+			from: "2026-01-01",
+			to: "2026-12-31",
+		}).success,
+	).toBe(true);
+	// A range longer than a leap year is rejected.
+	expect(
+		absoluteDateRangeSchema.safeParse({
+			from: "2024-01-01",
+			to: "2025-01-02",
+		}).success,
+	).toBe(false);
 });
 
 it("filters entries by any matching tag", () => {

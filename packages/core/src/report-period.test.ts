@@ -19,28 +19,23 @@ it("maps date ranges to period units", () => {
 	expect(periodUnitOf({ from: "2026-06-01", to: "2026-06-15" })).toBe("custom");
 });
 
-it("derives daily periods from now, ignoring the previous snapshot", () => {
+it("derives daily periods from now, ignoring the previous period", () => {
 	const monday = { from: "2026-06-08", to: "2026-06-08" };
-	expect(deriveNextPeriod("today", monday, "UTC", fridayUtc)).toEqual({
+	expect(deriveNextPeriod("day", monday, "UTC", fridayUtc)).toEqual({
 		from: "2026-06-12",
 		to: "2026-06-12",
 	});
 	// The workspace timezone, not UTC, decides what "today" is.
-	expect(deriveNextPeriod("today", monday, "Asia/Tokyo", fridayUtc)).toEqual({
+	expect(deriveNextPeriod("day", monday, "Asia/Tokyo", fridayUtc)).toEqual({
 		from: "2026-06-13",
 		to: "2026-06-13",
 	});
-	// A "yesterday" series keeps targeting yesterday.
-	expect(deriveNextPeriod("yesterday", monday, "UTC", fridayUtc)).toEqual({
-		from: "2026-06-11",
-		to: "2026-06-11",
-	});
 });
 
-it("derives weekly periods from the previous snapshot", () => {
+it("derives weekly periods from the previous period", () => {
 	expect(
 		deriveNextPeriod(
-			"this_week",
+			"week",
 			{ from: "2026-06-01", to: "2026-06-07" },
 			"UTC",
 			fridayUtc,
@@ -49,7 +44,7 @@ it("derives weekly periods from the previous snapshot", () => {
 	// Year rollover.
 	expect(
 		deriveNextPeriod(
-			"last_week",
+			"week",
 			{ from: "2026-12-28", to: "2027-01-03" },
 			"UTC",
 			fridayUtc,
@@ -61,7 +56,7 @@ it("derives monthly periods as the calendar month after the previous one", () =>
 	// Jan 31 + 1 month must not overflow into March.
 	expect(
 		deriveNextPeriod(
-			"this_month",
+			"month",
 			{ from: "2026-01-01", to: "2026-01-31" },
 			"UTC",
 			fridayUtc,
@@ -70,7 +65,7 @@ it("derives monthly periods as the calendar month after the previous one", () =>
 	// Leap February.
 	expect(
 		deriveNextPeriod(
-			"last_month",
+			"month",
 			{ from: "2024-01-01", to: "2024-01-31" },
 			"UTC",
 			fridayUtc,
@@ -79,17 +74,16 @@ it("derives monthly periods as the calendar month after the previous one", () =>
 	// Year rollover.
 	expect(
 		deriveNextPeriod(
-			"this_month",
+			"month",
 			{ from: "2026-12-01", to: "2026-12-31" },
 			"UTC",
 			fridayUtc,
 		),
 	).toEqual({ from: "2027-01-01", to: "2027-01-31" });
-	// A non-aligned previous range (from an override) still yields the full
-	// month after the month of its end date.
+	// A non-aligned previous range still yields the full month after its end.
 	expect(
 		deriveNextPeriod(
-			"this_month",
+			"month",
 			{ from: "2026-05-16", to: "2026-06-15" },
 			"UTC",
 			fridayUtc,
@@ -100,7 +94,7 @@ it("derives monthly periods as the calendar month after the previous one", () =>
 it("derives custom periods as a same-length window after the previous one", () => {
 	expect(
 		deriveNextPeriod(
-			{ from: "2026-01-28", to: "2026-02-03" },
+			"custom",
 			{ from: "2026-01-28", to: "2026-02-03" },
 			"UTC",
 			fridayUtc,
@@ -109,7 +103,7 @@ it("derives custom periods as a same-length window after the previous one", () =
 	// Single-day custom range.
 	expect(
 		deriveNextPeriod(
-			{ from: "2026-06-30", to: "2026-06-30" },
+			"custom",
 			{ from: "2026-06-30", to: "2026-06-30" },
 			"UTC",
 			fridayUtc,
@@ -117,17 +111,23 @@ it("derives custom periods as a same-length window after the previous one", () =
 	).toEqual({ from: "2026-07-01", to: "2026-07-01" });
 });
 
-it("falls back to resolving the range when there is no previous snapshot", () => {
-	expect(deriveNextPeriod("last_month", null, "UTC", fridayUtc)).toEqual({
-		from: "2026-05-01",
-		to: "2026-05-31",
+it("falls back to the current period for the cadence when there is no previous", () => {
+	expect(deriveNextPeriod("month", null, "UTC", fridayUtc)).toEqual({
+		from: "2026-06-01",
+		to: "2026-06-30",
 	});
-	expect(deriveNextPeriod("this_week", null, "UTC", fridayUtc)).toEqual({
+	expect(deriveNextPeriod("week", null, "UTC", fridayUtc)).toEqual({
 		from: "2026-06-08",
 		to: "2026-06-14",
 	});
-	const absolute = { from: "2026-04-01", to: "2026-04-10" };
-	expect(deriveNextPeriod(absolute, null, "UTC", fridayUtc)).toEqual(absolute);
+	expect(deriveNextPeriod("day", null, "UTC", fridayUtc)).toEqual({
+		from: "2026-06-12",
+		to: "2026-06-12",
+	});
+	expect(deriveNextPeriod("custom", null, "UTC", fridayUtc)).toEqual({
+		from: "2026-06-12",
+		to: "2026-06-12",
+	});
 });
 
 it("formats period labels compactly", () => {
