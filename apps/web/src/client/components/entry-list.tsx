@@ -12,6 +12,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { formatEntryDate } from "@/lib/format";
 
 interface EntryListProps {
 	entries: WorkEntry[];
@@ -27,7 +28,7 @@ export function EntryList({
 	members,
 	showProject = true,
 }: EntryListProps) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const projectName = (id: string) =>
 		projects.find((p) => p.id === id)?.name ?? id;
 	const memberName = (id: string) =>
@@ -45,19 +46,35 @@ export function EntryList({
 		<Table>
 			<TableHeader>
 				<TableRow>
-					<TableHead>{t("entries.date")}</TableHead>
-					{showProject && <TableHead>{t("entries.project")}</TableHead>}
-					<TableHead>{t("entries.author")}</TableHead>
-					<TableHead className="text-right">{t("entries.duration")}</TableHead>
-					<TableHead className="w-full">{t("entries.description")}</TableHead>
+					<TableHead className="text-muted-foreground text-xs">
+						{t("entries.date")}
+					</TableHead>
+					{showProject && (
+						<TableHead className="text-muted-foreground text-xs">
+							{t("entries.project")}
+						</TableHead>
+					)}
+					<TableHead className="text-muted-foreground text-xs">
+						{t("entries.author")}
+					</TableHead>
+					<TableHead className="text-muted-foreground w-full text-xs">
+						{t("entries.description")}
+					</TableHead>
+					<TableHead className="text-muted-foreground text-right text-xs">
+						{t("entries.durationColumn")}
+					</TableHead>
 					<TableHead />
 				</TableRow>
 			</TableHeader>
 			<TableBody>
 				{entries.map((entry) => (
 					<TableRow key={entry.id}>
-						<TableCell className="whitespace-nowrap">
-							{entry.entryDate}
+						<TableCell className="text-muted-foreground whitespace-nowrap">
+							{formatEntryDate(entry.entryDate, i18n.language, {
+								weekday: "short",
+								month: "short",
+								day: "numeric",
+							})}
 						</TableCell>
 						{showProject && (
 							<TableCell className="whitespace-nowrap">
@@ -67,11 +84,8 @@ export function EntryList({
 						<TableCell className="whitespace-nowrap">
 							{memberName(entry.userId)}
 						</TableCell>
-						<TableCell className="text-right whitespace-nowrap tabular-nums">
-							{formatDuration(entry.durationMinutes)}
-						</TableCell>
 						<TableCell>
-							<div className="flex flex-wrap items-center gap-1">
+							<div className="flex flex-wrap items-center gap-1.5">
 								<span>{entry.description}</span>
 								{entry.tags.map((tag) => (
 									<Badge key={tag} variant="secondary">
@@ -79,6 +93,9 @@ export function EntryList({
 									</Badge>
 								))}
 							</div>
+						</TableCell>
+						<TableCell className="text-muted-foreground text-right whitespace-nowrap tabular-nums">
+							{formatDuration(entry.durationMinutes)}
 						</TableCell>
 						<TableCell className="whitespace-nowrap">
 							<EntryActions entry={entry} />

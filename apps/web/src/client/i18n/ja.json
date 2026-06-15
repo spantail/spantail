@@ -89,6 +89,8 @@
 		"endsNextDay": "翌日に終了",
 		"sameAsStart": "開始時刻と同じ",
 		"duration": "分",
+		"durationColumn": "時間",
+		"actionsMenu": "記録の操作",
 		"minutesFromRange": "開始・終了から算出 ({{duration}})。上書きするには直接編集してください。",
 		"minutesManual": "または分を直接入力します。",
 		"description": "内容",

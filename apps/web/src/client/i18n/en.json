@@ -90,6 +90,8 @@
 		"endsNextDay": "Ends next day",
 		"sameAsStart": "Same as start time",
 		"duration": "Minutes",
+		"durationColumn": "Duration",
+		"actionsMenu": "Entry actions",
 		"minutesFromRange": "Calculated from start and end ({{duration}}) — edit to override.",
 		"minutesManual": "Or enter minutes directly.",
 		"description": "Description",
