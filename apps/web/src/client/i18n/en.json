@@ -157,6 +157,14 @@
 			"title": "No {{template}} reports yet.",
 			"createAction": "Create the first {{template}} report"
 		},
+		"tab": {
+			"all": "All"
+		},
+		"filter": {
+			"project": "Project",
+			"allProjects": "All projects",
+			"empty": "No reports match the current filters."
+		},
 		"delete": {
 			"title": "Delete this report?",
 			"description": "This permanently deletes the report and its share links. This cannot be undone.",

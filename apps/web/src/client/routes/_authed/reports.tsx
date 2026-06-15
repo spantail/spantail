@@ -7,6 +7,8 @@ import {
 	type Report,
 	type ReportMeta,
 	type ReportTemplate,
+	shiftDays,
+	todayInTimezone,
 } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +25,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
 import { downloadReportMarkdown } from "@/lib/report-download";
@@ -119,6 +130,36 @@ function ReportsPage() {
 	});
 	const rows = reports.data ?? [];
 
+	// Project names for the filter dropdown. Reports are owner-scoped to the
+	// user's own workspaces, so listing projects per workspace resolves every id.
+	const projectQueries = useQueries({
+		queries: workspaces.map((workspace) => ({
+			queryKey: ["projects", workspace.id],
+			queryFn: () => api.listProjects(workspace.id),
+		})),
+	});
+	const projectById = new Map<string, string>();
+	const projectWorkspaceById = new Map<string, string>();
+	for (const query of projectQueries) {
+		for (const project of query.data ?? []) {
+			projectById.set(project.id, project.name);
+			projectWorkspaceById.set(project.id, project.workspaceId);
+		}
+	}
+
+	// Filters (local state, matching the rest of the app). Period defaults to the
+	// last 14 days and keeps any report whose period overlaps it.
+	const tz = current?.timezone ?? "UTC";
+	const [from, setFrom] = useState(() => shiftDays(todayInTimezone(tz), -13));
+	const [to, setTo] = useState(() => todayInTimezone(tz));
+	const [projectFilter, setProjectFilter] = useState("all");
+
+	// Project options come from the workspace project catalog so the filter is
+	// always usable, regardless of whether reports declare a project scope.
+	const projectOptions = [...projectById.entries()]
+		.map(([id, name]) => ({ id, name }))
+		.sort((a, b) => a.name.localeCompare(b.name));
+
 	// One tab per enabled template, plus archived (disabled) templates that
 	// still have reports so no document is ever orphaned.
 	const enabledTabs = templates
@@ -135,10 +176,16 @@ function ReportsPage() {
 		),
 	];
 	const tabs = [
+		{
+			id: "all",
+			label: t("reports.tab.all"),
+			template: undefined as ReportTemplate | undefined,
+			archived: false,
+		},
 		...enabledTabs.map((tpl) => ({
 			id: tpl.id,
 			label: tpl.name,
-			template: tpl,
+			template: tpl as ReportTemplate | undefined,
 			archived: false,
 		})),
 		...archivedIds.map((id) => ({
@@ -238,18 +285,47 @@ function ReportsPage() {
 	const createTarget =
 		activeTemplate?.enabled === true ? activeTemplate : enabledTabs[0];
 
-	const tabReports = (templateId: string) =>
-		rows.filter((report) => report.templateId === templateId);
+	const matches = (report: ReportMeta) => {
+		const range = report.filters.dateRange;
+		// Period overlap (inclusive). ISO date strings compare lexicographically.
+		if (!(range.from <= to && range.to >= from)) return false;
+		// The project filter is inclusive: a report with no project scope covers
+		// everything within its workspaces, so it matches any selection whose
+		// workspace it spans.
+		if (projectFilter !== "all") {
+			const ids = report.filters.projectIds;
+			if (ids?.length) {
+				if (!ids.includes(projectFilter)) return false;
+			} else {
+				// An all-projects report only spans the projects in its own
+				// workspaces, so it can't match a project from a workspace it omits.
+				const ws = projectWorkspaceById.get(projectFilter);
+				if (ws && !report.filters.workspaceIds.includes(ws)) return false;
+			}
+		}
+		return true;
+	};
+
+	const tabReports = (tabId: string) =>
+		rows.filter(
+			(report) =>
+				(tabId === "all" || report.templateId === tabId) && matches(report),
+		);
 
 	const tabBody = (tabItem: (typeof tabs)[number]) => {
 		const list = tabReports(tabItem.id);
 		if (list.length === 0) {
-			return (
-				<div className="flex flex-col items-start gap-3">
-					<p className="text-muted-foreground text-sm">
-						{t("reports.blankState.title", { template: tabItem.label })}
-					</p>
-					{!tabItem.archived && tabItem.template && (
+			const unfilteredCount =
+				tabItem.id === "all"
+					? rows.length
+					: rows.filter((report) => report.templateId === tabItem.id).length;
+			// Genuine "no reports yet" on a template tab → offer to create the first.
+			if (unfilteredCount === 0 && !tabItem.archived && tabItem.template) {
+				return (
+					<div className="flex flex-col items-start gap-3">
+						<p className="text-muted-foreground text-sm">
+							{t("reports.blankState.title", { template: tabItem.label })}
+						</p>
 						<Button
 							onClick={() => openCreate(tabItem.template as ReportTemplate)}
 						>
@@ -257,8 +333,14 @@ function ReportsPage() {
 								template: tabItem.label,
 							})}
 						</Button>
-					)}
-				</div>
+					</div>
+				);
+			}
+			// Reports exist but the current filters hide them (or an empty All tab).
+			return (
+				<p className="text-muted-foreground text-sm">
+					{t("reports.filter.empty")}
+				</p>
 			);
 		}
 		return (
@@ -300,26 +382,76 @@ function ReportsPage() {
 				</Button>
 			</div>
 
-			{tabs.length === 0 && templatesReady ? (
+			{tabs.length === 1 && templatesReady ? (
 				<p className="text-muted-foreground text-sm">
 					{t("reports.noTemplates")}
 				</p>
 			) : (
-				<Tabs value={activeTab ?? undefined} onValueChange={setTab}>
-					<TabsList>
+				<>
+					<div className="flex flex-wrap items-end gap-3">
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="reports-from" className="text-xs">
+								{t("reports.from")}
+							</Label>
+							<Input
+								id="reports-from"
+								type="date"
+								className="w-40 [color-scheme:light] dark:[color-scheme:dark]"
+								value={from}
+								max={to}
+								onChange={(e) => setFrom(e.target.value)}
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="reports-to" className="text-xs">
+								{t("reports.to")}
+							</Label>
+							<Input
+								id="reports-to"
+								type="date"
+								className="w-40 [color-scheme:light] dark:[color-scheme:dark]"
+								value={to}
+								min={from}
+								onChange={(e) => setTo(e.target.value)}
+							/>
+						</div>
+						{projectOptions.length > 0 && (
+							<div className="flex flex-col gap-1.5">
+								<Label className="text-xs">{t("reports.filter.project")}</Label>
+								<Select value={projectFilter} onValueChange={setProjectFilter}>
+									<SelectTrigger className="w-44">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="all">
+											{t("reports.filter.allProjects")}
+										</SelectItem>
+										{projectOptions.map((project) => (
+											<SelectItem key={project.id} value={project.id}>
+												{project.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+					</div>
+					<Tabs value={activeTab ?? undefined} onValueChange={setTab}>
+						<TabsList>
+							{tabs.map((tabItem) => (
+								<TabsTrigger key={tabItem.id} value={tabItem.id}>
+									{tabItem.label}
+									{tabItem.archived ? ` (${t("reports.archived")})` : ""}
+								</TabsTrigger>
+							))}
+						</TabsList>
 						{tabs.map((tabItem) => (
-							<TabsTrigger key={tabItem.id} value={tabItem.id}>
-								{tabItem.label}
-								{tabItem.archived ? ` (${t("reports.archived")})` : ""}
-							</TabsTrigger>
+							<TabsContent key={tabItem.id} value={tabItem.id}>
+								{tabBody(tabItem)}
+							</TabsContent>
 						))}
-					</TabsList>
-					{tabs.map((tabItem) => (
-						<TabsContent key={tabItem.id} value={tabItem.id}>
-							{tabBody(tabItem)}
-						</TabsContent>
-					))}
-				</Tabs>
+					</Tabs>
+				</>
 			)}
 
 			{form && (
