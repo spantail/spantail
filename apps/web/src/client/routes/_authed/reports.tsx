@@ -139,9 +139,12 @@ function ReportsPage() {
 		})),
 	});
 	const projectById = new Map<string, string>();
+	const projectWorkspaceById = new Map<string, string>();
 	for (const query of projectQueries) {
-		for (const project of query.data ?? [])
+		for (const project of query.data ?? []) {
 			projectById.set(project.id, project.name);
+			projectWorkspaceById.set(project.id, project.workspaceId);
+		}
 	}
 
 	// Filters (local state, matching the rest of the app). Period defaults to the
@@ -293,10 +296,18 @@ function ReportsPage() {
 		// Period overlap (inclusive). ISO date strings compare lexicographically.
 		if (!(range.from <= to && range.to >= from)) return false;
 		// Project/tag are inclusive: a report with no project/tag scope covers
-		// everything, so it matches any specific selection.
+		// everything within its workspaces, so it matches any specific selection
+		// whose workspace it spans.
 		if (projectFilter !== "all") {
 			const ids = report.filters.projectIds;
-			if (ids?.length && !ids.includes(projectFilter)) return false;
+			if (ids?.length) {
+				if (!ids.includes(projectFilter)) return false;
+			} else {
+				// An all-projects report only spans the projects in its own
+				// workspaces, so it can't match a project from a workspace it omits.
+				const ws = projectWorkspaceById.get(projectFilter);
+				if (ws && !report.filters.workspaceIds.includes(ws)) return false;
+			}
 		}
 		if (tagFilter !== "all") {
 			const tags = report.filters.tags;
@@ -437,7 +448,14 @@ function ReportsPage() {
 						{tagOptions.length > 0 && (
 							<div className="flex flex-col gap-1.5">
 								<Label className="text-xs">{t("reports.filter.tag")}</Label>
-								<Select value={tagFilter} onValueChange={setTagFilter}>
+								<Select
+									// Real tags are prefixed so a literal "all" tag can't
+									// collide with the "All tags" sentinel.
+									value={tagFilter === "all" ? "all" : `tag:${tagFilter}`}
+									onValueChange={(v) =>
+										setTagFilter(v === "all" ? "all" : v.slice(4))
+									}
+								>
 									<SelectTrigger className="w-44">
 										<SelectValue />
 									</SelectTrigger>
@@ -446,7 +464,7 @@ function ReportsPage() {
 											{t("reports.filter.allTags")}
 										</SelectItem>
 										{tagOptions.map((tagOption) => (
-											<SelectItem key={tagOption} value={tagOption}>
+											<SelectItem key={tagOption} value={`tag:${tagOption}`}>
 												{tagOption}
 											</SelectItem>
 										))}
