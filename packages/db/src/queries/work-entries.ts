@@ -133,6 +133,27 @@ export async function getWorkEntryStats(
 	};
 }
 
+/**
+ * Distinct tags used by entries in scope (workspace, optionally a project),
+ * sorted. Backs the tag filter dropdown, so options are complete regardless of
+ * how many entry pages the client has loaded.
+ */
+export async function listWorkEntryTags(
+	db: Database,
+	query: { workspaceId: string; projectId?: string },
+): Promise<string[]> {
+	const conditions = [eq(workEntries.workspaceId, query.workspaceId)];
+	if (query.projectId)
+		conditions.push(eq(workEntries.projectId, query.projectId));
+	const rows = await db.all<{ value: string }>(sql`
+		select distinct value
+		from ${workEntries}, json_each(${workEntries.tags})
+		where ${and(...conditions)}
+		order by value
+	`);
+	return rows.map((row) => row.value);
+}
+
 /** Fetches entries for a resolved report scope; tags are filtered in core. */
 export async function listWorkEntriesForReport(
 	db: Database,

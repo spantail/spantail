@@ -31,6 +31,12 @@ import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
 
+// Radix Select values must be unique and non-empty, but a tag can be any
+// non-empty string (even "all"), so real tags are prefixed to stay distinct
+// from the "all tags" sentinel.
+const TAG_ALL = "all";
+const TAG_PREFIX = "t:";
+
 export const Route = createFileRoute("/_authed/projects/$projectId")({
 	component: ProjectPage,
 });
@@ -63,12 +69,22 @@ function ProjectPage() {
 	});
 
 	// Entry filters (local state). Like the Reports filter they live in a
-	// popover and are off by default: empty dates and "all" keep every entry.
-	// They flow into the server query so results stay correct across pagination.
+	// popover and are off by default: empty dates and a null member/tag keep
+	// every entry. They flow into the server query so results stay correct
+	// across the entry list's pagination.
 	const [from, setFrom] = useState("");
 	const [to, setTo] = useState("");
-	const [member, setMember] = useState("all");
-	const [tag, setTag] = useState("all");
+	const [member, setMember] = useState<string | null>(null);
+	const [tag, setTag] = useState<string | null>(null);
+
+	// Tag options come from a distinct-tags catalog scoped to this project, so
+	// the dropdown is complete regardless of how many entry pages are loaded.
+	const tags = useQuery({
+		queryKey: ["work-entry-tags", workspaceId, projectId],
+		queryFn: () =>
+			api.listWorkEntryTags({ workspaceId: workspaceId as string, projectId }),
+		enabled: Boolean(workspaceId) && !mismatch,
+	});
 
 	const entries = useInfiniteQuery({
 		queryKey: [
@@ -82,8 +98,8 @@ function ProjectPage() {
 			api.listWorkEntries({
 				workspaceId: workspaceId as string,
 				projectId,
-				userId: member !== "all" ? member : undefined,
-				tag: tag !== "all" ? tag : undefined,
+				userId: member ?? undefined,
+				tag: tag ?? undefined,
 				from: from || undefined,
 				to: to || undefined,
 				limit: PAGE_SIZE,
@@ -127,18 +143,11 @@ function ProjectPage() {
 	const memberOptions = members.data ?? [];
 	const memberName = (id: string) =>
 		memberOptions.find((m) => m.userId === id)?.name ?? id;
-	// Tag options come from the loaded entries. The selected tag is kept in the
-	// list so an active tag filter never drops out of its own dropdown.
-	const tagOptions = Array.from(
-		new Set([
-			...(tag !== "all" ? [tag] : []),
-			...allEntries.flatMap((entry) => entry.tags),
-		]),
-	).sort((a, b) => a.localeCompare(b));
+	const tagOptions = tags.data ?? [];
 
 	const periodActive = from !== "" || to !== "";
-	const memberActive = member !== "all";
-	const tagActive = tag !== "all";
+	const memberActive = member !== null;
+	const tagActive = tag !== null;
 	const activeFilterCount =
 		(periodActive ? 1 : 0) + (memberActive ? 1 : 0) + (tagActive ? 1 : 0);
 	const periodLabel =
@@ -150,8 +159,8 @@ function ProjectPage() {
 	const clearFilters = () => {
 		setFrom("");
 		setTo("");
-		setMember("all");
-		setTag("all");
+		setMember(null);
+		setTag(null);
 	};
 
 	return (
@@ -233,7 +242,10 @@ function ProjectPage() {
 										<Label className="text-xs">
 											{t("entries.filter.member")}
 										</Label>
-										<Select value={member} onValueChange={setMember}>
+										<Select
+											value={member ?? "all"}
+											onValueChange={(v) => setMember(v === "all" ? null : v)}
+										>
 											<SelectTrigger className="h-9 w-full">
 												<SelectValue />
 											</SelectTrigger>
@@ -253,16 +265,26 @@ function ProjectPage() {
 								{tagOptions.length > 0 && (
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">{t("entries.filter.tag")}</Label>
-										<Select value={tag} onValueChange={setTag}>
+										<Select
+											value={tag === null ? TAG_ALL : `${TAG_PREFIX}${tag}`}
+											onValueChange={(v) =>
+												setTag(
+													v === TAG_ALL ? null : v.slice(TAG_PREFIX.length),
+												)
+											}
+										>
 											<SelectTrigger className="h-9 w-full">
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="all">
+												<SelectItem value={TAG_ALL}>
 													{t("entries.filter.allTags")}
 												</SelectItem>
 												{tagOptions.map((option) => (
-													<SelectItem key={option} value={option}>
+													<SelectItem
+														key={option}
+														value={`${TAG_PREFIX}${option}`}
+													>
 														{option}
 													</SelectItem>
 												))}
@@ -300,18 +322,18 @@ function ProjectPage() {
 								}}
 							/>
 						)}
-						{memberActive && (
+						{member !== null && (
 							<FilterChip
 								label={memberName(member)}
 								removeLabel={t("reports.filter.remove")}
-								onClear={() => setMember("all")}
+								onClear={() => setMember(null)}
 							/>
 						)}
-						{tagActive && (
+						{tag !== null && (
 							<FilterChip
 								label={`#${tag}`}
 								removeLabel={t("reports.filter.remove")}
-								onClear={() => setTag("all")}
+								onClear={() => setTag(null)}
 							/>
 						)}
 						{activeFilterCount > 1 && (

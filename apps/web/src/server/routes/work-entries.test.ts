@@ -158,6 +158,50 @@ it("filters the list by tag", async () => {
 	expect(none).toHaveLength(0);
 });
 
+it("lists distinct tags in scope, sorted", async () => {
+	const { admin, ws, project } = await setup();
+	const other = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "ops", name: "Ops" },
+			admin,
+		)
+	).json()) as { id: string };
+	const mk = (projectId: string, tags: string[]) =>
+		apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId,
+				durationMinutes: 30,
+				description: "x",
+				tags,
+			},
+			admin,
+		);
+	await mk(project.id, ["bug", "api"]);
+	await mk(project.id, ["api"]);
+	await mk(other.id, ["ops"]);
+
+	// Workspace-wide: distinct and sorted across both projects.
+	const all = (await (
+		await apiGet(`/api/v1/work-entries/tags?workspaceId=${ws.id}`, admin)
+	).json()) as string[];
+	expect(all).toEqual(["api", "bug", "ops"]);
+
+	// Project-scoped: only that project's tags. Also proves "/tags" is not
+	// captured by the "/:id" route.
+	const scoped = (await (
+		await apiGet(
+			`/api/v1/work-entries/tags?workspaceId=${ws.id}&projectId=${project.id}`,
+			admin,
+		)
+	).json()) as string[];
+	expect(scoped).toEqual(["api", "bug"]);
+});
+
 it("lets only the author update or delete an entry", async () => {
 	const { admin, member, ws, project } = await setup();
 	const entry = (await (
