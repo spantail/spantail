@@ -89,6 +89,11 @@ export function ReportForm({
 	const seededWorkspaceIds = seed.workspaceIds.filter((id) =>
 		memberIds.has(id),
 	);
+	// If a seeded workspace was dropped (lost membership), its project filter
+	// belongs to a workspace that is no longer selected; keep projects only when
+	// the workspace set is intact so submit can't send a hidden, empty-rendering
+	// project filter.
+	const filtersIntact = seededWorkspaceIds.length === seed.workspaceIds.length;
 
 	const [name, setName] = useState(seed.name);
 	const [nameEdited, setNameEdited] = useState(seed.nameEdited);
@@ -100,7 +105,9 @@ export function ReportForm({
 				? [current.id]
 				: [],
 	);
-	const [projectIds, setProjectIds] = useState<string[]>(seed.projectIds);
+	const [projectIds, setProjectIds] = useState<string[]>(
+		filtersIntact ? seed.projectIds : [],
+	);
 	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
 		seed.rangeChoice,
 	);

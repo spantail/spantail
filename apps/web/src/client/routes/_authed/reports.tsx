@@ -7,7 +7,6 @@ import {
 	type Report,
 	type ReportMeta,
 	type ReportTemplate,
-	resolveBuiltinTemplateSettings,
 } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -72,22 +71,25 @@ function ReportsPage() {
 	});
 	const seen = new Set<string>();
 	const templates: ReportTemplate[] = [];
+	// Builtins repeat across workspaces with per-workspace enabled/cadence
+	// overrides. New reports anchor to the current workspace, so take builtins
+	// from its response (already resolved server-side, and kept fresh because
+	// the report-templates query is invalidated on a toggle — unlike me/settings).
+	const currentIndex = workspaces.findIndex((w) => w.id === current?.id);
+	const currentTemplates =
+		currentIndex >= 0 ? (templateQueries[currentIndex]?.data ?? []) : [];
+	for (const template of currentTemplates) {
+		if (template.builtin && !seen.has(template.id)) {
+			seen.add(template.id);
+			templates.push(template);
+		}
+	}
+	// Custom templates: union across all the user's workspaces (ids are unique).
 	for (const query of templateQueries) {
 		for (const template of query.data ?? []) {
-			if (seen.has(template.id)) continue;
+			if (template.builtin || seen.has(template.id)) continue;
 			seen.add(template.id);
-			// Builtins repeat across workspaces with per-workspace enabled/cadence
-			// overrides; new reports anchor to the current workspace, so resolve
-			// builtin state against it (matching the server) instead of trusting
-			// whichever workspace's response surfaced first.
-			templates.push(
-				template.builtin && current
-					? {
-							...template,
-							...resolveBuiltinTemplateSettings(current.settings, template.id),
-						}
-					: template,
-			);
+			templates.push(template);
 		}
 	}
 	const templatesReady = templateQueries.every((query) => !query.isPending);
