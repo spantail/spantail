@@ -95,6 +95,24 @@ function ReportsPage() {
 	const templatesReady = templateQueries.every((query) => !query.isPending);
 	const templateById = new Map(templates.map((tpl) => [tpl.id, tpl]));
 
+	// Builtin enabled/cadence is per-workspace, so an existing report's
+	// read-only state and Duplicate cadence must be resolved against the
+	// report's OWN anchor workspace (fresh from its report-templates response),
+	// not the current workspace. Custom rows are workspace-independent — fall
+	// back to the union when a report's anchor isn't the custom's workspace.
+	const stateByWorkspace = new Map<string, Map<string, ReportTemplate>>();
+	workspaces.forEach((workspace, i) => {
+		const byId = new Map<string, ReportTemplate>();
+		for (const tpl of templateQueries[i]?.data ?? []) byId.set(tpl.id, tpl);
+		stateByWorkspace.set(workspace.id, byId);
+	});
+	const reportTemplateState = (
+		report: ReportMeta,
+	): ReportTemplate | undefined =>
+		stateByWorkspace
+			.get(report.filters.workspaceIds[0] ?? "")
+			?.get(report.templateId) ?? templateById.get(report.templateId);
+
 	const reports = useQuery({
 		queryKey: ["reports"],
 		queryFn: () => api.listReports(),
@@ -180,7 +198,8 @@ function ReportsPage() {
 	};
 
 	const openDuplicate = (report: ReportMeta) => {
-		const unit = templateById.get(report.templateId)?.periodUnit ?? "custom";
+		// Cadence comes from the report's anchor workspace (builtins vary by ws).
+		const unit = reportTemplateState(report)?.periodUnit ?? "custom";
 		const timezone =
 			workspaces.find((w) => w.id === report.filters.workspaceIds[0])
 				?.timezone ??
@@ -249,7 +268,10 @@ function ReportsPage() {
 						key={report.id}
 						report={report}
 						templates={templates}
-						readOnly={tabItem.archived}
+						// Read-only when the template is disabled in THIS report's
+						// anchor workspace (matches the server's per-report check),
+						// independent of the tab's current-workspace create state.
+						readOnly={!(reportTemplateState(report)?.enabled ?? false)}
 						onView={setViewing}
 						onEdit={openEdit}
 						onDuplicate={openDuplicate}
