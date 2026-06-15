@@ -9,7 +9,7 @@ import {
 	type ReportTemplate,
 } from "@toxil/core";
 import { PlusIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
-import { useState } from "react";
+import { type KeyboardEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportCard } from "@/components/report-card";
@@ -241,6 +241,27 @@ function ReportsPage() {
 	const activeTab =
 		tab && tabs.some((x) => x.id === tab) ? tab : (tabs[0]?.id ?? null);
 
+	// Roving-tabindex keyboard nav for the custom tab strip (ARIA tabs pattern):
+	// Left/Right move and activate, Home/End jump to the ends, focus follows.
+	const tablistRef = useRef<HTMLDivElement>(null);
+	const onTabKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+		const ids = tabs.map((x) => x.id);
+		const current = ids.indexOf(activeTab ?? "");
+		if (current < 0) return;
+		let next = current;
+		if (e.key === "ArrowRight") next = (current + 1) % ids.length;
+		else if (e.key === "ArrowLeft")
+			next = (current - 1 + ids.length) % ids.length;
+		else if (e.key === "Home") next = 0;
+		else if (e.key === "End") next = ids.length - 1;
+		else return;
+		e.preventDefault();
+		setTab(ids[next] ?? null);
+		tablistRef.current
+			?.querySelector<HTMLButtonElement>(`[data-tab-id="${ids[next]}"]`)
+			?.focus();
+	};
+
 	const newSeed = (template: ReportTemplate): ReportFormSeed => ({
 		name: "",
 		nameEdited: false,
@@ -441,27 +462,40 @@ function ReportsPage() {
 					<div className="flex flex-col gap-3">
 						<div className="flex items-end gap-3 border-b">
 							<div className="-mb-px min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-								<div role="tablist" className="flex w-max items-center gap-1">
-									{tabs.map((tabItem) => (
-										<button
-											key={tabItem.id}
-											type="button"
-											role="tab"
-											aria-selected={activeTab === tabItem.id}
-											onClick={() => setTab(tabItem.id)}
-											className={`relative shrink-0 px-3 pt-1 pb-2.5 text-sm whitespace-nowrap transition-colors ${
-												activeTab === tabItem.id
-													? "text-foreground font-medium"
-													: "text-muted-foreground hover:text-foreground"
-											}`}
-										>
-											{tabItem.label}
-											{tabItem.archived ? ` (${t("reports.archived")})` : ""}
-											{activeTab === tabItem.id && (
-												<span className="bg-foreground absolute inset-x-2 bottom-0 h-0.5 rounded-full" />
-											)}
-										</button>
-									))}
+								<div
+									ref={tablistRef}
+									role="tablist"
+									aria-orientation="horizontal"
+									onKeyDown={onTabKeyDown}
+									className="flex w-max items-center gap-1"
+								>
+									{tabs.map((tabItem) => {
+										const selected = activeTab === tabItem.id;
+										return (
+											<button
+												key={tabItem.id}
+												type="button"
+												role="tab"
+												id={`reports-tab-${tabItem.id}`}
+												data-tab-id={tabItem.id}
+												aria-selected={selected}
+												aria-controls="reports-tabpanel"
+												tabIndex={selected ? 0 : -1}
+												onClick={() => setTab(tabItem.id)}
+												className={`relative shrink-0 px-3 pt-1 pb-2.5 text-sm whitespace-nowrap transition-colors ${
+													selected
+														? "text-foreground font-medium"
+														: "text-muted-foreground hover:text-foreground"
+												}`}
+											>
+												{tabItem.label}
+												{tabItem.archived ? ` (${t("reports.archived")})` : ""}
+												{selected && (
+													<span className="bg-foreground absolute inset-x-2 bottom-0 h-0.5 rounded-full" />
+												)}
+											</button>
+										);
+									})}
 								</div>
 							</div>
 							<div className="shrink-0 pb-1.5">
@@ -585,10 +619,16 @@ function ReportsPage() {
 							</div>
 						)}
 					</div>
-					{(() => {
-						const active = tabs.find((x) => x.id === activeTab);
-						return active ? tabBody(active) : null;
-					})()}
+					<div
+						id="reports-tabpanel"
+						role="tabpanel"
+						aria-labelledby={activeTab ? `reports-tab-${activeTab}` : undefined}
+					>
+						{(() => {
+							const active = tabs.find((x) => x.id === activeTab);
+							return active ? tabBody(active) : null;
+						})()}
+					</div>
 				</>
 			)}
 
