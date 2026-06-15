@@ -11,7 +11,8 @@ export const queryClient = new QueryClient({
 
 /**
  * Refreshes everything derived from a workspace's entries after a mutation:
- * timelines, project lists, and stats (prefix-matched query keys).
+ * timelines, project lists, stats, and the tag filter catalog (prefix-matched
+ * query keys).
  */
 export function invalidateWorkEntryData(
 	client: QueryClient,
@@ -19,4 +20,5 @@ export function invalidateWorkEntryData(
 ): void {
 	client.invalidateQueries({ queryKey: ["work-entries", workspaceId] });
 	client.invalidateQueries({ queryKey: ["work-entry-stats", workspaceId] });
+	client.invalidateQueries({ queryKey: ["work-entry-tags", workspaceId] });
 }
