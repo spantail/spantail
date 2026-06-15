@@ -156,6 +156,16 @@
 			"title": "{{template}} のレポートはまだありません。",
 			"createAction": "最初の {{template}} レポートを作成"
 		},
+		"tab": {
+			"all": "すべて"
+		},
+		"filter": {
+			"project": "プロジェクト",
+			"tag": "タグ",
+			"allProjects": "すべてのプロジェクト",
+			"allTags": "すべてのタグ",
+			"empty": "条件に一致するレポートはありません。"
+		},
 		"delete": {
 			"title": "このレポートを削除しますか?",
 			"description": "レポートと共有リンクを完全に削除します。元に戻せません。",
