@@ -49,7 +49,7 @@
 		"projectsEmpty": "No active projects yet",
 		"reports": "Reports",
 		"settings": "Settings",
-		"accountTokens": "Account & tokens"
+		"account": "Account"
 	},
 	"projects": {
 		"notFound": "Project not found in this workspace.",

@@ -60,9 +60,9 @@ export function NavUser({ user }: { user: AuthUser }) {
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem asChild>
-						<Link to="/settings/tokens">
+						<Link to="/settings/password">
 							<UserIcon />
-							{t("nav.accountTokens")}
+							{t("nav.account")}
 						</Link>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>

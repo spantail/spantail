@@ -49,7 +49,7 @@
 		"projectsEmpty": "稼働中のプロジェクトはありません",
 		"reports": "レポート",
 		"settings": "設定",
-		"accountTokens": "アカウントとトークン"
+		"account": "アカウント"
 	},
 	"projects": {
 		"notFound": "このワークスペースにプロジェクトが見つかりません。",
