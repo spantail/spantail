@@ -64,6 +64,13 @@
       "when": 1781620397172,
       "tag": "0008_blushing_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1781622439861,
+      "tag": "0009_remarkable_jack_power",
+      "breakpoints": true
     }
   ]
 }

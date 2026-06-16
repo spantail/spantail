@@ -100,7 +100,14 @@ export const invitationRoutes = new Hono<AppEnv>()
 			address: settings.emailFromAddress,
 			name: settings.emailFromName,
 		});
-		await mailer.send({ to: input.email, subject, html, text });
+		try {
+			await mailer.send({ to: input.email, subject, html, text });
+		} catch (error) {
+			// Don't leave an orphan pending invitation (which would block resends
+			// with a 409) when delivery fails.
+			await deleteInvitation(c.var.db, invitation.id);
+			throw error;
+		}
 
 		return c.json(toInvitation(invitation), 201);
 	})

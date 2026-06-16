@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { userInvitations } from "../schema/instance";
@@ -44,7 +44,11 @@ export async function getPendingInvitationByEmail(
 		.select()
 		.from(userInvitations)
 		.where(
-			and(eq(userInvitations.email, email), isNull(userInvitations.acceptedAt)),
+			and(
+				eq(userInvitations.email, email),
+				isNull(userInvitations.acceptedAt),
+				gt(userInvitations.expiresAt, new Date()),
+			),
 		)
 		.get();
 }
@@ -52,10 +56,16 @@ export async function getPendingInvitationByEmail(
 export async function listPendingInvitations(
 	db: Database,
 ): Promise<InvitationRow[]> {
+	// Expired invitations are no longer actionable, so they are not "pending".
 	return db
 		.select()
 		.from(userInvitations)
-		.where(isNull(userInvitations.acceptedAt))
+		.where(
+			and(
+				isNull(userInvitations.acceptedAt),
+				gt(userInvitations.expiresAt, new Date()),
+			),
+		)
 		.orderBy(userInvitations.createdAt);
 }
 
