@@ -69,14 +69,14 @@ const GROUPS: SettingsNavGroup[] = [
 		labelKey: "settings.nav.account",
 		items: [
 			{
-				to: "/settings/tokens",
-				labelKey: "settings.nav.tokens",
-				icon: KeyIcon,
-			},
-			{
 				to: "/settings/password",
 				labelKey: "settings.nav.password",
 				icon: LockIcon,
+			},
+			{
+				to: "/settings/tokens",
+				labelKey: "settings.nav.tokens",
+				icon: KeyIcon,
 			},
 			{
 				to: "/settings/preferences",
