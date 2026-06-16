@@ -1,7 +1,9 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"types": []
+		"types": [],
+		// Email templates under src/server are authored as react-email components.
+		"jsx": "react-jsx"
 	},
 	"include": ["src/server", "test", "worker-configuration.d.ts"]
 }
