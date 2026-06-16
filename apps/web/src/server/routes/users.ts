@@ -11,6 +11,7 @@ import {
 	listUsers,
 	type UserRow,
 	updateUser,
+	userOwnsAnyWorkspace,
 } from "@toxil/db";
 import { Hono } from "hono";
 
@@ -107,6 +108,14 @@ export const userRoutes = new Hono<AppEnv>()
 		}
 		if ((target.isAdmin ?? false) && (await countAdmins(c.var.db)) <= 1) {
 			throw new AppError("forbidden", "Cannot remove the last instance admin");
+		}
+		// Deleting a user cascades their workspace memberships, which would orphan
+		// any workspace they own. Require the workspace to be handled first.
+		if (await userOwnsAnyWorkspace(c.var.db, id)) {
+			throw new AppError(
+				"conflict",
+				"This user owns a workspace; reassign or delete the workspace first",
+			);
 		}
 
 		await deleteUser(c.var.db, id);

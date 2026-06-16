@@ -95,16 +95,18 @@ export const invitationRoutes = new Hono<AppEnv>()
 		});
 
 		const inviteUrl = `${c.env.BETTER_AUTH_URL.replace(/\/$/, "")}/invite/${token}`;
-		const { subject, html, text } = await renderInvitationEmail(inviteUrl);
-		const mailer = getMailer(c.env, {
-			address: settings.emailFromAddress,
-			name: settings.emailFromName,
-		});
 		try {
+			const { subject, html, text } = await renderInvitationEmail(inviteUrl);
+			// getMailer can throw (e.g. enabled but no from address configured), so
+			// it lives inside the cleanup block alongside send.
+			const mailer = getMailer(c.env, {
+				address: settings.emailFromAddress,
+				name: settings.emailFromName,
+			});
 			await mailer.send({ to: input.email, subject, html, text });
 		} catch (error) {
 			// Don't leave an orphan pending invitation (which would block resends
-			// with a 409) when delivery fails.
+			// with a 409) when rendering, mailer construction, or delivery fails.
 			await deleteInvitation(c.var.db, invitation.id);
 			throw error;
 		}

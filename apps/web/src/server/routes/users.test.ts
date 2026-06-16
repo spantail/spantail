@@ -105,6 +105,43 @@ it("deletes a user who authored a report template", async () => {
 	expect(list.some((t) => t.name === "Tina template")).toBe(true);
 });
 
+it("refuses to delete a workspace owner", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+
+	// A second instance admin who creates (and thus owns) their own workspace.
+	const owner = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/users",
+			{ email: "owner2@example.com", name: "Owner2", grantAdmin: true },
+			admin,
+		)
+	).json()) as { id: string; generatedPassword: string };
+	const signIn = await apiJson(
+		"POST",
+		"/api/auth/sign-in/email",
+		{ email: "owner2@example.com", password: owner.generatedPassword },
+		undefined,
+	);
+	const ownerCookie = signIn.headers.get("set-cookie")?.split(";")[0] ?? "";
+	const ws = await apiJson(
+		"POST",
+		"/api/v1/workspaces",
+		{ slug: "beta", name: "Beta", timezone: "UTC" },
+		ownerCookie,
+	);
+	expect(ws.status).toBe(201);
+
+	// Deleting the owner would orphan the workspace, so it is refused.
+	const del = await apiJson(
+		"DELETE",
+		`/api/v1/users/${owner.id}`,
+		undefined,
+		admin,
+	);
+	expect(del.status).toBe(409);
+});
+
 it("enforces last-admin and self guards", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const adminMe = (await (await apiGet("/api/v1/me", admin)).json()) as {
