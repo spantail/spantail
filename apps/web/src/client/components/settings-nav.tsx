@@ -3,7 +3,9 @@ import {
 	FileTextIcon,
 	FolderIcon,
 	KeyIcon,
+	MailIcon,
 	SettingsIcon,
+	ShieldIcon,
 	UsersIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -11,14 +13,17 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 // Sections of the Settings hub, grouped by scope. Mirrors the design's
-// SubNav: workspace-scoped settings, then the user-scoped account section.
+// SubNav: workspace-scoped settings, then the user-scoped account section,
+// then an instance-admin-only system section.
 interface SettingsNavItem {
 	to:
 		| "/settings/general"
 		| "/settings/projects"
 		| "/settings/members"
 		| "/settings/templates"
-		| "/settings/tokens";
+		| "/settings/tokens"
+		| "/settings/users"
+		| "/settings/email";
 	labelKey: string;
 	icon: React.ComponentType<{ className?: string }>;
 }
@@ -26,6 +31,8 @@ interface SettingsNavItem {
 interface SettingsNavGroup {
 	labelKey: string;
 	items: SettingsNavItem[];
+	/** Only shown to instance admins (system-wide settings). */
+	adminOnly?: boolean;
 }
 
 const GROUPS: SettingsNavGroup[] = [
@@ -64,15 +71,31 @@ const GROUPS: SettingsNavGroup[] = [
 			},
 		],
 	},
+	{
+		labelKey: "settings.nav.system",
+		adminOnly: true,
+		items: [
+			{
+				to: "/settings/users",
+				labelKey: "settings.nav.systemUsers",
+				icon: ShieldIcon,
+			},
+			{
+				to: "/settings/email",
+				labelKey: "settings.nav.email",
+				icon: MailIcon,
+			},
+		],
+	},
 ];
 
-export function SettingsNav() {
+export function SettingsNav({ isAdmin }: { isAdmin: boolean }) {
 	const { t } = useTranslation();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
 	return (
 		<nav className="flex shrink-0 flex-col gap-5 md:w-48">
-			{GROUPS.map((group) => (
+			{GROUPS.filter((group) => !group.adminOnly || isAdmin).map((group) => (
 				<div key={group.labelKey} className="flex flex-col gap-1">
 					<p className="text-muted-foreground px-2 pb-1 text-xs font-medium uppercase tracking-wider">
 						{t(group.labelKey)}

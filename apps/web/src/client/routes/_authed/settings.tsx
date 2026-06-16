@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { SettingsNav } from "@/components/settings-nav";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/_authed/settings")({
 	component: SettingsLayout,
@@ -12,6 +14,7 @@ export const Route = createFileRoute("/_authed/settings")({
 // behind a left sub-nav. Each section is its own deep-linkable child route.
 function SettingsLayout() {
 	const { t } = useTranslation();
+	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -24,7 +27,7 @@ function SettingsLayout() {
 				</p>
 			</div>
 			<div className="flex flex-col gap-6 md:flex-row md:gap-10">
-				<SettingsNav />
+				<SettingsNav isAdmin={me.data?.user.isAdmin ?? false} />
 				<div className="min-w-0 flex-1">
 					<Outlet />
 				</div>
