@@ -52,7 +52,7 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
 			403,
 		);
 	}
-	return createAuth(c.env, c.var.db).handler(c.req.raw);
+	return createAuth(c.env, c.var.db, c.executionCtx).handler(c.req.raw);
 });
 
 const v1 = new Hono<AppEnv>();

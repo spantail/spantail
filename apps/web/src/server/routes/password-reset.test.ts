@@ -12,6 +12,15 @@ async function enableEmail(admin: string) {
 	);
 }
 
+/** Reset emails are sent via waitUntil, so allow a few ticks for delivery. */
+async function waitForOutbox(length: number): Promise<void> {
+	for (let i = 0; i < 50; i++) {
+		if (getOutbox().length >= length) return;
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	throw new Error(`outbox did not reach ${length} message(s)`);
+}
+
 /** Pulls the most recent reset token out of the dev outbox. */
 function lastResetToken(): string {
 	const latest = getOutbox()[0];
@@ -44,8 +53,10 @@ it("sends nothing when email delivery is disabled", async () => {
 		undefined,
 	);
 	// Better Auth returns success regardless (no account enumeration), but with
-	// delivery off we must not have sent anything.
+	// delivery off we must not have sent anything. Give the deferred (waitUntil)
+	// delivery a chance to run before asserting it stayed empty.
 	expect(res.status).toBe(200);
+	await new Promise((resolve) => setTimeout(resolve, 50));
 	expect(getOutbox()).toHaveLength(0);
 });
 
@@ -60,7 +71,7 @@ it("emails a reset link that lets the user set a new password", async () => {
 		undefined,
 	);
 	expect(requested.status).toBe(200);
-	expect(getOutbox()).toHaveLength(1);
+	await waitForOutbox(1);
 
 	const token = lastResetToken();
 	const reset = await apiJson(
