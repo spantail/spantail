@@ -25,6 +25,7 @@ import {
 	SidebarMenuItem,
 	SidebarMenuSkeleton,
 	SidebarRail,
+	useSidebar,
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { useProjects } from "@/hooks/use-projects";
@@ -40,9 +41,18 @@ interface NavItem {
 // account, user menu) live in the header's top-right corner instead.
 const MAIN_ITEMS: NavItem[] = [{ key: "nav.home", to: "/", icon: HomeIcon }];
 
+// On mobile the sidebar is a Sheet overlay; selecting an item should both
+// navigate and dismiss it. Returns a click handler that closes the drawer
+// (a no-op on desktop, where the sidebar is a persistent rail).
+function useDismissOnMobile() {
+	const { setOpenMobile } = useSidebar();
+	return () => setOpenMobile(false);
+}
+
 function NavItems({ items }: { items: NavItem[] }) {
 	const { t } = useTranslation();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const dismissOnMobile = useDismissOnMobile();
 
 	return (
 		<SidebarMenu>
@@ -54,6 +64,7 @@ function NavItems({ items }: { items: NavItem[] }) {
 							asChild
 							isActive={isActive}
 							tooltip={t(item.key)}
+							onClick={dismissOnMobile}
 							className={isActive ? undefined : "text-sidebar-foreground/70"}
 						>
 							<Link to={item.to}>
@@ -73,6 +84,7 @@ function ProjectsGroup() {
 	const { current } = useWorkspace();
 	const projects = useProjects();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const dismissOnMobile = useDismissOnMobile();
 
 	if (!current) return null;
 	const active = (projects.data ?? [])
@@ -112,6 +124,7 @@ function ProjectsGroup() {
 												asChild
 												isActive={isActive}
 												tooltip={project.name}
+												onClick={dismissOnMobile}
 												className={
 													isActive ? undefined : "text-sidebar-foreground/70"
 												}
@@ -142,6 +155,7 @@ function SettingsMenu() {
 	const { t } = useTranslation();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const isActive = pathname.startsWith("/settings");
+	const dismissOnMobile = useDismissOnMobile();
 
 	return (
 		<SidebarMenu>
@@ -150,6 +164,7 @@ function SettingsMenu() {
 					asChild
 					isActive={isActive}
 					tooltip={t("nav.settings")}
+					onClick={dismissOnMobile}
 					className={isActive ? undefined : "text-sidebar-foreground/70"}
 				>
 					<Link to="/settings">

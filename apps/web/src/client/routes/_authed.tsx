@@ -72,12 +72,13 @@ function AuthedLayout() {
 								>
 									<Link
 										to="/reports"
+										aria-label={t("nav.reports")}
 										activeProps={{
 											className: "bg-accent text-accent-foreground",
 										}}
 									>
 										<FileChartColumnIcon />
-										{t("nav.reports")}
+										<span className="hidden sm:inline">{t("nav.reports")}</span>
 									</Link>
 								</Button>
 								<ModeToggle />
@@ -103,9 +104,14 @@ function LogWorkButton() {
 
 	if (!current) return null;
 	return (
-		<Button size="sm" className="text-xs" onClick={() => openCreate()}>
+		<Button
+			size="sm"
+			className="text-xs"
+			aria-label={t("nav.logWork")}
+			onClick={() => openCreate()}
+		>
 			<PlusIcon />
-			{t("nav.logWork")}
+			<span className="hidden sm:inline">{t("nav.logWork")}</span>
 		</Button>
 	);
 }
