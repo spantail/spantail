@@ -111,7 +111,9 @@ it("updates the slug and rejects collisions with another workspace", async () =>
 		admin,
 	);
 	expect(renamed.status).toBe(200);
-	expect((await renamed.json()).slug).toBe("acme-renamed");
+	expect(((await renamed.json()) as { slug: string }).slug).toBe(
+		"acme-renamed",
+	);
 
 	// Re-applying the same slug to its own workspace is a no-op, not a conflict.
 	const same = await apiJson(
