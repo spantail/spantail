@@ -7,6 +7,7 @@ import {
 	countAdmins,
 	deleteUser,
 	findUserByEmail,
+	getInstanceSettings,
 	getUserById,
 	listUsers,
 	type UserRow,
@@ -42,6 +43,15 @@ export const userRoutes = new Hono<AppEnv>()
 		requireInstanceAdmin(c);
 		const input = validate(createUserInputSchema, await c.req.json());
 
+		// Direct creation is the email-off path; when delivery is on, onboarding
+		// goes through invitations (mirrors the opposite gate on POST /invitations).
+		const settings = await getInstanceSettings(c.var.db);
+		if (settings?.emailEnabled) {
+			throw new AppError(
+				"forbidden",
+				"Email delivery is enabled; invite the user instead",
+			);
+		}
 		if (await findUserByEmail(c.var.db, input.email)) {
 			throw new AppError("conflict", "A user with this email already exists");
 		}

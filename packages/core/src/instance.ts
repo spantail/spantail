@@ -10,8 +10,8 @@ export type EmailSettings = z.infer<typeof emailSettingsSchema>;
 
 export const updateEmailSettingsInputSchema = z.object({
 	emailEnabled: z.boolean(),
-	// Optional so an admin can enable delivery before the Cloudflare sending
-	// domain is configured; sends stay inert until a from address exists.
+	// Optional so callers can update one field at a time; the API requires a
+	// from address to be present when enabling delivery.
 	emailFromAddress: z.email().nullable().optional(),
 	emailFromName: z.string().max(100).nullable().optional(),
 });

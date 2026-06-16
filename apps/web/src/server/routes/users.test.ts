@@ -142,6 +142,23 @@ it("refuses to delete a workspace owner", async () => {
 	expect(del.status).toBe(409);
 });
 
+it("rejects direct user creation when email delivery is enabled", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	await apiJson(
+		"PATCH",
+		"/api/v1/instance/email",
+		{ emailEnabled: true, emailFromAddress: "noreply@example.com" },
+		admin,
+	);
+	const res = await apiJson(
+		"POST",
+		"/api/v1/users",
+		{ email: "x@example.com", name: "X" },
+		admin,
+	);
+	expect(res.status).toBe(403);
+});
+
 it("enforces last-admin and self guards", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const adminMe = (await (await apiGet("/api/v1/me", admin)).json()) as {

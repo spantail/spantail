@@ -9,6 +9,7 @@ import {
 } from "@toxil/db";
 import { Hono } from "hono";
 
+import { AppError } from "../lib/errors";
 import { requireInstanceAdmin } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import type { AppEnv } from "../types";
@@ -32,12 +33,21 @@ export const instanceRoutes = new Hono<AppEnv>()
 
 		// Omitted from* fields keep their current values.
 		const current = toEmailSettings(await getInstanceSettings(c.var.db));
+		const emailFromAddress =
+			input.emailFromAddress === undefined
+				? current.emailFromAddress
+				: input.emailFromAddress;
+		// Enabling without a sender would make every invite fail at send time, so
+		// require a from address to turn delivery on.
+		if (input.emailEnabled && !emailFromAddress) {
+			throw new AppError(
+				"bad_request",
+				"A from address is required to enable email delivery",
+			);
+		}
 		const row = await upsertInstanceSettings(c.var.db, {
 			emailEnabled: input.emailEnabled,
-			emailFromAddress:
-				input.emailFromAddress === undefined
-					? current.emailFromAddress
-					: input.emailFromAddress,
+			emailFromAddress,
 			emailFromName:
 				input.emailFromName === undefined
 					? current.emailFromName

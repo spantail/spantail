@@ -46,3 +46,14 @@ it("reads and updates email settings (instance admin only)", async () => {
 	const member = await signUpUser("Member", "member@example.com");
 	expect((await apiGet("/api/v1/instance/email", member)).status).toBe(403);
 });
+
+it("requires a from address to enable email", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const res = await apiJson(
+		"PATCH",
+		"/api/v1/instance/email",
+		{ emailEnabled: true },
+		admin,
+	);
+	expect(res.status).toBe(400);
+});
