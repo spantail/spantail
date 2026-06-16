@@ -25,6 +25,7 @@ export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 
 export const updateWorkspaceInputSchema = z
 	.object({
+		slug: slugSchema,
 		name: z.string().min(1).max(100),
 		timezone: timezoneSchema,
 		archived: z.boolean(),

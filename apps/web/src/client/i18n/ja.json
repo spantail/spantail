@@ -34,10 +34,8 @@
 		"projects": "プロジェクト",
 		"projectsEmpty": "稼働中のプロジェクトはありません",
 		"reports": "レポート",
-		"templates": "テンプレート",
-		"settings": "ワークスペース設定",
-		"groupManage": "管理",
-		"account": "アカウント"
+		"settings": "設定",
+		"accountTokens": "アカウントとトークン"
 	},
 	"projects": {
 		"notFound": "このワークスペースにプロジェクトが見つかりません。",
@@ -220,7 +218,6 @@
 		}
 	},
 	"templates": {
-		"title": "レポートテンプレート",
 		"listTitle": "テンプレート",
 		"newTitle": "テンプレートを作成",
 		"editTitle": "テンプレートを編集",
@@ -255,7 +252,18 @@
 		"member": "メンバー"
 	},
 	"settings": {
-		"title": "ワークスペース設定",
+		"title": "設定",
+		"subtitle": "ワークスペース・チーム・個人アクセスを管理します。",
+		"adminOnlyHint": "これらの設定はワークスペース管理者のみ変更できます。",
+		"nav": {
+			"workspace": "ワークスペース",
+			"account": "アカウント",
+			"general": "一般",
+			"projects": "プロジェクト",
+			"members": "メンバー",
+			"templates": "レポートテンプレート",
+			"tokens": "API トークン"
+		},
 		"slug": "スラッグ",
 		"timezone": "タイムゾーン",
 		"workspaceName": "ワークスペース名",

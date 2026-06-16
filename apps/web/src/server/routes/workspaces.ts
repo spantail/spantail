@@ -56,6 +56,15 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		await requireWorkspaceAccess(c, workspaceId, "admin");
 		const input = validate(updateWorkspaceInputSchema, await c.req.json());
 		const { archived, ...rest } = input;
+		if (rest.slug !== undefined) {
+			const existing = await getWorkspaceBySlug(c.var.db, rest.slug);
+			if (existing && existing.id !== workspaceId) {
+				throw new AppError(
+					"conflict",
+					"A workspace with this slug already exists",
+				);
+			}
+		}
 		const updated = await updateWorkspace(c.var.db, workspaceId, {
 			...rest,
 			...(archived === undefined

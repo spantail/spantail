@@ -34,10 +34,8 @@
 		"projects": "Projects",
 		"projectsEmpty": "No active projects yet",
 		"reports": "Reports",
-		"templates": "Templates",
-		"settings": "Workspace settings",
-		"groupManage": "Manage",
-		"account": "Account"
+		"settings": "Settings",
+		"accountTokens": "Account & tokens"
 	},
 	"projects": {
 		"notFound": "Project not found in this workspace.",
@@ -221,7 +219,6 @@
 		}
 	},
 	"templates": {
-		"title": "Report templates",
 		"listTitle": "Templates",
 		"newTitle": "New template",
 		"editTitle": "Edit template",
@@ -256,7 +253,18 @@
 		"member": "Member"
 	},
 	"settings": {
-		"title": "Workspace settings",
+		"title": "Settings",
+		"subtitle": "Manage your workspace, team and personal access.",
+		"adminOnlyHint": "Only workspace admins can change these settings.",
+		"nav": {
+			"workspace": "Workspace",
+			"account": "Account",
+			"general": "General",
+			"projects": "Projects",
+			"members": "Members",
+			"templates": "Report templates",
+			"tokens": "API tokens"
+		},
 		"slug": "Slug",
 		"timezone": "Timezone",
 		"workspaceName": "Workspace name",

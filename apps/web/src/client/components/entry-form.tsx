@@ -210,7 +210,7 @@ export function EntryForm({
 					{t("entries.noProjects")}
 				</p>
 				<Button asChild variant="outline" onClick={onCancel}>
-					<Link to="/settings">{t("entries.goToSettings")}</Link>
+					<Link to="/settings/projects">{t("entries.goToSettings")}</Link>
 				</Button>
 			</div>
 		);

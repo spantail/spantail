@@ -1,7 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
 	ChevronRightIcon,
-	FileTextIcon,
 	FolderIcon,
 	HomeIcon,
 	SettingsIcon,
@@ -13,12 +12,6 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
 	Sidebar,
 	SidebarContent,
@@ -32,7 +25,6 @@ import {
 	SidebarMenuItem,
 	SidebarMenuSkeleton,
 	SidebarRail,
-	useSidebar,
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { useProjects } from "@/hooks/use-projects";
@@ -40,20 +32,13 @@ import { useWorkspace } from "@/lib/workspace";
 
 interface NavItem {
 	key: string;
-	to: "/" | "/templates" | "/settings";
+	to: "/";
 	icon: React.ComponentType<{ className?: string }>;
 }
 
 // The sidebar is workspace-scoped only; user-scoped surfaces (reports,
 // account, user menu) live in the header's top-right corner instead.
 const MAIN_ITEMS: NavItem[] = [{ key: "nav.home", to: "/", icon: HomeIcon }];
-
-// Rarely-used management screens hide behind a single cog button to keep
-// the sidebar quiet.
-const MANAGE_ITEMS: NavItem[] = [
-	{ key: "nav.templates", to: "/templates", icon: FileTextIcon },
-	{ key: "nav.settings", to: "/settings", icon: SettingsIcon },
-];
 
 function NavItems({ items }: { items: NavItem[] }) {
 	const { t } = useTranslation();
@@ -151,42 +136,27 @@ function ProjectsGroup() {
 	);
 }
 
-function ManageMenu() {
+// Settings is the one management surface left in the sidebar: a single cog
+// that opens the Settings hub, where a sub-nav reaches every section.
+function SettingsMenu() {
 	const { t } = useTranslation();
-	const { isMobile } = useSidebar();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	const isActive = MANAGE_ITEMS.some((item) => item.to === pathname);
+	const isActive = pathname.startsWith("/settings");
 
 	return (
 		<SidebarMenu>
 			<SidebarMenuItem>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<SidebarMenuButton
-							isActive={isActive}
-							tooltip={t("nav.groupManage")}
-							className={isActive ? undefined : "text-sidebar-foreground/70"}
-						>
-							<SettingsIcon />
-							<span>{t("nav.groupManage")}</span>
-						</SidebarMenuButton>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						className="min-w-48 rounded-lg"
-						align="end"
-						side={isMobile ? "bottom" : "right"}
-						sideOffset={4}
-					>
-						{MANAGE_ITEMS.map((item) => (
-							<DropdownMenuItem key={item.key} asChild>
-								<Link to={item.to}>
-									<item.icon />
-									{t(item.key)}
-								</Link>
-							</DropdownMenuItem>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<SidebarMenuButton
+					asChild
+					isActive={isActive}
+					tooltip={t("nav.settings")}
+					className={isActive ? undefined : "text-sidebar-foreground/70"}
+				>
+					<Link to="/settings">
+						<SettingsIcon />
+						<span>{t("nav.settings")}</span>
+					</Link>
+				</SidebarMenuButton>
 			</SidebarMenuItem>
 		</SidebarMenu>
 	);
@@ -205,7 +175,7 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 				<ProjectsGroup />
 			</SidebarContent>
 			<SidebarFooter>
-				<ManageMenu />
+				<SettingsMenu />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
