@@ -1,4 +1,5 @@
 import {
+	type EmailEnabled,
 	type EmailSettings,
 	updateEmailSettingsInputSchema,
 } from "@toxil/core";
@@ -23,6 +24,15 @@ function toEmailSettings(row: InstanceSettingsRow | undefined): EmailSettings {
 }
 
 export const instanceRoutes = new Hono<AppEnv>()
+	// Public: unauthenticated so the forgot-password screen can branch between
+	// self-service recovery and a "contact your admin" message. Exposes only the
+	// boolean, never the from address.
+	.get("/email-enabled", async (c) => {
+		const settings = await getInstanceSettings(c.var.db);
+		return c.json({
+			enabled: settings?.emailEnabled ?? false,
+		} satisfies EmailEnabled);
+	})
 	.get("/email", async (c) => {
 		requireInstanceAdmin(c);
 		return c.json(toEmailSettings(await getInstanceSettings(c.var.db)));

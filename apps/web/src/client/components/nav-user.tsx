@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { AuthUser } from "@toxil/core";
-import { LanguagesIcon, LogOutIcon, UserIcon } from "lucide-react";
+import { LogOutIcon, UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,7 +19,7 @@ import { authClient } from "@/lib/auth-client";
 // User-scoped menu in the header's top-right corner — deliberately outside
 // the workspace-scoped sidebar.
 export function NavUser({ user }: { user: AuthUser }) {
-	const { t, i18n } = useTranslation();
+	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const initials = user.name
 		.split(/\s+/)
@@ -60,18 +60,10 @@ export function NavUser({ user }: { user: AuthUser }) {
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem asChild>
-						<Link to="/settings/tokens">
+						<Link to="/settings/password">
 							<UserIcon />
-							{t("nav.accountTokens")}
+							{t("nav.account")}
 						</Link>
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						onClick={() =>
-							i18n.changeLanguage(i18n.language === "ja" ? "en" : "ja")
-						}
-					>
-						<LanguagesIcon />
-						{t("nav.switchLanguage")}
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />

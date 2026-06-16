@@ -3,9 +3,11 @@ import {
 	FileTextIcon,
 	FolderIcon,
 	KeyIcon,
+	LockIcon,
 	MailIcon,
 	SettingsIcon,
 	ShieldIcon,
+	SlidersHorizontalIcon,
 	UsersIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -22,6 +24,8 @@ interface SettingsNavItem {
 		| "/settings/members"
 		| "/settings/templates"
 		| "/settings/tokens"
+		| "/settings/password"
+		| "/settings/preferences"
 		| "/settings/users"
 		| "/settings/email";
 	labelKey: string;
@@ -65,9 +69,19 @@ const GROUPS: SettingsNavGroup[] = [
 		labelKey: "settings.nav.account",
 		items: [
 			{
+				to: "/settings/password",
+				labelKey: "settings.nav.password",
+				icon: LockIcon,
+			},
+			{
 				to: "/settings/tokens",
 				labelKey: "settings.nav.tokens",
 				icon: KeyIcon,
+			},
+			{
+				to: "/settings/preferences",
+				labelKey: "settings.nav.preferences",
+				icon: SlidersHorizontalIcon,
 			},
 		],
 	},

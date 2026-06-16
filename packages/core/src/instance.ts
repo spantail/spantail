@@ -8,6 +8,16 @@ export const emailSettingsSchema = z.object({
 });
 export type EmailSettings = z.infer<typeof emailSettingsSchema>;
 
+/**
+ * Public projection of whether the instance can deliver email. Exposed
+ * unauthenticated so the forgot-password screen can decide between offering
+ * self-service recovery and telling the user to contact an admin.
+ */
+export const emailEnabledSchema = z.object({
+	enabled: z.boolean(),
+});
+export type EmailEnabled = z.infer<typeof emailEnabledSchema>;
+
 export const updateEmailSettingsInputSchema = z.object({
 	emailEnabled: z.boolean(),
 	// Optional so callers can update one field at a time; the API requires a

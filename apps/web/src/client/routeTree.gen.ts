@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
@@ -23,6 +25,8 @@ import { Route as AuthedSettingsUsersRouteImport } from './routes/_authed/settin
 import { Route as AuthedSettingsTokensRouteImport } from './routes/_authed/settings/tokens'
 import { Route as AuthedSettingsTemplatesRouteImport } from './routes/_authed/settings/templates'
 import { Route as AuthedSettingsProjectsRouteImport } from './routes/_authed/settings/projects'
+import { Route as AuthedSettingsPreferencesRouteImport } from './routes/_authed/settings/preferences'
+import { Route as AuthedSettingsPasswordRouteImport } from './routes/_authed/settings/password'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
 import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
@@ -33,6 +37,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
@@ -41,6 +50,11 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedRoute,
+} as any)
+const ResetPasswordTokenRoute = ResetPasswordTokenRouteImport.update({
+  id: '/reset-password/$token',
+  path: '/reset-password/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
@@ -97,6 +111,17 @@ const AuthedSettingsProjectsRoute = AuthedSettingsProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsPreferencesRoute =
+  AuthedSettingsPreferencesRouteImport.update({
+    id: '/preferences',
+    path: '/preferences',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
+const AuthedSettingsPasswordRoute = AuthedSettingsPasswordRouteImport.update({
+  id: '/password',
+  path: '/password',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
   id: '/members',
   path: '/members',
@@ -120,6 +145,7 @@ const AuthedProjectsProjectIdRoute = AuthedProjectsProjectIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
@@ -127,10 +153,13 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/password': typeof AuthedSettingsPasswordRoute
+  '/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
@@ -138,17 +167,21 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AuthedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
   '/reports': typeof AuthedReportsRoute
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/': typeof AuthedIndexRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/password': typeof AuthedSettingsPasswordRoute
+  '/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
@@ -158,6 +191,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/_authed/account': typeof AuthedAccountRoute
   '/_authed/entries': typeof AuthedEntriesRoute
@@ -165,11 +199,14 @@ export interface FileRoutesById {
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/_authed/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/email': typeof AuthedSettingsEmailRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
+  '/_authed/settings/password': typeof AuthedSettingsPasswordRoute
+  '/_authed/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/_authed/settings/projects': typeof AuthedSettingsProjectsRoute
   '/_authed/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/_authed/settings/tokens': typeof AuthedSettingsTokensRoute
@@ -180,6 +217,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot-password'
     | '/login'
     | '/account'
     | '/entries'
@@ -187,10 +225,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/templates'
     | '/invite/$token'
+    | '/reset-password/$token'
     | '/projects/$projectId'
     | '/settings/email'
     | '/settings/general'
     | '/settings/members'
+    | '/settings/password'
+    | '/settings/preferences'
     | '/settings/projects'
     | '/settings/templates'
     | '/settings/tokens'
@@ -198,17 +239,21 @@ export interface FileRouteTypes {
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/forgot-password'
     | '/login'
     | '/account'
     | '/entries'
     | '/reports'
     | '/templates'
     | '/invite/$token'
+    | '/reset-password/$token'
     | '/'
     | '/projects/$projectId'
     | '/settings/email'
     | '/settings/general'
     | '/settings/members'
+    | '/settings/password'
+    | '/settings/preferences'
     | '/settings/projects'
     | '/settings/templates'
     | '/settings/tokens'
@@ -217,6 +262,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authed'
+    | '/forgot-password'
     | '/login'
     | '/_authed/account'
     | '/_authed/entries'
@@ -224,11 +270,14 @@ export interface FileRouteTypes {
     | '/_authed/settings'
     | '/_authed/templates'
     | '/invite/$token'
+    | '/reset-password/$token'
     | '/_authed/'
     | '/_authed/projects/$projectId'
     | '/_authed/settings/email'
     | '/_authed/settings/general'
     | '/_authed/settings/members'
+    | '/_authed/settings/password'
+    | '/_authed/settings/preferences'
     | '/_authed/settings/projects'
     | '/_authed/settings/templates'
     | '/_authed/settings/tokens'
@@ -238,8 +287,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   InviteTokenRoute: typeof InviteTokenRoute
+  ResetPasswordTokenRoute: typeof ResetPasswordTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -249,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed': {
@@ -264,6 +322,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/reset-password/$token': {
+      id: '/reset-password/$token'
+      path: '/reset-password/$token'
+      fullPath: '/reset-password/$token'
+      preLoaderRoute: typeof ResetPasswordTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/invite/$token': {
       id: '/invite/$token'
@@ -342,6 +407,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsProjectsRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/preferences': {
+      id: '/_authed/settings/preferences'
+      path: '/preferences'
+      fullPath: '/settings/preferences'
+      preLoaderRoute: typeof AuthedSettingsPreferencesRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/password': {
+      id: '/_authed/settings/password'
+      path: '/password'
+      fullPath: '/settings/password'
+      preLoaderRoute: typeof AuthedSettingsPasswordRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/members': {
       id: '/_authed/settings/members'
       path: '/members'
@@ -377,6 +456,8 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsEmailRoute: typeof AuthedSettingsEmailRoute
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
+  AuthedSettingsPasswordRoute: typeof AuthedSettingsPasswordRoute
+  AuthedSettingsPreferencesRoute: typeof AuthedSettingsPreferencesRoute
   AuthedSettingsProjectsRoute: typeof AuthedSettingsProjectsRoute
   AuthedSettingsTemplatesRoute: typeof AuthedSettingsTemplatesRoute
   AuthedSettingsTokensRoute: typeof AuthedSettingsTokensRoute
@@ -388,6 +469,8 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsEmailRoute: AuthedSettingsEmailRoute,
   AuthedSettingsGeneralRoute: AuthedSettingsGeneralRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
+  AuthedSettingsPasswordRoute: AuthedSettingsPasswordRoute,
+  AuthedSettingsPreferencesRoute: AuthedSettingsPreferencesRoute,
   AuthedSettingsProjectsRoute: AuthedSettingsProjectsRoute,
   AuthedSettingsTemplatesRoute: AuthedSettingsTemplatesRoute,
   AuthedSettingsTokensRoute: AuthedSettingsTokensRoute,
@@ -424,8 +507,10 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   InviteTokenRoute: InviteTokenRoute,
+  ResetPasswordTokenRoute: ResetPasswordTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

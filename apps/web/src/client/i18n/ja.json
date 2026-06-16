@@ -15,7 +15,19 @@
 		"signupAction": "アカウント作成",
 		"noAccount": "アカウントをお持ちでない方はこちら",
 		"haveAccount": "すでにアカウントをお持ちの方はこちら",
-		"logout": "ログアウト"
+		"logout": "ログアウト",
+		"forgotPassword": "パスワードをお忘れですか?",
+		"forgotPasswordTitle": "パスワードを再設定",
+		"forgotPasswordDescription": "メールアドレスを入力してください。パスワード再設定用のリンクをお送りします。",
+		"sendResetLink": "再設定リンクを送信",
+		"resetSentNotice": "そのメールアドレスのアカウントが存在する場合、再設定リンクを送信しました。受信トレイをご確認ください。",
+		"recoveryUnavailableTitle": "パスワード復旧は利用できません",
+		"recoveryUnavailableDescription": "このインスタンスではメール配信が有効になっていないため、メールでのパスワード再設定はできません。パスワードの再設定はシステム管理者にご連絡ください。",
+		"backToLogin": "ログインへ戻る",
+		"resetPasswordTitle": "新しいパスワードを設定",
+		"resetPasswordDescription": "アカウントの新しいパスワードを設定してください。",
+		"resetPasswordAction": "パスワードを再設定",
+		"resetInvalid": "この再設定リンクは無効か、有効期限が切れています。"
 	},
 	"errors": {
 		"generic": "問題が発生しました。もう一度お試しください。"
@@ -27,22 +39,17 @@
 		"toLogin": "ログインへ",
 		"acceptAction": "アカウントを作成"
 	},
-	"theme": {
-		"toDark": "ダークモードに切り替え",
-		"toLight": "ライトモードに切り替え"
-	},
 	"home": {
 		"subtitle": "{{date}} · あなたの時間をひと目で。"
 	},
 	"nav": {
 		"home": "ホーム",
-		"switchLanguage": "Switch to English",
 		"logWork": "記録する",
 		"projects": "プロジェクト",
 		"projectsEmpty": "稼働中のプロジェクトはありません",
 		"reports": "レポート",
 		"settings": "設定",
-		"accountTokens": "アカウントとトークン"
+		"account": "アカウント"
 	},
 	"projects": {
 		"notFound": "このワークスペースにプロジェクトが見つかりません。",
@@ -271,6 +278,8 @@
 			"members": "メンバー",
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
+			"password": "パスワード",
+			"preferences": "環境設定",
 			"systemUsers": "ユーザー管理",
 			"email": "メール"
 		},
@@ -324,6 +333,24 @@
 			"copyAction": "コピー",
 			"copied": "クリップボードにコピーしました。",
 			"doneAction": "完了"
+		},
+		"password": {
+			"title": "パスワードを変更",
+			"description": "ログインに使うパスワードを変更します。変更すると他のセッションからはログアウトされます。",
+			"current": "現在のパスワード",
+			"new": "新しいパスワード",
+			"confirm": "新しいパスワード(確認)",
+			"changeAction": "パスワードを変更",
+			"changed": "パスワードを変更しました。",
+			"mismatch": "新しいパスワードが一致しません。"
+		},
+		"preferences": {
+			"title": "環境設定",
+			"description": "言語と外観を設定します。これらはこのブラウザに適用されます。",
+			"language": "言語",
+			"theme": "テーマ",
+			"themeLight": "ライト",
+			"themeDark": "ダーク"
 		},
 		"users": {
 			"title": "ユーザー",

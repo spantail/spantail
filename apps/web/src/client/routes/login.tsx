@@ -98,6 +98,15 @@ function LoginPage() {
 								: t("auth.signupAction")}
 						</Button>
 					</form>
+					{mode === "login" && (
+						<button
+							type="button"
+							className="text-muted-foreground mt-4 block text-sm underline-offset-4 hover:underline"
+							onClick={() => navigate({ to: "/forgot-password" })}
+						>
+							{t("auth.forgotPassword")}
+						</button>
+					)}
 					<button
 						type="button"
 						className="text-muted-foreground mt-4 text-sm underline-offset-4 hover:underline"
