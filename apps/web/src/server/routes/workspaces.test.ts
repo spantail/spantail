@@ -92,3 +92,42 @@ it("updates and archives workspaces for admins only", async () => {
 	expect(body.name).toBe("Acme Inc");
 	expect(body.archivedAt).not.toBeNull();
 });
+
+it("updates the slug and rejects collisions with another workspace", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const ws = await createWs(admin);
+	const other = await apiJson(
+		"POST",
+		"/api/v1/workspaces",
+		{ ...WS, slug: "beta" },
+		admin,
+	);
+	const otherWs = (await other.json()) as { id: string };
+
+	const renamed = await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${ws.id}`,
+		{ slug: "acme-renamed" },
+		admin,
+	);
+	expect(renamed.status).toBe(200);
+	expect((await renamed.json()).slug).toBe("acme-renamed");
+
+	// Re-applying the same slug to its own workspace is a no-op, not a conflict.
+	const same = await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${ws.id}`,
+		{ slug: "acme-renamed" },
+		admin,
+	);
+	expect(same.status).toBe(200);
+
+	// Taking another workspace's slug is rejected.
+	const conflict = await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${otherWs.id}`,
+		{ slug: "acme-renamed" },
+		admin,
+	);
+	expect(conflict.status).toBe(409);
+});
