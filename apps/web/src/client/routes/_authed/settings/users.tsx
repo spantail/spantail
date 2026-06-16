@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import {
+	MoreHorizontalIcon,
+	ShieldIcon,
+	ShieldOffIcon,
+	Trash2Icon,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,10 +18,9 @@ import {
 	AlertDialogFooter,
 	AlertDialogHeader,
 	AlertDialogTitle,
-	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -24,6 +29,13 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -285,36 +297,22 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 											)}
 										</TableCell>
 										<TableCell className="text-right">
-											<div className="flex justify-end gap-1">
-												<Button
-													variant="ghost"
-													size="sm"
-													disabled={
-														isSelf && user.isAdmin
-															? true
-															: updateMutation.isPending
-													}
-													onClick={() => {
-														setError(null);
-														updateMutation.mutate({
-															id: user.id,
-															isAdmin: !user.isAdmin,
-														});
-													}}
-												>
-													{user.isAdmin
-														? t("settings.users.revokeAdmin")
-														: t("settings.users.makeAdmin")}
-												</Button>
-												{!isSelf && (
-													<DeleteUserButton
-														onConfirm={() => {
-															setError(null);
-															deleteMutation.mutate(user.id);
-														}}
-													/>
-												)}
-											</div>
+											<UserRowActions
+												isAdmin={user.isAdmin}
+												isSelf={isSelf}
+												disabled={updateMutation.isPending}
+												onToggleAdmin={() => {
+													setError(null);
+													updateMutation.mutate({
+														id: user.id,
+														isAdmin: !user.isAdmin,
+													});
+												}}
+												onDelete={() => {
+													setError(null);
+													deleteMutation.mutate(user.id);
+												}}
+											/>
 										</TableCell>
 									</TableRow>
 								);
@@ -373,33 +371,85 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 	);
 }
 
-function DeleteUserButton({ onConfirm }: { onConfirm: () => void }) {
+function UserRowActions({
+	isAdmin,
+	isSelf,
+	disabled,
+	onToggleAdmin,
+	onDelete,
+}: {
+	isAdmin: boolean;
+	isSelf: boolean;
+	disabled: boolean;
+	onToggleAdmin: () => void;
+	onDelete: () => void;
+}) {
 	const { t } = useTranslation();
+	const [deleting, setDeleting] = useState(false);
+	// You cannot revoke your own admin role, nor delete your own account.
+	const cannotToggle = isSelf && isAdmin;
+
 	return (
-		<AlertDialog>
-			<AlertDialogTrigger asChild>
-				<Button variant="ghost" size="sm">
-					{t("settings.users.deleteAction")}
-				</Button>
-			</AlertDialogTrigger>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>
-						{t("settings.users.delete.title")}
-					</AlertDialogTitle>
-					<AlertDialogDescription>
-						{t("settings.users.delete.description")}
-					</AlertDialogDescription>
-				</AlertDialogHeader>
-				<AlertDialogFooter>
-					<AlertDialogCancel>
-						{t("settings.users.delete.cancel")}
-					</AlertDialogCancel>
-					<AlertDialogAction onClick={onConfirm}>
-						{t("settings.users.delete.confirm")}
-					</AlertDialogAction>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
+		<>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						size="icon"
+						className="text-muted-foreground size-7"
+						aria-label={t("settings.users.actionsMenu")}
+					>
+						<MoreHorizontalIcon />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end">
+					<DropdownMenuItem
+						disabled={cannotToggle || disabled}
+						onClick={onToggleAdmin}
+					>
+						{isAdmin ? <ShieldOffIcon /> : <ShieldIcon />}
+						{isAdmin
+							? t("settings.users.revokeAdmin")
+							: t("settings.users.makeAdmin")}
+					</DropdownMenuItem>
+					{!isSelf && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuItem
+								variant="destructive"
+								onSelect={() => setDeleting(true)}
+							>
+								<Trash2Icon />
+								{t("settings.users.deleteAction")}
+							</DropdownMenuItem>
+						</>
+					)}
+				</DropdownMenuContent>
+			</DropdownMenu>
+
+			<AlertDialog open={deleting} onOpenChange={setDeleting}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							{t("settings.users.delete.title")}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("settings.users.delete.description")}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>
+							{t("settings.users.delete.cancel")}
+						</AlertDialogCancel>
+						<AlertDialogAction
+							className={buttonVariants({ variant: "destructive" })}
+							onClick={onDelete}
+						>
+							{t("settings.users.delete.confirm")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</>
 	);
 }

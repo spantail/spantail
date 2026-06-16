@@ -342,6 +342,7 @@
 			"generatedDescription": "このワンタイムパスワードをユーザーに伝えてください。二度と表示されません。",
 			"copyAction": "パスワードをコピー",
 			"dismissAction": "閉じる",
+			"actionsMenu": "ユーザー操作",
 			"makeAdmin": "管理者にする",
 			"revokeAdmin": "管理者を解除",
 			"deleteAction": "削除",

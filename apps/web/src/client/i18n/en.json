@@ -343,6 +343,7 @@
 			"generatedDescription": "Share this one-time password with the user. It will not be shown again.",
 			"copyAction": "Copy password",
 			"dismissAction": "Dismiss",
+			"actionsMenu": "User actions",
 			"makeAdmin": "Make admin",
 			"revokeAdmin": "Revoke admin",
 			"deleteAction": "Delete",
