@@ -15,7 +15,19 @@
 		"signupAction": "Create account",
 		"noAccount": "No account? Sign up",
 		"haveAccount": "Already have an account? Log in",
-		"logout": "Log out"
+		"logout": "Log out",
+		"forgotPassword": "Forgot password?",
+		"forgotPasswordTitle": "Reset your password",
+		"forgotPasswordDescription": "Enter your email and we'll send you a link to reset your password.",
+		"sendResetLink": "Send reset link",
+		"resetSentNotice": "If an account exists for that email, a reset link is on its way. Check your inbox.",
+		"recoveryUnavailableTitle": "Password recovery unavailable",
+		"recoveryUnavailableDescription": "Email delivery is not enabled on this instance, so passwords can't be reset by email. Contact your system administrator to reset your password.",
+		"backToLogin": "Back to login",
+		"resetPasswordTitle": "Set a new password",
+		"resetPasswordDescription": "Choose a new password for your account.",
+		"resetPasswordAction": "Reset password",
+		"resetInvalid": "This reset link is invalid or has expired."
 	},
 	"errors": {
 		"generic": "Something went wrong. Please try again."
@@ -27,16 +39,11 @@
 		"toLogin": "Go to login",
 		"acceptAction": "Create account"
 	},
-	"theme": {
-		"toDark": "Switch to dark mode",
-		"toLight": "Switch to light mode"
-	},
 	"home": {
 		"subtitle": "{{date}} · your time at a glance."
 	},
 	"nav": {
 		"home": "Home",
-		"switchLanguage": "日本語に切り替え",
 		"logWork": "Log work",
 		"projects": "Projects",
 		"projectsEmpty": "No active projects yet",
@@ -272,6 +279,8 @@
 			"members": "Members",
 			"templates": "Report templates",
 			"tokens": "API tokens",
+			"password": "Password",
+			"preferences": "Preferences",
 			"systemUsers": "User management",
 			"email": "Email"
 		},
@@ -325,6 +334,24 @@
 			"copyAction": "Copy",
 			"copied": "Copied to clipboard.",
 			"doneAction": "Done"
+		},
+		"password": {
+			"title": "Change password",
+			"description": "Update the password you use to sign in. Changing it signs out your other sessions.",
+			"current": "Current password",
+			"new": "New password",
+			"confirm": "Confirm new password",
+			"changeAction": "Change password",
+			"changed": "Password changed.",
+			"mismatch": "The new passwords do not match."
+		},
+		"preferences": {
+			"title": "Preferences",
+			"description": "Set your language and appearance. These apply to this browser.",
+			"language": "Language",
+			"theme": "Theme",
+			"themeLight": "Light",
+			"themeDark": "Dark"
 		},
 		"users": {
 			"title": "Users",

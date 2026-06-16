@@ -13,6 +13,7 @@ import type {
 	CreateUserInputData,
 	CreateWorkEntryInputData,
 	CreateWorkspaceInput,
+	EmailEnabled,
 	EmailSettings,
 	Invitation,
 	InvitationPreview,
@@ -158,6 +159,11 @@ export class ToxilClient {
 		return this.request("POST", `/invitations/accept/${token}`, {
 			body: input,
 		});
+	}
+
+	/** Public: whether the instance can deliver email (gates self-service recovery). */
+	getEmailEnabled(): Promise<EmailEnabled> {
+		return this.request("GET", "/instance/email-enabled");
 	}
 
 	getEmailSettings(): Promise<EmailSettings> {

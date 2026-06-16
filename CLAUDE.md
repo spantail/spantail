@@ -52,10 +52,10 @@ pnpm deploy             # wrangler deploy (apps/web)
   to icons). The sidebar is workspace-scoped only: workspace switcher at the top, workspace
   navigation, and a single Settings cog pinned at the bottom that opens the Settings hub
   (`/settings`). Settings is one screen with a left sub-nav grouping every management section —
-  Workspace (general, projects, members, report templates) and Account (API tokens) — each a
-  deep-linkable child route (`/settings/<section>`). User-scoped surfaces — reports and the user
-  menu (account, language, logout) — live in the header's top-right corner, never in the sidebar.
-  New screens render inside this shell.
+  Workspace (general, projects, members, report templates) and Account (API tokens, password,
+  preferences: language + theme) — each a deep-linkable child route (`/settings/<section>`).
+  User-scoped surfaces — reports and the user menu (account, logout) — live in the header's
+  top-right corner, never in the sidebar. New screens render inside this shell.
 - **Dates and time.** `work_entries.entry_date` is a local date string (`YYYY-MM-DD`) in the
   workspace's timezone. All timestamps are UTC. Durations are integer minutes.
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report filters
