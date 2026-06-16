@@ -28,6 +28,24 @@ export async function addMember(
 	await db.insert(workspaceMembers).values(input);
 }
 
+/** Whether the user is the owner of any workspace. */
+export async function userOwnsAnyWorkspace(
+	db: Database,
+	userId: string,
+): Promise<boolean> {
+	const row = await db
+		.select({ workspaceId: workspaceMembers.workspaceId })
+		.from(workspaceMembers)
+		.where(
+			and(
+				eq(workspaceMembers.userId, userId),
+				eq(workspaceMembers.role, "owner"),
+			),
+		)
+		.get();
+	return row !== undefined;
+}
+
 export async function removeMember(
 	db: Database,
 	workspaceId: string,

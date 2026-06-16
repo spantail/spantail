@@ -20,6 +20,13 @@
 	"errors": {
 		"generic": "Something went wrong. Please try again."
 	},
+	"invite": {
+		"title": "Accept your invitation",
+		"description": "Set up your Toxil account for {{email}}.",
+		"invalid": "This invitation is invalid or has expired.",
+		"toLogin": "Go to login",
+		"acceptAction": "Create account"
+	},
 	"theme": {
 		"toDark": "Switch to dark mode",
 		"toLight": "Switch to light mode"
@@ -259,12 +266,16 @@
 		"nav": {
 			"workspace": "Workspace",
 			"account": "Account",
+			"system": "System",
 			"general": "General",
 			"projects": "Projects",
 			"members": "Members",
 			"templates": "Report templates",
-			"tokens": "API tokens"
+			"tokens": "API tokens",
+			"systemUsers": "User management",
+			"email": "Email"
 		},
+		"systemAdminOnly": "Only instance admins can access this section.",
 		"slug": "Slug",
 		"timezone": "Timezone",
 		"workspaceName": "Workspace name",
@@ -314,6 +325,46 @@
 			"copyAction": "Copy",
 			"copied": "Copied to clipboard.",
 			"doneAction": "Done"
+		},
+		"users": {
+			"title": "Users",
+			"role": "Role",
+			"admin": "Admin",
+			"member": "Member",
+			"you": "(you)",
+			"grantAdmin": "Grant instance admin",
+			"createTitle": "Create user",
+			"createDescription": "Email delivery is off, so the user is created immediately with a generated password.",
+			"createAction": "Create user",
+			"inviteTitle": "Invite user",
+			"inviteDescription": "Send an email invitation; the user sets their own name and password.",
+			"inviteAction": "Send invitation",
+			"generatedTitle": "User created",
+			"generatedDescription": "Share this one-time password with the user. It will not be shown again.",
+			"copyAction": "Copy password",
+			"dismissAction": "Dismiss",
+			"actionsMenu": "User actions",
+			"makeAdmin": "Make admin",
+			"revokeAdmin": "Revoke admin",
+			"deleteAction": "Delete",
+			"pendingTitle": "Pending invitations",
+			"expires": "Expires",
+			"revokeInvite": "Revoke",
+			"delete": {
+				"title": "Delete this user?",
+				"description": "This permanently deletes the user and all of their work entries, reports, and tokens. This cannot be undone.",
+				"confirm": "Delete",
+				"cancel": "Cancel"
+			}
+		},
+		"email": {
+			"title": "Email",
+			"description": "Email delivery uses Cloudflare Email Service and requires a Workers Paid plan. It is off by default.",
+			"enableLabel": "Enable email delivery",
+			"enableHint": "When off, invitations are disabled and you hand out generated passwords directly.",
+			"fromAddress": "From address",
+			"fromName": "From name",
+			"saveAction": "Save"
 		}
 	}
 }

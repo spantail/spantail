@@ -10,6 +10,15 @@ export async function countUsers(db: Database): Promise<number> {
 	return rows[0]?.value ?? 0;
 }
 
+/** Number of instance admins; used to block removing the last one. */
+export async function countAdmins(db: Database): Promise<number> {
+	const rows = await db
+		.select({ value: count() })
+		.from(user)
+		.where(eq(user.isAdmin, true));
+	return rows[0]?.value ?? 0;
+}
+
 export async function findUserByEmail(
 	db: Database,
 	email: string,
@@ -30,4 +39,29 @@ export async function listUsersByIds(
 ): Promise<UserRow[]> {
 	if (ids.length === 0) return [];
 	return db.select().from(user).where(inArray(user.id, ids));
+}
+
+export async function listUsers(db: Database): Promise<UserRow[]> {
+	return db.select().from(user).orderBy(user.createdAt);
+}
+
+export async function updateUser(
+	db: Database,
+	id: string,
+	patch: Partial<Pick<UserRow, "name" | "isAdmin">>,
+): Promise<UserRow | undefined> {
+	const rows = await db
+		.update(user)
+		.set(patch)
+		.where(eq(user.id, id))
+		.returning();
+	return rows[0];
+}
+
+export async function deleteUser(db: Database, id: string): Promise<boolean> {
+	const rows = await db
+		.delete(user)
+		.where(eq(user.id, id))
+		.returning({ id: user.id });
+	return rows.length > 0;
 }

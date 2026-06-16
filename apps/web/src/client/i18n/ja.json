@@ -20,6 +20,13 @@
 	"errors": {
 		"generic": "問題が発生しました。もう一度お試しください。"
 	},
+	"invite": {
+		"title": "招待を受ける",
+		"description": "{{email}} の Toxil アカウントを設定します。",
+		"invalid": "この招待は無効か、有効期限が切れています。",
+		"toLogin": "ログインへ",
+		"acceptAction": "アカウントを作成"
+	},
 	"theme": {
 		"toDark": "ダークモードに切り替え",
 		"toLight": "ライトモードに切り替え"
@@ -258,12 +265,16 @@
 		"nav": {
 			"workspace": "ワークスペース",
 			"account": "アカウント",
+			"system": "システム",
 			"general": "一般",
 			"projects": "プロジェクト",
 			"members": "メンバー",
 			"templates": "レポートテンプレート",
-			"tokens": "API トークン"
+			"tokens": "API トークン",
+			"systemUsers": "ユーザー管理",
+			"email": "メール"
 		},
+		"systemAdminOnly": "このセクションはインスタンス管理者のみがアクセスできます。",
 		"slug": "スラッグ",
 		"timezone": "タイムゾーン",
 		"workspaceName": "ワークスペース名",
@@ -313,6 +324,46 @@
 			"copyAction": "コピー",
 			"copied": "クリップボードにコピーしました。",
 			"doneAction": "完了"
+		},
+		"users": {
+			"title": "ユーザー",
+			"role": "ロール",
+			"admin": "管理者",
+			"member": "メンバー",
+			"you": "(自分)",
+			"grantAdmin": "インスタンス管理者権限を付与",
+			"createTitle": "ユーザーを作成",
+			"createDescription": "メール配信がオフのため、ユーザーは生成されたパスワードで即時作成されます。",
+			"createAction": "ユーザーを作成",
+			"inviteTitle": "ユーザーを招待",
+			"inviteDescription": "招待メールを送信します。ユーザーは自分で名前とパスワードを設定します。",
+			"inviteAction": "招待を送信",
+			"generatedTitle": "ユーザーを作成しました",
+			"generatedDescription": "このワンタイムパスワードをユーザーに伝えてください。二度と表示されません。",
+			"copyAction": "パスワードをコピー",
+			"dismissAction": "閉じる",
+			"actionsMenu": "ユーザー操作",
+			"makeAdmin": "管理者にする",
+			"revokeAdmin": "管理者を解除",
+			"deleteAction": "削除",
+			"pendingTitle": "保留中の招待",
+			"expires": "有効期限",
+			"revokeInvite": "取り消し",
+			"delete": {
+				"title": "このユーザーを削除しますか?",
+				"description": "ユーザーと、そのすべての作業ログ・レポート・トークンが完全に削除されます。元に戻せません。",
+				"confirm": "削除",
+				"cancel": "キャンセル"
+			}
+		},
+		"email": {
+			"title": "メール",
+			"description": "メール配信は Cloudflare Email Service を使用し、Workers Paid プランが必要です。既定ではオフです。",
+			"enableLabel": "メール配信を有効化",
+			"enableHint": "オフの場合は招待が無効になり、生成したパスワードを直接渡す運用になります。",
+			"fromAddress": "送信元アドレス",
+			"fromName": "送信者名",
+			"saveAction": "保存"
 		}
 	}
 }

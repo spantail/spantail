@@ -32,9 +32,11 @@ export const reportTemplates = sqliteTable(
 		periodUnit: text("period_unit", { enum: PERIOD_UNITS })
 			.notNull()
 			.default("custom"),
-		createdBy: text("created_by")
-			.notNull()
-			.references(() => user.id),
+		// Nullable + set null on delete: keep the workspace's template when its
+		// author is removed (authorship is just dropped).
+		createdBy: text("created_by").references(() => user.id, {
+			onDelete: "set null",
+		}),
 		createdAt: createdAtMs(),
 		updatedAt: updatedAtMs(),
 	},

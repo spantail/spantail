@@ -49,11 +49,9 @@ it("signs up, signs in, and reports the session", async () => {
 	expect(signInRes.status).toBe(200);
 });
 
-it("grants instance admin to the first user only", async () => {
+it("makes the first user an instance admin and closes public sign-up", async () => {
 	const firstRes = await signUp("First", "first@example.com");
 	expect(firstRes.status).toBe(200);
-	const secondRes = await signUp("Second", "second@example.com");
-	expect(secondRes.status).toBe(200);
 
 	const firstSession = (await (
 		await exports.default.fetch(
@@ -62,14 +60,10 @@ it("grants instance admin to the first user only", async () => {
 			}),
 		)
 	).json()) as { user: { isAdmin: boolean } };
-	const secondSession = (await (
-		await exports.default.fetch(
-			new Request(`${BASE}/api/auth/get-session`, {
-				headers: { cookie: sessionCookie(secondRes) },
-			}),
-		)
-	).json()) as { user: { isAdmin: boolean } };
-
 	expect(firstSession.user.isAdmin).toBe(true);
-	expect(secondSession.user.isAdmin).toBe(false);
+
+	// Onboarding becomes admin-driven once the bootstrap admin exists, so
+	// public sign-up is rejected for everyone after the first user.
+	const secondRes = await signUp("Second", "second@example.com");
+	expect(secondRes.status).toBe(403);
 });

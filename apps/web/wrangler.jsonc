@@ -25,6 +25,13 @@
 			"bucket_name": "toxil-shares"
 		}
 	],
+	// Cloudflare Email Service (public beta). Inert until the account onboards a
+	// sending domain on a Workers Paid plan. Local dev never invokes it: the
+	// mailer routes to an in-memory dev outbox whenever APP_ENV !== "production".
+	"send_email": [{ "name": "EMAIL" }],
+	"vars": {
+		"APP_ENV": "development"
+	},
 	"env": {
 		// Bindings are not inherited into named environments; production mirrors
 		// the defaults. Self-hosters: replace the placeholder IDs with the IDs of
@@ -47,7 +54,11 @@
 					"binding": "SHARE_BUCKET",
 					"bucket_name": "toxil-shares"
 				}
-			]
+			],
+			"send_email": [{ "name": "EMAIL" }],
+			"vars": {
+				"APP_ENV": "production"
+			}
 		}
 	}
 }

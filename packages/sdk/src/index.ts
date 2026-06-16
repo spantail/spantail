@@ -1,24 +1,34 @@
 import type {
+	AcceptInvitationInput,
 	AddWorkspaceMemberInputData,
 	ApiToken,
 	AuthUser,
+	CreatedUser,
+	CreateInvitationInputData,
 	CreateProjectInput,
 	CreateReportInput,
 	CreateReportShareInput,
 	CreateReportTemplateInput,
 	CreateTokenInput,
+	CreateUserInputData,
 	CreateWorkEntryInputData,
 	CreateWorkspaceInput,
+	EmailSettings,
+	Invitation,
+	InvitationPreview,
 	ListWorkEntriesQueryData,
+	ManagedUser,
 	Project,
 	Report,
 	ReportMeta,
 	ReportShare,
 	ReportTemplate,
+	UpdateEmailSettingsInput,
 	UpdateProjectInput,
 	UpdateReportInput,
 	UpdateReportTemplateInput,
 	UpdateReportTemplateStateInput,
+	UpdateUserInput,
 	UpdateWorkEntryInput,
 	UpdateWorkspaceInput,
 	WorkEntry,
@@ -106,6 +116,56 @@ export class ToxilClient {
 
 	me(): Promise<Me> {
 		return this.request("GET", "/me");
+	}
+
+	// --- Instance-wide user management (instance admin only) ---
+
+	listUsers(): Promise<ManagedUser[]> {
+		return this.request("GET", "/users");
+	}
+
+	createUser(input: CreateUserInputData): Promise<CreatedUser> {
+		return this.request("POST", "/users", { body: input });
+	}
+
+	updateUser(id: string, input: UpdateUserInput): Promise<ManagedUser> {
+		return this.request("PATCH", `/users/${id}`, { body: input });
+	}
+
+	deleteUser(id: string): Promise<void> {
+		return this.request("DELETE", `/users/${id}`);
+	}
+
+	listInvitations(): Promise<Invitation[]> {
+		return this.request("GET", "/invitations");
+	}
+
+	createInvitation(input: CreateInvitationInputData): Promise<Invitation> {
+		return this.request("POST", "/invitations", { body: input });
+	}
+
+	revokeInvitation(id: string): Promise<void> {
+		return this.request("DELETE", `/invitations/${id}`);
+	}
+
+	/** Public: validates an invitation token and returns the invited email. */
+	getInvitation(token: string): Promise<InvitationPreview> {
+		return this.request("GET", `/invitations/accept/${token}`);
+	}
+
+	/** Public: accepts an invitation, creating the account. */
+	acceptInvitation(token: string, input: AcceptInvitationInput): Promise<void> {
+		return this.request("POST", `/invitations/accept/${token}`, {
+			body: input,
+		});
+	}
+
+	getEmailSettings(): Promise<EmailSettings> {
+		return this.request("GET", "/instance/email");
+	}
+
+	updateEmailSettings(input: UpdateEmailSettingsInput): Promise<EmailSettings> {
+		return this.request("PATCH", "/instance/email", { body: input });
 	}
 
 	listWorkspaces(): Promise<WorkspaceWithRole[]> {

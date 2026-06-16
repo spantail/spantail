@@ -8,8 +8,8 @@ import {
 } from "@toxil/db";
 import type { Context } from "hono";
 
-import { requireAuth } from "../middleware/auth";
-import type { AppEnv } from "../types";
+import { requireAuth, requireScope } from "../middleware/auth";
+import type { AppEnv, AuthContext } from "../types";
 import { AppError } from "./errors";
 
 const ROLE_RANK: Record<WorkspaceRole, number> = {
@@ -17,6 +17,19 @@ const ROLE_RANK: Record<WorkspaceRole, number> = {
 	admin: 1,
 	owner: 2,
 };
+
+/**
+ * Asserts the caller is an instance admin (the system-wide super admin).
+ * PAT callers must also hold the "admin" scope. Used by the system-wide user
+ * management, invitation, and instance-settings endpoints.
+ */
+export function requireInstanceAdmin(c: Context<AppEnv>): AuthContext {
+	const auth = requireScope(c, "admin");
+	if (!auth.user.isAdmin) {
+		throw new AppError("forbidden", "Requires instance admin");
+	}
+	return auth;
+}
 
 /**
  * Asserts the current user is a member of the workspace with at least

@@ -12,17 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedReportsRouteImport } from './routes/_authed/reports'
 import { Route as AuthedEntriesRouteImport } from './routes/_authed/entries'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as AuthedSettingsUsersRouteImport } from './routes/_authed/settings/users'
 import { Route as AuthedSettingsTokensRouteImport } from './routes/_authed/settings/tokens'
 import { Route as AuthedSettingsTemplatesRouteImport } from './routes/_authed/settings/templates'
 import { Route as AuthedSettingsProjectsRouteImport } from './routes/_authed/settings/projects'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
+import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects.$projectId'
 
 const LoginRoute = LoginRouteImport.update({
@@ -38,6 +41,11 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedRoute,
+} as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedTemplatesRoute = AuthedTemplatesRouteImport.update({
   id: '/templates',
@@ -69,6 +77,11 @@ const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsUsersRoute = AuthedSettingsUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsTokensRoute = AuthedSettingsTokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
@@ -94,6 +107,11 @@ const AuthedSettingsGeneralRoute = AuthedSettingsGeneralRouteImport.update({
   path: '/general',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsEmailRoute = AuthedSettingsEmailRouteImport.update({
+  id: '/email',
+  path: '/email',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedProjectsProjectIdRoute = AuthedProjectsProjectIdRouteImport.update({
   id: '/projects/$projectId',
   path: '/projects/$projectId',
@@ -108,12 +126,15 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthedReportsRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/templates': typeof AuthedTemplatesRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
+  '/settings/users': typeof AuthedSettingsUsersRoute
   '/settings/': typeof AuthedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -122,13 +143,16 @@ export interface FileRoutesByTo {
   '/entries': typeof AuthedEntriesRoute
   '/reports': typeof AuthedReportsRoute
   '/templates': typeof AuthedTemplatesRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/': typeof AuthedIndexRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
+  '/settings/users': typeof AuthedSettingsUsersRoute
   '/settings': typeof AuthedSettingsIndexRoute
 }
 export interface FileRoutesById {
@@ -140,13 +164,16 @@ export interface FileRoutesById {
   '/_authed/reports': typeof AuthedReportsRoute
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/_authed/templates': typeof AuthedTemplatesRoute
+  '/invite/$token': typeof InviteTokenRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
+  '/_authed/settings/email': typeof AuthedSettingsEmailRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
   '/_authed/settings/projects': typeof AuthedSettingsProjectsRoute
   '/_authed/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/_authed/settings/tokens': typeof AuthedSettingsTokensRoute
+  '/_authed/settings/users': typeof AuthedSettingsUsersRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
 }
 export interface FileRouteTypes {
@@ -159,12 +186,15 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/templates'
+    | '/invite/$token'
     | '/projects/$projectId'
+    | '/settings/email'
     | '/settings/general'
     | '/settings/members'
     | '/settings/projects'
     | '/settings/templates'
     | '/settings/tokens'
+    | '/settings/users'
     | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -173,13 +203,16 @@ export interface FileRouteTypes {
     | '/entries'
     | '/reports'
     | '/templates'
+    | '/invite/$token'
     | '/'
     | '/projects/$projectId'
+    | '/settings/email'
     | '/settings/general'
     | '/settings/members'
     | '/settings/projects'
     | '/settings/templates'
     | '/settings/tokens'
+    | '/settings/users'
     | '/settings'
   id:
     | '__root__'
@@ -190,19 +223,23 @@ export interface FileRouteTypes {
     | '/_authed/reports'
     | '/_authed/settings'
     | '/_authed/templates'
+    | '/invite/$token'
     | '/_authed/'
     | '/_authed/projects/$projectId'
+    | '/_authed/settings/email'
     | '/_authed/settings/general'
     | '/_authed/settings/members'
     | '/_authed/settings/projects'
     | '/_authed/settings/templates'
     | '/_authed/settings/tokens'
+    | '/_authed/settings/users'
     | '/_authed/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  InviteTokenRoute: typeof InviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -227,6 +264,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authed/templates': {
       id: '/_authed/templates'
@@ -270,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsIndexRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/users': {
+      id: '/_authed/settings/users'
+      path: '/users'
+      fullPath: '/settings/users'
+      preLoaderRoute: typeof AuthedSettingsUsersRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/tokens': {
       id: '/_authed/settings/tokens'
       path: '/tokens'
@@ -305,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsGeneralRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/email': {
+      id: '/_authed/settings/email'
+      path: '/email'
+      fullPath: '/settings/email'
+      preLoaderRoute: typeof AuthedSettingsEmailRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/projects/$projectId': {
       id: '/_authed/projects/$projectId'
       path: '/projects/$projectId'
@@ -316,20 +374,24 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedSettingsRouteChildren {
+  AuthedSettingsEmailRoute: typeof AuthedSettingsEmailRoute
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
   AuthedSettingsProjectsRoute: typeof AuthedSettingsProjectsRoute
   AuthedSettingsTemplatesRoute: typeof AuthedSettingsTemplatesRoute
   AuthedSettingsTokensRoute: typeof AuthedSettingsTokensRoute
+  AuthedSettingsUsersRoute: typeof AuthedSettingsUsersRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
 }
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
+  AuthedSettingsEmailRoute: AuthedSettingsEmailRoute,
   AuthedSettingsGeneralRoute: AuthedSettingsGeneralRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
   AuthedSettingsProjectsRoute: AuthedSettingsProjectsRoute,
   AuthedSettingsTemplatesRoute: AuthedSettingsTemplatesRoute,
   AuthedSettingsTokensRoute: AuthedSettingsTokensRoute,
+  AuthedSettingsUsersRoute: AuthedSettingsUsersRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
 }
 
@@ -363,6 +425,7 @@ const AuthedRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   LoginRoute: LoginRoute,
+  InviteTokenRoute: InviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
