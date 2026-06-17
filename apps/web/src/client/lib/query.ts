@@ -22,3 +22,9 @@ export function invalidateWorkEntryData(
 	client.invalidateQueries({ queryKey: ["work-entry-stats", workspaceId] });
 	client.invalidateQueries({ queryKey: ["work-entry-tags", workspaceId] });
 }
+
+/** Refreshes the inbox list and the header unread badge after a change. */
+export function invalidateInbox(client: QueryClient): void {
+	client.invalidateQueries({ queryKey: ["inbox"] });
+	client.invalidateQueries({ queryKey: ["inbox-unread"] });
+}

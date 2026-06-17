@@ -1,8 +1,44 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { user } from "../schema/auth";
 import { workspaceMembers } from "../schema/domain";
+
+/**
+ * Users who are members of EVERY given workspace, excluding one user (the
+ * sender). Used to scope the "Send to" recipient picker: a report's frozen body
+ * includes entries from all of `report.filters.workspaceIds`, and reading a
+ * report requires membership in every one of them (`requireScopeWorkspaces`), so
+ * recipients must clear the same bar — a member of only some of the workspaces
+ * would otherwise receive data they cannot access.
+ */
+export async function listMembersInAllWorkspaces(
+	db: Database,
+	workspaceIds: string[],
+	excludeUserId: string,
+) {
+	const ids = [...new Set(workspaceIds)];
+	if (ids.length === 0) return [];
+	return db
+		.select({
+			id: user.id,
+			name: user.name,
+			email: user.email,
+		})
+		.from(workspaceMembers)
+		.innerJoin(user, eq(workspaceMembers.userId, user.id))
+		.where(
+			and(
+				inArray(workspaceMembers.workspaceId, ids),
+				ne(user.id, excludeUserId),
+			),
+		)
+		.groupBy(user.id, user.name, user.email)
+		.having(
+			eq(sql`count(distinct ${workspaceMembers.workspaceId})`, ids.length),
+		)
+		.orderBy(user.name);
+}
 
 export async function listMembers(db: Database, workspaceId: string) {
 	const rows = await db

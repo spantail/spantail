@@ -1,4 +1,5 @@
 export * from "./common";
+export * from "./delivery";
 export * from "./duration";
 export * from "./errors";
 export * from "./instance";

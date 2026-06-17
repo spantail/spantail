@@ -233,7 +233,35 @@
 			"expires": "Expires {{value}}",
 			"views": "Views: {{value}}",
 			"empty": "No share links yet. Create one above to share this report."
+		},
+		"send": {
+			"title": "Send: {{name}}",
+			"description": "Send a snapshot of this report to other members' inboxes.",
+			"sendAction": "Send to",
+			"recipients": "Recipients",
+			"searchPlaceholder": "Search members…",
+			"noRecipients": "No one else is a member of this report's workspaces.",
+			"noMatch": "No members match your search.",
+			"message": "Message (optional)",
+			"messagePlaceholder": "Add a short note…",
+			"cancel": "Cancel",
+			"toast_one": "Sent to {{count}} recipient.",
+			"toast_other": "Sent to {{count}} recipients."
 		}
+	},
+	"notifications": {
+		"title": "Notifications",
+		"description": "Reports other members have sent to you.",
+		"markAllRead": "Mark all as read",
+		"tab": {
+			"all": "All",
+			"unread": "Unread"
+		},
+		"empty": "No notifications yet.",
+		"emptyUnread": "No unread notifications.",
+		"from": "From {{name}}",
+		"deleteAction": "Delete",
+		"closeAction": "Close"
 	},
 	"templates": {
 		"listTitle": "Templates",

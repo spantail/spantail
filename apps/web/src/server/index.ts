@@ -7,6 +7,7 @@ import { registerMcpRoute } from "./mcp";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
 import { devMailRoutes } from "./routes/dev-mail";
+import { inboxRoutes } from "./routes/inbox";
 import { instanceRoutes } from "./routes/instance";
 import { invitationRoutes } from "./routes/invitations";
 import { meRoutes } from "./routes/me";
@@ -58,6 +59,7 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
 const v1 = new Hono<AppEnv>();
 v1.use(loadAuth);
 v1.route("/me", meRoutes);
+v1.route("/inbox", inboxRoutes);
 v1.route("/users", userRoutes);
 v1.route("/invitations", invitationRoutes);
 v1.route("/instance", instanceRoutes);

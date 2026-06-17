@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { EntryDialogProvider, useEntryDialog } from "@/components/entry-dialog";
+import { NavInbox } from "@/components/nav-inbox";
 import { NavUser } from "@/components/nav-user";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,6 +81,7 @@ function AuthedLayout() {
 										<span className="hidden sm:inline">{t("nav.reports")}</span>
 									</Link>
 								</Button>
+								<NavInbox />
 								<NavUser user={me.data.user} />
 							</div>
 						</header>
