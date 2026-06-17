@@ -93,8 +93,6 @@
 		"editTitle": "記録を編集",
 		"newDescription": "取り組んだ作業とその時間を記録します。",
 		"editDescription": "この作業記録の内容を更新します。",
-		"detailTitle": "記録の詳細",
-		"detailDescription": "この作業記録のメモと詳細を表示します。",
 		"project": "プロジェクト",
 		"selectProject": "プロジェクトを選択",
 		"date": "日付",

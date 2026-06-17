@@ -94,8 +94,6 @@
 		"editTitle": "Edit entry",
 		"newDescription": "Record what you worked on and for how long.",
 		"editDescription": "Update the details of this work entry.",
-		"detailTitle": "Entry details",
-		"detailDescription": "View the full note and details of this work entry.",
 		"project": "Project",
 		"selectProject": "Select a project",
 		"date": "Date",
