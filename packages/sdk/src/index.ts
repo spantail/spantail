@@ -375,12 +375,12 @@ export class ToxilClient {
 		return this.request("POST", `/inbox/${id}/read`);
 	}
 
-	markAllInboxRead(): Promise<void> {
-		return this.request("POST", "/inbox/read-all");
+	markInboxUnread(id: string): Promise<void> {
+		return this.request("POST", `/inbox/${id}/unread`);
 	}
 
-	deleteInboxMessage(id: string): Promise<void> {
-		return this.request("DELETE", `/inbox/${id}`);
+	markAllInboxRead(): Promise<void> {
+		return this.request("POST", "/inbox/read-all");
 	}
 
 	listTokens(): Promise<ApiToken[]> {

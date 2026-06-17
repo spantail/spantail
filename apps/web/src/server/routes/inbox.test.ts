@@ -173,7 +173,7 @@ it("marks messages read individually and in bulk", async () => {
 	).toBe(0);
 });
 
-it("deletes a message from the recipient's inbox", async () => {
+it("returns a read message to the unread state", async () => {
 	const { owner, member, report, memberId } = await setup();
 	await apiJson(
 		"POST",
@@ -186,8 +186,38 @@ it("deletes a message from the recipient's inbox", async () => {
 	).json()) as Array<{ id: string }>;
 	const id = inbox[0]?.id;
 
+	await apiJson("POST", `/api/v1/inbox/${id}/read`, undefined, member);
+	const unread = async () =>
+		(
+			(await (await apiGet("/api/v1/inbox/unread-count", member)).json()) as {
+				count: number;
+			}
+		).count;
+	expect(await unread()).toBe(0);
+
 	expect(
-		(await apiJson("DELETE", `/api/v1/inbox/${id}`, undefined, member)).status,
+		(await apiJson("POST", `/api/v1/inbox/${id}/unread`, undefined, member))
+			.status,
+	).toBe(204);
+	expect(await unread()).toBe(1);
+});
+
+it("cascades report deletion to the deliveries it produced", async () => {
+	const { owner, member, report, memberId } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ recipientUserIds: [memberId] },
+		owner,
+	);
+	expect(
+		((await (await apiGet("/api/v1/inbox", member)).json()) as unknown[])
+			.length,
+	).toBe(1);
+
+	expect(
+		(await apiJson("DELETE", `/api/v1/reports/${report.id}`, undefined, owner))
+			.status,
 	).toBe(204);
 	expect(
 		((await (await apiGet("/api/v1/inbox", member)).json()) as unknown[])

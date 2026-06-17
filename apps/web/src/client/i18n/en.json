@@ -235,23 +235,30 @@
 			"empty": "No share links yet. Create one above to share this report."
 		},
 		"send": {
-			"title": "Send: {{name}}",
-			"description": "Send a snapshot of this report to other members' inboxes.",
+			"title": "Send “{{name}}”",
+			"description": "Deliver this report to a teammate's Toxil inbox — for review or sign-off.",
 			"sendAction": "Send to",
 			"recipients": "Recipients",
-			"searchPlaceholder": "Search members…",
+			"selectedCount": "{{count}} selected",
+			"searchPlaceholder": "Search people…",
 			"noRecipients": "No one else is a member of this report's workspaces.",
-			"noMatch": "No members match your search.",
-			"message": "Message (optional)",
-			"messagePlaceholder": "Add a short note…",
+			"noMatch": "No people match your search.",
+			"message": "Message",
+			"messageHint": "Optional — add context for the recipient.",
+			"messagePlaceholder": "e.g. Weekly report for your review — let me know if anything looks off.",
 			"cancel": "Cancel",
+			"submit": "Send",
+			"submitCount_one": "Send to {{count}} person",
+			"submitCount_other": "Send to {{count}} people",
 			"toast_one": "Sent to {{count}} recipient.",
 			"toast_other": "Sent to {{count}} recipients."
 		}
 	},
 	"notifications": {
 		"title": "Notifications",
-		"description": "Reports other members have sent to you.",
+		"unreadSummary_one": "You have {{count}} unread report to review.",
+		"unreadSummary_other": "You have {{count}} unread reports to review.",
+		"allCaughtUp": "You're all caught up.",
 		"markAllRead": "Mark all as read",
 		"tab": {
 			"all": "All",
@@ -259,8 +266,10 @@
 		},
 		"empty": "No notifications yet.",
 		"emptyUnread": "No unread notifications.",
+		"sentYouAReport": "sent you a report",
 		"from": "From {{name}}",
-		"deleteAction": "Delete",
+		"markRead": "Mark as read",
+		"markUnread": "Mark as unread",
 		"closeAction": "Close"
 	},
 	"templates": {

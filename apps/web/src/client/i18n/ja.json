@@ -234,23 +234,30 @@
 			"empty": "共有リンクはまだありません。上のフォームからこのレポートを共有できます。"
 		},
 		"send": {
-			"title": "送信: {{name}}",
-			"description": "このレポートのスナップショットを他のメンバーのインボックスへ送ります。",
+			"title": "「{{name}}」を送信",
+			"description": "このレポートをチームメイトの Toxil インボックスへ送信します（レビューや承認用）。",
 			"sendAction": "送信先",
 			"recipients": "宛先",
-			"searchPlaceholder": "メンバーを検索…",
+			"selectedCount": "{{count}} 件選択中",
+			"searchPlaceholder": "ユーザーを検索…",
 			"noRecipients": "このレポートのワークスペースに他のメンバーがいません。",
-			"noMatch": "検索に一致するメンバーがいません。",
-			"message": "メッセージ（任意）",
-			"messagePlaceholder": "短いメモを添えられます…",
+			"noMatch": "一致するユーザーがいません。",
+			"message": "メッセージ",
+			"messageHint": "任意 — 受信者向けの補足を添えられます。",
+			"messagePlaceholder": "例: レビュー用の週次レポートです。気になる点があれば教えてください。",
 			"cancel": "キャンセル",
+			"submit": "送信",
+			"submitCount_one": "{{count}} 人に送信",
+			"submitCount_other": "{{count}} 人に送信",
 			"toast_one": "{{count}} 人に送信しました。",
 			"toast_other": "{{count}} 人に送信しました。"
 		}
 	},
 	"notifications": {
 		"title": "通知",
-		"description": "他のメンバーからあなたへ送られたレポート。",
+		"unreadSummary_one": "未読のレポートが {{count}} 件あります。",
+		"unreadSummary_other": "未読のレポートが {{count}} 件あります。",
+		"allCaughtUp": "すべて確認済みです。",
 		"markAllRead": "すべて既読にする",
 		"tab": {
 			"all": "すべて",
@@ -258,8 +265,10 @@
 		},
 		"empty": "通知はまだありません。",
 		"emptyUnread": "未読の通知はありません。",
+		"sentYouAReport": "さんがレポートを送信しました",
 		"from": "送信者: {{name}}",
-		"deleteAction": "削除",
+		"markRead": "既読にする",
+		"markUnread": "未読にする",
 		"closeAction": "閉じる"
 	},
 	"templates": {
