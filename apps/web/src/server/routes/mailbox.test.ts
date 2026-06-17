@@ -7,6 +7,7 @@ interface MailItem {
 	scope: "received" | "sent";
 	batchId: string;
 	reportName: string;
+	readAt: string | null;
 	starred: boolean;
 	archived: boolean;
 	trashed: boolean;
@@ -220,6 +221,41 @@ it("reports folder counts for the sidebar", async () => {
 	).json()) as Record<string, number>;
 	expect(aliceCounts.inbox).toBe(1);
 	expect(aliceCounts.unread).toBe(1);
+});
+
+it("mark-all-read leaves archived/trashed unread mail untouched", async () => {
+	const { owner, alice, report, aliceId } = await setup();
+	// Two separate sends → two received messages, both unread.
+	for (let n = 0; n < 2; n++) {
+		await apiJson(
+			"POST",
+			`/api/v1/reports/${report.id}/send`,
+			{ recipientUserIds: [aliceId] },
+			owner,
+		);
+	}
+	const items = await folder(alice, "inbox");
+	expect(items).toHaveLength(2);
+	const hidden = items[0];
+	if (!hidden) throw new Error("setup failed");
+
+	// Archive one while it is still unread, then mark all read.
+	await apiJson(
+		"PATCH",
+		"/api/v1/inbox/flags",
+		{ scope: "received", targetId: hidden.id, archived: true },
+		alice,
+	);
+	await apiJson("POST", "/api/v1/inbox/read-all", undefined, alice);
+
+	// The archived message stays unread (only visible Inbox mail was cleared).
+	const archived = await folder(alice, "archive");
+	expect(archived).toHaveLength(1);
+	expect(archived[0]?.readAt).toBeNull();
+	const unreadCount = (await (
+		await apiGet("/api/v1/inbox/unread-count", alice)
+	).json()) as { count: number };
+	expect(unreadCount.count).toBe(0);
 });
 
 it("rejects flagging a target the caller doesn't own", async () => {

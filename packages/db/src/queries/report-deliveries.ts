@@ -1,5 +1,14 @@
 import type { MailFolder, MailScope } from "@toxil/core";
-import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+	and,
+	desc,
+	eq,
+	isNotNull,
+	isNull,
+	notExists,
+	or,
+	sql,
+} from "drizzle-orm";
 import type { Database } from "../index";
 import { user } from "../schema/auth";
 import { reportDeliveries } from "../schema/deliveries";
@@ -430,6 +439,11 @@ export async function markInboxRead(
 		);
 }
 
+/**
+ * Marks every unread Inbox message read. Archived or trashed unread messages
+ * are left alone — they aren't in the Inbox the user is clearing, and marking
+ * them read would silently change their state if they were ever restored.
+ */
 export async function markAllInboxRead(
 	db: Database,
 	userId: string,
@@ -441,6 +455,22 @@ export async function markAllInboxRead(
 			and(
 				eq(reportDeliveries.recipientUserId, userId),
 				isNull(reportDeliveries.readAt),
+				notExists(
+					db
+						.select({ one: sql`1` })
+						.from(deliveryFlags)
+						.where(
+							and(
+								eq(deliveryFlags.userId, userId),
+								eq(deliveryFlags.scope, "received"),
+								eq(deliveryFlags.targetId, reportDeliveries.id),
+								or(
+									isNotNull(deliveryFlags.archivedAt),
+									isNotNull(deliveryFlags.trashedAt),
+								),
+							),
+						),
+				),
 			),
 		);
 }
