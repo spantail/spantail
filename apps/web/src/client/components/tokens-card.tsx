@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TokenScope } from "@toxil/core";
-import { CopyIcon } from "lucide-react";
+import { CheckIcon, CopyIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -227,7 +227,7 @@ export function TokensCard() {
 								}
 							}}
 						>
-							<CopyIcon />
+							{copied ? <CheckIcon /> : <CopyIcon />}
 						</Button>
 					</div>
 					{copied && (

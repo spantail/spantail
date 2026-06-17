@@ -295,9 +295,6 @@
 			"title": "ワークスペースを作成",
 			"description": "ワークスペースはプロジェクトとメンバーをまとめる単位です(部署・クライアント等)。"
 		},
-		"editWorkspace": {
-			"title": "ワークスペース: {{name}}"
-		},
 		"projects": {
 			"title": "プロジェクト",
 			"name": "プロジェクト名",
@@ -306,7 +303,8 @@
 			"status": {
 				"active": "稼働中",
 				"archived": "アーカイブ済み"
-			}
+			},
+			"description": "プロジェクトを作成し、追跡しなくなったものはアーカイブできます。"
 		},
 		"members": {
 			"title": "メンバー",
@@ -342,7 +340,15 @@
 			"confirm": "新しいパスワード(確認)",
 			"changeAction": "パスワードを変更",
 			"changed": "パスワードを変更しました。",
-			"mismatch": "新しいパスワードが一致しません。"
+			"mismatch": "新しいパスワードが一致しません。",
+			"strengthHint": "8文字以上を使用してください。",
+			"strength": {
+				"weak": "弱い",
+				"fair": "まあまあ",
+				"good": "良い",
+				"strong": "強い"
+			},
+			"match": "パスワードが一致しています"
 		},
 		"preferences": {
 			"title": "環境設定",
@@ -381,7 +387,8 @@
 				"description": "ユーザーと、そのすべての作業ログ・レポート・トークンが完全に削除されます。元に戻せません。",
 				"confirm": "削除",
 				"cancel": "キャンセル"
-			}
+			},
+			"adminBanner": "これらのアカウントはこの Toxil インスタンスの全ワークスペースにまたがり、インスタンス管理者のみが閲覧できます。"
 		},
 		"email": {
 			"title": "メール",
@@ -390,7 +397,14 @@
 			"enableHint": "オフの場合は招待が無効になり、生成したパスワードを直接渡す運用になります。",
 			"fromAddress": "送信元アドレス",
 			"fromName": "送信者名",
-			"saveAction": "保存"
+			"saveAction": "保存",
+			"statusEnabled": "有効",
+			"statusDisabled": "無効",
+			"adminBanner": "メール配信はインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。"
+		},
+		"adminBannerLead": "インスタンス管理。",
+		"general": {
+			"description": "レポート期間の解決に使うワークスペース名とタイムゾーン。"
 		}
 	}
 }

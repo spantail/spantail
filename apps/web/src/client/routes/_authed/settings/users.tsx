@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+	CheckIcon,
+	CopyIcon,
 	MoreHorizontalIcon,
 	ShieldIcon,
 	ShieldOffIcon,
@@ -9,6 +11,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AdminBanner } from "@/components/admin-banner";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -85,6 +88,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 	const [generatedPassword, setGeneratedPassword] = useState<string | null>(
 		null,
 	);
+	const [copied, setCopied] = useState(false);
 
 	const emailSettings = useQuery({
 		queryKey: ["emailSettings"],
@@ -114,6 +118,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 		onSuccess: async (created) => {
 			await queryClient.invalidateQueries({ queryKey: ["users"] });
 			setGeneratedPassword(created.generatedPassword ?? null);
+			setCopied(false);
 			resetForm();
 		},
 		onError: (err: Error) => setError(err.message),
@@ -152,6 +157,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 
 	return (
 		<div className="flex flex-col gap-4">
+			<AdminBanner body={t("settings.users.adminBanner")} />
 			<Card>
 				<CardHeader>
 					<CardTitle className="font-heading text-base">
@@ -219,29 +225,32 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 					</form>
 
 					{generatedPassword && (
-						<div className="bg-muted mt-4 flex flex-col gap-2 rounded-lg p-4">
+						<div className="border-border bg-muted/50 mt-4 flex flex-col gap-2 rounded-lg border p-4">
 							<p className="text-sm font-medium">
 								{t("settings.users.generatedTitle")}
 							</p>
 							<p className="text-muted-foreground text-sm">
 								{t("settings.users.generatedDescription")}
 							</p>
-							<code className="bg-background rounded px-2 py-1 text-sm">
-								{generatedPassword}
-							</code>
-							<div className="flex gap-2">
+							<div className="flex items-center gap-2">
+								<code className="bg-background flex-1 overflow-x-auto rounded-md px-3 py-2 font-mono text-xs">
+									{generatedPassword}
+								</code>
 								<Button
-									variant="secondary"
-									size="sm"
-									onClick={() =>
-										navigator.clipboard.writeText(generatedPassword)
-									}
+									variant="outline"
+									size="icon"
+									aria-label={t("settings.users.copyAction")}
+									onClick={async () => {
+										await navigator.clipboard.writeText(generatedPassword);
+										setCopied(true);
+									}}
 								>
-									{t("settings.users.copyAction")}
+									{copied ? <CheckIcon /> : <CopyIcon />}
 								</Button>
 								<Button
 									variant="ghost"
 									size="sm"
+									className="text-muted-foreground"
 									onClick={() => setGeneratedPassword(null)}
 								>
 									{t("settings.users.dismissAction")}

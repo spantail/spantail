@@ -5,7 +5,13 @@ import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -83,11 +89,12 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 				<CardTitle className="font-heading text-base">
 					{t("settings.projects.title")}
 				</CardTitle>
+				<CardDescription>{t("settings.projects.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
 				{canManage && (
 					<form
-						className="grid gap-4 sm:grid-cols-3"
+						className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
 						onSubmit={(e) => {
 							e.preventDefault();
 							createMutation.mutate();
@@ -141,7 +148,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 								<TableCell>
 									<Badge
 										variant={
-											project.status === "active" ? "default" : "secondary"
+											project.status === "active" ? "outline" : "secondary"
 										}
 									>
 										{t(`settings.projects.status.${project.status}`)}

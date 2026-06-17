@@ -296,9 +296,6 @@
 			"title": "Create workspace",
 			"description": "Workspaces group projects and members, e.g. a department or client."
 		},
-		"editWorkspace": {
-			"title": "Workspace: {{name}}"
-		},
 		"projects": {
 			"title": "Projects",
 			"name": "Project name",
@@ -307,7 +304,8 @@
 			"status": {
 				"active": "Active",
 				"archived": "Archived"
-			}
+			},
+			"description": "Create projects and archive ones you no longer track."
 		},
 		"members": {
 			"title": "Members",
@@ -343,7 +341,15 @@
 			"confirm": "Confirm new password",
 			"changeAction": "Change password",
 			"changed": "Password changed.",
-			"mismatch": "The new passwords do not match."
+			"mismatch": "The new passwords do not match.",
+			"strengthHint": "Use at least 8 characters.",
+			"strength": {
+				"weak": "Weak",
+				"fair": "Fair",
+				"good": "Good",
+				"strong": "Strong"
+			},
+			"match": "Passwords match"
 		},
 		"preferences": {
 			"title": "Preferences",
@@ -382,7 +388,8 @@
 				"description": "This permanently deletes the user and all of their work entries, reports, and tokens. This cannot be undone.",
 				"confirm": "Delete",
 				"cancel": "Cancel"
-			}
+			},
+			"adminBanner": "These accounts span every workspace on this Toxil instance and are visible only to instance admins."
 		},
 		"email": {
 			"title": "Email",
@@ -391,7 +398,14 @@
 			"enableHint": "When off, invitations are disabled and you hand out generated passwords directly.",
 			"fromAddress": "From address",
 			"fromName": "From name",
-			"saveAction": "Save"
+			"saveAction": "Save",
+			"statusEnabled": "Enabled",
+			"statusDisabled": "Disabled",
+			"adminBanner": "Email delivery applies to the whole instance and is visible only to instance admins."
+		},
+		"adminBannerLead": "Instance administration.",
+		"general": {
+			"description": "Workspace name and timezone used to resolve report periods."
 		}
 	}
 }
