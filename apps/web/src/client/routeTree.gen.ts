@@ -9,19 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MailRouteImport } from './routes/mail'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as MailIndexRouteImport } from './routes/mail/index'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
+import { Route as MailFolderRouteImport } from './routes/mail/$folder'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedReportsRouteImport } from './routes/_authed/reports'
-import { Route as AuthedNotificationsRouteImport } from './routes/_authed/notifications'
 import { Route as AuthedEntriesRouteImport } from './routes/_authed/entries'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
+import { Route as MailFolderIndexRouteImport } from './routes/mail/$folder/index'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as MailFolderMessageIdRouteImport } from './routes/mail/$folder/$messageId'
 import { Route as AuthedSettingsUsersRouteImport } from './routes/_authed/settings/users'
 import { Route as AuthedSettingsTokensRouteImport } from './routes/_authed/settings/tokens'
 import { Route as AuthedSettingsTemplatesRouteImport } from './routes/_authed/settings/templates'
@@ -33,6 +37,11 @@ import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/sett
 import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects.$projectId'
 
+const MailRoute = MailRouteImport.update({
+  id: '/mail',
+  path: '/mail',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -47,6 +56,11 @@ const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MailIndexRoute = MailIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MailRoute,
+} as any)
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -56,6 +70,11 @@ const ResetPasswordTokenRoute = ResetPasswordTokenRouteImport.update({
   id: '/reset-password/$token',
   path: '/reset-password/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MailFolderRoute = MailFolderRouteImport.update({
+  id: '/$folder',
+  path: '/$folder',
+  getParentRoute: () => MailRoute,
 } as any)
 const InviteTokenRoute = InviteTokenRouteImport.update({
   id: '/invite/$token',
@@ -77,11 +96,6 @@ const AuthedReportsRoute = AuthedReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedNotificationsRoute = AuthedNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedEntriesRoute = AuthedEntriesRouteImport.update({
   id: '/entries',
   path: '/entries',
@@ -92,10 +106,20 @@ const AuthedAccountRoute = AuthedAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => AuthedRoute,
 } as any)
+const MailFolderIndexRoute = MailFolderIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MailFolderRoute,
+} as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const MailFolderMessageIdRoute = MailFolderMessageIdRouteImport.update({
+  id: '/$messageId',
+  path: '/$messageId',
+  getParentRoute: () => MailFolderRoute,
 } as any)
 const AuthedSettingsUsersRoute = AuthedSettingsUsersRouteImport.update({
   id: '/users',
@@ -153,14 +177,16 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mail': typeof MailRouteWithChildren
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
-  '/notifications': typeof AuthedNotificationsRoute
   '/reports': typeof AuthedReportsRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/mail/$folder': typeof MailFolderRouteWithChildren
   '/reset-password/$token': typeof ResetPasswordTokenRoute
+  '/mail/': typeof MailIndexRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -171,19 +197,21 @@ export interface FileRoutesByFullPath {
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
   '/settings/users': typeof AuthedSettingsUsersRoute
+  '/mail/$folder/$messageId': typeof MailFolderMessageIdRoute
   '/settings/': typeof AuthedSettingsIndexRoute
+  '/mail/$folder/': typeof MailFolderIndexRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
-  '/notifications': typeof AuthedNotificationsRoute
   '/reports': typeof AuthedReportsRoute
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/': typeof AuthedIndexRoute
+  '/mail': typeof MailIndexRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -194,22 +222,26 @@ export interface FileRoutesByTo {
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
   '/settings/users': typeof AuthedSettingsUsersRoute
+  '/mail/$folder/$messageId': typeof MailFolderMessageIdRoute
   '/settings': typeof AuthedSettingsIndexRoute
+  '/mail/$folder': typeof MailFolderIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/mail': typeof MailRouteWithChildren
   '/_authed/account': typeof AuthedAccountRoute
   '/_authed/entries': typeof AuthedEntriesRoute
-  '/_authed/notifications': typeof AuthedNotificationsRoute
   '/_authed/reports': typeof AuthedReportsRoute
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/_authed/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
+  '/mail/$folder': typeof MailFolderRouteWithChildren
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/_authed/': typeof AuthedIndexRoute
+  '/mail/': typeof MailIndexRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/email': typeof AuthedSettingsEmailRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
@@ -220,7 +252,9 @@ export interface FileRoutesById {
   '/_authed/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/_authed/settings/tokens': typeof AuthedSettingsTokensRoute
   '/_authed/settings/users': typeof AuthedSettingsUsersRoute
+  '/mail/$folder/$messageId': typeof MailFolderMessageIdRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
+  '/mail/$folder/': typeof MailFolderIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -228,14 +262,16 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot-password'
     | '/login'
+    | '/mail'
     | '/account'
     | '/entries'
-    | '/notifications'
     | '/reports'
     | '/settings'
     | '/templates'
     | '/invite/$token'
+    | '/mail/$folder'
     | '/reset-password/$token'
+    | '/mail/'
     | '/projects/$projectId'
     | '/settings/email'
     | '/settings/general'
@@ -246,19 +282,21 @@ export interface FileRouteTypes {
     | '/settings/templates'
     | '/settings/tokens'
     | '/settings/users'
+    | '/mail/$folder/$messageId'
     | '/settings/'
+    | '/mail/$folder/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
     | '/login'
     | '/account'
     | '/entries'
-    | '/notifications'
     | '/reports'
     | '/templates'
     | '/invite/$token'
     | '/reset-password/$token'
     | '/'
+    | '/mail'
     | '/projects/$projectId'
     | '/settings/email'
     | '/settings/general'
@@ -269,21 +307,25 @@ export interface FileRouteTypes {
     | '/settings/templates'
     | '/settings/tokens'
     | '/settings/users'
+    | '/mail/$folder/$messageId'
     | '/settings'
+    | '/mail/$folder'
   id:
     | '__root__'
     | '/_authed'
     | '/forgot-password'
     | '/login'
+    | '/mail'
     | '/_authed/account'
     | '/_authed/entries'
-    | '/_authed/notifications'
     | '/_authed/reports'
     | '/_authed/settings'
     | '/_authed/templates'
     | '/invite/$token'
+    | '/mail/$folder'
     | '/reset-password/$token'
     | '/_authed/'
+    | '/mail/'
     | '/_authed/projects/$projectId'
     | '/_authed/settings/email'
     | '/_authed/settings/general'
@@ -294,19 +336,29 @@ export interface FileRouteTypes {
     | '/_authed/settings/templates'
     | '/_authed/settings/tokens'
     | '/_authed/settings/users'
+    | '/mail/$folder/$messageId'
     | '/_authed/settings/'
+    | '/mail/$folder/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  MailRoute: typeof MailRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
   ResetPasswordTokenRoute: typeof ResetPasswordTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/mail': {
+      id: '/mail'
+      path: '/mail'
+      fullPath: '/mail'
+      preLoaderRoute: typeof MailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -328,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mail/': {
+      id: '/mail/'
+      path: '/'
+      fullPath: '/mail/'
+      preLoaderRoute: typeof MailIndexRouteImport
+      parentRoute: typeof MailRoute
+    }
     '/_authed/': {
       id: '/_authed/'
       path: '/'
@@ -341,6 +400,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/reset-password/$token'
       preLoaderRoute: typeof ResetPasswordTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/mail/$folder': {
+      id: '/mail/$folder'
+      path: '/$folder'
+      fullPath: '/mail/$folder'
+      preLoaderRoute: typeof MailFolderRouteImport
+      parentRoute: typeof MailRoute
     }
     '/invite/$token': {
       id: '/invite/$token'
@@ -370,13 +436,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedReportsRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/notifications': {
-      id: '/_authed/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AuthedNotificationsRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/entries': {
       id: '/_authed/entries'
       path: '/entries'
@@ -391,12 +450,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAccountRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/mail/$folder/': {
+      id: '/mail/$folder/'
+      path: '/'
+      fullPath: '/mail/$folder/'
+      preLoaderRoute: typeof MailFolderIndexRouteImport
+      parentRoute: typeof MailFolderRoute
+    }
     '/_authed/settings/': {
       id: '/_authed/settings/'
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof AuthedSettingsIndexRouteImport
       parentRoute: typeof AuthedSettingsRoute
+    }
+    '/mail/$folder/$messageId': {
+      id: '/mail/$folder/$messageId'
+      path: '/$messageId'
+      fullPath: '/mail/$folder/$messageId'
+      preLoaderRoute: typeof MailFolderMessageIdRouteImport
+      parentRoute: typeof MailFolderRoute
     }
     '/_authed/settings/users': {
       id: '/_authed/settings/users'
@@ -504,7 +577,6 @@ const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
 interface AuthedRouteChildren {
   AuthedAccountRoute: typeof AuthedAccountRoute
   AuthedEntriesRoute: typeof AuthedEntriesRoute
-  AuthedNotificationsRoute: typeof AuthedNotificationsRoute
   AuthedReportsRoute: typeof AuthedReportsRoute
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
   AuthedTemplatesRoute: typeof AuthedTemplatesRoute
@@ -515,7 +587,6 @@ interface AuthedRouteChildren {
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountRoute: AuthedAccountRoute,
   AuthedEntriesRoute: AuthedEntriesRoute,
-  AuthedNotificationsRoute: AuthedNotificationsRoute,
   AuthedReportsRoute: AuthedReportsRoute,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
   AuthedTemplatesRoute: AuthedTemplatesRoute,
@@ -526,10 +597,37 @@ const AuthedRouteChildren: AuthedRouteChildren = {
 const AuthedRouteWithChildren =
   AuthedRoute._addFileChildren(AuthedRouteChildren)
 
+interface MailFolderRouteChildren {
+  MailFolderMessageIdRoute: typeof MailFolderMessageIdRoute
+  MailFolderIndexRoute: typeof MailFolderIndexRoute
+}
+
+const MailFolderRouteChildren: MailFolderRouteChildren = {
+  MailFolderMessageIdRoute: MailFolderMessageIdRoute,
+  MailFolderIndexRoute: MailFolderIndexRoute,
+}
+
+const MailFolderRouteWithChildren = MailFolderRoute._addFileChildren(
+  MailFolderRouteChildren,
+)
+
+interface MailRouteChildren {
+  MailFolderRoute: typeof MailFolderRouteWithChildren
+  MailIndexRoute: typeof MailIndexRoute
+}
+
+const MailRouteChildren: MailRouteChildren = {
+  MailFolderRoute: MailFolderRouteWithChildren,
+  MailIndexRoute: MailIndexRoute,
+}
+
+const MailRouteWithChildren = MailRoute._addFileChildren(MailRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  MailRoute: MailRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
   ResetPasswordTokenRoute: ResetPasswordTokenRoute,
 }

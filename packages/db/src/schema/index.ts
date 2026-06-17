@@ -3,6 +3,7 @@
 // report deliveries / inbox (M6).
 export * from "./auth";
 export * from "./deliveries";
+export * from "./delivery-flags";
 export * from "./discussions";
 export * from "./domain";
 export * from "./instance";

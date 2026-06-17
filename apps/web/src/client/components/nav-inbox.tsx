@@ -25,7 +25,7 @@ export function NavInbox() {
 			className="relative rounded-full"
 		>
 			<Link
-				to="/notifications"
+				to="/mail"
 				aria-label={t("notifications.title")}
 				activeProps={{ className: "bg-accent text-accent-foreground" }}
 			>

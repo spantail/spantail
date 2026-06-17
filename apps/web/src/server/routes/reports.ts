@@ -36,6 +36,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
+import { parseOptionalJsonBody } from "../lib/json";
 import {
 	type MemberWorkspace,
 	requireScopeWorkspaces,
@@ -188,16 +189,6 @@ async function renderReportDocument(
 		resolvedFilters: { ...filters, dateRange: range },
 		totalMinutes,
 	};
-}
-
-async function parseOptionalJsonBody(c: Context<AppEnv>): Promise<unknown> {
-	const rawBody = await c.req.text();
-	if (rawBody.trim() === "") return {};
-	try {
-		return JSON.parse(rawBody);
-	} catch {
-		throw new AppError("bad_request", "Request body must be valid JSON");
-	}
 }
 
 export const reportRoutes = new Hono<AppEnv>()
@@ -382,9 +373,13 @@ export const reportRoutes = new Hono<AppEnv>()
 		}
 		const message =
 			input.message && input.message.trim() !== "" ? input.message : null;
+		// One id shared by every row of this send so the sender's Sent folder can
+		// group the fan-out back into a single entry.
+		const batchId = crypto.randomUUID();
 		await createReportDeliveries(
 			c.var.db,
 			recipientIds.map((recipientUserId) => ({
+				batchId,
 				reportId: report.id,
 				senderUserId: user.id,
 				recipientUserId,

@@ -272,6 +272,43 @@
 		"markUnread": "Mark as unread",
 		"closeAction": "Close"
 	},
+	"mail": {
+		"back": "Back to",
+		"backToWorkspace": "Back to {{name}}",
+		"folder": {
+			"inbox": "Inbox",
+			"starred": "Starred",
+			"sent": "Sent",
+			"archive": "Archive",
+			"trash": "Trash"
+		},
+		"list": {
+			"to": "To: {{names}}"
+		},
+		"toolbar": {
+			"close": "Close",
+			"prev": "Previous",
+			"next": "Next",
+			"position": "{{index}} of {{total}}",
+			"star": "Star",
+			"unstar": "Unstar",
+			"archive": "Archive",
+			"unarchive": "Move to inbox",
+			"trash": "Move to trash",
+			"restore": "Restore"
+		},
+		"empty": {
+			"inbox": "Your inbox is empty.",
+			"starred": "No starred reports.",
+			"sent": "You haven't sent any reports.",
+			"archive": "Archive is empty.",
+			"trash": "Trash is empty."
+		},
+		"detail": {
+			"selectPrompt": "Select a report to read.",
+			"notFound": "This report is no longer available."
+		}
+	},
 	"discussion": {
 		"commentsHeading_one": "{{count}} comment",
 		"commentsHeading_other": "{{count}} comments",
