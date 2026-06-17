@@ -325,6 +325,8 @@ export function ReportList({
 						size="sm"
 						className="h-8"
 						disabled={!createTarget}
+						aria-label={t("reports.newAction")}
+						title={t("reports.newAction")}
 						onClick={() => createTarget && openCreate(createTarget)}
 					>
 						<PlusIcon className="size-3.5" />
