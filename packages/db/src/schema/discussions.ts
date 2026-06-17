@@ -65,6 +65,10 @@ export const reportReactions = sqliteTable(
 		createdAt: createdAtMs(),
 	},
 	(table) => [
+		// Every discussion fetch lists a report's reactions by report_id; neither
+		// unique index below covers that predicate (one is partial, the other
+		// leads with comment_id), so a plain index keeps the lookup off a scan.
+		index("report_reactions_report_idx").on(table.reportId),
 		// One emoji per user per target. SQLite treats NULLs as distinct, so a
 		// single unique index over the nullable comment_id wouldn't dedupe
 		// report-body reactions — split into two partial indexes.

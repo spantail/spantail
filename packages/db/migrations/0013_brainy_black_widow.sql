@@ -1,0 +1,1 @@
+CREATE INDEX `report_reactions_report_idx` ON `report_reactions` (`report_id`);
