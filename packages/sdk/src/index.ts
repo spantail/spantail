@@ -3,6 +3,7 @@ import type {
 	AddWorkspaceMemberInputData,
 	ApiToken,
 	AuthUser,
+	Comment,
 	CreatedUser,
 	CreateInvitationInputData,
 	CreateProjectInput,
@@ -22,8 +23,11 @@ import type {
 	ListWorkEntriesQueryData,
 	ManagedUser,
 	Project,
+	ReactionEmoji,
+	ReactionSummary,
 	Recipient,
 	Report,
+	ReportDiscussion,
 	ReportMeta,
 	ReportShare,
 	ReportTemplate,
@@ -86,7 +90,7 @@ export class ToxilClient {
 	}
 
 	private async request<T>(
-		method: "GET" | "POST" | "PATCH" | "DELETE",
+		method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 		path: string,
 		options: { query?: Query; body?: unknown } = {},
 	): Promise<T> {
@@ -381,6 +385,55 @@ export class ToxilClient {
 
 	markAllInboxRead(): Promise<void> {
 		return this.request("POST", "/inbox/read-all");
+	}
+
+	// --- Report discussion (reactions + comments on Send-to-shared reports) ---
+
+	getReportDiscussion(reportId: string): Promise<ReportDiscussion> {
+		return this.request("GET", `/reports/${reportId}/discussion`);
+	}
+
+	/** Toggles an emoji on the report body; returns the body's reaction summary. */
+	toggleReportReaction(
+		reportId: string,
+		emoji: ReactionEmoji,
+	): Promise<ReactionSummary[]> {
+		return this.request("PUT", `/reports/${reportId}/reactions`, {
+			body: { emoji },
+		});
+	}
+
+	addReportComment(reportId: string, body: string): Promise<Comment> {
+		return this.request("POST", `/reports/${reportId}/comments`, {
+			body: { body },
+		});
+	}
+
+	updateReportComment(
+		reportId: string,
+		commentId: string,
+		body: string,
+	): Promise<Comment> {
+		return this.request("PATCH", `/reports/${reportId}/comments/${commentId}`, {
+			body: { body },
+		});
+	}
+
+	deleteReportComment(reportId: string, commentId: string): Promise<void> {
+		return this.request("DELETE", `/reports/${reportId}/comments/${commentId}`);
+	}
+
+	/** Toggles an emoji on a comment; returns that comment's reaction summary. */
+	toggleReportCommentReaction(
+		reportId: string,
+		commentId: string,
+		emoji: ReactionEmoji,
+	): Promise<ReactionSummary[]> {
+		return this.request(
+			"PUT",
+			`/reports/${reportId}/comments/${commentId}/reactions`,
+			{ body: { emoji } },
+		);
 	}
 
 	listTokens(): Promise<ApiToken[]> {

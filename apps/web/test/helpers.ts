@@ -78,7 +78,7 @@ export async function apiGet(path: string, cookie?: string): Promise<Response> {
 }
 
 export async function apiJson(
-	method: "POST" | "PATCH" | "DELETE",
+	method: "POST" | "PUT" | "PATCH" | "DELETE",
 	path: string,
 	body: unknown,
 	cookie?: string,
