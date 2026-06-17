@@ -118,6 +118,8 @@
 		"cancelAction": "Cancel",
 		"editAction": "Edit",
 		"deleteAction": "Delete",
+		"closeAction": "Close",
+		"loggedBy": "Logged by {{name}}",
 		"empty": "No entries yet.",
 		"noProjects": "No active projects. Create one in workspace settings first.",
 		"goToSettings": "Open settings",

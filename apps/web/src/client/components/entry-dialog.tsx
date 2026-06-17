@@ -1,5 +1,6 @@
-import { useRouterState } from "@tanstack/react-router";
-import { formatDuration, type WorkEntry } from "@toxil/core";
+import { useQuery } from "@tanstack/react-query";
+import { useRouteContext, useRouterState } from "@tanstack/react-router";
+import { formatDuration, utcToZonedTime, type WorkEntry } from "@toxil/core";
 import {
 	createContext,
 	useCallback,
@@ -22,6 +23,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { useProjects } from "@/hooks/use-projects";
+import { api } from "@/lib/api";
 import { formatEntryDate } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -60,6 +62,7 @@ export function EntryDialogProvider({
 }) {
 	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
+	const { session } = useRouteContext({ from: "/_authed" });
 	const projects = useProjects();
 	const [state, setState] = useState<EntryDialogState | null>(null);
 	// Remount key so the form re-derives its initial state on every open.
@@ -113,19 +116,44 @@ export function EntryDialogProvider({
 		[openCreate, openEdit, openView],
 	);
 
-	// In view mode the entry's description is the dialog title; project, date and
-	// duration form the subtitle.
+	// In view mode the entry's description is the dialog title; project, date,
+	// duration, tags and note make up the body. The author byline (and the
+	// member lookup it needs) only applies to entries the viewer doesn't own.
 	const viewEntry = state?.mode === "view" ? state.entry : null;
+	const isOthersEntry =
+		viewEntry != null && viewEntry.userId !== session.user.id;
+	const members = useQuery({
+		queryKey: ["members", current?.id],
+		queryFn: () => api.listMembers(current?.id as string),
+		enabled: Boolean(current) && isOthersEntry,
+	});
+	const viewProjectName = viewEntry
+		? ((projects.data ?? []).find((p) => p.id === viewEntry.projectId)?.name ??
+			viewEntry.projectId)
+		: "";
+	const viewDateLabel = viewEntry
+		? formatEntryDate(viewEntry.entryDate, i18n.language, {
+				year: "numeric",
+				month: "short",
+				day: "numeric",
+				weekday: "short",
+			})
+		: "";
+	const viewTimeRange =
+		viewEntry?.startedAt && viewEntry.endedAt && current
+			? `${utcToZonedTime(viewEntry.startedAt, current.timezone)}–${utcToZonedTime(viewEntry.endedAt, current.timezone)}`
+			: null;
+	// Resolve to the member's name only; while members load (or for a user no
+	// longer in the workspace) the byline stays hidden rather than show a raw id.
+	const viewAuthorName = isOthersEntry
+		? ((members.data ?? []).find((m) => m.userId === viewEntry?.userId)?.name ??
+			null)
+		: null;
+	// Concise summary kept for the (visually hidden) dialog description.
 	const viewSubtitle = viewEntry
 		? [
-				(projects.data ?? []).find((p) => p.id === viewEntry.projectId)?.name ??
-					viewEntry.projectId,
-				formatEntryDate(viewEntry.entryDate, i18n.language, {
-					year: "numeric",
-					month: "short",
-					day: "numeric",
-					weekday: "short",
-				}),
+				viewProjectName,
+				viewDateLabel,
 				formatDuration(viewEntry.durationMinutes),
 			].join(" · ")
 		: null;
@@ -144,7 +172,7 @@ export function EntryDialogProvider({
 										? t("entries.editTitle")
 										: t("entries.newTitle")}
 							</DialogTitle>
-							<DialogDescription>
+							<DialogDescription className={viewEntry ? "sr-only" : undefined}>
 								{viewSubtitle ??
 									(state?.mode === "edit"
 										? t("entries.editDescription")
@@ -153,7 +181,13 @@ export function EntryDialogProvider({
 						</DialogHeader>
 						{state?.mode === "view" && (
 							<>
-								<EntryDetail entry={state.entry} />
+								<EntryDetail
+									entry={state.entry}
+									projectName={viewProjectName}
+									dateLabel={viewDateLabel}
+									timeRange={viewTimeRange}
+									authorName={viewAuthorName}
+								/>
 								<EntryDetailActions
 									entry={state.entry}
 									onEdit={() => openEdit(state.entry)}
