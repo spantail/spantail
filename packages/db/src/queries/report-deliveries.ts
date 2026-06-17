@@ -95,13 +95,15 @@ export async function markAllInboxRead(
 		);
 }
 
-export async function deleteInboxMessage(
+/** Returns a read message to the unread state; scoped to the recipient. */
+export async function markInboxUnread(
 	db: Database,
 	id: string,
 	userId: string,
 ): Promise<void> {
 	await db
-		.delete(reportDeliveries)
+		.update(reportDeliveries)
+		.set({ readAt: null })
 		.where(
 			and(
 				eq(reportDeliveries.id, id),

@@ -5,10 +5,11 @@ import {
 	type InboxMessage,
 	type InboxMessageDetail,
 } from "@toxil/core";
-import { CheckCheckIcon, Trash2Icon } from "lucide-react";
+import { CheckCheckIcon, CheckIcon, DotIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
+import { PersonAvatar } from "@/components/person-avatar";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -20,7 +21,9 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
+import { formatRelativeTime } from "@/lib/format";
 import { invalidateInbox } from "@/lib/query";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authed/notifications")({
 	component: NotificationsPage,
@@ -56,12 +59,13 @@ function NotificationsPage() {
 		onError: (err: Error) => setError(err.message),
 	});
 
-	const deleteMutation = useMutation({
-		mutationFn: (id: string) => api.deleteInboxMessage(id),
-		onSuccess: (_data, id) => {
-			invalidateInbox(queryClient);
-			setViewing((current) => (current?.id === id ? null : current));
-		},
+	// Hover toggle: flip a single message between read and unread.
+	const toggleReadMutation = useMutation({
+		mutationFn: (message: InboxMessage) =>
+			message.readAt === null
+				? api.markInboxRead(message.id)
+				: api.markInboxUnread(message.id),
+		onSuccess: () => invalidateInbox(queryClient),
 		onError: (err: Error) => setError(err.message),
 	});
 
@@ -74,9 +78,9 @@ function NotificationsPage() {
 	const visible =
 		tab === "unread" ? rows.filter((m) => m.readAt === null) : rows;
 
-	const tabs: { id: TabId; label: string }[] = [
-		{ id: "all", label: t("notifications.tab.all") },
-		{ id: "unread", label: t("notifications.tab.unread") },
+	const tabs: { id: TabId; label: string; count: number }[] = [
+		{ id: "all", label: t("notifications.tab.all"), count: rows.length },
+		{ id: "unread", label: t("notifications.tab.unread"), count: unreadCount },
 	];
 
 	return (
@@ -87,7 +91,9 @@ function NotificationsPage() {
 						{t("notifications.title")}
 					</h1>
 					<p className="text-muted-foreground mt-0.5 text-sm">
-						{t("notifications.description")}
+						{unreadCount > 0
+							? t("notifications.unreadSummary", { count: unreadCount })
+							: t("notifications.allCaughtUp")}
 					</p>
 				</div>
 				<Button
@@ -109,18 +115,24 @@ function NotificationsPage() {
 							key={tabItem.id}
 							type="button"
 							onClick={() => setTab(tabItem.id)}
-							className={`relative px-3 pt-1 pb-2.5 text-sm transition-colors ${
+							className={cn(
+								"relative flex items-center gap-1.5 px-3 pt-1 pb-2.5 text-sm transition-colors",
 								selected
 									? "text-foreground font-medium"
-									: "text-muted-foreground hover:text-foreground"
-							}`}
+									: "text-muted-foreground hover:text-foreground",
+							)}
 						>
 							{tabItem.label}
-							{tabItem.id === "unread" && unreadCount > 0 && (
-								<span className="bg-muted text-muted-foreground ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums">
-									{unreadCount}
-								</span>
-							)}
+							<span
+								className={cn(
+									"rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+									selected
+										? "bg-secondary text-foreground"
+										: "bg-muted text-muted-foreground",
+								)}
+							>
+								{tabItem.count}
+							</span>
 							{selected && (
 								<span className="bg-foreground absolute inset-x-2 bottom-0 h-0.5 rounded-full" />
 							)}
@@ -144,26 +156,33 @@ function NotificationsPage() {
 						return (
 							<div
 								key={message.id}
-								className="group hover:bg-muted/40 flex items-center transition-colors"
+								className={cn(
+									"group hover:bg-muted/40 relative flex items-start gap-3 px-4 py-3.5 transition-colors",
+									unread && "bg-primary/[0.04]",
+								)}
 							>
 								<button
 									type="button"
 									disabled={openMutation.isPending}
 									onClick={() => openMutation.mutate(message)}
-									className="flex min-w-0 flex-1 items-center gap-3 py-3.5 pr-2 pl-4 text-left"
+									className="flex min-w-0 flex-1 items-start gap-3 text-left"
 								>
-									<span
-										className={`size-2 shrink-0 rounded-full ${
-											unread ? "bg-primary" : "bg-transparent"
-										}`}
-										aria-hidden
-									/>
+									<span className="mt-2 flex w-2 shrink-0 justify-center">
+										{unread && (
+											<span
+												className="bg-primary size-2 rounded-full"
+												aria-hidden
+											/>
+										)}
+									</span>
+									<PersonAvatar name={message.senderName} size={36} />
 									<span className="min-w-0 flex-1">
 										<span className="flex items-baseline gap-2">
 											<span
-												className={`min-w-0 truncate text-sm ${
-													unread ? "font-semibold" : "font-medium"
-												}`}
+												className={cn(
+													"min-w-0 truncate text-sm",
+													unread ? "font-semibold" : "font-medium",
+												)}
 											>
 												{message.reportName}
 											</span>
@@ -175,26 +194,42 @@ function NotificationsPage() {
 											</span>
 										</span>
 										<span className="text-muted-foreground mt-0.5 block truncate text-xs">
-											{t("notifications.from", { name: message.senderName })}
-											{message.message ? ` · ${message.message}` : ""}
+											<span className="text-foreground/80 font-medium">
+												{message.senderName}
+											</span>{" "}
+											{t("notifications.sentYouAReport")}
 										</span>
-									</span>
-									<span className="text-muted-foreground hidden shrink-0 text-xs tabular-nums sm:block">
-										{new Date(message.createdAt).toLocaleDateString(
-											i18n.language,
-											{ month: "short", day: "numeric" },
+										{message.message && (
+											<span className="text-muted-foreground mt-1 line-clamp-1 block text-sm">
+												{message.message}
+											</span>
 										)}
 									</span>
 								</button>
-								<Button
-									variant="ghost"
-									size="icon"
-									aria-label={t("notifications.deleteAction")}
-									className="text-muted-foreground mr-2 ml-1 size-8 shrink-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0"
-									onClick={() => deleteMutation.mutate(message.id)}
-								>
-									<Trash2Icon />
-								</Button>
+								<div className="mt-0.5 flex shrink-0 items-center gap-1">
+									<span className="text-muted-foreground text-xs whitespace-nowrap">
+										{formatRelativeTime(message.createdAt, i18n.language)}
+									</span>
+									<Button
+										variant="ghost"
+										size="icon"
+										disabled={toggleReadMutation.isPending}
+										aria-label={
+											unread
+												? t("notifications.markRead")
+												: t("notifications.markUnread")
+										}
+										title={
+											unread
+												? t("notifications.markRead")
+												: t("notifications.markUnread")
+										}
+										className="text-muted-foreground size-7 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0"
+										onClick={() => toggleReadMutation.mutate(message)}
+									>
+										{unread ? <CheckIcon /> : <DotIcon />}
+									</Button>
+								</div>
 							</div>
 						);
 					})}

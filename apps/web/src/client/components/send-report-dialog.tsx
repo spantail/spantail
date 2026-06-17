@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { formatPeriodLabel, type ReportMeta } from "@toxil/core";
+import type { ReportMeta } from "@toxil/core";
+import { CheckIcon, SearchIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { PersonAvatar } from "@/components/person-avatar";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -17,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 /**
  * "Send to": drops a frozen snapshot of the report into other members' inboxes.
@@ -34,8 +36,6 @@ export function SendReportDialog({
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [message, setMessage] = useState("");
 	const [error, setError] = useState<string | null>(null);
-
-	const title = `${report.name} ${formatPeriodLabel(report.filters.dateRange)}`;
 
 	const recipients = useQuery({
 		queryKey: ["report-recipients", report.id],
@@ -73,12 +73,16 @@ export function SendReportDialog({
 					c.email.toLowerCase().includes(query),
 			)
 		: candidates;
+	const count = selected.size;
+	const chosen = candidates.filter((c) => selected.has(c.id));
 
 	return (
 		<Dialog open onOpenChange={(open) => !open && onClose()}>
-			<DialogContent size="lg">
+			<DialogContent size="2xl">
 				<DialogHeader>
-					<DialogTitle>{t("reports.send.title", { name: title })}</DialogTitle>
+					<DialogTitle className="pr-10">
+						{t("reports.send.title", { name: report.name })}
+					</DialogTitle>
 					<DialogDescription>{t("reports.send.description")}</DialogDescription>
 				</DialogHeader>
 				<form
@@ -89,50 +93,71 @@ export function SendReportDialog({
 					}}
 				>
 					<div className="flex flex-col gap-2">
-						<Label>{t("reports.send.recipients")}</Label>
+						<div className="flex items-center justify-between">
+							<Label>{t("reports.send.recipients")}</Label>
+							{count > 0 && (
+								<span className="text-muted-foreground text-xs">
+									{t("reports.send.selectedCount", { count })}
+								</span>
+							)}
+						</div>
 						{candidates.length === 0 && !recipients.isPending ? (
 							<p className="text-muted-foreground text-sm">
 								{t("reports.send.noRecipients")}
 							</p>
 						) : (
 							<>
-								<Input
-									value={search}
-									onChange={(e) => setSearch(e.target.value)}
-									placeholder={t("reports.send.searchPlaceholder")}
-								/>
-								<ul className="max-h-56 overflow-y-auto rounded-lg border">
-									{filtered.map((candidate) => (
-										<li
-											key={candidate.id}
-											className="hover:bg-muted/40 flex items-center gap-3 px-3 py-2 text-sm"
-										>
-											<Checkbox
-												id={`recipient-${candidate.id}`}
-												checked={selected.has(candidate.id)}
-												onCheckedChange={() => toggle(candidate.id)}
-											/>
-											<Label
-												htmlFor={`recipient-${candidate.id}`}
-												className="min-w-0 flex-1 cursor-pointer font-normal"
+								<div className="relative">
+									<SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+									<Input
+										value={search}
+										onChange={(e) => setSearch(e.target.value)}
+										placeholder={t("reports.send.searchPlaceholder")}
+										className="pl-9"
+									/>
+								</div>
+								<div className="flex max-h-60 flex-col overflow-y-auto rounded-lg border">
+									{filtered.map((candidate) => {
+										const on = selected.has(candidate.id);
+										return (
+											<button
+												key={candidate.id}
+												type="button"
+												aria-pressed={on}
+												onClick={() => toggle(candidate.id)}
+												className={cn(
+													"flex items-center gap-3 border-b px-3 py-2.5 text-left transition-colors last:border-b-0",
+													on ? "bg-primary/5" : "hover:bg-muted/50",
+												)}
 											>
+												<PersonAvatar name={candidate.name} size={32} />
 												<span className="min-w-0 flex-1">
-													<span className="block truncate font-medium">
+													<span className="block truncate text-sm font-medium">
 														{candidate.name}
 													</span>
 													<span className="text-muted-foreground block truncate text-xs">
 														{candidate.email}
 													</span>
 												</span>
-											</Label>
-										</li>
-									))}
+												<span
+													className={cn(
+														"flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors",
+														on
+															? "border-primary bg-primary text-primary-foreground"
+															: "border-input",
+													)}
+												>
+													{on && <CheckIcon className="size-3.5" />}
+												</span>
+											</button>
+										);
+									})}
 									{filtered.length === 0 && (
-										<li className="text-muted-foreground px-3 py-2 text-sm">
+										<p className="text-muted-foreground px-3 py-6 text-center text-sm">
 											{t("reports.send.noMatch")}
-										</li>
+										</p>
 									)}
-								</ul>
+								</div>
 							</>
 						)}
 					</div>
@@ -142,10 +167,27 @@ export function SendReportDialog({
 							id="send-message"
 							value={message}
 							maxLength={1000}
+							rows={3}
 							onChange={(e) => setMessage(e.target.value)}
 							placeholder={t("reports.send.messagePlaceholder")}
 						/>
+						<p className="text-muted-foreground text-xs">
+							{t("reports.send.messageHint")}
+						</p>
 					</div>
+					{chosen.length > 0 && (
+						<div className="flex flex-wrap gap-1.5">
+							{chosen.map((c) => (
+								<span
+									key={c.id}
+									className="bg-secondary inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-xs font-medium"
+								>
+									<PersonAvatar name={c.name} size={18} />
+									{c.name}
+								</span>
+							))}
+						</div>
+					)}
 					{error && <p className="text-destructive text-sm">{error}</p>}
 					<DialogFooter>
 						<Button type="button" variant="outline" onClick={onClose}>
@@ -153,9 +195,12 @@ export function SendReportDialog({
 						</Button>
 						<Button
 							type="submit"
-							disabled={selected.size === 0 || sendMutation.isPending}
+							disabled={count === 0 || sendMutation.isPending}
 						>
-							{t("reports.send.sendAction")}
+							<SendIcon />
+							{count === 0
+								? t("reports.send.submit")
+								: t("reports.send.submitCount", { count })}
 						</Button>
 					</DialogFooter>
 				</form>

@@ -1,10 +1,10 @@
 import {
 	countUnreadInbox,
-	deleteInboxMessage,
 	getInboxMessage,
 	listInboxForUser,
 	markAllInboxRead,
 	markInboxRead,
+	markInboxUnread,
 } from "@toxil/db";
 import { Hono } from "hono";
 
@@ -46,10 +46,10 @@ export const inboxRoutes = new Hono<AppEnv>()
 		await markInboxRead(c.var.db, row.id, user.id);
 		return c.body(null, 204);
 	})
-	.delete("/:id", async (c) => {
+	.post("/:id/unread", async (c) => {
 		const { user } = requireScope(c, "write");
 		const row = await getInboxMessage(c.var.db, c.req.param("id"), user.id);
 		if (!row) throw new AppError("not_found", "Message not found");
-		await deleteInboxMessage(c.var.db, row.id, user.id);
+		await markInboxUnread(c.var.db, row.id, user.id);
 		return c.body(null, 204);
 	});

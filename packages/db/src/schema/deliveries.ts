@@ -6,16 +6,17 @@ import { reports } from "./reports";
 
 // An internal "Send to" delivery: a snapshot of a report dropped into another
 // user's inbox. The body and identifying metadata are frozen at send time, so a
-// later report edit/delete — or the sender's deletion — never changes what the
-// recipient received (the email model).
+// later report edit — or the sender's deletion — never changes what the
+// recipient received (the email model). Deleting the source report, however,
+// cascades and removes the deliveries it produced.
 export const reportDeliveries = sqliteTable(
 	"report_deliveries",
 	{
 		id: text("id").primaryKey(),
-		// Kept for reference only; the snapshot is independent, so a deleted report
-		// nulls this without removing the recipient's copy.
+		// Deleting the source report cascades to its deliveries: removing a report
+		// clears the copies it dropped into recipients' inboxes.
 		reportId: text("report_id").references(() => reports.id, {
-			onDelete: "set null",
+			onDelete: "cascade",
 		}),
 		// Authorship is dropped if the sender's account is deleted; the frozen
 		// senderName/senderEmail keep the message readable.
