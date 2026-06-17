@@ -22,7 +22,7 @@ import {
 	deleteReport,
 	getReportById,
 	getReportTemplateById,
-	listDistinctMembersForWorkspaces,
+	listMembersInAllWorkspaces,
 	listProjectsByIds,
 	listReportMetaByOwner,
 	listReportSharesByReport,
@@ -347,7 +347,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "read");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		await requireScopeWorkspaces(c, report.filters.workspaceIds);
-		const members = await listDistinctMembersForWorkspaces(
+		const members = await listMembersInAllWorkspaces(
 			c.var.db,
 			report.filters.workspaceIds,
 			user.id,
@@ -365,7 +365,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			sendReportInputSchema,
 			await parseOptionalJsonBody(c),
 		);
-		const candidates = await listDistinctMembersForWorkspaces(
+		const candidates = await listMembersInAllWorkspaces(
 			c.var.db,
 			report.filters.workspaceIds,
 			user.id,
@@ -376,7 +376,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			if (!allowed.has(id)) {
 				throw new AppError(
 					"bad_request",
-					"Recipient is not a member of the report's workspaces",
+					"Recipient must be a member of every workspace in the report",
 				);
 			}
 		}

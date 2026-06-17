@@ -238,6 +238,77 @@ it("validates send input and hides the report from non-owners", async () => {
 	).toBe(404);
 });
 
+it("restricts recipients to members of every workspace in the report", async () => {
+	const owner = await signUpUser("Owner", "owner@example.com");
+	const both = await signUpUser("Both", "both@example.com");
+	const onlyA = await signUpUser("OnlyA", "onlya@example.com");
+	const mkWs = async (slug: string) =>
+		(await (
+			await apiJson(
+				"POST",
+				"/api/v1/workspaces",
+				{ slug, name: slug, timezone: "Asia/Tokyo" },
+				owner,
+			)
+		).json()) as { id: string };
+	const wsA = await mkWs("alpha");
+	const wsB = await mkWs("beta");
+	for (const ws of [wsA, wsB]) {
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/members`,
+			{ email: "both@example.com" },
+			owner,
+		);
+	}
+	// onlyA belongs to A but not B.
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${wsA.id}/members`,
+		{ email: "onlya@example.com" },
+		owner,
+	);
+
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Cross",
+				templateId: "builtin:monthly",
+				filters: { workspaceIds: [wsA.id, wsB.id], dateRange: "this_month" },
+			},
+			owner,
+		)
+	).json()) as { id: string };
+
+	const emails = (
+		(await (
+			await apiGet(`/api/v1/reports/${report.id}/recipients`, owner)
+		).json()) as Array<{ id: string; email: string }>
+	).map((r) => r.email);
+	expect(emails).toContain("both@example.com");
+	expect(emails).not.toContain("onlya@example.com");
+
+	const onlyAId = (
+		(await (await apiGet("/api/v1/me", onlyA)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	// A member of only one of the report's workspaces can't be a recipient.
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/reports/${report.id}/send`,
+				{ recipientUserIds: [onlyAId] },
+				owner,
+			)
+		).status,
+	).toBe(400);
+	void both;
+});
+
 it("scopes inbox reads to the recipient", async () => {
 	const { owner, member, outsider, report, memberId } = await setup();
 	await apiJson(
