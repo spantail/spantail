@@ -81,8 +81,9 @@ export function MailSidebar() {
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarMenu>
+					<SidebarMenu className="gap-1.5">
 						{FOLDERS.map(({ folder, icon: Icon }) => {
+							// Only the inbox carries a badge — its unread count.
 							const badge = folder === "inbox" ? (counts.data?.unread ?? 0) : 0;
 							return (
 								<SidebarMenuItem key={folder}>
@@ -90,6 +91,7 @@ export function MailSidebar() {
 										asChild
 										isActive={active === folder}
 										tooltip={t(`mail.folder.${folder}`)}
+										className="h-9"
 										onClick={dismiss}
 									>
 										<Link to="/mail/$folder" params={{ folder }}>
@@ -98,7 +100,7 @@ export function MailSidebar() {
 										</Link>
 									</SidebarMenuButton>
 									{badge > 0 && (
-										<SidebarMenuBadge>
+										<SidebarMenuBadge className="bg-primary text-primary-foreground peer-data-active/menu-button:text-primary-foreground peer-hover/menu-button:text-primary-foreground rounded-full font-semibold">
 											{badge > 99 ? "99+" : badge}
 										</SidebarMenuBadge>
 									)}

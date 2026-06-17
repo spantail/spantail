@@ -53,21 +53,22 @@ export function MailToolbar({
 	};
 
 	return (
-		<div className="flex h-12 shrink-0 items-center gap-1 border-b px-2">
+		<div className="flex h-14 shrink-0 items-center gap-1 border-b px-3">
 			<Button
 				variant="ghost"
 				size="icon"
-				className="size-8"
+				className="size-9"
 				aria-label={t("mail.toolbar.close")}
 				title={t("mail.toolbar.close")}
 				onClick={close}
 			>
 				<XIcon />
 			</Button>
+			<div className="bg-border mx-1 h-5 w-px" aria-hidden />
 			<Button
 				variant="ghost"
 				size="icon"
-				className="size-8"
+				className="size-9"
 				aria-label={
 					item.starred ? t("mail.toolbar.unstar") : t("mail.toolbar.star")
 				}
@@ -83,7 +84,7 @@ export function MailToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-8"
+					className="size-9"
 					aria-label={t("mail.toolbar.unarchive")}
 					title={t("mail.toolbar.unarchive")}
 					disabled={actions.pending}
@@ -95,7 +96,7 @@ export function MailToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-8"
+					className="size-9"
 					aria-label={t("mail.toolbar.archive")}
 					title={t("mail.toolbar.archive")}
 					disabled={actions.pending}
@@ -108,7 +109,7 @@ export function MailToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-8"
+					className="size-9"
 					aria-label={t("mail.toolbar.restore")}
 					title={t("mail.toolbar.restore")}
 					disabled={actions.pending}
@@ -120,7 +121,7 @@ export function MailToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-8"
+					className="size-9"
 					aria-label={t("mail.toolbar.trash")}
 					title={t("mail.toolbar.trash")}
 					disabled={actions.pending}
@@ -141,7 +142,7 @@ export function MailToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-8"
+					className="size-9"
 					aria-label={t("mail.toolbar.prev")}
 					title={t("mail.toolbar.prev")}
 					disabled={!prev}
@@ -152,7 +153,7 @@ export function MailToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-8"
+					className="size-9"
 					aria-label={t("mail.toolbar.next")}
 					title={t("mail.toolbar.next")}
 					disabled={!next}

@@ -283,7 +283,8 @@
 			"trash": "Trash"
 		},
 		"list": {
-			"to": "To: {{names}}"
+			"to": "To: {{names}}",
+			"noMessage": "No message"
 		},
 		"toolbar": {
 			"close": "Close",
@@ -306,7 +307,9 @@
 		},
 		"detail": {
 			"selectPrompt": "Select a report to read.",
-			"notFound": "This report is no longer available."
+			"notFound": "This report is no longer available.",
+			"attachedReport": "Attached report",
+			"download": "Download"
 		}
 	},
 	"discussion": {

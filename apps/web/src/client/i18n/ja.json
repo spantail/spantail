@@ -282,7 +282,8 @@
 			"trash": "ゴミ箱"
 		},
 		"list": {
-			"to": "宛先: {{names}}"
+			"to": "宛先: {{names}}",
+			"noMessage": "メッセージなし"
 		},
 		"toolbar": {
 			"close": "閉じる",
@@ -305,7 +306,9 @@
 		},
 		"detail": {
 			"selectPrompt": "読むレポートを選択してください。",
-			"notFound": "このレポートは利用できなくなりました。"
+			"notFound": "このレポートは利用できなくなりました。",
+			"attachedReport": "添付レポート",
+			"download": "ダウンロード"
 		}
 	},
 	"discussion": {
