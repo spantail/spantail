@@ -35,7 +35,7 @@ interface EntryTimelineProps {
 
 /** The personal work log: entries grouped under date headers. */
 export function EntryTimeline({ entries, projects }: EntryTimelineProps) {
-	const { t, i18n } = useTranslation();
+	const { i18n } = useTranslation();
 	const { openView } = useEntryDialog();
 	const projectName = (id: string) =>
 		projects.find((p) => p.id === id)?.name ?? id;
@@ -71,7 +71,6 @@ export function EntryTimeline({ entries, projects }: EntryTimelineProps) {
 								<button
 									type="button"
 									onClick={() => openView(entry)}
-									aria-label={t("entries.viewDetails")}
 									className="flex min-w-0 flex-1 items-center gap-3 py-2 text-left"
 								>
 									<span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">

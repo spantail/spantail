@@ -92,7 +92,6 @@ export function EntryList({
 							<button
 								type="button"
 								onClick={() => openView(entry)}
-								aria-label={t("entries.viewDetails")}
 								className="flex flex-wrap items-center gap-1.5 text-left hover:underline"
 							>
 								<span>{entry.description}</span>
