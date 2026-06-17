@@ -20,13 +20,25 @@ export async function createReportDeliveries(
 		.values(values.map((v) => ({ id: crypto.randomUUID(), ...v })));
 }
 
-/** A user's inbox, newest first. The frozen body is included; strip it for lists. */
-export async function listInboxForUser(
-	db: Database,
-	userId: string,
-): Promise<ReportDeliveryRow[]> {
+/**
+ * A user's inbox, newest first. Metadata only: the (potentially large) frozen
+ * body is left out of the list and fetched per-message by getInboxMessage,
+ * mirroring the reports list.
+ */
+export async function listInboxForUser(db: Database, userId: string) {
 	return db
-		.select()
+		.select({
+			id: reportDeliveries.id,
+			reportId: reportDeliveries.reportId,
+			senderName: reportDeliveries.senderName,
+			senderEmail: reportDeliveries.senderEmail,
+			reportName: reportDeliveries.reportName,
+			dateFrom: reportDeliveries.dateFrom,
+			dateTo: reportDeliveries.dateTo,
+			message: reportDeliveries.message,
+			readAt: reportDeliveries.readAt,
+			createdAt: reportDeliveries.createdAt,
+		})
 		.from(reportDeliveries)
 		.where(eq(reportDeliveries.recipientUserId, userId))
 		.orderBy(desc(reportDeliveries.createdAt));

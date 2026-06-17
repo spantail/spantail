@@ -9,7 +9,7 @@ import {
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
-import { toApiInbox, toApiInboxDetail } from "../lib/inbox-api";
+import { toApiInboxDetail } from "../lib/inbox-api";
 import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
@@ -18,8 +18,9 @@ import type { AppEnv } from "../types";
 export const inboxRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
+		// Metadata only (no body, no internal ids) — already the API shape.
 		const rows = await listInboxForUser(c.var.db, user.id);
-		return c.json(rows.map(toApiInbox));
+		return c.json(rows);
 	})
 	// Static segment registered before "/:id" so the badge count never matches it.
 	.get("/unread-count", async (c) => {
