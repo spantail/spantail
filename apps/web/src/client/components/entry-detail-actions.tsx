@@ -37,9 +37,10 @@ export function EntryDetailActions({
 	return (
 		<DialogFooter className="sm:justify-between">
 			<Button
-				variant="destructive"
+				variant="ghost"
 				disabled={deleteMutation.isPending}
 				onClick={() => deleteMutation.mutate()}
+				className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
 			>
 				<Trash2Icon />
 				{t("entries.deleteAction")}
