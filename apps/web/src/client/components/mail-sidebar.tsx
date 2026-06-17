@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import type { MailFolder, MailFolderCounts } from "@toxil/core";
+import type { MailFolder } from "@toxil/core";
 import {
 	ArchiveIcon,
 	ArrowLeftIcon,
@@ -24,7 +24,6 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { api } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
 const FOLDERS: { folder: MailFolder; icon: typeof InboxIcon }[] = [
@@ -34,15 +33,6 @@ const FOLDERS: { folder: MailFolder; icon: typeof InboxIcon }[] = [
 	{ folder: "archive", icon: ArchiveIcon },
 	{ folder: "trash", icon: Trash2Icon },
 ];
-
-/** Inbox shows its unread count; the other folders show their total size. */
-function folderBadge(
-	folder: MailFolder,
-	counts: MailFolderCounts | undefined,
-): number {
-	if (!counts) return 0;
-	return folder === "inbox" ? counts.unread : counts[folder];
-}
 
 export function MailSidebar() {
 	const { t } = useTranslation();
@@ -91,15 +81,17 @@ export function MailSidebar() {
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarMenu>
+					<SidebarMenu className="gap-1.5">
 						{FOLDERS.map(({ folder, icon: Icon }) => {
-							const badge = folderBadge(folder, counts.data);
+							// Only the inbox carries a badge — its unread count.
+							const badge = folder === "inbox" ? (counts.data?.unread ?? 0) : 0;
 							return (
 								<SidebarMenuItem key={folder}>
 									<SidebarMenuButton
 										asChild
 										isActive={active === folder}
 										tooltip={t(`mail.folder.${folder}`)}
+										className="h-9"
 										onClick={dismiss}
 									>
 										<Link to="/mail/$folder" params={{ folder }}>
@@ -108,14 +100,7 @@ export function MailSidebar() {
 										</Link>
 									</SidebarMenuButton>
 									{badge > 0 && (
-										<SidebarMenuBadge
-											className={cn(
-												"rounded-full font-semibold",
-												folder === "inbox"
-													? "bg-primary text-primary-foreground peer-data-active/menu-button:text-primary-foreground peer-hover/menu-button:text-primary-foreground"
-													: "bg-muted text-muted-foreground",
-											)}
-										>
+										<SidebarMenuBadge className="bg-primary text-primary-foreground peer-data-active/menu-button:text-primary-foreground peer-hover/menu-button:text-primary-foreground rounded-full font-semibold">
 											{badge > 99 ? "99+" : badge}
 										</SidebarMenuBadge>
 									)}
