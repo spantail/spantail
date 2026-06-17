@@ -16,11 +16,13 @@ import type {
 	CreateWorkspaceInput,
 	EmailEnabled,
 	EmailSettings,
-	InboxMessage,
-	InboxMessageDetail,
 	Invitation,
 	InvitationPreview,
 	ListWorkEntriesQueryData,
+	MailFolder,
+	MailFolderCounts,
+	MailItem,
+	MailItemDetail,
 	ManagedUser,
 	Project,
 	ReactionEmoji,
@@ -33,6 +35,7 @@ import type {
 	ReportTemplate,
 	SendReportInput,
 	SendReportResult,
+	SetMailFlagsInput,
 	UnreadCount,
 	UpdateEmailSettingsInput,
 	UpdateProjectInput,
@@ -363,16 +366,27 @@ export class ToxilClient {
 		return this.request("POST", `/reports/${reportId}/send`, { body: input });
 	}
 
-	listInbox(): Promise<InboxMessage[]> {
-		return this.request("GET", "/inbox");
+	/** Lists a mailbox folder. Defaults to the Inbox. */
+	listInbox(folder: MailFolder = "inbox"): Promise<MailItem[]> {
+		return this.request("GET", "/inbox", { query: { folder } });
+	}
+
+	getMailboxCounts(): Promise<MailFolderCounts> {
+		return this.request("GET", "/inbox/counts");
 	}
 
 	getInboxUnreadCount(): Promise<UnreadCount> {
 		return this.request("GET", "/inbox/unread-count");
 	}
 
-	getInboxMessage(id: string): Promise<InboxMessageDetail> {
+	/** Opens a mailbox item by delivery id; the server resolves received vs sent. */
+	getInboxMessage(id: string): Promise<MailItemDetail> {
 		return this.request("GET", `/inbox/${id}`);
+	}
+
+	/** Toggles the caller's flags (starred/archived/trashed) on a target. */
+	setMailFlags(input: SetMailFlagsInput): Promise<void> {
+		return this.request("PATCH", "/inbox/flags", { body: input });
 	}
 
 	markInboxRead(id: string): Promise<void> {

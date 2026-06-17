@@ -26,6 +26,10 @@ export const reportDeliveries = sqliteTable(
 		recipientUserId: text("recipient_user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
+		// Shared by every row from one "Send to" (one send fans out to N rows).
+		// The sender's Sent folder groups by it; legacy rows backfill batch_id = id
+		// (each becomes a singleton batch).
+		batchId: text("batch_id").notNull(),
 		// Sender identity and report title/period frozen at send time.
 		senderName: text("sender_name").notNull(),
 		senderEmail: text("sender_email").notNull(),
@@ -43,6 +47,12 @@ export const reportDeliveries = sqliteTable(
 	(table) => [
 		index("report_deliveries_recipient_idx").on(
 			table.recipientUserId,
+			table.createdAt,
+		),
+		// Drives the Sent folder: the sender's batches, newest first.
+		index("report_deliveries_sender_batch_idx").on(
+			table.senderUserId,
+			table.batchId,
 			table.createdAt,
 		),
 	],

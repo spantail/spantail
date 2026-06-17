@@ -271,6 +271,43 @@
 		"markUnread": "未読にする",
 		"closeAction": "閉じる"
 	},
+	"mail": {
+		"back": "戻る",
+		"backToWorkspace": "{{name}} に戻る",
+		"folder": {
+			"inbox": "受信トレイ",
+			"starred": "スター付き",
+			"sent": "送信済み",
+			"archive": "アーカイブ",
+			"trash": "ゴミ箱"
+		},
+		"list": {
+			"to": "宛先: {{names}}"
+		},
+		"toolbar": {
+			"close": "閉じる",
+			"prev": "前へ",
+			"next": "次へ",
+			"position": "{{total}} 件中 {{index}} 件目",
+			"star": "スターを付ける",
+			"unstar": "スターを外す",
+			"archive": "アーカイブ",
+			"unarchive": "受信トレイに戻す",
+			"trash": "ゴミ箱へ移動",
+			"restore": "元に戻す"
+		},
+		"empty": {
+			"inbox": "受信トレイは空です。",
+			"starred": "スター付きのレポートはありません。",
+			"sent": "送信したレポートはありません。",
+			"archive": "アーカイブは空です。",
+			"trash": "ゴミ箱は空です。"
+		},
+		"detail": {
+			"selectPrompt": "読むレポートを選択してください。",
+			"notFound": "このレポートは利用できなくなりました。"
+		}
+	},
 	"discussion": {
 		"commentsHeading_one": "コメント {{count}} 件",
 		"commentsHeading_other": "コメント {{count}} 件",

@@ -23,9 +23,14 @@ export function invalidateWorkEntryData(
 	client.invalidateQueries({ queryKey: ["work-entry-tags", workspaceId] });
 }
 
-/** Refreshes the inbox list and the header unread badge after a change. */
-export function invalidateInbox(client: QueryClient): void {
-	client.invalidateQueries({ queryKey: ["inbox"] });
+/**
+ * Refreshes the mailbox after a change. Star/archive/trash move an item between
+ * folders, so every folder list is invalidated (prefix match), along with the
+ * sidebar counts and the header unread badge.
+ */
+export function invalidateMail(client: QueryClient): void {
+	client.invalidateQueries({ queryKey: ["mail"] });
+	client.invalidateQueries({ queryKey: ["mail-counts"] });
 	client.invalidateQueries({ queryKey: ["inbox-unread"] });
 }
 
