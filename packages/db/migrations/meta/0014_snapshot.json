@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "726bd7eb-4016-4b4e-ad2c-438e8bc0ec7d",
+  "id": "00ca2cf3-8f5d-43da-8794-2cf1f777fdbf",
   "prevId": "7386f7c9-75a7-4d4f-b034-d7676a632063",
   "tables": {
     "account": {
@@ -399,7 +399,7 @@
           "name": "batch_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "sender_name": {

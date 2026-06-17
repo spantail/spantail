@@ -35,6 +35,11 @@ export async function createReportDeliveries(
 		.values(values.map((v) => ({ id: crypto.randomUUID(), ...v })));
 }
 
+// A delivery's batch key: its batch_id, or its own id when batch_id is NULL (a
+// send handled by the pre-deploy Worker, before batch_id was populated). This
+// makes such a row behave as a singleton batch instead of a null grouping key.
+const batchKey = sql<string>`coalesce(${reportDeliveries.batchId}, ${reportDeliveries.id})`;
+
 /**
  * The flag predicate for a folder, evaluated against the left-joined
  * delivery_flags columns (null = not flagged). Trash is terminal: it shows
@@ -124,7 +129,7 @@ async function listReceived(
 	return rows.map((r) => ({
 		id: r.id,
 		scope: "received",
-		batchId: r.batchId,
+		batchId: r.batchId ?? r.id,
 		reportId: r.reportId,
 		senderName: r.senderName,
 		senderEmail: r.senderEmail,
@@ -153,7 +158,7 @@ async function listSent(
 			// A stable representative delivery id for the batch — the detail route
 			// opens it and the server resolves the sent scope from the sender.
 			id: sql<string>`min(${reportDeliveries.id})`,
-			batchId: reportDeliveries.batchId,
+			batchId: batchKey,
 			reportId: sql<string | null>`max(${reportDeliveries.reportId})`,
 			senderName: sql<string>`max(${reportDeliveries.senderName})`,
 			senderEmail: sql<string>`max(${reportDeliveries.senderEmail})`,
@@ -175,13 +180,13 @@ async function listSent(
 			and(
 				eq(deliveryFlags.userId, userId),
 				eq(deliveryFlags.scope, "sent"),
-				eq(deliveryFlags.targetId, reportDeliveries.batchId),
+				eq(deliveryFlags.targetId, batchKey),
 			),
 		)
 		.where(
 			and(eq(reportDeliveries.senderUserId, userId), flagPredicate(folder)),
 		)
-		.groupBy(reportDeliveries.batchId)
+		.groupBy(batchKey)
 		.orderBy(desc(sql`min(${reportDeliveries.createdAt})`));
 
 	return rows.map((r) => ({
@@ -286,7 +291,7 @@ export async function getMailItemDetail(
 		return {
 			id: row.id,
 			scope: "received",
-			batchId: row.batchId,
+			batchId: row.batchId ?? row.id,
 			reportId: row.reportId,
 			senderName: row.senderName,
 			senderEmail: row.senderEmail,
@@ -304,22 +309,19 @@ export async function getMailItemDetail(
 	}
 
 	if (row.senderUserId === userId) {
+		// The batch key the rest of the API flags and routes by.
+		const key = row.batchId ?? row.id;
 		const recipients = await db
 			.select({ id: user.id, name: user.name, email: user.email })
 			.from(reportDeliveries)
 			.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
-			.where(
-				and(
-					eq(reportDeliveries.batchId, row.batchId),
-					eq(reportDeliveries.senderUserId, userId),
-				),
-			)
+			.where(and(eq(batchKey, key), eq(reportDeliveries.senderUserId, userId)))
 			.orderBy(user.name);
-		const flags = await getDeliveryFlags(db, userId, "sent", row.batchId);
+		const flags = await getDeliveryFlags(db, userId, "sent", key);
 		return {
 			id: row.id,
 			scope: "sent",
-			batchId: row.batchId,
+			batchId: key,
 			reportId: row.reportId,
 			senderName: row.senderName,
 			senderEmail: row.senderEmail,
@@ -374,10 +376,7 @@ export async function userOwnsMailTarget(
 					eq(reportDeliveries.id, targetId),
 					eq(reportDeliveries.recipientUserId, userId),
 				)
-			: and(
-					eq(reportDeliveries.batchId, targetId),
-					eq(reportDeliveries.senderUserId, userId),
-				);
+			: and(eq(batchKey, targetId), eq(reportDeliveries.senderUserId, userId));
 	const row = await db
 		.select({ id: reportDeliveries.id })
 		.from(reportDeliveries)

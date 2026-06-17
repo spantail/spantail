@@ -26,10 +26,12 @@ export const reportDeliveries = sqliteTable(
 		recipientUserId: text("recipient_user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		// Shared by every row from one "Send to" (one send fans out to N rows).
-		// The sender's Sent folder groups by it; legacy rows backfill batch_id = id
-		// (each becomes a singleton batch).
-		batchId: text("batch_id").notNull(),
+		// Shared by every row from one "Send to" (one send fans out to N rows); the
+		// sender's Sent folder groups by it. Nullable for an order-safe rollout:
+		// after the column is added but before the new Worker ships, an old send
+		// inserts no batch_id. Queries treat a NULL as a singleton batch via
+		// COALESCE(batch_id, id), so grouping/flagging never see a null key.
+		batchId: text("batch_id"),
 		// Sender identity and report title/period frozen at send time.
 		senderName: text("sender_name").notNull(),
 		senderEmail: text("sender_email").notNull(),
