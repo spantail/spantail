@@ -72,8 +72,9 @@ function EditWorkspaceCard() {
 		<Card>
 			<CardHeader>
 				<CardTitle className="font-heading text-base">
-					{t("settings.editWorkspace.title", { name: current?.name })}
+					{t("settings.nav.general")}
 				</CardTitle>
+				<CardDescription>{t("settings.general.description")}</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form
