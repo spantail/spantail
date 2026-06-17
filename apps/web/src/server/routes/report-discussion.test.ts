@@ -269,6 +269,41 @@ it("rejects a comment-level reaction on a comment not in the report", async () =
 	).toBe(404);
 });
 
+it("keeps the thread shared after the last recipient is deleted", async () => {
+	const { owner, member, report, memberId } = await setup();
+	await send(report, owner, memberId);
+	await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/comments`,
+		{ body: "Reviewed, looks good" },
+		member,
+	);
+
+	// Delete the member's account (owner is the bootstrap instance admin). Their
+	// delivery cascades away, but the comment is retained with a null author.
+	expect(
+		(await apiJson("DELETE", `/api/v1/users/${memberId}`, undefined, owner))
+			.status,
+	).toBe(204);
+
+	// The owner still sees the retained thread and can follow up.
+	const view = await getDiscussion(report.id, owner);
+	expect(view.shared).toBe(true);
+	expect(view.comments).toHaveLength(1);
+	expect(view.comments[0]?.authorName).toBe("Member");
+	expect(view.comments[0]?.editable).toBe(false);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/reports/${report.id}/comments`,
+				{ body: "Thanks for the review" },
+				owner,
+			)
+		).status,
+	).toBe(201);
+});
+
 it("cascades report deletion to its comments and reactions", async () => {
 	const { owner, member, report, memberId } = await setup();
 	await send(report, owner, memberId);
