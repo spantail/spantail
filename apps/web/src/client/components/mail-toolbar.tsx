@@ -38,9 +38,12 @@ export function MailToolbar({
 	const next =
 		index >= 0 && index < items.length - 1 ? items[index + 1] : undefined;
 
-	const close = () => navigate({ to: "/mail/$folder", params: { folder } });
+	const close = () => navigate({ to: "/messages/$folder", params: { folder } });
 	const open = (messageId: string) =>
-		navigate({ to: "/mail/$folder/$messageId", params: { folder, messageId } });
+		navigate({
+			to: "/messages/$folder/$messageId",
+			params: { folder, messageId },
+		});
 	// Archiving or trashing removes the item from the current folder, so step back
 	// to the list afterwards.
 	const archiveAndClose = () => {
@@ -58,8 +61,8 @@ export function MailToolbar({
 				variant="ghost"
 				size="icon"
 				className="size-9"
-				aria-label={t("mail.toolbar.close")}
-				title={t("mail.toolbar.close")}
+				aria-label={t("messages.toolbar.close")}
+				title={t("messages.toolbar.close")}
 				onClick={close}
 			>
 				<XIcon />
@@ -70,9 +73,15 @@ export function MailToolbar({
 				size="icon"
 				className="size-9"
 				aria-label={
-					item.starred ? t("mail.toolbar.unstar") : t("mail.toolbar.star")
+					item.starred
+						? t("messages.toolbar.unstar")
+						: t("messages.toolbar.star")
 				}
-				title={item.starred ? t("mail.toolbar.unstar") : t("mail.toolbar.star")}
+				title={
+					item.starred
+						? t("messages.toolbar.unstar")
+						: t("messages.toolbar.star")
+				}
 				disabled={actions.pending}
 				onClick={() => actions.setStar(item, !item.starred)}
 			>
@@ -85,8 +94,8 @@ export function MailToolbar({
 					variant="ghost"
 					size="icon"
 					className="size-9"
-					aria-label={t("mail.toolbar.unarchive")}
-					title={t("mail.toolbar.unarchive")}
+					aria-label={t("messages.toolbar.unarchive")}
+					title={t("messages.toolbar.unarchive")}
 					disabled={actions.pending}
 					onClick={() => actions.setArchive(item, false)}
 				>
@@ -97,8 +106,8 @@ export function MailToolbar({
 					variant="ghost"
 					size="icon"
 					className="size-9"
-					aria-label={t("mail.toolbar.archive")}
-					title={t("mail.toolbar.archive")}
+					aria-label={t("messages.toolbar.archive")}
+					title={t("messages.toolbar.archive")}
 					disabled={actions.pending}
 					onClick={archiveAndClose}
 				>
@@ -110,8 +119,8 @@ export function MailToolbar({
 					variant="ghost"
 					size="icon"
 					className="size-9"
-					aria-label={t("mail.toolbar.restore")}
-					title={t("mail.toolbar.restore")}
+					aria-label={t("messages.toolbar.restore")}
+					title={t("messages.toolbar.restore")}
 					disabled={actions.pending}
 					onClick={() => actions.setTrash(item, false)}
 				>
@@ -122,8 +131,8 @@ export function MailToolbar({
 					variant="ghost"
 					size="icon"
 					className="size-9"
-					aria-label={t("mail.toolbar.trash")}
-					title={t("mail.toolbar.trash")}
+					aria-label={t("messages.toolbar.trash")}
+					title={t("messages.toolbar.trash")}
 					disabled={actions.pending}
 					onClick={trashAndClose}
 				>
@@ -133,7 +142,7 @@ export function MailToolbar({
 			<div className="ml-auto flex items-center gap-1">
 				{index >= 0 && items.length > 0 && (
 					<span className="text-muted-foreground mr-1 text-xs tabular-nums">
-						{t("mail.toolbar.position", {
+						{t("messages.toolbar.position", {
 							index: index + 1,
 							total: items.length,
 						})}
@@ -143,8 +152,8 @@ export function MailToolbar({
 					variant="ghost"
 					size="icon"
 					className="size-9"
-					aria-label={t("mail.toolbar.prev")}
-					title={t("mail.toolbar.prev")}
+					aria-label={t("messages.toolbar.prev")}
+					title={t("messages.toolbar.prev")}
 					disabled={!prev}
 					onClick={() => prev && open(prev.id)}
 				>
@@ -154,8 +163,8 @@ export function MailToolbar({
 					variant="ghost"
 					size="icon"
 					className="size-9"
-					aria-label={t("mail.toolbar.next")}
-					title={t("mail.toolbar.next")}
+					aria-label={t("messages.toolbar.next")}
+					title={t("messages.toolbar.next")}
 					disabled={!next}
 					onClick={() => next && open(next.id)}
 				>

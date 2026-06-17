@@ -272,7 +272,7 @@
 		"markUnread": "Mark as unread",
 		"closeAction": "Close"
 	},
-	"mail": {
+	"messages": {
 		"back": "Back to",
 		"backToWorkspace": "Back to {{name}}",
 		"folder": {
@@ -300,14 +300,14 @@
 		},
 		"empty": {
 			"inbox": "Your inbox is empty.",
-			"starred": "No starred reports.",
-			"sent": "You haven't sent any reports.",
+			"starred": "No starred messages.",
+			"sent": "You haven't sent any messages.",
 			"archive": "Archive is empty.",
 			"trash": "Trash is empty."
 		},
 		"detail": {
-			"selectPrompt": "Select a report to read.",
-			"notFound": "This report is no longer available.",
+			"selectPrompt": "Select a message to read.",
+			"notFound": "This message is no longer available.",
 			"attachedReport": "Attached report",
 			"download": "Download"
 		}

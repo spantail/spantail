@@ -57,7 +57,7 @@ export function MailSidebar() {
 						<SidebarMenuButton
 							asChild
 							size="lg"
-							tooltip={t("mail.backToWorkspace", {
+							tooltip={t("messages.backToWorkspace", {
 								name: current?.name ?? "",
 							})}
 							onClick={dismiss}
@@ -68,7 +68,7 @@ export function MailSidebar() {
 								</div>
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="text-muted-foreground truncate text-xs">
-										{t("mail.back")}
+										{t("messages.back")}
 									</span>
 									<span className="truncate font-medium">
 										{current?.name ?? ""}
@@ -90,13 +90,13 @@ export function MailSidebar() {
 									<SidebarMenuButton
 										asChild
 										isActive={active === folder}
-										tooltip={t(`mail.folder.${folder}`)}
+										tooltip={t(`messages.folder.${folder}`)}
 										className="h-9"
 										onClick={dismiss}
 									>
-										<Link to="/mail/$folder" params={{ folder }}>
+										<Link to="/messages/$folder" params={{ folder }}>
 											<Icon />
-											<span>{t(`mail.folder.${folder}`)}</span>
+											<span>{t(`messages.folder.${folder}`)}</span>
 										</Link>
 									</SidebarMenuButton>
 									{badge > 0 && (

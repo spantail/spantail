@@ -8,7 +8,7 @@ import { WorkspaceProvider } from "@/lib/workspace";
 /**
  * Loads the current user and provides workspace context. Shared by the two
  * authenticated shells — the workspace chrome (`_authed`) and the mailbox
- * (`/mail`) — so the `me` query and WorkspaceProvider live in one place. Each
+ * (`/messages`) — so the `me` query and WorkspaceProvider live in one place. Each
  * shell still declares its own route-level auth guard (a tiny session check).
  */
 export function AuthedRoot({

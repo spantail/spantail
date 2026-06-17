@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { InboxIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-export const Route = createFileRoute("/mail/$folder/")({
+export const Route = createFileRoute("/messages/$folder/")({
 	component: EmptyDetail,
 });
 
@@ -14,7 +14,7 @@ function EmptyDetail() {
 				<InboxIcon className="size-6" />
 			</div>
 			<p className="text-muted-foreground text-sm">
-				{t("mail.detail.selectPrompt")}
+				{t("messages.detail.selectPrompt")}
 			</p>
 		</div>
 	);

@@ -14,10 +14,10 @@ import {
 } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-export const Route = createFileRoute("/mail/$folder")({
+export const Route = createFileRoute("/messages/$folder")({
 	beforeLoad: ({ params }) => {
 		if (!mailFolderSchema.safeParse(params.folder).success) {
-			throw redirect({ to: "/mail/$folder", params: { folder: "inbox" } });
+			throw redirect({ to: "/messages/$folder", params: { folder: "inbox" } });
 		}
 	},
 	component: FolderLayout,
@@ -32,7 +32,7 @@ function FolderLayout() {
 	}) as string | undefined;
 	const isMobile = useIsMobile();
 
-	// Mobile: single pane driven by the URL — the list, or the open report.
+	// Mobile: single pane driven by the URL — the list, or the open message.
 	if (isMobile) {
 		return (
 			<div className="h-full min-h-0">
