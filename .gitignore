@@ -8,6 +8,9 @@ coverage/
 # Cloudflare local state
 .wrangler/
 
+# TanStack Router plugin temp output
+.tanstack/
+
 # Local secrets
 .dev.vars
 .dev.vars.*

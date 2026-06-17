@@ -9,22 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as ReportsIndexRouteImport } from './routes/reports/index'
 import { Route as MessagesIndexRouteImport } from './routes/messages/index'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
+import { Route as ReportsTabRouteImport } from './routes/reports/$tab'
 import { Route as MessagesFolderRouteImport } from './routes/messages/$folder'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
-import { Route as AuthedReportsRouteImport } from './routes/_authed/reports'
 import { Route as AuthedEntriesRouteImport } from './routes/_authed/entries'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
+import { Route as ReportsTabIndexRouteImport } from './routes/reports/$tab/index'
 import { Route as MessagesFolderIndexRouteImport } from './routes/messages/$folder/index'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as ReportsTabReportIdRouteImport } from './routes/reports/$tab/$reportId'
 import { Route as MessagesFolderMessageIdRouteImport } from './routes/messages/$folder/$messageId'
 import { Route as AuthedSettingsUsersRouteImport } from './routes/_authed/settings/users'
 import { Route as AuthedSettingsTokensRouteImport } from './routes/_authed/settings/tokens'
@@ -37,6 +41,11 @@ import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/sett
 import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects.$projectId'
 
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MessagesRoute = MessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -56,6 +65,11 @@ const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsIndexRoute = ReportsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReportsRoute,
+} as any)
 const MessagesIndexRoute = MessagesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -70,6 +84,11 @@ const ResetPasswordTokenRoute = ResetPasswordTokenRouteImport.update({
   id: '/reset-password/$token',
   path: '/reset-password/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsTabRoute = ReportsTabRouteImport.update({
+  id: '/$tab',
+  path: '/$tab',
+  getParentRoute: () => ReportsRoute,
 } as any)
 const MessagesFolderRoute = MessagesFolderRouteImport.update({
   id: '/$folder',
@@ -91,11 +110,6 @@ const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedReportsRoute = AuthedReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedEntriesRoute = AuthedEntriesRouteImport.update({
   id: '/entries',
   path: '/entries',
@@ -106,6 +120,11 @@ const AuthedAccountRoute = AuthedAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => AuthedRoute,
 } as any)
+const ReportsTabIndexRoute = ReportsTabIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReportsTabRoute,
+} as any)
 const MessagesFolderIndexRoute = MessagesFolderIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -115,6 +134,11 @@ const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const ReportsTabReportIdRoute = ReportsTabReportIdRouteImport.update({
+  id: '/$reportId',
+  path: '/$reportId',
+  getParentRoute: () => ReportsTabRoute,
 } as any)
 const MessagesFolderMessageIdRoute = MessagesFolderMessageIdRouteImport.update({
   id: '/$messageId',
@@ -178,15 +202,17 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/reports': typeof ReportsRouteWithChildren
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
-  '/reports': typeof AuthedReportsRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/messages/$folder': typeof MessagesFolderRouteWithChildren
+  '/reports/$tab': typeof ReportsTabRouteWithChildren
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/messages/': typeof MessagesIndexRoute
+  '/reports/': typeof ReportsIndexRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -198,20 +224,22 @@ export interface FileRoutesByFullPath {
   '/settings/tokens': typeof AuthedSettingsTokensRoute
   '/settings/users': typeof AuthedSettingsUsersRoute
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
+  '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/settings/': typeof AuthedSettingsIndexRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
+  '/reports/$tab/': typeof ReportsTabIndexRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
-  '/reports': typeof AuthedReportsRoute
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/': typeof AuthedIndexRoute
   '/messages': typeof MessagesIndexRoute
+  '/reports': typeof ReportsIndexRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -223,8 +251,10 @@ export interface FileRoutesByTo {
   '/settings/tokens': typeof AuthedSettingsTokensRoute
   '/settings/users': typeof AuthedSettingsUsersRoute
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
+  '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/settings': typeof AuthedSettingsIndexRoute
   '/messages/$folder': typeof MessagesFolderIndexRoute
+  '/reports/$tab': typeof ReportsTabIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -232,16 +262,18 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
+  '/reports': typeof ReportsRouteWithChildren
   '/_authed/account': typeof AuthedAccountRoute
   '/_authed/entries': typeof AuthedEntriesRoute
-  '/_authed/reports': typeof AuthedReportsRoute
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/_authed/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/messages/$folder': typeof MessagesFolderRouteWithChildren
+  '/reports/$tab': typeof ReportsTabRouteWithChildren
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/_authed/': typeof AuthedIndexRoute
   '/messages/': typeof MessagesIndexRoute
+  '/reports/': typeof ReportsIndexRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/email': typeof AuthedSettingsEmailRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
@@ -253,8 +285,10 @@ export interface FileRoutesById {
   '/_authed/settings/tokens': typeof AuthedSettingsTokensRoute
   '/_authed/settings/users': typeof AuthedSettingsUsersRoute
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
+  '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
+  '/reports/$tab/': typeof ReportsTabIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -263,15 +297,17 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/messages'
+    | '/reports'
     | '/account'
     | '/entries'
-    | '/reports'
     | '/settings'
     | '/templates'
     | '/invite/$token'
     | '/messages/$folder'
+    | '/reports/$tab'
     | '/reset-password/$token'
     | '/messages/'
+    | '/reports/'
     | '/projects/$projectId'
     | '/settings/email'
     | '/settings/general'
@@ -283,20 +319,22 @@ export interface FileRouteTypes {
     | '/settings/tokens'
     | '/settings/users'
     | '/messages/$folder/$messageId'
+    | '/reports/$tab/$reportId'
     | '/settings/'
     | '/messages/$folder/'
+    | '/reports/$tab/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
     | '/login'
     | '/account'
     | '/entries'
-    | '/reports'
     | '/templates'
     | '/invite/$token'
     | '/reset-password/$token'
     | '/'
     | '/messages'
+    | '/reports'
     | '/projects/$projectId'
     | '/settings/email'
     | '/settings/general'
@@ -308,24 +346,28 @@ export interface FileRouteTypes {
     | '/settings/tokens'
     | '/settings/users'
     | '/messages/$folder/$messageId'
+    | '/reports/$tab/$reportId'
     | '/settings'
     | '/messages/$folder'
+    | '/reports/$tab'
   id:
     | '__root__'
     | '/_authed'
     | '/forgot-password'
     | '/login'
     | '/messages'
+    | '/reports'
     | '/_authed/account'
     | '/_authed/entries'
-    | '/_authed/reports'
     | '/_authed/settings'
     | '/_authed/templates'
     | '/invite/$token'
     | '/messages/$folder'
+    | '/reports/$tab'
     | '/reset-password/$token'
     | '/_authed/'
     | '/messages/'
+    | '/reports/'
     | '/_authed/projects/$projectId'
     | '/_authed/settings/email'
     | '/_authed/settings/general'
@@ -337,8 +379,10 @@ export interface FileRouteTypes {
     | '/_authed/settings/tokens'
     | '/_authed/settings/users'
     | '/messages/$folder/$messageId'
+    | '/reports/$tab/$reportId'
     | '/_authed/settings/'
     | '/messages/$folder/'
+    | '/reports/$tab/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -346,12 +390,20 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRouteWithChildren
+  ReportsRoute: typeof ReportsRouteWithChildren
   InviteTokenRoute: typeof InviteTokenRoute
   ResetPasswordTokenRoute: typeof ResetPasswordTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/messages': {
       id: '/messages'
       path: '/messages'
@@ -380,6 +432,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/': {
+      id: '/reports/'
+      path: '/'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof ReportsIndexRouteImport
+      parentRoute: typeof ReportsRoute
+    }
     '/messages/': {
       id: '/messages/'
       path: '/'
@@ -400,6 +459,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/reset-password/$token'
       preLoaderRoute: typeof ResetPasswordTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/reports/$tab': {
+      id: '/reports/$tab'
+      path: '/$tab'
+      fullPath: '/reports/$tab'
+      preLoaderRoute: typeof ReportsTabRouteImport
+      parentRoute: typeof ReportsRoute
     }
     '/messages/$folder': {
       id: '/messages/$folder'
@@ -429,13 +495,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/reports': {
-      id: '/_authed/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof AuthedReportsRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/entries': {
       id: '/_authed/entries'
       path: '/entries'
@@ -450,6 +509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAccountRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/reports/$tab/': {
+      id: '/reports/$tab/'
+      path: '/'
+      fullPath: '/reports/$tab/'
+      preLoaderRoute: typeof ReportsTabIndexRouteImport
+      parentRoute: typeof ReportsTabRoute
+    }
     '/messages/$folder/': {
       id: '/messages/$folder/'
       path: '/'
@@ -463,6 +529,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof AuthedSettingsIndexRouteImport
       parentRoute: typeof AuthedSettingsRoute
+    }
+    '/reports/$tab/$reportId': {
+      id: '/reports/$tab/$reportId'
+      path: '/$reportId'
+      fullPath: '/reports/$tab/$reportId'
+      preLoaderRoute: typeof ReportsTabReportIdRouteImport
+      parentRoute: typeof ReportsTabRoute
     }
     '/messages/$folder/$messageId': {
       id: '/messages/$folder/$messageId'
@@ -577,7 +650,6 @@ const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
 interface AuthedRouteChildren {
   AuthedAccountRoute: typeof AuthedAccountRoute
   AuthedEntriesRoute: typeof AuthedEntriesRoute
-  AuthedReportsRoute: typeof AuthedReportsRoute
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
   AuthedTemplatesRoute: typeof AuthedTemplatesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
@@ -587,7 +659,6 @@ interface AuthedRouteChildren {
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountRoute: AuthedAccountRoute,
   AuthedEntriesRoute: AuthedEntriesRoute,
-  AuthedReportsRoute: AuthedReportsRoute,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
   AuthedTemplatesRoute: AuthedTemplatesRoute,
   AuthedIndexRoute: AuthedIndexRoute,
@@ -625,11 +696,39 @@ const MessagesRouteWithChildren = MessagesRoute._addFileChildren(
   MessagesRouteChildren,
 )
 
+interface ReportsTabRouteChildren {
+  ReportsTabReportIdRoute: typeof ReportsTabReportIdRoute
+  ReportsTabIndexRoute: typeof ReportsTabIndexRoute
+}
+
+const ReportsTabRouteChildren: ReportsTabRouteChildren = {
+  ReportsTabReportIdRoute: ReportsTabReportIdRoute,
+  ReportsTabIndexRoute: ReportsTabIndexRoute,
+}
+
+const ReportsTabRouteWithChildren = ReportsTabRoute._addFileChildren(
+  ReportsTabRouteChildren,
+)
+
+interface ReportsRouteChildren {
+  ReportsTabRoute: typeof ReportsTabRouteWithChildren
+  ReportsIndexRoute: typeof ReportsIndexRoute
+}
+
+const ReportsRouteChildren: ReportsRouteChildren = {
+  ReportsTabRoute: ReportsTabRouteWithChildren,
+  ReportsIndexRoute: ReportsIndexRoute,
+}
+
+const ReportsRouteWithChildren =
+  ReportsRoute._addFileChildren(ReportsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRouteWithChildren,
+  ReportsRoute: ReportsRouteWithChildren,
   InviteTokenRoute: InviteTokenRoute,
   ResetPasswordTokenRoute: ResetPasswordTokenRoute,
 }
