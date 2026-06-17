@@ -94,7 +94,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 			<CardContent className="flex flex-col gap-4">
 				{canManage && (
 					<form
-						className="grid gap-4 sm:grid-cols-3"
+						className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
 						onSubmit={(e) => {
 							e.preventDefault();
 							createMutation.mutate();
