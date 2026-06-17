@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { Report, ReportMeta } from "@toxil/core";
 import {
@@ -9,26 +9,16 @@ import {
 	PencilIcon,
 	SendIcon,
 	Share2Icon,
-	Trash2Icon,
 	XIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ReportDeleteAction } from "@/components/report-delete-action";
 import { useReportDialogs } from "@/components/report-dialogs";
 import { SendReportDialog } from "@/components/send-report-dialog";
 import { ShareDialog } from "@/components/share-dialog";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { downloadReportMarkdown } from "@/lib/report-download";
 import { useReportTemplates } from "@/lib/use-report-templates";
@@ -42,12 +32,10 @@ export function ReportToolbar({
 }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const queryClient = useQueryClient();
 	const { openEdit, openDuplicate } = useReportDialogs();
 	const { reportTemplateState } = useReportTemplates();
 	const [sharing, setSharing] = useState(false);
 	const [sending, setSending] = useState(false);
-	const [deleting, setDeleting] = useState(false);
 
 	// Same ordering as the list (tab filter only); aux list filters aren't shared
 	// across the route boundary, so prev/next walk the tab's full set.
@@ -70,14 +58,6 @@ export function ReportToolbar({
 	const close = () => navigate({ to: "/reports/$tab", params: { tab } });
 	const open = (reportId: string) =>
 		navigate({ to: "/reports/$tab/$reportId", params: { tab, reportId } });
-
-	const deleteMutation = useMutation({
-		mutationFn: () => api.deleteReport(report.id),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ["reports"] });
-			close();
-		},
-	});
 
 	return (
 		<div className="flex h-14 shrink-0 items-center gap-1 border-b px-3">
@@ -146,16 +126,7 @@ export function ReportToolbar({
 					</Button>
 				</>
 			)}
-			<Button
-				variant="ghost"
-				size="icon"
-				className="text-muted-foreground hover:text-destructive size-9"
-				aria-label={t("reports.deleteAction")}
-				title={t("reports.deleteAction")}
-				onClick={() => setDeleting(true)}
-			>
-				<Trash2Icon />
-			</Button>
+			<ReportDeleteAction reportId={report.id} onDeleted={close} />
 
 			<div className="ml-auto flex items-center gap-1">
 				{index >= 0 && items.length > 0 && (
@@ -189,26 +160,6 @@ export function ReportToolbar({
 					<ChevronRightIcon />
 				</Button>
 			</div>
-
-			<AlertDialog open={deleting} onOpenChange={setDeleting}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>{t("reports.delete.title")}</AlertDialogTitle>
-						<AlertDialogDescription>
-							{t("reports.delete.description")}
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>{t("reports.delete.cancel")}</AlertDialogCancel>
-						<AlertDialogAction
-							className={buttonVariants({ variant: "destructive" })}
-							onClick={() => deleteMutation.mutate()}
-						>
-							{t("reports.delete.confirm")}
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
 
 			{sending && (
 				<SendReportDialog report={report} onClose={() => setSending(false)} />
