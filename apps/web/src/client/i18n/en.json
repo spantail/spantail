@@ -183,6 +183,7 @@
 			"all": "All"
 		},
 		"filterAction": "Filter",
+		"moreActions": "More actions",
 		"filter": {
 			"project": "Project",
 			"allProjects": "All projects",

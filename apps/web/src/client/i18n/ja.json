@@ -182,6 +182,7 @@
 			"all": "すべて"
 		},
 		"filterAction": "フィルター",
+		"moreActions": "その他の操作",
 		"filter": {
 			"project": "プロジェクト",
 			"allProjects": "すべてのプロジェクト",
