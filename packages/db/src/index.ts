@@ -13,6 +13,7 @@ export * from "./queries/instance";
 export * from "./queries/invitations";
 export * from "./queries/members";
 export * from "./queries/projects";
+export * from "./queries/report-deliveries";
 export * from "./queries/report-shares";
 export * from "./queries/report-templates";
 export * from "./queries/reports";

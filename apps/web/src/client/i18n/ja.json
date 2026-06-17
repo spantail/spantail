@@ -232,7 +232,35 @@
 			"expires": "期限 {{value}}",
 			"views": "閲覧数: {{value}}",
 			"empty": "共有リンクはまだありません。上のフォームからこのレポートを共有できます。"
+		},
+		"send": {
+			"title": "送信: {{name}}",
+			"description": "このレポートのスナップショットを他のメンバーのインボックスへ送ります。",
+			"sendAction": "送信先",
+			"recipients": "宛先",
+			"searchPlaceholder": "メンバーを検索…",
+			"noRecipients": "このレポートのワークスペースに他のメンバーがいません。",
+			"noMatch": "検索に一致するメンバーがいません。",
+			"message": "メッセージ（任意）",
+			"messagePlaceholder": "短いメモを添えられます…",
+			"cancel": "キャンセル",
+			"toast_one": "{{count}} 人に送信しました。",
+			"toast_other": "{{count}} 人に送信しました。"
 		}
+	},
+	"notifications": {
+		"title": "通知",
+		"description": "他のメンバーからあなたへ送られたレポート。",
+		"markAllRead": "すべて既読にする",
+		"tab": {
+			"all": "すべて",
+			"unread": "未読"
+		},
+		"empty": "通知はまだありません。",
+		"emptyUnread": "未読の通知はありません。",
+		"from": "送信者: {{name}}",
+		"deleteAction": "削除",
+		"closeAction": "閉じる"
 	},
 	"templates": {
 		"listTitle": "テンプレート",

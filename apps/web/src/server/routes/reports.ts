@@ -12,14 +12,17 @@ import {
 	renderReport,
 	resolveBuiltinTemplateSettings,
 	resolveDateRange,
+	sendReportInputSchema,
 	updateReportInputSchema,
 } from "@toxil/core";
 import {
 	createReport,
+	createReportDeliveries,
 	createReportShare,
 	deleteReport,
 	getReportById,
 	getReportTemplateById,
+	listDistinctMembersForWorkspaces,
 	listProjectsByIds,
 	listReportMetaByOwner,
 	listReportSharesByReport,
@@ -337,4 +340,62 @@ export const reportRoutes = new Hono<AppEnv>()
 		await requireScopeWorkspaces(c, report.filters.workspaceIds);
 		const shares = await listReportSharesByReport(c.var.db, report.id);
 		return c.json(shares.map(toApiShare));
+	})
+	// Recipient picker for "Send to": the union of members across the report's
+	// workspaces (people already entitled to its data), minus the sender.
+	.get("/:id/recipients", async (c) => {
+		const { user } = requireScope(c, "read");
+		const report = await requireReportOwner(c, c.req.param("id"));
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const members = await listDistinctMembersForWorkspaces(
+			c.var.db,
+			report.filters.workspaceIds,
+			user.id,
+		);
+		return c.json(members);
+	})
+	// Drops a frozen snapshot of the report into each recipient's inbox. Same
+	// owner + membership re-check as reading the report; recipients are validated
+	// against the workspace-members union so a send can't widen who sees the data.
+	.post("/:id/send", async (c) => {
+		const { user } = requireScope(c, "write");
+		const report = await requireReportOwner(c, c.req.param("id"));
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const input = validate(
+			sendReportInputSchema,
+			await parseOptionalJsonBody(c),
+		);
+		const candidates = await listDistinctMembersForWorkspaces(
+			c.var.db,
+			report.filters.workspaceIds,
+			user.id,
+		);
+		const allowed = new Set(candidates.map((m) => m.id));
+		const recipientIds = [...new Set(input.recipientUserIds)];
+		for (const id of recipientIds) {
+			if (!allowed.has(id)) {
+				throw new AppError(
+					"bad_request",
+					"Recipient is not a member of the report's workspaces",
+				);
+			}
+		}
+		const message =
+			input.message && input.message.trim() !== "" ? input.message : null;
+		await createReportDeliveries(
+			c.var.db,
+			recipientIds.map((recipientUserId) => ({
+				reportId: report.id,
+				senderUserId: user.id,
+				recipientUserId,
+				senderName: user.name,
+				senderEmail: user.email,
+				reportName: report.name,
+				dateFrom: report.filters.dateRange.from,
+				dateTo: report.filters.dateRange.to,
+				renderedMarkdown: report.renderedMarkdown,
+				message,
+			})),
+		);
+		return c.json({ delivered: recipientIds.length }, 201);
 	});

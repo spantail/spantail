@@ -15,15 +15,21 @@ import type {
 	CreateWorkspaceInput,
 	EmailEnabled,
 	EmailSettings,
+	InboxMessage,
+	InboxMessageDetail,
 	Invitation,
 	InvitationPreview,
 	ListWorkEntriesQueryData,
 	ManagedUser,
 	Project,
+	Recipient,
 	Report,
 	ReportMeta,
 	ReportShare,
 	ReportTemplate,
+	SendReportInput,
+	SendReportResult,
+	UnreadCount,
 	UpdateEmailSettingsInput,
 	UpdateProjectInput,
 	UpdateReportInput,
@@ -336,6 +342,45 @@ export class ToxilClient {
 
 	revokeReportShare(shareId: string): Promise<ReportShare> {
 		return this.request("POST", `/report-shares/${shareId}/revoke`);
+	}
+
+	// --- Internal "Send to" + inbox ---
+
+	/** Candidate recipients for a report: its workspaces' members, minus you. */
+	listReportRecipients(reportId: string): Promise<Recipient[]> {
+		return this.request("GET", `/reports/${reportId}/recipients`);
+	}
+
+	/** Drops a frozen snapshot of the report into each recipient's inbox. */
+	sendReport(
+		reportId: string,
+		input: SendReportInput,
+	): Promise<SendReportResult> {
+		return this.request("POST", `/reports/${reportId}/send`, { body: input });
+	}
+
+	listInbox(): Promise<InboxMessage[]> {
+		return this.request("GET", "/inbox");
+	}
+
+	getInboxUnreadCount(): Promise<UnreadCount> {
+		return this.request("GET", "/inbox/unread-count");
+	}
+
+	getInboxMessage(id: string): Promise<InboxMessageDetail> {
+		return this.request("GET", `/inbox/${id}`);
+	}
+
+	markInboxRead(id: string): Promise<void> {
+		return this.request("POST", `/inbox/${id}/read`);
+	}
+
+	markAllInboxRead(): Promise<void> {
+		return this.request("POST", "/inbox/read-all");
+	}
+
+	deleteInboxMessage(id: string): Promise<void> {
+		return this.request("DELETE", `/inbox/${id}`);
 	}
 
 	listTokens(): Promise<ApiToken[]> {

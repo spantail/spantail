@@ -13,11 +13,13 @@ import {
 	MoreHorizontalIcon,
 	PencilIcon,
 	PlusIcon,
+	SendIcon,
 	Share2Icon,
 	Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SendReportDialog } from "@/components/send-report-dialog";
 import { ShareDialog } from "@/components/share-dialog";
 import {
 	AlertDialog,
@@ -64,6 +66,7 @@ export function ReportCard({
 	const queryClient = useQueryClient();
 	const [error, setError] = useState<string | null>(null);
 	const [sharing, setSharing] = useState(false);
+	const [sending, setSending] = useState(false);
 	const [deleting, setDeleting] = useState(false);
 
 	const templateName =
@@ -160,6 +163,10 @@ export function ReportCard({
 							<DownloadIcon />
 							{t("reports.view.downloadAction")}
 						</DropdownMenuItem>
+						<DropdownMenuItem onSelect={() => setSending(true)}>
+							<SendIcon />
+							{t("reports.send.sendAction")}
+						</DropdownMenuItem>
 						<DropdownMenuItem onSelect={() => setSharing(true)}>
 							<Share2Icon />
 							{t("reports.shares.shareAction")}
@@ -209,6 +216,10 @@ export function ReportCard({
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+
+			{sending && (
+				<SendReportDialog report={report} onClose={() => setSending(false)} />
+			)}
 
 			{sharing && (
 				<ShareDialog report={report} onClose={() => setSharing(false)} />
