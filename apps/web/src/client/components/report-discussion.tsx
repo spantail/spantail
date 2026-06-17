@@ -285,7 +285,7 @@ function CommentItem({
 							<Button
 								size="sm"
 								disabled={draft.trim() === "" || updateMutation.isPending}
-								onClick={() => updateMutation.mutate(draft.trim())}
+								onClick={() => updateMutation.mutate(draft)}
 							>
 								{t("discussion.editSave")}
 							</Button>
@@ -403,7 +403,7 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 					<Button
 						size="sm"
 						disabled={draft.trim() === "" || addMutation.isPending}
-						onClick={() => addMutation.mutate(draft.trim())}
+						onClick={() => addMutation.mutate(draft)}
 					>
 						{t("discussion.composer.submit")}
 					</Button>
