@@ -70,8 +70,12 @@ export function EntryList({
 			</TableHeader>
 			<TableBody>
 				{entries.map((entry) => (
-					<TableRow key={entry.id}>
-						<TableCell className="text-muted-foreground whitespace-nowrap">
+					// The whole row opens the detail dialog: the description button's
+					// stretched overlay (`before:inset-0`) covers the relative row, so a
+					// real button keeps it keyboard-accessible and lint-clean — no click
+					// handler on the <tr>. The actions cell is raised above the overlay.
+					<TableRow key={entry.id} className="group relative cursor-pointer">
+						<TableCell className="text-muted-foreground py-3 whitespace-nowrap">
 							{formatEntryDate(entry.entryDate, i18n.language, {
 								weekday: "short",
 								month: "short",
@@ -79,22 +83,22 @@ export function EntryList({
 							})}
 						</TableCell>
 						{showProject && (
-							<TableCell className="whitespace-nowrap">
+							<TableCell className="py-3 whitespace-nowrap">
 								{projectName(entry.projectId)}
 							</TableCell>
 						)}
-						<TableCell className="whitespace-nowrap">
+						<TableCell className="py-3 whitespace-nowrap">
 							{memberName(entry.userId)}
 						</TableCell>
-						<TableCell>
-							{/* The description opens the detail dialog; kept a button (not a
-							    row handler) so it stays keyboard-accessible and lint-clean. */}
+						<TableCell className="py-3">
 							<button
 								type="button"
 								onClick={() => openView(entry)}
-								className="flex flex-wrap items-center gap-1.5 text-left hover:underline"
+								className="flex flex-wrap items-center gap-1.5 text-left before:absolute before:inset-0 before:content-['']"
 							>
-								<span>{entry.description}</span>
+								<span className="underline-offset-4 group-hover:underline">
+									{entry.description}
+								</span>
 								{entry.tags.map((tag) => (
 									<Badge key={tag} variant="secondary">
 										{tag}
@@ -102,10 +106,10 @@ export function EntryList({
 								))}
 							</button>
 						</TableCell>
-						<TableCell className="text-muted-foreground text-right whitespace-nowrap tabular-nums">
+						<TableCell className="text-muted-foreground py-3 text-right whitespace-nowrap tabular-nums">
 							{formatDuration(entry.durationMinutes)}
 						</TableCell>
-						<TableCell className="whitespace-nowrap">
+						<TableCell className="relative z-10 py-3 whitespace-nowrap">
 							<EntryActions entry={entry} />
 						</TableCell>
 					</TableRow>

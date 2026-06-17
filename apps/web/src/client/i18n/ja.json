@@ -117,6 +117,8 @@
 		"cancelAction": "キャンセル",
 		"editAction": "編集",
 		"deleteAction": "削除",
+		"closeAction": "閉じる",
+		"loggedBy": "{{name}} さんが記録",
 		"empty": "まだ記録がありません。",
 		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
 		"goToSettings": "設定を開く",

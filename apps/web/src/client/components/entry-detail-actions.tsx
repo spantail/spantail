@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { useDeleteWorkEntry } from "@/hooks/use-delete-work-entry";
 
-/** Edit/delete footer for the detail dialog; null for entries the viewer can't manage. */
+/**
+ * Detail-dialog footer: Delete/Edit for the viewer's own entry, a plain Close
+ * for entries owned by someone else.
+ */
 export function EntryDetailActions({
 	entry,
 	onEdit,
@@ -21,7 +24,15 @@ export function EntryDetailActions({
 	const { session } = useRouteContext({ from: "/_authed" });
 	const deleteMutation = useDeleteWorkEntry(entry, onClose);
 
-	if (entry.userId !== session.user.id) return null;
+	if (entry.userId !== session.user.id) {
+		return (
+			<DialogFooter>
+				<Button variant="outline" onClick={onClose}>
+					{t("entries.closeAction")}
+				</Button>
+			</DialogFooter>
+		);
+	}
 
 	return (
 		<DialogFooter className="sm:justify-between">
