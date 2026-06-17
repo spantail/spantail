@@ -36,7 +36,7 @@ export function MessageList({
 		<div className="flex h-full min-h-0 flex-col">
 			<div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
 				<h2 className="font-heading text-base font-semibold tracking-tight">
-					{t(`mail.folder.${folder}`)}
+					{t(`messages.folder.${folder}`)}
 				</h2>
 				{folder === "inbox" && (
 					<Button
@@ -70,7 +70,7 @@ export function MessageList({
 							<InboxIcon className="size-5" />
 						</div>
 						<p className="text-muted-foreground text-sm">
-							{t(`mail.empty.${folder}`)}
+							{t(`messages.empty.${folder}`)}
 						</p>
 					</div>
 				) : (

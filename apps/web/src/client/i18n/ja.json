@@ -271,7 +271,7 @@
 		"markUnread": "未読にする",
 		"closeAction": "閉じる"
 	},
-	"mail": {
+	"messages": {
 		"back": "戻る",
 		"backToWorkspace": "{{name}} に戻る",
 		"folder": {
@@ -299,14 +299,14 @@
 		},
 		"empty": {
 			"inbox": "受信トレイは空です。",
-			"starred": "スター付きのレポートはありません。",
-			"sent": "送信したレポートはありません。",
+			"starred": "スター付きのメッセージはありません。",
+			"sent": "送信したメッセージはありません。",
 			"archive": "アーカイブは空です。",
 			"trash": "ゴミ箱は空です。"
 		},
 		"detail": {
-			"selectPrompt": "読むレポートを選択してください。",
-			"notFound": "このレポートは利用できなくなりました。",
+			"selectPrompt": "読むメッセージを選択してください。",
+			"notFound": "このメッセージは利用できなくなりました。",
 			"attachedReport": "添付レポート",
 			"download": "ダウンロード"
 		}

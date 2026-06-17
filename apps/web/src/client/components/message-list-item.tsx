@@ -22,8 +22,8 @@ export function MessageListItem({
 	const unread = item.scope === "received" && item.readAt === null;
 	const isSent = item.scope === "sent";
 	const starLabel = item.starred
-		? t("mail.toolbar.unstar")
-		: t("mail.toolbar.star");
+		? t("messages.toolbar.unstar")
+		: t("messages.toolbar.star");
 
 	return (
 		<div
@@ -33,7 +33,7 @@ export function MessageListItem({
 			)}
 		>
 			<Link
-				to="/mail/$folder/$messageId"
+				to="/messages/$folder/$messageId"
 				params={{ folder, messageId: item.id }}
 				className="flex w-full gap-3 rounded-xl px-3 py-3 text-left"
 			>
@@ -57,7 +57,9 @@ export function MessageListItem({
 							)}
 						>
 							{isSent
-								? t("mail.list.to", { names: item.recipientNames.join(", ") })
+								? t("messages.list.to", {
+										names: item.recipientNames.join(", "),
+									})
 								: item.senderName}
 						</span>
 						<span className="text-muted-foreground ml-auto shrink-0 text-xs whitespace-nowrap tabular-nums">
@@ -85,7 +87,7 @@ export function MessageListItem({
 						</span>
 					) : (
 						<span className="text-muted-foreground/60 mt-1 block text-xs italic">
-							{t("mail.list.noMessage")}
+							{t("messages.list.noMessage")}
 						</span>
 					)}
 				</span>

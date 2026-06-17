@@ -13,7 +13,7 @@ import { authClient } from "@/lib/auth-client";
 // The mailbox is a sibling shell to the workspace chrome: report sharing spans
 // workspaces (user-scoped), so it gets its own folder sidebar instead of the
 // workspace navigation. Its own auth guard mirrors `_authed`.
-export const Route = createFileRoute("/mail")({
+export const Route = createFileRoute("/messages")({
 	beforeLoad: async () => {
 		const { data } = await authClient.getSession();
 		if (!data) {

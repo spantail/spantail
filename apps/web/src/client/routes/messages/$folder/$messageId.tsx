@@ -16,7 +16,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { invalidateMail } from "@/lib/query";
 import { downloadMarkdown } from "@/lib/report-download";
 
-export const Route = createFileRoute("/mail/$folder/$messageId")({
+export const Route = createFileRoute("/messages/$folder/$messageId")({
 	component: ReadingPane,
 });
 
@@ -56,7 +56,7 @@ function ReadingPane() {
 	if (detail.isError || !data) {
 		return (
 			<div className="text-muted-foreground flex h-full items-center justify-center px-6 text-center text-sm">
-				{t("mail.detail.notFound")}
+				{t("messages.detail.notFound")}
 			</div>
 		);
 	}
@@ -65,7 +65,7 @@ function ReadingPane() {
 	// Header byline: recipient(s) for a sent batch, the sender for a received copy.
 	const personName = isSent ? (data.recipientNames[0] ?? "?") : data.senderName;
 	const personLabel = isSent
-		? t("mail.list.to", { names: data.recipientNames.join(", ") })
+		? t("messages.list.to", { names: data.recipientNames.join(", ") })
 		: data.senderName;
 	const email = isSent ? undefined : data.senderEmail;
 	const period = formatPeriodLabel({ from: data.dateFrom, to: data.dateTo });
@@ -112,7 +112,7 @@ function ReadingPane() {
 							</span>
 							<div className="min-w-0 flex-1">
 								<div className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
-									{t("mail.detail.attachedReport")}
+									{t("messages.detail.attachedReport")}
 								</div>
 								<div className="truncate text-sm font-medium tabular-nums">
 									{period}
@@ -122,8 +122,8 @@ function ReadingPane() {
 								variant="outline"
 								size="sm"
 								className="shrink-0"
-								aria-label={t("mail.detail.download")}
-								title={t("mail.detail.download")}
+								aria-label={t("messages.detail.download")}
+								title={t("messages.detail.download")}
 								onClick={() =>
 									downloadMarkdown(
 										`${data.reportName} ${period}.md`,
@@ -133,7 +133,7 @@ function ReadingPane() {
 							>
 								<DownloadIcon className="size-4" />
 								<span className="hidden sm:inline">
-									{t("mail.detail.download")}
+									{t("messages.detail.download")}
 								</span>
 							</Button>
 						</div>
