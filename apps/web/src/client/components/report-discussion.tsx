@@ -5,8 +5,12 @@ import {
 	type ReactionEmoji,
 	type ReactionSummary,
 } from "@toxil/core";
-import { MoreHorizontalIcon, SmilePlusIcon } from "lucide-react";
-import { useState } from "react";
+import {
+	MessageSquareIcon,
+	MoreHorizontalIcon,
+	SmilePlusIcon,
+} from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
@@ -32,15 +36,8 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
+import { authClient } from "@/lib/auth-client";
 import { formatRelativeTime } from "@/lib/format";
 import { invalidateReportDiscussion } from "@/lib/query";
 import { cn } from "@/lib/utils";
@@ -73,53 +70,58 @@ function ReactionBar({
 	reactions,
 	onToggle,
 	disabled,
+	size = "md",
 }: {
 	reactions: ReactionSummary[];
 	onToggle: (emoji: ReactionEmoji) => void;
 	disabled: boolean;
+	size?: "sm" | "md";
 }) {
 	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
 	const reactedLabel = (emoji: ReactionEmoji) =>
 		t(`discussion.emoji.${EMOJI_LABEL_KEY[emoji]}`);
+	const pillSize = size === "sm" ? "h-7 text-xs" : "h-8 text-sm";
+	const triggerSize = size === "sm" ? "size-7" : "size-8";
 
 	return (
 		<div className="flex flex-wrap items-center gap-1.5">
 			{reactions.map((reaction) => (
-				<Tooltip key={reaction.emoji}>
-					<TooltipTrigger asChild>
-						<button
-							type="button"
-							disabled={disabled}
-							onClick={() => onToggle(reaction.emoji)}
-							aria-label={reactedLabel(reaction.emoji)}
-							aria-pressed={reaction.reactedByMe}
-							className={cn(
-								"flex h-7 items-center gap-1 rounded-full border px-2 text-sm tabular-nums transition-colors",
-								reaction.reactedByMe
-									? "border-primary/40 bg-primary/10 text-foreground"
-									: "border-border bg-muted/40 text-muted-foreground hover:bg-muted",
-							)}
-						>
-							<span aria-hidden>{EMOJI_GLYPH[reaction.emoji]}</span>
-							<span className="text-xs">{reaction.count}</span>
-						</button>
-					</TooltipTrigger>
-					<TooltipContent>{reaction.userNames.join(", ")}</TooltipContent>
-				</Tooltip>
+				<button
+					key={reaction.emoji}
+					type="button"
+					disabled={disabled}
+					onClick={() => onToggle(reaction.emoji)}
+					aria-label={reactedLabel(reaction.emoji)}
+					aria-pressed={reaction.reactedByMe}
+					title={reaction.userNames.join(", ")}
+					className={cn(
+						"inline-flex items-center gap-1.5 rounded-full border px-2.5 font-medium tabular-nums transition-colors",
+						pillSize,
+						reaction.reactedByMe
+							? "border-primary/40 bg-primary/10 text-foreground"
+							: "border-border bg-muted/40 text-muted-foreground hover:bg-muted",
+					)}
+				>
+					<span aria-hidden className="leading-none">
+						{EMOJI_GLYPH[reaction.emoji]}
+					</span>
+					<span className="tabular-nums">{reaction.count}</span>
+				</button>
 			))}
 			<Popover open={open} onOpenChange={setOpen}>
 				<PopoverTrigger asChild>
-					<Button
+					<button
 						type="button"
-						variant="ghost"
-						size="icon"
 						disabled={disabled}
 						aria-label={t("discussion.addReaction")}
-						className="text-muted-foreground size-7 rounded-full"
+						className={cn(
+							"text-muted-foreground hover:bg-secondary inline-flex items-center justify-center rounded-full border transition-colors",
+							triggerSize,
+						)}
 					>
-						<SmilePlusIcon />
-					</Button>
+						<SmilePlusIcon className={size === "sm" ? "size-3.5" : "size-4"} />
+					</button>
 				</PopoverTrigger>
 				<PopoverContent align="start" className="w-auto p-1.5">
 					<div className="flex gap-1">
@@ -137,7 +139,7 @@ function ReactionBar({
 									}}
 									aria-label={reactedLabel(emoji)}
 									className={cn(
-										"flex size-8 items-center justify-center rounded-md text-lg transition-colors hover:bg-muted",
+										"hover:bg-accent flex size-8 items-center justify-center rounded-lg text-lg transition-colors",
 										active && "bg-primary/10",
 									)}
 								>
@@ -152,45 +154,64 @@ function ReactionBar({
 	);
 }
 
-/** A markdown editor with a Write/Preview toggle, reused for new + edit. */
-function CommentEditor({
+/**
+ * A bordered markdown editor card with a Write/Preview toggle and a footer
+ * slot, matching the mockup. Reused for the main composer and inline edits.
+ */
+function CommentComposer({
 	value,
 	onChange,
+	footer,
 }: {
 	value: string;
 	onChange: (value: string) => void;
+	footer: ReactNode;
 }) {
 	const { t } = useTranslation();
+	const [tab, setTab] = useState<"write" | "preview">("write");
+
 	return (
-		<Tabs defaultValue="write" className="gap-2">
-			<TabsList>
-				<TabsTrigger value="write">
-					{t("discussion.composer.write")}
-				</TabsTrigger>
-				<TabsTrigger value="preview">
-					{t("discussion.composer.preview")}
-				</TabsTrigger>
-			</TabsList>
-			<TabsContent value="write">
-				<Textarea
+		<div className="bg-card min-w-0 flex-1 overflow-hidden rounded-xl border">
+			<div className="border-border flex items-center gap-1 border-b px-2 pt-2">
+				{(["write", "preview"] as const).map((id) => (
+					<button
+						key={id}
+						type="button"
+						onClick={() => setTab(id)}
+						className={cn(
+							"rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+							tab === id
+								? "bg-secondary text-foreground"
+								: "text-muted-foreground hover:text-foreground",
+						)}
+					>
+						{t(`discussion.composer.${id}`)}
+					</button>
+				))}
+			</div>
+			{tab === "write" ? (
+				<textarea
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
+					rows={3}
 					placeholder={t("discussion.composer.placeholder")}
-					className="min-h-24"
+					className="placeholder:text-muted-foreground block w-full resize-none border-0 bg-transparent px-3.5 py-3 text-sm leading-relaxed outline-none"
 				/>
-			</TabsContent>
-			<TabsContent value="preview">
-				<div className="min-h-24 rounded-md border px-3 py-2">
+			) : (
+				<div className="min-h-[88px] px-3.5 py-3 text-sm leading-relaxed">
 					{value.trim() === "" ? (
-						<p className="text-muted-foreground text-sm">
+						<p className="text-muted-foreground italic">
 							{t("discussion.composer.previewEmpty")}
 						</p>
 					) : (
 						<MarkdownView markdown={value} />
 					)}
 				</div>
-			</TabsContent>
-		</Tabs>
+			)}
+			<div className="border-border flex items-center justify-between gap-2 border-t px-3 py-2">
+				{footer}
+			</div>
+		</div>
 	);
 }
 
@@ -234,7 +255,7 @@ function CommentItem({
 			<PersonAvatar name={comment.authorName} size={32} />
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-2">
-					<span className="text-sm font-medium">{comment.authorName}</span>
+					<span className="text-sm font-semibold">{comment.authorName}</span>
 					<span className="text-muted-foreground text-xs">
 						{formatRelativeTime(comment.createdAt, i18n.language)}
 						{edited && ` · ${t("discussion.edited")}`}
@@ -272,24 +293,34 @@ function CommentItem({
 				</div>
 
 				{editing ? (
-					<div className="mt-2 flex flex-col gap-2">
-						<CommentEditor value={draft} onChange={setDraft} />
-						<div className="flex justify-end gap-2">
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={() => setEditing(false)}
-							>
-								{t("discussion.editCancel")}
-							</Button>
-							<Button
-								size="sm"
-								disabled={draft.trim() === "" || updateMutation.isPending}
-								onClick={() => updateMutation.mutate(draft)}
-							>
-								{t("discussion.editSave")}
-							</Button>
-						</div>
+					<div className="mt-2">
+						<CommentComposer
+							value={draft}
+							onChange={setDraft}
+							footer={
+								<>
+									<span className="text-muted-foreground text-xs">
+										{t("discussion.composer.markdownHint")}
+									</span>
+									<div className="flex gap-2">
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={() => setEditing(false)}
+										>
+											{t("discussion.editCancel")}
+										</Button>
+										<Button
+											size="sm"
+											disabled={draft.trim() === "" || updateMutation.isPending}
+											onClick={() => updateMutation.mutate(draft)}
+										>
+											{t("discussion.editSave")}
+										</Button>
+									</div>
+								</>
+							}
+						/>
 					</div>
 				) : (
 					<div className="mt-1">
@@ -299,6 +330,7 @@ function CommentItem({
 
 				<div className="mt-2">
 					<ReactionBar
+						size="sm"
 						reactions={comment.reactions}
 						onToggle={(emoji) => reactionMutation.mutate(emoji)}
 						disabled={reactionMutation.isPending}
@@ -342,6 +374,8 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [draft, setDraft] = useState("");
+	const { data: session } = authClient.useSession();
+	const meName = session?.user?.name ?? "?";
 
 	const discussion = useQuery({
 		queryKey: ["report-discussion", reportId],
@@ -368,47 +402,47 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 	if (!data?.shared) return null;
 
 	return (
-		<div className="flex flex-col gap-4">
-			<Separator />
+		<section className="flex flex-col gap-5">
 			<ReactionBar
 				reactions={data.reactions}
 				onToggle={(emoji) => bodyReactionMutation.mutate(emoji)}
 				disabled={bodyReactionMutation.isPending}
 			/>
 
-			<h3 className="text-sm font-semibold">
-				{t("discussion.commentsHeading", { count: data.comments.length })}
-			</h3>
+			<div className="flex flex-col gap-5">
+				<h3 className="flex items-center gap-2 text-sm font-semibold">
+					<MessageSquareIcon className="text-muted-foreground size-4" />
+					{data.comments.length === 0
+						? t("discussion.empty")
+						: t("discussion.commentsHeading", { count: data.comments.length })}
+				</h3>
 
-			{data.comments.length === 0 ? (
-				<p className="text-muted-foreground text-sm">{t("discussion.empty")}</p>
-			) : (
-				<div className="flex flex-col gap-5">
-					{data.comments.map((comment) => (
-						<CommentItem
-							key={comment.id}
-							reportId={reportId}
-							comment={comment}
-						/>
-					))}
-				</div>
-			)}
-
-			<div className="flex flex-col gap-2">
-				<CommentEditor value={draft} onChange={setDraft} />
-				<div className="flex items-center justify-between gap-2">
-					<span className="text-muted-foreground text-xs">
-						{t("discussion.composer.markdownHint")}
-					</span>
-					<Button
-						size="sm"
-						disabled={draft.trim() === "" || addMutation.isPending}
-						onClick={() => addMutation.mutate(draft)}
-					>
-						{t("discussion.composer.submit")}
-					</Button>
-				</div>
+				{data.comments.map((comment) => (
+					<CommentItem key={comment.id} reportId={reportId} comment={comment} />
+				))}
 			</div>
-		</div>
+
+			<div className="flex gap-3">
+				<PersonAvatar name={meName} size={32} />
+				<CommentComposer
+					value={draft}
+					onChange={setDraft}
+					footer={
+						<>
+							<span className="text-muted-foreground text-xs">
+								{t("discussion.composer.markdownHint")}
+							</span>
+							<Button
+								size="sm"
+								disabled={draft.trim() === "" || addMutation.isPending}
+								onClick={() => addMutation.mutate(draft)}
+							>
+								{t("discussion.composer.submit")}
+							</Button>
+						</>
+					}
+				/>
+			</div>
+		</section>
 	);
 }
