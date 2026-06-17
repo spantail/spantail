@@ -12,6 +12,7 @@ import { instanceRoutes } from "./routes/instance";
 import { invitationRoutes } from "./routes/invitations";
 import { meRoutes } from "./routes/me";
 import { projectRoutes } from "./routes/projects";
+import { reportDiscussionRoutes } from "./routes/report-discussion";
 import { reportShareRoutes } from "./routes/report-shares";
 import { reportTemplateRoutes } from "./routes/report-templates";
 import { reportRoutes } from "./routes/reports";
@@ -68,6 +69,9 @@ v1.route("/projects", projectRoutes);
 v1.route("/report-shares", reportShareRoutes);
 v1.route("/report-templates", reportTemplateRoutes);
 v1.route("/reports", reportRoutes);
+// Discussion endpoints (/reports/:id/discussion, comments, reactions) for the
+// owner + Send-to recipients; mounted after reportRoutes on the same prefix.
+v1.route("/reports", reportDiscussionRoutes);
 v1.route("/work-entries", workEntryRoutes);
 v1.route("/tokens", tokenRoutes);
 

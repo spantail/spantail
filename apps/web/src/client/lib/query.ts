@@ -28,3 +28,11 @@ export function invalidateInbox(client: QueryClient): void {
 	client.invalidateQueries({ queryKey: ["inbox"] });
 	client.invalidateQueries({ queryKey: ["inbox-unread"] });
 }
+
+/** Refreshes a report's discussion (reactions + comments) after a change. */
+export function invalidateReportDiscussion(
+	client: QueryClient,
+	reportId: string,
+): void {
+	client.invalidateQueries({ queryKey: ["report-discussion", reportId] });
+}

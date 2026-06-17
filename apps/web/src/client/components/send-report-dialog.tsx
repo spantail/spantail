@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReportMeta } from "@toxil/core";
 import { CheckIcon, SearchIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { invalidateReportDiscussion } from "@/lib/query";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,6 +33,7 @@ export function SendReportDialog({
 	onClose: () => void;
 }) {
 	const { t } = useTranslation();
+	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [message, setMessage] = useState("");
@@ -49,6 +51,9 @@ export function SendReportDialog({
 				message: message.trim() === "" ? undefined : message,
 			}),
 		onSuccess: (result) => {
+			// The report is now shared, so a cached {shared:false} discussion
+			// (owner opened it before sending) must refetch.
+			invalidateReportDiscussion(queryClient, report.id);
 			toast.success(t("reports.send.toast", { count: result.delivered }));
 			onClose();
 		},

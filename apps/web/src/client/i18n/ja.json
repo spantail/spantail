@@ -271,6 +271,42 @@
 		"markUnread": "未読にする",
 		"closeAction": "閉じる"
 	},
+	"discussion": {
+		"commentsHeading_one": "コメント {{count}} 件",
+		"commentsHeading_other": "コメント {{count}} 件",
+		"empty": "コメントはまだありません。",
+		"addReaction": "リアクションを追加",
+		"edited": "編集済み",
+		"commentActions": "コメントの操作",
+		"edit": "編集",
+		"delete": "削除",
+		"editSave": "保存",
+		"editCancel": "キャンセル",
+		"emoji": {
+			"thumbsUp": "いいね",
+			"thumbsDown": "よくないね",
+			"laugh": "笑い",
+			"hooray": "やったね",
+			"confused": "困惑",
+			"heart": "ハート",
+			"rocket": "ロケット",
+			"eyes": "注目"
+		},
+		"composer": {
+			"write": "入力",
+			"preview": "プレビュー",
+			"placeholder": "コメントを入力…",
+			"previewEmpty": "プレビューする内容がありません。",
+			"markdownHint": "Markdown 対応",
+			"submit": "コメント"
+		},
+		"deleteConfirm": {
+			"title": "コメントを削除しますか？",
+			"description": "このコメントは完全に削除されます。",
+			"cancel": "キャンセル",
+			"confirm": "削除"
+		}
+	},
 	"templates": {
 		"listTitle": "テンプレート",
 		"newTitle": "テンプレートを作成",

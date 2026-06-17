@@ -272,6 +272,42 @@
 		"markUnread": "Mark as unread",
 		"closeAction": "Close"
 	},
+	"discussion": {
+		"commentsHeading_one": "{{count}} comment",
+		"commentsHeading_other": "{{count}} comments",
+		"empty": "No comments yet.",
+		"addReaction": "Add reaction",
+		"edited": "edited",
+		"commentActions": "Comment actions",
+		"edit": "Edit",
+		"delete": "Delete",
+		"editSave": "Save",
+		"editCancel": "Cancel",
+		"emoji": {
+			"thumbsUp": "Thumbs up",
+			"thumbsDown": "Thumbs down",
+			"laugh": "Laugh",
+			"hooray": "Hooray",
+			"confused": "Confused",
+			"heart": "Heart",
+			"rocket": "Rocket",
+			"eyes": "Eyes"
+		},
+		"composer": {
+			"write": "Write",
+			"preview": "Preview",
+			"placeholder": "Leave a comment…",
+			"previewEmpty": "Nothing to preview.",
+			"markdownHint": "Markdown supported",
+			"submit": "Comment"
+		},
+		"deleteConfirm": {
+			"title": "Delete comment?",
+			"description": "This comment will be permanently removed.",
+			"cancel": "Cancel",
+			"confirm": "Delete"
+		}
+	},
 	"templates": {
 		"listTitle": "Templates",
 		"newTitle": "New template",

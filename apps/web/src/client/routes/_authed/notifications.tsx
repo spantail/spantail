@@ -10,6 +10,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
+import { ReportDiscussion } from "@/components/report-discussion";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -257,6 +258,9 @@ function NotificationsPage() {
 							</p>
 						)}
 						<MarkdownView markdown={viewing.renderedMarkdown} />
+						{viewing.reportId && (
+							<ReportDiscussion reportId={viewing.reportId} />
+						)}
 						<DialogFooter>
 							<DialogClose asChild>
 								<Button>{t("notifications.closeAction")}</Button>

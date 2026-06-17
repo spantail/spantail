@@ -1,5 +1,6 @@
 export * from "./common";
 export * from "./delivery";
+export * from "./discussion";
 export * from "./duration";
 export * from "./errors";
 export * from "./instance";

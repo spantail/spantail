@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { FilterChip } from "@/components/filter-chip";
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportCard } from "@/components/report-card";
+import { ReportDiscussion } from "@/components/report-discussion";
 import { ReportForm, type ReportFormSeed } from "@/components/report-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -646,6 +647,7 @@ function ReportsPage() {
 							</DialogDescription>
 						</DialogHeader>
 						<MarkdownView markdown={viewing.renderedMarkdown} />
+						<ReportDiscussion reportId={viewing.id} />
 						<DialogFooter>
 							<Button
 								variant="outline"
