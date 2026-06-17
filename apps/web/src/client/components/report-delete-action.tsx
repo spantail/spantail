@@ -36,6 +36,10 @@ export function ReportDeleteAction({
 	const deleteMutation = useMutation({
 		mutationFn: () => api.deleteReport(reportId),
 		onSuccess: async () => {
+			// Drop the cached detail too: otherwise navigating back to the deleted
+			// report within staleTime renders it (and its actions) from cache
+			// instead of refetching the 404.
+			queryClient.removeQueries({ queryKey: ["report", reportId] });
 			await queryClient.invalidateQueries({ queryKey: ["reports"] });
 			onDeleted();
 		},
