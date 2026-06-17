@@ -122,6 +122,8 @@ function ReadingPane() {
 								variant="outline"
 								size="sm"
 								className="shrink-0"
+								aria-label={t("mail.detail.download")}
+								title={t("mail.detail.download")}
 								onClick={() =>
 									downloadMarkdown(
 										`${data.reportName} ${period}.md`,

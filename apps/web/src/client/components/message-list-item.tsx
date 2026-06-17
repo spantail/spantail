@@ -99,10 +99,12 @@ export function MessageListItem({
 				aria-pressed={item.starred}
 				title={starLabel}
 				className={cn(
-					"absolute top-3 right-3 z-10 flex size-5 items-center justify-center rounded transition-colors",
+					"focus-visible:ring-ring absolute top-3 right-3 z-10 flex size-5 items-center justify-center rounded outline-none transition focus-visible:ring-2",
 					item.starred
 						? "text-amber-400"
-						: "text-transparent group-hover:text-muted-foreground/50 hover:text-muted-foreground",
+						: // Faintly visible by default (so touch + keyboard users can find
+							// it); hidden until row hover only where hover is available.
+							"text-muted-foreground/70 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0",
 				)}
 				onClick={() => actions.setStar(item, !item.starred)}
 			>
