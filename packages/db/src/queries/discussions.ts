@@ -182,6 +182,11 @@ export async function listReportReactions(
 /**
  * Toggles one emoji for a user on a target (report body when commentId is null,
  * else a comment). Returns true if it was added, false if it was removed.
+ *
+ * Delete-then-insert (rather than select-then-write) keeps it tolerant of
+ * concurrent requests: two tabs adding the same emoji both delete nothing and
+ * both insert, but the second insert hits the partial unique index and is
+ * ignored via onConflictDoNothing instead of surfacing a 500.
  */
 export async function toggleReportReaction(
 	db: Database,
@@ -194,9 +199,8 @@ export async function toggleReportReaction(
 	},
 ): Promise<boolean> {
 	const { reportId, commentId, userId, userName, emoji } = values;
-	const existing = await db
-		.select({ id: reportReactions.id })
-		.from(reportReactions)
+	const removed = await db
+		.delete(reportReactions)
 		.where(
 			and(
 				eq(reportReactions.reportId, reportId),
@@ -207,20 +211,19 @@ export async function toggleReportReaction(
 				eq(reportReactions.emoji, emoji),
 			),
 		)
-		.get();
+		.returning({ id: reportReactions.id });
+	if (removed.length > 0) return false;
 
-	if (existing) {
-		await db.delete(reportReactions).where(eq(reportReactions.id, existing.id));
-		return false;
-	}
-
-	await db.insert(reportReactions).values({
-		id: crypto.randomUUID(),
-		reportId,
-		commentId,
-		userId,
-		userName,
-		emoji,
-	});
+	await db
+		.insert(reportReactions)
+		.values({
+			id: crypto.randomUUID(),
+			reportId,
+			commentId,
+			userId,
+			userName,
+			emoji,
+		})
+		.onConflictDoNothing();
 	return true;
 }
