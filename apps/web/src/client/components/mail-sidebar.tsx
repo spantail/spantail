@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import type { MailFolder } from "@toxil/core";
+import type { MailFolder, MailFolderCounts } from "@toxil/core";
 import {
 	ArchiveIcon,
 	ArrowLeftIcon,
@@ -24,6 +24,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
 const FOLDERS: { folder: MailFolder; icon: typeof InboxIcon }[] = [
@@ -33,6 +34,15 @@ const FOLDERS: { folder: MailFolder; icon: typeof InboxIcon }[] = [
 	{ folder: "archive", icon: ArchiveIcon },
 	{ folder: "trash", icon: Trash2Icon },
 ];
+
+/** Inbox shows its unread count; the other folders show their total size. */
+function folderBadge(
+	folder: MailFolder,
+	counts: MailFolderCounts | undefined,
+): number {
+	if (!counts) return 0;
+	return folder === "inbox" ? counts.unread : counts[folder];
+}
 
 export function MailSidebar() {
 	const { t } = useTranslation();
@@ -83,7 +93,7 @@ export function MailSidebar() {
 				<SidebarGroup>
 					<SidebarMenu>
 						{FOLDERS.map(({ folder, icon: Icon }) => {
-							const badge = folder === "inbox" ? (counts.data?.unread ?? 0) : 0;
+							const badge = folderBadge(folder, counts.data);
 							return (
 								<SidebarMenuItem key={folder}>
 									<SidebarMenuButton
@@ -98,7 +108,14 @@ export function MailSidebar() {
 										</Link>
 									</SidebarMenuButton>
 									{badge > 0 && (
-										<SidebarMenuBadge>
+										<SidebarMenuBadge
+											className={cn(
+												"rounded-full font-semibold",
+												folder === "inbox"
+													? "bg-primary text-primary-foreground peer-data-active/menu-button:text-primary-foreground peer-hover/menu-button:text-primary-foreground"
+													: "bg-muted text-muted-foreground",
+											)}
+										>
 											{badge > 99 ? "99+" : badge}
 										</SidebarMenuBadge>
 									)}
