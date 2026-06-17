@@ -5,3 +5,12 @@ BETTER_AUTH_SECRET=
 
 # Base URL the app is served from during local development.
 BETTER_AUTH_URL=http://localhost:5173
+
+# Social login (optional). Set a provider's client id + secret to let an
+# instance admin enable it under Settings > Social login. Leave blank to keep
+# the provider unavailable. Register the callback URL with the provider as
+# ${BETTER_AUTH_URL}/api/auth/callback/google and .../callback/github.
+GOOGLE_OAUTH_CLIENT_ID=
+GOOGLE_OAUTH_CLIENT_SECRET=
+GITHUB_OAUTH_CLIENT_ID=
+GITHUB_OAUTH_CLIENT_SECRET=

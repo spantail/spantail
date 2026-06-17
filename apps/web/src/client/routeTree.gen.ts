@@ -32,6 +32,7 @@ import { Route as AuthedSettingsTemplatesRouteImport } from './routes/_authed/se
 import { Route as AuthedSettingsProjectsRouteImport } from './routes/_authed/settings/projects'
 import { Route as AuthedSettingsPreferencesRouteImport } from './routes/_authed/settings/preferences'
 import { Route as AuthedSettingsPasswordRouteImport } from './routes/_authed/settings/password'
+import { Route as AuthedSettingsOauthRouteImport } from './routes/_authed/settings/oauth'
 import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
 import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
@@ -152,6 +153,11 @@ const AuthedSettingsPasswordRoute = AuthedSettingsPasswordRouteImport.update({
   path: '/password',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsOauthRoute = AuthedSettingsOauthRouteImport.update({
+  id: '/oauth',
+  path: '/oauth',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
   id: '/members',
   path: '/members',
@@ -191,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/oauth': typeof AuthedSettingsOauthRoute
   '/settings/password': typeof AuthedSettingsPasswordRoute
   '/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
   '/settings/members': typeof AuthedSettingsMembersRoute
+  '/settings/oauth': typeof AuthedSettingsOauthRoute
   '/settings/password': typeof AuthedSettingsPasswordRoute
   '/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/_authed/settings/email': typeof AuthedSettingsEmailRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
   '/_authed/settings/members': typeof AuthedSettingsMembersRoute
+  '/_authed/settings/oauth': typeof AuthedSettingsOauthRoute
   '/_authed/settings/password': typeof AuthedSettingsPasswordRoute
   '/_authed/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/_authed/settings/projects': typeof AuthedSettingsProjectsRoute
@@ -276,6 +285,7 @@ export interface FileRouteTypes {
     | '/settings/email'
     | '/settings/general'
     | '/settings/members'
+    | '/settings/oauth'
     | '/settings/password'
     | '/settings/preferences'
     | '/settings/projects'
@@ -301,6 +311,7 @@ export interface FileRouteTypes {
     | '/settings/email'
     | '/settings/general'
     | '/settings/members'
+    | '/settings/oauth'
     | '/settings/password'
     | '/settings/preferences'
     | '/settings/projects'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/email'
     | '/_authed/settings/general'
     | '/_authed/settings/members'
+    | '/_authed/settings/oauth'
     | '/_authed/settings/password'
     | '/_authed/settings/preferences'
     | '/_authed/settings/projects'
@@ -513,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsPasswordRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/oauth': {
+      id: '/_authed/settings/oauth'
+      path: '/oauth'
+      fullPath: '/settings/oauth'
+      preLoaderRoute: typeof AuthedSettingsOauthRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/members': {
       id: '/_authed/settings/members'
       path: '/members'
@@ -548,6 +567,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsEmailRoute: typeof AuthedSettingsEmailRoute
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
   AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
+  AuthedSettingsOauthRoute: typeof AuthedSettingsOauthRoute
   AuthedSettingsPasswordRoute: typeof AuthedSettingsPasswordRoute
   AuthedSettingsPreferencesRoute: typeof AuthedSettingsPreferencesRoute
   AuthedSettingsProjectsRoute: typeof AuthedSettingsProjectsRoute
@@ -561,6 +581,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsEmailRoute: AuthedSettingsEmailRoute,
   AuthedSettingsGeneralRoute: AuthedSettingsGeneralRoute,
   AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
+  AuthedSettingsOauthRoute: AuthedSettingsOauthRoute,
   AuthedSettingsPasswordRoute: AuthedSettingsPasswordRoute,
   AuthedSettingsPreferencesRoute: AuthedSettingsPreferencesRoute,
   AuthedSettingsProjectsRoute: AuthedSettingsProjectsRoute,

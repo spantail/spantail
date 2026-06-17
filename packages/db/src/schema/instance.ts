@@ -22,6 +22,20 @@ export const instanceSettings = sqliteTable("instance_settings", {
 		.default(false),
 	emailFromAddress: text("email_from_address"),
 	emailFromName: text("email_from_name"),
+	// Social login is off by default; an instance admin opts in once the matching
+	// OAuth client credentials are configured in the environment.
+	googleOAuthEnabled: integer("google_oauth_enabled", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	githubOAuthEnabled: integer("github_oauth_enabled", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	// Allowlist of email domains permitted to sign in with Google. Empty array
+	// (the default) means no restriction.
+	googleAllowedDomains: text("google_allowed_domains", { mode: "json" })
+		.$type<string[]>()
+		.notNull()
+		.default([]),
 	updatedAt: updatedAtMs(),
 });
 

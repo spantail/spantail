@@ -1,3 +1,4 @@
+import { isEmailDomainAllowed } from "@toxil/core";
 import {
 	authOptions,
 	countUsers,
@@ -7,8 +8,19 @@ import {
 } from "@toxil/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError } from "better-auth/api";
 import { renderPasswordResetEmail } from "./emails/password-reset-email";
 import { getMailer } from "./lib/mail/mailer";
+
+/**
+ * Social login providers to enable for this request, resolved from the instance
+ * settings (admin toggles) and environment credentials by the caller. A
+ * provider absent here has no callback route, so it cannot be used to sign in.
+ */
+export interface SocialConfig {
+	google?: { clientId: string; clientSecret: string; allowedDomains: string[] };
+	github?: { clientId: string; clientSecret: string };
+}
 
 /**
  * Better Auth instance, created once per request with the request's D1-backed
@@ -17,14 +29,36 @@ import { getMailer } from "./lib/mail/mailer";
  * `ctx` is the request's execution context; when present, reset-email delivery
  * is deferred via `waitUntil` so the response time of a recovery request does
  * not depend on whether the account exists (timing-based enumeration).
+ *
+ * `social` enables Google/GitHub providers for this request. Session-only
+ * callers (e.g. `getSession`) can omit it.
  */
 export function createAuth(
 	env: Env,
 	db: Database,
 	// Structurally typed so both the Workers and Hono ExecutionContext fit.
 	ctx?: { waitUntil(promise: Promise<unknown>): void },
+	social?: SocialConfig,
 ) {
+	const socialProviders: NonNullable<
+		Parameters<typeof betterAuth>[0]["socialProviders"]
+	> = {};
+	if (social?.google) {
+		socialProviders.google = {
+			clientId: social.google.clientId,
+			clientSecret: social.google.clientSecret,
+		};
+	}
+	if (social?.github) {
+		socialProviders.github = {
+			clientId: social.github.clientId,
+			clientSecret: social.github.clientSecret,
+		};
+	}
+	const googleAllowedDomains = social?.google?.allowedDomains ?? [];
+
 	return betterAuth({
+		socialProviders,
 		...authOptions,
 		emailAndPassword: {
 			...authOptions.emailAndPassword,
@@ -69,7 +103,20 @@ export function createAuth(
 		databaseHooks: {
 			user: {
 				create: {
-					before: async (user) => {
+					before: async (user, hookCtx) => {
+						// Google domain allowlist: only enforced when a Google sign-in
+						// would auto-provision a new user. Existing users (created by an
+						// admin) are already trusted and are not re-checked here.
+						if (
+							social?.google &&
+							hookCtx?.path === "/callback/:id" &&
+							hookCtx.params?.id === "google" &&
+							!isEmailDomainAllowed(user.email, googleAllowedDomains)
+						) {
+							throw new APIError("FORBIDDEN", {
+								message: "This email domain is not allowed to sign in",
+							});
+						}
 						// The first registered user becomes the instance admin.
 						if ((await countUsers(db)) === 0) {
 							return { data: { ...user, isAdmin: true } };
