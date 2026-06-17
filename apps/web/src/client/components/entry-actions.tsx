@@ -1,9 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import type { WorkEntry } from "@toxil/core";
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 
 import { useEntryDialog } from "@/components/entry-dialog";
 import { Button } from "@/components/ui/button";
@@ -13,23 +11,14 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { api } from "@/lib/api";
-import { invalidateWorkEntryData } from "@/lib/query";
+import { useDeleteWorkEntry } from "@/hooks/use-delete-work-entry";
 
 /** Kebab edit/delete menu for the viewer's own entries; null for others'. */
 export function EntryActions({ entry }: { entry: WorkEntry }) {
 	const { t } = useTranslation();
-	const queryClient = useQueryClient();
 	const { openEdit } = useEntryDialog();
 	const { session } = useRouteContext({ from: "/_authed" });
-
-	const deleteMutation = useMutation({
-		mutationFn: () => api.deleteWorkEntry(entry.id),
-		onSuccess: () => {
-			invalidateWorkEntryData(queryClient, entry.workspaceId);
-			toast.success(t("entries.toast.deleted"));
-		},
-	});
+	const deleteMutation = useDeleteWorkEntry(entry);
 
 	if (entry.userId !== session.user.id) return null;
 
