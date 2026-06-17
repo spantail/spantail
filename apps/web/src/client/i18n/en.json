@@ -109,6 +109,7 @@
 		"description": "Description",
 		"descriptionPlaceholder": "What did you work on?",
 		"note": "Note",
+		"noNote": "No note for this entry.",
 		"tags": "Tags",
 		"tagsPlaceholder": "api, design",
 		"author": "Member",

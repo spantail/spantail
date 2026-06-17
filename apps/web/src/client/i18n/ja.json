@@ -108,6 +108,7 @@
 		"description": "内容",
 		"descriptionPlaceholder": "何に取り組みましたか?",
 		"note": "メモ",
+		"noNote": "この記録にメモはありません。",
 		"tags": "タグ",
 		"tagsPlaceholder": "api, design",
 		"author": "メンバー",

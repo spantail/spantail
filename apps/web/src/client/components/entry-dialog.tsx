@@ -1,5 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
-import type { WorkEntry } from "@toxil/core";
+import { formatDuration, type WorkEntry } from "@toxil/core";
 import {
 	createContext,
 	useCallback,
@@ -11,6 +11,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { EntryDetail } from "@/components/entry-detail";
+import { EntryDetailActions } from "@/components/entry-detail-actions";
 import { EntryForm } from "@/components/entry-form";
 import {
 	Dialog,
@@ -20,15 +22,18 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { useProjects } from "@/hooks/use-projects";
+import { formatEntryDate } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
 type EntryDialogState =
 	| { mode: "create"; defaultProjectId?: string }
-	| { mode: "edit"; entry: WorkEntry };
+	| { mode: "edit"; entry: WorkEntry }
+	| { mode: "view"; entry: WorkEntry };
 
 interface EntryDialogContextValue {
 	openCreate: () => void;
 	openEdit: (entry: WorkEntry) => void;
+	openView: (entry: WorkEntry) => void;
 }
 
 const EntryDialogContext = createContext<EntryDialogContextValue | null>(null);
@@ -53,7 +58,7 @@ export function EntryDialogProvider({
 }: {
 	children: React.ReactNode;
 }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
 	const projects = useProjects();
 	const [state, setState] = useState<EntryDialogState | null>(null);
@@ -82,6 +87,10 @@ export function EntryDialogProvider({
 		setInstanceId((id) => id + 1);
 		setState({ mode: "edit", entry });
 	}, []);
+	const openView = useCallback((entry: WorkEntry) => {
+		setInstanceId((id) => id + 1);
+		setState({ mode: "view", entry });
+	}, []);
 	const close = useCallback(() => setState(null), []);
 
 	useEffect(() => {
@@ -100,9 +109,26 @@ export function EntryDialogProvider({
 	}, [openCreate]);
 
 	const value = useMemo(
-		() => ({ openCreate, openEdit }),
-		[openCreate, openEdit],
+		() => ({ openCreate, openEdit, openView }),
+		[openCreate, openEdit, openView],
 	);
+
+	// In view mode the entry's description is the dialog title; project, date and
+	// duration form the subtitle.
+	const viewEntry = state?.mode === "view" ? state.entry : null;
+	const viewSubtitle = viewEntry
+		? [
+				(projects.data ?? []).find((p) => p.id === viewEntry.projectId)?.name ??
+					viewEntry.projectId,
+				formatEntryDate(viewEntry.entryDate, i18n.language, {
+					year: "numeric",
+					month: "short",
+					day: "numeric",
+					weekday: "short",
+				}),
+				formatDuration(viewEntry.durationMinutes),
+			].join(" · ")
+		: null;
 
 	return (
 		<EntryDialogContext.Provider value={value}>
@@ -112,17 +138,30 @@ export function EntryDialogProvider({
 					<DialogContent size="2xl">
 						<DialogHeader>
 							<DialogTitle>
-								{state?.mode === "edit"
-									? t("entries.editTitle")
-									: t("entries.newTitle")}
+								{viewEntry
+									? viewEntry.description
+									: state?.mode === "edit"
+										? t("entries.editTitle")
+										: t("entries.newTitle")}
 							</DialogTitle>
 							<DialogDescription>
-								{state?.mode === "edit"
-									? t("entries.editDescription")
-									: t("entries.newDescription")}
+								{viewSubtitle ??
+									(state?.mode === "edit"
+										? t("entries.editDescription")
+										: t("entries.newDescription"))}
 							</DialogDescription>
 						</DialogHeader>
-						{state && (
+						{state?.mode === "view" && (
+							<>
+								<EntryDetail entry={state.entry} />
+								<EntryDetailActions
+									entry={state.entry}
+									onEdit={() => openEdit(state.entry)}
+									onClose={close}
+								/>
+							</>
+						)}
+						{state && state.mode !== "view" && (
 							<EntryForm
 								key={instanceId}
 								workspaceId={current.id}

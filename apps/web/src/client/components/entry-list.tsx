@@ -3,6 +3,7 @@ import { formatDuration } from "@toxil/core";
 import { useTranslation } from "react-i18next";
 
 import { EntryActions } from "@/components/entry-actions";
+import { useEntryDialog } from "@/components/entry-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
 	Table,
@@ -29,6 +30,7 @@ export function EntryList({
 	showProject = true,
 }: EntryListProps) {
 	const { t, i18n } = useTranslation();
+	const { openView } = useEntryDialog();
 	const projectName = (id: string) =>
 		projects.find((p) => p.id === id)?.name ?? id;
 	const memberName = (id: string) =>
@@ -85,14 +87,20 @@ export function EntryList({
 							{memberName(entry.userId)}
 						</TableCell>
 						<TableCell>
-							<div className="flex flex-wrap items-center gap-1.5">
+							{/* The description opens the detail dialog; kept a button (not a
+							    row handler) so it stays keyboard-accessible and lint-clean. */}
+							<button
+								type="button"
+								onClick={() => openView(entry)}
+								className="flex flex-wrap items-center gap-1.5 text-left hover:underline"
+							>
 								<span>{entry.description}</span>
 								{entry.tags.map((tag) => (
 									<Badge key={tag} variant="secondary">
 										{tag}
 									</Badge>
 								))}
-							</div>
+							</button>
 						</TableCell>
 						<TableCell className="text-muted-foreground text-right whitespace-nowrap tabular-nums">
 							{formatDuration(entry.durationMinutes)}
