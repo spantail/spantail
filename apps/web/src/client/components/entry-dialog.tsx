@@ -1,5 +1,6 @@
-import { useRouterState } from "@tanstack/react-router";
+import { useRouteContext, useRouterState } from "@tanstack/react-router";
 import { formatDuration, type WorkEntry } from "@toxil/core";
+import { PencilIcon } from "lucide-react";
 import {
 	createContext,
 	useCallback,
@@ -13,10 +14,12 @@ import { toast } from "sonner";
 
 import { EntryDetail } from "@/components/entry-detail";
 import { EntryForm } from "@/components/entry-form";
+import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -59,6 +62,7 @@ export function EntryDialogProvider({
 }) {
 	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
+	const { session } = useRouteContext({ from: "/_authed" });
 	const projects = useProjects();
 	const [state, setState] = useState<EntryDialogState | null>(null);
 	// Remount key so the form re-derives its initial state on every open.
@@ -150,7 +154,19 @@ export function EntryDialogProvider({
 										: t("entries.newDescription"))}
 							</DialogDescription>
 						</DialogHeader>
-						{state?.mode === "view" && <EntryDetail entry={state.entry} />}
+						{state?.mode === "view" && (
+							<>
+								<EntryDetail entry={state.entry} />
+								{state.entry.userId === session.user.id && (
+									<DialogFooter>
+										<Button onClick={() => openEdit(state.entry)}>
+											<PencilIcon />
+											{t("entries.editAction")}
+										</Button>
+									</DialogFooter>
+								)}
+							</>
+						)}
 						{state && state.mode !== "view" && (
 							<EntryForm
 								key={instanceId}
