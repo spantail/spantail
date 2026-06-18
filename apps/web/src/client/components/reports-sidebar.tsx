@@ -78,7 +78,9 @@ export function ReportsSidebar() {
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarGroupLabel>{t("reports.rail.library")}</SidebarGroupLabel>
+					<SidebarGroupLabel className="text-[11px] tracking-wider uppercase">
+						{t("reports.rail.library")}
+					</SidebarGroupLabel>
 					<SidebarMenu>
 						<SidebarMenuItem>
 							<SidebarMenuButton
@@ -97,7 +99,9 @@ export function ReportsSidebar() {
 					</SidebarMenu>
 				</SidebarGroup>
 				<SidebarGroup>
-					<SidebarGroupLabel>{t("reports.rail.templates")}</SidebarGroupLabel>
+					<SidebarGroupLabel className="text-[11px] tracking-wider uppercase">
+						{t("reports.rail.templates")}
+					</SidebarGroupLabel>
 					<SidebarMenu className="gap-1.5">
 						{enabledTemplates.map((tpl) => (
 							<SidebarMenuItem key={tpl.id}>

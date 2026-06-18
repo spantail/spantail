@@ -396,15 +396,14 @@ export function ReportList({
 						</PopoverContent>
 					</Popover>
 					<Button
-						size="sm"
-						className="h-8"
+						size="icon"
+						className="size-8"
 						disabled={!createTarget}
 						aria-label={t("reports.newAction")}
 						title={t("reports.newAction")}
 						onClick={() => createTarget && openCreate(createTarget)}
 					>
 						<PlusIcon className="size-3.5" />
-						<span className="hidden sm:inline">{t("reports.newAction")}</span>
 					</Button>
 				</div>
 			</div>
