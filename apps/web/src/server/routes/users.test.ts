@@ -8,6 +8,7 @@ type ManagedUser = {
 	id: string;
 	email: string;
 	isAdmin: boolean;
+	providers: string[];
 	generatedPassword?: string;
 };
 
@@ -56,6 +57,11 @@ it("lists, creates, and grants admin (instance admin only)", async () => {
 		await apiGet("/api/v1/users", admin)
 	).json()) as ManagedUser[];
 	expect(list).toHaveLength(3);
+	// Password-only accounts report no linked social providers.
+	expect(list.every((u) => Array.isArray(u.providers))).toBe(true);
+	expect(list.find((u) => u.email === "bob@example.com")?.providers).toEqual(
+		[],
+	);
 
 	// A non-admin cannot manage users.
 	const eveCookie = await signUpUser("Eve", "eve@example.com");

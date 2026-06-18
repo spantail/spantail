@@ -406,7 +406,7 @@
 			"members": "Members",
 			"templates": "Report templates",
 			"tokens": "API tokens",
-			"password": "Password",
+			"signin": "Sign-in",
 			"preferences": "Preferences",
 			"systemUsers": "User management",
 			"email": "Email",
@@ -479,6 +479,17 @@
 			},
 			"match": "Passwords match"
 		},
+		"signin": {
+			"title": "Connected accounts",
+			"description": "Link a Google or GitHub account to sign in with it, or disconnect one you no longer use.",
+			"connected": "Connected",
+			"notConnected": "Not connected",
+			"connect": "Connect",
+			"disconnect": "Disconnect",
+			"disconnected": "Account disconnected.",
+			"lastAccount": "This is your only sign-in method, so it cannot be disconnected. Set a password or link another account first.",
+			"noneAvailable": "No social login providers are enabled on this instance."
+		},
 		"preferences": {
 			"title": "Preferences",
 			"description": "Set your language and appearance. These apply to this browser.",
@@ -489,6 +500,7 @@
 		},
 		"users": {
 			"title": "Users",
+			"signin": "Sign-in",
 			"role": "Role",
 			"admin": "Admin",
 			"member": "Member",

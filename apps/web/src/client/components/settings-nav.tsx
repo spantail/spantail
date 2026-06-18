@@ -4,7 +4,7 @@ import {
 	FolderIcon,
 	KeyIcon,
 	KeyRoundIcon,
-	LockIcon,
+	LogInIcon,
 	MailIcon,
 	SettingsIcon,
 	ShieldIcon,
@@ -25,7 +25,7 @@ interface SettingsNavItem {
 		| "/settings/members"
 		| "/settings/templates"
 		| "/settings/tokens"
-		| "/settings/password"
+		| "/settings/sign-in"
 		| "/settings/preferences"
 		| "/settings/users"
 		| "/settings/email"
@@ -71,9 +71,9 @@ const GROUPS: SettingsNavGroup[] = [
 		labelKey: "settings.nav.account",
 		items: [
 			{
-				to: "/settings/password",
-				labelKey: "settings.nav.password",
-				icon: LockIcon,
+				to: "/settings/sign-in",
+				labelKey: "settings.nav.signin",
+				icon: LogInIcon,
 			},
 			{
 				to: "/settings/tokens",

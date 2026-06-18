@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { oauthProviderSchema } from "./instance";
+
 /** The authenticated user as exposed by the API (subset of the auth table). */
 export const authUserSchema = z.object({
 	id: z.string(),
@@ -16,6 +18,9 @@ export const managedUserSchema = z.object({
 	email: z.email(),
 	isAdmin: z.boolean(),
 	createdAt: z.string(),
+	// Social login providers linked to this account (empty for password-only
+	// users). Lets the admin see at a glance how each user signs in.
+	providers: z.array(oauthProviderSchema),
 });
 export type ManagedUser = z.infer<typeof managedUserSchema>;
 

@@ -405,7 +405,7 @@
 			"members": "メンバー",
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
-			"password": "パスワード",
+			"signin": "サインイン",
 			"preferences": "環境設定",
 			"systemUsers": "ユーザー管理",
 			"email": "メール",
@@ -478,6 +478,17 @@
 			},
 			"match": "パスワードが一致しています"
 		},
+		"signin": {
+			"title": "連携アカウント",
+			"description": "Google または GitHub アカウントを連携するとそれでサインインできます。使わなくなった連携は解除できます。",
+			"connected": "連携済み",
+			"notConnected": "未連携",
+			"connect": "連携",
+			"disconnect": "連携を解除",
+			"disconnected": "連携を解除しました。",
+			"lastAccount": "これが唯一のサインイン手段のため解除できません。先にパスワードを設定するか、別のアカウントを連携してください。",
+			"noneAvailable": "このインスタンスではソーシャルログインが有効化されていません。"
+		},
 		"preferences": {
 			"title": "環境設定",
 			"description": "言語と外観を設定します。これらはこのブラウザに適用されます。",
@@ -488,6 +499,7 @@
 		},
 		"users": {
 			"title": "ユーザー",
+			"signin": "サインイン",
 			"role": "ロール",
 			"admin": "管理者",
 			"member": "メンバー",
