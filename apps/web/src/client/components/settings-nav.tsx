@@ -1,10 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
 	FileTextIcon,
+	FingerprintIcon,
 	FolderIcon,
 	KeyIcon,
 	KeyRoundIcon,
-	LockIcon,
 	MailIcon,
 	SettingsIcon,
 	ShieldIcon,
@@ -25,7 +25,7 @@ interface SettingsNavItem {
 		| "/settings/members"
 		| "/settings/templates"
 		| "/settings/tokens"
-		| "/settings/password"
+		| "/settings/authentication"
 		| "/settings/preferences"
 		| "/settings/users"
 		| "/settings/email"
@@ -71,9 +71,9 @@ const GROUPS: SettingsNavGroup[] = [
 		labelKey: "settings.nav.account",
 		items: [
 			{
-				to: "/settings/password",
-				labelKey: "settings.nav.password",
-				icon: LockIcon,
+				to: "/settings/authentication",
+				labelKey: "settings.nav.authentication",
+				icon: FingerprintIcon,
 			},
 			{
 				to: "/settings/tokens",

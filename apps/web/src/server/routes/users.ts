@@ -1,6 +1,7 @@
 import {
 	createUserInputSchema,
 	type ManagedUser,
+	type OauthProvider,
 	updateUserInputSchema,
 } from "@toxil/core";
 import {
@@ -8,7 +9,9 @@ import {
 	deleteUser,
 	findUserByEmail,
 	getInstanceSettings,
+	getOauthProvidersForUser,
 	getUserById,
+	listOauthProvidersByUser,
 	listUsers,
 	type UserRow,
 	updateUser,
@@ -23,21 +26,30 @@ import { requireInstanceAdmin } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import type { AppEnv } from "../types";
 
-function toManagedUser(row: UserRow): ManagedUser {
+function toManagedUser(
+	row: UserRow,
+	providers: OauthProvider[] = [],
+): ManagedUser {
 	return {
 		id: row.id,
 		name: row.name,
 		email: row.email,
 		isAdmin: row.isAdmin ?? false,
 		createdAt: row.createdAt.toISOString(),
+		providers,
 	};
 }
 
 export const userRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		requireInstanceAdmin(c);
-		const rows = await listUsers(c.var.db);
-		return c.json(rows.map(toManagedUser));
+		const [rows, providersByUser] = await Promise.all([
+			listUsers(c.var.db),
+			listOauthProvidersByUser(c.var.db),
+		]);
+		return c.json(
+			rows.map((row) => toManagedUser(row, providersByUser.get(row.id) ?? [])),
+		);
 	})
 	.post("/", async (c) => {
 		requireInstanceAdmin(c);
@@ -108,7 +120,8 @@ export const userRoutes = new Hono<AppEnv>()
 		if (input.isAdmin !== undefined) patch.isAdmin = input.isAdmin;
 		const updated = await updateUser(c.var.db, id, patch);
 		if (!updated) throw new AppError("not_found", "User not found");
-		return c.json(toManagedUser(updated));
+		const providers = await getOauthProvidersForUser(c.var.db, updated.id);
+		return c.json(toManagedUser(updated, providers));
 	})
 	.delete("/:id", async (c) => {
 		const { user: actor } = requireInstanceAdmin(c);

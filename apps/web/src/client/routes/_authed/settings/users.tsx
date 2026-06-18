@@ -12,6 +12,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AdminBanner } from "@/components/admin-banner";
+import { GitHubIcon, GoogleIcon } from "@/components/provider-icons";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -273,6 +274,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 							<TableRow>
 								<TableHead>{t("auth.name")}</TableHead>
 								<TableHead>{t("auth.email")}</TableHead>
+								<TableHead>{t("settings.users.authentication")}</TableHead>
 								<TableHead>{t("settings.users.role")}</TableHead>
 								<TableHead />
 							</TableRow>
@@ -293,6 +295,20 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 										</TableCell>
 										<TableCell className="text-muted-foreground">
 											{user.email}
+										</TableCell>
+										<TableCell>
+											{user.providers.length > 0 ? (
+												<span className="flex items-center gap-1.5">
+													{user.providers.includes("google") && (
+														<GoogleIcon className="size-4" />
+													)}
+													{user.providers.includes("github") && (
+														<GitHubIcon className="size-4" />
+													)}
+												</span>
+											) : (
+												<span className="text-muted-foreground">—</span>
+											)}
 										</TableCell>
 										<TableCell>
 											{user.isAdmin ? (

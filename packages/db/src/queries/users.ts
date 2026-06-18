@@ -1,7 +1,8 @@
+import { type OauthProvider, oauthProviderSchema } from "@toxil/core";
 import { count, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "../index";
-import { user } from "../schema/auth";
+import { account, user } from "../schema/auth";
 
 export type UserRow = typeof user.$inferSelect;
 
@@ -43,6 +44,46 @@ export async function listUsersByIds(
 
 export async function listUsers(db: Database): Promise<UserRow[]> {
 	return db.select().from(user).orderBy(user.createdAt);
+}
+
+/**
+ * Social login providers linked per user, keyed by user id. Only OAuth
+ * providers are reported (the `credential`/password account is ignored), so a
+ * password-only user is simply absent from the map. Used by the admin user
+ * list to show how each user signs in.
+ */
+export async function listOauthProvidersByUser(
+	db: Database,
+): Promise<Map<string, OauthProvider[]>> {
+	const rows = await db
+		.select({ userId: account.userId, providerId: account.providerId })
+		.from(account);
+	const byUser = new Map<string, OauthProvider[]>();
+	for (const row of rows) {
+		const parsed = oauthProviderSchema.safeParse(row.providerId);
+		if (!parsed.success) continue;
+		const list = byUser.get(row.userId);
+		if (list) list.push(parsed.data);
+		else byUser.set(row.userId, [parsed.data]);
+	}
+	return byUser;
+}
+
+/** Social login providers linked to a single user (empty if password-only). */
+export async function getOauthProvidersForUser(
+	db: Database,
+	userId: string,
+): Promise<OauthProvider[]> {
+	const rows = await db
+		.select({ providerId: account.providerId })
+		.from(account)
+		.where(eq(account.userId, userId));
+	const providers: OauthProvider[] = [];
+	for (const row of rows) {
+		const parsed = oauthProviderSchema.safeParse(row.providerId);
+		if (parsed.success) providers.push(parsed.data);
+	}
+	return providers;
 }
 
 export async function updateUser(

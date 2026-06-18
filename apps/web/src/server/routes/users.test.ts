@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { createDb, findUserByEmail } from "@toxil/db";
+import { createDb, findUserByEmail, schema } from "@toxil/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
@@ -8,6 +8,7 @@ type ManagedUser = {
 	id: string;
 	email: string;
 	isAdmin: boolean;
+	providers: string[];
 	generatedPassword?: string;
 };
 
@@ -56,6 +57,11 @@ it("lists, creates, and grants admin (instance admin only)", async () => {
 		await apiGet("/api/v1/users", admin)
 	).json()) as ManagedUser[];
 	expect(list).toHaveLength(3);
+	// Password-only accounts report no linked social providers.
+	expect(list.every((u) => Array.isArray(u.providers))).toBe(true);
+	expect(list.find((u) => u.email === "bob@example.com")?.providers).toEqual(
+		[],
+	);
 
 	// A non-admin cannot manage users.
 	const eveCookie = await signUpUser("Eve", "eve@example.com");
@@ -199,6 +205,17 @@ it("enforces last-admin and self guards", async () => {
 		)
 	).json()) as ManagedUser;
 
+	// Simulate a linked Google account so the PATCH response must preserve it
+	// (an admin editing a user must not blank out their linked providers).
+	await createDb(env.DB).insert(schema.account).values({
+		id: "acc-dave-google",
+		accountId: "google-dave",
+		providerId: "google",
+		userId: second.id,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	});
+
 	const demoteOther = await apiJson(
 		"PATCH",
 		`/api/v1/users/${second.id}`,
@@ -206,7 +223,9 @@ it("enforces last-admin and self guards", async () => {
 		admin,
 	);
 	expect(demoteOther.status).toBe(200);
-	expect(((await demoteOther.json()) as ManagedUser).isAdmin).toBe(false);
+	const demoted = (await demoteOther.json()) as ManagedUser;
+	expect(demoted.isAdmin).toBe(false);
+	expect(demoted.providers).toEqual(["google"]);
 
 	// Now only the actor is admin; deleting the other (non-admin) is fine.
 	const del = await apiJson(
