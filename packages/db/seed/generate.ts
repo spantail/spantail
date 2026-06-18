@@ -8,6 +8,7 @@ import {
 	renderReport,
 	shiftDays,
 	todayInTimezone,
+	type WorkEntrySource,
 	zonedDateTimeToUtc,
 } from "@toxil/core";
 import { hashPassword } from "better-auth/crypto";
@@ -96,6 +97,21 @@ function roundMinutes(n: number): number {
 // typical) with enough spread that daily totals rise and fall around ~8h
 // instead of sitting flat.
 const MINUTE_FACTORS = [0.75, 0.9, 1, 1, 1.1, 1.25];
+
+// Weighted client channels for demo entries: mostly the web SPA, with enough
+// cli/mcp/api mixed in that the source badge is meaningful in the demo.
+const SOURCE_POOL: WorkEntrySource[] = [
+	"web",
+	"web",
+	"web",
+	"web",
+	"web",
+	"web",
+	"cli",
+	"cli",
+	"mcp",
+	"api",
+];
 
 /** Whether a `cadence` line is worked on a given day (deterministic). */
 function cadenceActive(
@@ -370,6 +386,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					description,
 					note: null,
 					tags,
+					source: pick(SOURCE_POOL, hashString(`src:${seed}`)),
 					createdAt,
 					updatedAt: createdAt,
 				});

@@ -51,6 +51,7 @@ import type {
 	UpdateWorkEntryInput,
 	UpdateWorkspaceInput,
 	WorkEntry,
+	WorkEntrySource,
 	WorkEntryStats,
 	WorkEntryStatsQuery,
 	WorkEntryTagsQuery,
@@ -71,6 +72,12 @@ export interface ToxilClientOptions {
 	token?: string;
 	/** Custom fetch implementation (e.g. an in-process loopback in a Worker). */
 	fetch?: typeof fetch;
+	/**
+	 * Client channel sent as the X-Toxil-Client header, recorded as a work
+	 * entry's source. Set "cli" / "mcp" so PAT-authenticated calls are
+	 * distinguishable from a direct API call.
+	 */
+	client?: WorkEntrySource;
 }
 
 export class ToxilApiError extends Error {
@@ -90,11 +97,13 @@ export class ToxilClient {
 	private readonly baseUrl: string;
 	private readonly token?: string;
 	private readonly fetchImpl: typeof fetch;
+	private readonly client?: WorkEntrySource;
 
 	constructor(options: ToxilClientOptions) {
 		this.baseUrl = options.baseUrl.replace(/\/$/, "");
 		this.token = options.token;
 		this.fetchImpl = options.fetch ?? ((...args) => globalThis.fetch(...args));
+		this.client = options.client;
 	}
 
 	private async request<T>(
@@ -109,6 +118,7 @@ export class ToxilClient {
 
 		const headers: Record<string, string> = {};
 		if (this.token) headers.authorization = `Bearer ${this.token}`;
+		if (this.client) headers["x-toxil-client"] = this.client;
 		if (options.body !== undefined)
 			headers["content-type"] = "application/json";
 

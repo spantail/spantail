@@ -124,6 +124,13 @@
 		"deleteAction": "Delete",
 		"closeAction": "Close",
 		"loggedBy": "Logged by {{name}}",
+		"source": "Logged via",
+		"sources": {
+			"web": "Web",
+			"cli": "CLI",
+			"mcp": "MCP",
+			"api": "API"
+		},
 		"empty": "No entries yet.",
 		"noProjects": "No active projects. Create one in workspace settings first.",
 		"goToSettings": "Open settings",

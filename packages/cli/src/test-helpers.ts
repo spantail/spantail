@@ -132,6 +132,7 @@ export function entryFixture(overrides: Partial<WorkEntry> = {}): WorkEntry {
 		description: "Did things",
 		note: null,
 		tags: [],
+		source: "cli",
 		createdAt: "2026-06-12T00:00:00Z",
 		updatedAt: "2026-06-12T00:00:00Z",
 		...overrides,

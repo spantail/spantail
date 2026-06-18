@@ -77,5 +77,6 @@ export function createClient(
 		baseUrl: options.baseUrl,
 		token: options.token,
 		fetch: wrapped,
+		client: "cli",
 	});
 }

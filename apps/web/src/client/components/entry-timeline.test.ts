@@ -20,6 +20,7 @@ function entry(
 		description: id,
 		note: null,
 		tags: [],
+		source: "web",
 		createdAt: "2026-06-12T00:00:00.000Z",
 		updatedAt: "2026-06-12T00:00:00.000Z",
 	};
