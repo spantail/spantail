@@ -56,10 +56,10 @@ export function createAuth(
 		socialProviders.github = {
 			clientId: social.github.clientId,
 			clientSecret: social.github.clientSecret,
-			// GitHub email ownership is not something we treat as verified, so a
-			// GitHub identity never gets the auto-link/trust a verified email does:
-			// force emailVerified false (GitHub otherwise reports its own state).
-			mapProfileToUser: () => ({ emailVerified: false }),
+			// GitHub only marks an email verified after the user proves ownership,
+			// so we trust its verified flag exactly like Google's: a verified GitHub
+			// email links into an existing (verified) account, while an unverified
+			// one still cannot (requireLocalEmailVerified stays at its true default).
 		};
 	}
 	const googleAllowedDomains = social?.google?.allowedDomains ?? [];
