@@ -11,6 +11,9 @@ coverage/
 # TanStack Router plugin temp output
 .tanstack/
 
+# Seed tooling scratch output (generated SQL / share bodies)
+packages/db/seed/.tmp/
+
 # Local secrets
 .dev.vars
 .dev.vars.*

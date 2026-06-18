@@ -1,0 +1,26 @@
+# The instance owner is a fictional software firm (Northwind Software) plus
+# three client workspaces. `language` drives the language of seeded content
+# (project names, work-entry descriptions) and which report template is used.
+- key: ws-self
+  slug: northwind
+  name: Northwind Software
+  timezone: Asia/Tokyo
+  language: en
+- key: ws-acme
+  slug: acme
+  name: Acme Robotics
+  timezone: America/Los_Angeles
+  language: en
+  client: true
+- key: ws-globex
+  slug: globex
+  name: Globex Media
+  timezone: America/Los_Angeles
+  language: en
+  client: true
+- key: ws-sakura
+  slug: sakura
+  name: 桜トレーディング
+  timezone: Asia/Tokyo
+  language: ja
+  client: true

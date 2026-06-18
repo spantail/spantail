@@ -7,16 +7,19 @@
 		".": "./src/index.ts"
 	},
 	"scripts": {
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --noEmit && tsc -p tsconfig.seed.json --noEmit",
 		"generate": "drizzle-kit generate"
 	},
 	"dependencies": {
 		"@toxil/core": "workspace:*",
-		"drizzle-orm": "^0.45.2"
+		"drizzle-orm": "^0.45.2",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260611.1",
+		"@types/node": "^25.9.3",
 		"better-auth": "^1.6.16",
-		"drizzle-kit": "^0.31.10"
+		"drizzle-kit": "^0.31.10",
+		"yaml": "^2.9.0"
 	}
 }

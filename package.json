@@ -15,10 +15,14 @@
 		"db:generate": "pnpm --filter @toxil/db run generate",
 		"db:migrate:local": "pnpm --filter web exec wrangler d1 migrations apply toxil-db --local",
 		"db:migrate:remote": "pnpm --filter web exec wrangler d1 migrations apply toxil-db --remote",
+		"db:drop": "tsx packages/db/seed/drop.ts",
+		"db:seed": "tsx packages/db/seed/seed.ts",
+		"db:reset": "pnpm db:drop && pnpm db:migrate:local && pnpm db:seed",
 		"deploy": "pnpm --filter web run deploy"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.16",
+		"tsx": "^4.22.4",
 		"typescript": "^6.0.3",
 		"vitest": "^4.1.8"
 	}

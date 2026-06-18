@@ -22,6 +22,9 @@ pnpm typecheck          # tsc across all packages
 pnpm db:generate        # drizzle-kit generate (after editing packages/db/src/schema)
 pnpm db:migrate:local   # apply migrations to local D1
 pnpm db:migrate:remote  # apply migrations to remote D1
+pnpm db:seed            # seed local D1/R2 with demo data (see packages/db/seed)
+pnpm db:drop            # wipe local D1/R2 state
+pnpm db:reset           # db:drop → db:migrate:local → db:seed (local only)
 pnpm deploy             # wrangler deploy (apps/web)
 ```
 

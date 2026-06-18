@@ -1,0 +1,64 @@
+# Three active projects per workspace. Names follow the workspace language.
+- key: p-self-platform
+  workspace: ws-self
+  slug: platform
+  name: Platform Core
+  description: Core services and APIs.
+- key: p-self-tooling
+  workspace: ws-self
+  slug: tooling
+  name: Internal Tools
+  description: Internal developer tooling.
+- key: p-self-devops
+  workspace: ws-self
+  slug: devops
+  name: DevOps
+  description: CI/CD and infrastructure.
+
+- key: p-acme-warehouse
+  workspace: ws-acme
+  slug: warehouse
+  name: Warehouse App
+  description: Warehouse management application.
+- key: p-acme-mobile
+  workspace: ws-acme
+  slug: mobile
+  name: Mobile Client
+  description: Customer-facing mobile client.
+- key: p-acme-data
+  workspace: ws-acme
+  slug: data
+  name: Data Pipeline
+  description: Batch and streaming data pipeline.
+
+- key: p-globex-portal
+  workspace: ws-globex
+  slug: portal
+  name: Web Portal
+  description: Public web portal.
+- key: p-globex-analytics
+  workspace: ws-globex
+  slug: analytics
+  name: Analytics
+  description: Product analytics and dashboards.
+- key: p-globex-cms
+  workspace: ws-globex
+  slug: cms
+  name: CMS Migration
+  description: Headless CMS migration.
+
+- key: p-sakura-inventory
+  workspace: ws-sakura
+  slug: inventory
+  name: 在庫管理システム
+  description: 倉庫の在庫を管理するシステム。
+- key: p-sakura-orders
+  workspace: ws-sakura
+  slug: orders
+  name: 受発注API
+  description: 受発注を処理するAPI。
+- key: p-sakura-dashboard
+  workspace: ws-sakura
+  slug: dashboard
+  name: 管理ダッシュボード
+  description: 社内向けの管理ダッシュボード。

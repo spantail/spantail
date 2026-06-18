@@ -1,0 +1,42 @@
+# Each workspace has exactly 3 members, one of whom manages it (owner/admin).
+# The manager is the recipient of daily/monthly reports for that workspace.
+# Users deliberately span multiple client workspaces.
+- workspace: ws-self
+  user: u-admin
+  role: owner
+- workspace: ws-self
+  user: u-author
+  role: member
+- workspace: ws-self
+  user: u-carol
+  role: member
+
+- workspace: ws-acme
+  user: u-author
+  role: admin
+- workspace: ws-acme
+  user: u-carol
+  role: member
+- workspace: ws-acme
+  user: u-dan
+  role: member
+
+- workspace: ws-globex
+  user: u-carol
+  role: admin
+- workspace: ws-globex
+  user: u-dan
+  role: member
+- workspace: ws-globex
+  user: u-erin
+  role: member
+
+- workspace: ws-sakura
+  user: u-dan
+  role: admin
+- workspace: ws-sakura
+  user: u-erin
+  role: member
+- workspace: ws-sakura
+  user: u-admin
+  role: member

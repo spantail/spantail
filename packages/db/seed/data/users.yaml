@@ -1,0 +1,25 @@
+# Demo users. All share the same password (see seed/README.md).
+# `homeWorkspace` selects the timezone + language used for a member's
+# cross-workspace daily reports. `key` is an internal reference only.
+- key: u-admin
+  name: Alice Nakamura
+  email: alice@northwind.example
+  isAdmin: true
+  homeWorkspace: ws-self
+- key: u-author
+  name: Bilal Rahman
+  email: bilal@northwind.example
+  canManageTemplates: true
+  homeWorkspace: ws-self
+- key: u-carol
+  name: Carol Mendoza
+  email: carol@northwind.example
+  homeWorkspace: ws-globex
+- key: u-dan
+  name: Daichi Sato
+  email: daichi@northwind.example
+  homeWorkspace: ws-acme
+- key: u-erin
+  name: Erin Walsh
+  email: erin@northwind.example
+  homeWorkspace: ws-sakura
