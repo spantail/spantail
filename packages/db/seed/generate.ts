@@ -262,6 +262,22 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	};
 
 	// --- Work entries (last 45 days, weekdays, 8h/day) ---------------------
+	// entry_date is the workspace-local date, so a member's work in a client
+	// workspace is dated in that workspace's timezone (not the member's home).
+	const weekdaysByTz = new Map<string, string[]>();
+	const weekdaysFor = (timezone: string): string[] => {
+		const cached = weekdaysByTz.get(timezone);
+		if (cached) return cached;
+		const anchor = todayInTimezone(timezone, now);
+		const dates: string[] = [];
+		for (let back = WINDOW_DAYS - 1; back >= 0; back--) {
+			const date = shiftDays(anchor, -back);
+			if (isWeekday(date)) dates.push(date);
+		}
+		weekdaysByTz.set(timezone, dates);
+		return dates;
+	};
+
 	const entryRows: Row[] = [];
 	// user.key -> date -> entries (for daily reports)
 	const entriesByUserDate = new Map<string, Map<string, EntryRecord[]>>();
@@ -270,29 +286,23 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 
 	for (const user of usersByKey.values()) {
 		const allocation = config.workPatterns.allocations[user.key] ?? [];
-		const anchor = todayInTimezone(user.home.timezone, now);
-		const dates: string[] = [];
-		for (let back = WINDOW_DAYS - 1; back >= 0; back--) {
-			const date = shiftDays(anchor, -back);
-			if (isWeekday(date)) dates.push(date);
-		}
 		const byDate = new Map<string, EntryRecord[]>();
 		const byWs = new Map<string, EntryRecord[]>();
 		entriesByUserDate.set(user.key, byDate);
 		entriesByUserWs.set(user.key, byWs);
 
-		dates.forEach((date, dayIndex) => {
-			allocation.forEach((line, lineIndex) => {
-				const project = projByKey.get(line.project);
-				if (!project) throw new Error(`unknown project ${line.project}`);
-				const lang = project.workspace.language;
+		allocation.forEach((line, lineIndex) => {
+			const project = projByKey.get(line.project);
+			if (!project) throw new Error(`unknown project ${line.project}`);
+			const { timezone, language } = project.workspace;
+			weekdaysFor(timezone).forEach((date, dayIndex) => {
 				const descTemplate = pick(
-					config.workPatterns.descriptions[lang],
+					config.workPatterns.descriptions[language],
 					dayIndex + lineIndex,
 				);
 				const description = descTemplate.split("{project}").join(project.name);
 				const tags = [
-					pick(config.workPatterns.tags[lang], dayIndex + lineIndex + 2),
+					pick(config.workPatterns.tags[language], dayIndex + lineIndex + 2),
 				];
 				const record: EntryRecord = {
 					id: randomUUID(),
@@ -304,9 +314,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					description,
 					tags,
 				};
-				const createdAt = new Date(
-					zonedDateTimeToUtc(date, "18:00", user.home.timezone),
-				);
+				const createdAt = new Date(zonedDateTimeToUtc(date, "18:00", timezone));
 				entryRows.push({
 					id: record.id,
 					workspaceId: project.workspace.id,

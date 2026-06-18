@@ -57,6 +57,26 @@ describe("generateDataset", () => {
 		for (const total of perUserDay.values()) expect(total).toBe(480);
 	});
 
+	it("dates entries in the workspace timezone, not the author's home", async () => {
+		// 06:00Z: Tokyo is already Fri 2026-06-19; Los Angeles is still Thu 06-18.
+		const dataset = await generateDataset(new Date("2026-06-19T06:00:00Z"));
+		const rows = (name: string): Row[] =>
+			dataset.tables.find((t) => t.table === name)?.rows ?? [];
+		const tzById = new Map(
+			rows("workspaces").map((w) => [w.id as string, w.timezone as string]),
+		);
+		const maxByTz = new Map<string, string>();
+		for (const e of rows("workEntries")) {
+			const tz = tzById.get(e.workspaceId as string) ?? "";
+			const date = e.entryDate as string;
+			if (!maxByTz.has(tz) || date > (maxByTz.get(tz) ?? "")) {
+				maxByTz.set(tz, date);
+			}
+		}
+		expect(maxByTz.get("Asia/Tokyo")).toBe("2026-06-19");
+		expect(maxByTz.get("America/Los_Angeles")).toBe("2026-06-18");
+	});
+
 	it("uses only enabled custom templates and disables builtins", async () => {
 		const { rows } = await build();
 		const templateIds = new Set(rows("reportTemplates").map((t) => t.id));
