@@ -92,6 +92,12 @@ function OauthSettingsCard() {
 
 	const data = settings.data;
 
+	// Don't let an admin save before settings load: the form state is still its
+	// defaults, so a premature submit would wipe the existing configuration.
+	if (settings.isPending || !data) {
+		return <p className="text-muted-foreground text-sm">{t("app.loading")}</p>;
+	}
+
 	return (
 		<div className="flex flex-col gap-4">
 			<AdminBanner body={t("settings.oauth.adminBanner")} />
