@@ -4,10 +4,12 @@ import {
 	fireEvent,
 	render,
 	screen,
+	waitFor,
 	within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { queryClient } from "@/lib/query";
 import { App, createAppRouter } from "./app";
 
 const NOW = "2026-06-12T00:00:00.000Z";
@@ -94,10 +96,6 @@ beforeEach(() => {
 					return json(zeroStats);
 				case "/api/v1/workspaces/ws1/projects":
 					return json([{ ...projectPayload, id: "p1", workspaceId: "ws1" }]);
-				case "/api/v1/projects/p1":
-					return json({ ...projectPayload, id: "p1", workspaceId: "ws1" });
-				case "/api/v1/projects/p2":
-					return json({ ...projectPayload, id: "p2", workspaceId: "ws2" });
 				default:
 					return json([]);
 			}
@@ -117,6 +115,12 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	vi.unstubAllGlobals();
+	// The query cache is a module singleton, so reset it between tests to stop
+	// one test's `me`/workspace data from leaking into the next.
+	queryClient.clear();
+	// The workspace provider persists the active workspace here; clear it so
+	// each test starts from a known (empty) selection.
+	localStorage.clear();
 });
 
 async function renderApp(initialPath: string) {
@@ -173,21 +177,30 @@ it("redirects the removed entries route to home", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
 	const router = await renderApp("/entries");
 
+	// `/entries` → `/` → the active workspace dashboard.
 	expect(await screen.findByText("Today")).toBeDefined();
-	expect(router.state.location.pathname).toBe("/");
+	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
-it("renders a project page for the current workspace", async () => {
+it("redirects the bare home route to the active workspace dashboard", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	const router = await renderApp("/projects/p1");
+	const router = await renderApp("/");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/w/acme");
+});
+
+it("renders a project page addressed by its slug", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/w/acme/projects/website");
 
 	expect((await screen.findAllByText("Website")).length).toBeGreaterThan(0);
-	expect(router.state.location.pathname).toBe("/projects/p1");
+	expect(router.state.location.pathname).toBe("/w/acme/projects/website");
 });
 
 it("pre-selects the project when logging work from a project page", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	await renderApp("/projects/p1");
+	await renderApp("/w/acme/projects/website");
 	// Wait for the projects query so the contextual default can resolve.
 	await screen.findAllByText("Website");
 
@@ -199,12 +212,21 @@ it("pre-selects the project when logging work from a project page", async () => 
 	).toBeGreaterThan(0);
 });
 
-it("redirects a project of another workspace to home", async () => {
+it("shows a not-found message for an unknown project slug", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	const router = await renderApp("/projects/p2");
+	await renderApp("/w/acme/projects/ghost");
+
+	expect(
+		await screen.findByText("Project not found in this workspace."),
+	).toBeDefined();
+});
+
+it("redirects an unknown workspace slug to the active workspace", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/w/ghost");
 
 	expect(await screen.findByText("Today")).toBeDefined();
-	expect(router.state.location.pathname).toBe("/");
+	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
 it("renders the home dashboard and the empty timeline call to action", async () => {
@@ -216,4 +238,50 @@ it("renders the home dashboard and the empty timeline call to action", async () 
 	expect(
 		await screen.findByRole("button", { name: "Log your first entry" }),
 	).toBeDefined();
+});
+
+it("keeps the URL-selected workspace active after leaving the scoped route", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	// Last-visited is Acme (the first membership), but the user deep-links into
+	// Beta — the URL must win even after navigating to a top-level surface.
+	localStorage.setItem("toxil.ws", "ws1");
+	const twoWorkspaceMe = {
+		...mePayload,
+		memberships: [
+			mePayload.memberships[0],
+			{
+				id: "ws2",
+				slug: "beta",
+				name: "Beta",
+				timezone: "Asia/Tokyo",
+				settings: {},
+				createdAt: NOW,
+				archivedAt: null,
+				role: "owner",
+			},
+		],
+	};
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input instanceof Request ? input.url : input));
+			switch (url.pathname) {
+				case "/api/v1/me":
+					return json(twoWorkspaceMe);
+				case "/api/v1/work-entries/stats":
+					return json(zeroStats);
+				default:
+					return json([]);
+			}
+		}),
+	);
+
+	const router = await renderApp("/w/beta");
+	await screen.findByText("Today");
+	expect(router.state.location.pathname).toBe("/w/beta");
+
+	// Going back to the home hub must forward to Beta, not the stale first
+	// workspace, proving the URL selection was folded into state.
+	router.navigate({ to: "/" });
+	await waitFor(() => expect(router.state.location.pathname).toBe("/w/beta"));
 });

@@ -2,7 +2,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { formatPeriodLabel } from "@toxil/core";
 import { SlidersHorizontalIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
@@ -26,6 +26,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -37,30 +38,23 @@ const PAGE_SIZE = 50;
 const TAG_ALL = "all";
 const TAG_PREFIX = "t:";
 
-export const Route = createFileRoute("/_authed/projects/$projectId")({
+export const Route = createFileRoute(
+	"/_authed/w/$wsSlug/projects/$projectSlug",
+)({
 	component: ProjectPage,
 });
 
 function ProjectPage() {
 	const { t } = useTranslation();
-	const { projectId } = Route.useParams();
+	const { projectSlug } = Route.useParams();
 	const { current } = useWorkspace();
-	const navigate = Route.useNavigate();
 
 	const workspaceId = current?.id;
-	const project = useQuery({
-		queryKey: ["project", projectId],
-		queryFn: () => api.getProject(projectId),
-	});
-	// True on a foreign-workspace link and when the workspace switcher moves
-	// away mid-view; either way this page must not show foreign data.
-	const mismatch = Boolean(
-		project.data && workspaceId && project.data.workspaceId !== workspaceId,
-	);
-
-	useEffect(() => {
-		if (mismatch) navigate({ to: "/" });
-	}, [mismatch, navigate]);
+	// The project is resolved from the workspace's project list (the same query
+	// the sidebar loads), so a slug outside this workspace simply isn't found —
+	// there is no cross-workspace data to guard against.
+	const projects = useProjects();
+	const project = (projects.data ?? []).find((p) => p.slug === projectSlug);
 
 	const members = useQuery({
 		queryKey: ["members", workspaceId],
@@ -80,10 +74,13 @@ function ProjectPage() {
 	// Tag options come from a distinct-tags catalog scoped to this project, so
 	// the dropdown is complete regardless of how many entry pages are loaded.
 	const tags = useQuery({
-		queryKey: ["work-entry-tags", workspaceId, projectId],
+		queryKey: ["work-entry-tags", workspaceId, project?.id],
 		queryFn: () =>
-			api.listWorkEntryTags({ workspaceId: workspaceId as string, projectId }),
-		enabled: Boolean(workspaceId) && !mismatch,
+			api.listWorkEntryTags({
+				workspaceId: workspaceId as string,
+				projectId: project?.id as string,
+			}),
+		enabled: Boolean(workspaceId) && Boolean(project),
 	});
 
 	const entries = useInfiniteQuery({
@@ -91,13 +88,13 @@ function ProjectPage() {
 			"work-entries",
 			workspaceId,
 			"project",
-			projectId,
+			project?.id,
 			{ from, to, member, tag },
 		],
 		queryFn: ({ pageParam }) =>
 			api.listWorkEntries({
 				workspaceId: workspaceId as string,
-				projectId,
+				projectId: project?.id as string,
 				userId: member ?? undefined,
 				tag: tag ?? undefined,
 				from: from || undefined,
@@ -108,7 +105,7 @@ function ProjectPage() {
 		initialPageParam: 0,
 		getNextPageParam: (lastPage, allPages) =>
 			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
-		enabled: Boolean(workspaceId) && !mismatch,
+		enabled: Boolean(workspaceId) && Boolean(project),
 	});
 
 	if (!current) {
@@ -118,7 +115,14 @@ function ProjectPage() {
 			</p>
 		);
 	}
-	if (project.isError) {
+	if (projects.isPending) {
+		return (
+			<p className="text-muted-foreground p-4 text-center text-sm">
+				{t("app.loading")}
+			</p>
+		);
+	}
+	if (!project) {
 		return (
 			<div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
 				<p className="text-muted-foreground text-sm">
@@ -128,13 +132,6 @@ function ProjectPage() {
 					<Link to="/">{t("projects.backHome")}</Link>
 				</Button>
 			</div>
-		);
-	}
-	if (project.isPending || mismatch) {
-		return (
-			<p className="text-muted-foreground p-4 text-center text-sm">
-				{t("app.loading")}
-			</p>
 		);
 	}
 
@@ -169,22 +166,20 @@ function ProjectPage() {
 			<div className="flex flex-col gap-1.5">
 				<div className="flex items-center gap-2">
 					<h1 className="font-heading text-xl font-semibold tracking-tight">
-						{project.data.name}
+						{project.name}
 					</h1>
 					<Badge
-						variant={project.data.status === "active" ? "outline" : "secondary"}
+						variant={project.status === "active" ? "outline" : "secondary"}
 					>
-						{t(`settings.projects.status.${project.data.status}`)}
+						{t(`settings.projects.status.${project.status}`)}
 					</Badge>
 				</div>
-				{project.data.description && (
-					<p className="text-muted-foreground text-sm">
-						{project.data.description}
-					</p>
+				{project.description && (
+					<p className="text-muted-foreground text-sm">{project.description}</p>
 				)}
 			</div>
 			<DashboardStats
-				scope={{ workspaceId: current.id, projectId }}
+				scope={{ workspaceId: current.id, projectId: project.id }}
 				breakdown="user"
 			/>
 			<section className="flex flex-col gap-3">
@@ -359,7 +354,7 @@ function ProjectPage() {
 					<>
 						<EntryList
 							entries={allEntries}
-							projects={project.data ? [project.data] : []}
+							projects={[project]}
 							members={members.data ?? []}
 							showProject={false}
 							onLoadMore={() => {

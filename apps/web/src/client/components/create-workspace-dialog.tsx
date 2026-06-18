@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -29,6 +30,7 @@ export function CreateWorkspaceDialog({
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
+	const navigate = useNavigate();
 	const { setCurrentId } = useWorkspace();
 	const [slug, setSlug] = useState("");
 	const [name, setName] = useState("");
@@ -44,6 +46,10 @@ export function CreateWorkspaceDialog({
 			setName("");
 			setError(null);
 			onOpenChange(false);
+			// Land on the new workspace. On a `/w/...` route the URL is the source
+			// of truth, so navigating is what actually selects it (a bare
+			// setCurrentId would be overridden by the current slug).
+			navigate({ to: "/w/$wsSlug", params: { wsSlug: workspace.slug } });
 		},
 		onError: (err: Error) => setError(err.message),
 	});
