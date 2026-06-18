@@ -1,5 +1,8 @@
-import { exports } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
+import { createDb, findUserByEmail } from "@toxil/db";
 import { expect, it } from "vitest";
+
+import { socialProviderOf } from "./auth";
 
 const BASE = "https://example.com";
 
@@ -62,8 +65,31 @@ it("makes the first user an instance admin and closes public sign-up", async () 
 	).json()) as { user: { isAdmin: boolean } };
 	expect(firstSession.user.isAdmin).toBe(true);
 
+	// The bootstrap admin is marked email-verified so they can later link a
+	// Google account to this credential account.
+	const firstRow = await findUserByEmail(createDb(env.DB), "first@example.com");
+	expect(firstRow?.emailVerified).toBe(true);
+
 	// Onboarding becomes admin-driven once the bootstrap admin exists, so
 	// public sign-up is rejected for everyone after the first user.
 	const secondRes = await signUp("Second", "second@example.com");
 	expect(secondRes.status).toBe(403);
+});
+
+it("detects the social provider behind a user-create hook", () => {
+	expect(
+		socialProviderOf({ path: "/callback/:id", params: { id: "google" } }),
+	).toBe("google");
+	expect(
+		socialProviderOf({ path: "/callback/:id", params: { id: "github" } }),
+	).toBe("github");
+	expect(
+		socialProviderOf({ path: "/sign-in/social", body: { provider: "google" } }),
+	).toBe("google");
+	// Credential sign-up and unknown providers are not social.
+	expect(socialProviderOf({ path: "/sign-up/email" })).toBeNull();
+	expect(
+		socialProviderOf({ path: "/callback/:id", params: { id: "apple" } }),
+	).toBeNull();
+	expect(socialProviderOf(null)).toBeNull();
 });

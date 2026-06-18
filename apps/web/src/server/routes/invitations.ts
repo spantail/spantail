@@ -139,9 +139,13 @@ export const invitationRoutes = new Hono<AppEnv>()
 			name: input.name,
 			password: input.password,
 		});
-		if (invitation.grantAdmin) {
-			await updateUser(c.var.db, userId, { isAdmin: true });
-		}
+		// Admin-vouched onboarding: mark verified so the user can later link a
+		// Google account (Better Auth won't link into an unverified local
+		// account), and grant admin when the invitation carries it.
+		await updateUser(c.var.db, userId, {
+			emailVerified: true,
+			...(invitation.grantAdmin ? { isAdmin: true } : {}),
+		});
 		await markInvitationAccepted(c.var.db, invitation.id);
 		return c.body(null, 201);
 	});

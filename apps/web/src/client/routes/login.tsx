@@ -155,16 +155,21 @@ function LoginPage() {
 							{t("auth.forgotPassword")}
 						</button>
 					)}
-					<button
-						type="button"
-						className="text-muted-foreground mt-4 text-sm underline-offset-4 hover:underline"
-						onClick={() => {
-							setMode(mode === "login" ? "signup" : "login");
-							setError(null);
-						}}
-					>
-						{mode === "login" ? t("auth.noAccount") : t("auth.haveAccount")}
-					</button>
+					{/* Public sign-up is closed once the instance is claimed; the toggle
+					  appears only to bootstrap the first super-admin. Everyone else
+					  joins by invitation or social sign-in. */}
+					{providers.data?.selfSignupAvailable && (
+						<button
+							type="button"
+							className="text-muted-foreground mt-4 text-sm underline-offset-4 hover:underline"
+							onClick={() => {
+								setMode(mode === "login" ? "signup" : "login");
+								setError(null);
+							}}
+						>
+							{mode === "login" ? t("auth.noAccount") : t("auth.haveAccount")}
+						</button>
+					)}
 				</CardContent>
 			</Card>
 		</div>

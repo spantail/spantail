@@ -113,6 +113,20 @@
       "when": 1781715250845,
       "tag": "0015_funny_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1781755852287,
+      "tag": "0016_backfill_credential_email_verified",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1781758058552,
+      "tag": "0017_lowercase_pending_invitation_emails",
+      "breakpoints": true
     }
   ]
 }

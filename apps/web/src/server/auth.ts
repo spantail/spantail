@@ -1,10 +1,13 @@
-import { isEmailDomainAllowed } from "@toxil/core";
+import { isSelfJoinDomain } from "@toxil/core";
 import {
 	authOptions,
 	countUsers,
 	type Database,
 	getInstanceSettings,
+	getPendingInvitationByEmail,
+	markInvitationAccepted,
 	schema,
+	updateUser,
 } from "@toxil/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -53,6 +56,10 @@ export function createAuth(
 		socialProviders.github = {
 			clientId: social.github.clientId,
 			clientSecret: social.github.clientSecret,
+			// GitHub only marks an email verified after the user proves ownership,
+			// so we trust its verified flag exactly like Google's: a verified GitHub
+			// email links into an existing (verified) account, while an unverified
+			// one still cannot (requireLocalEmailVerified stays at its true default).
 		};
 	}
 	const googleAllowedDomains = social?.google?.allowedDomains ?? [];
@@ -104,35 +111,91 @@ export function createAuth(
 			user: {
 				create: {
 					before: async (user, hookCtx) => {
-						// Google domain allowlist: enforced when a Google sign-in would
-						// auto-provision a new user, on both sign-in paths — the redirect
-						// callback (/callback/:id) and the ID-token flow (/sign-in/social,
-						// which never hits the callback). Existing users (created by an
-						// admin) are already trusted and are not re-checked here.
-						const isGoogleSignIn =
-							(hookCtx?.path === "/callback/:id" &&
-								hookCtx.params?.id === "google") ||
-							(hookCtx?.path === "/sign-in/social" &&
-								hookCtx.body?.provider === "google");
-						if (
-							social?.google &&
-							isGoogleSignIn &&
-							!isEmailDomainAllowed(user.email, googleAllowedDomains)
-						) {
-							throw new APIError("FORBIDDEN", {
-								message: "This email domain is not allowed to sign in",
-							});
-						}
-						// The first registered user becomes the instance admin.
+						// Bootstrap: the first registered user claims the instance as its
+						// super-admin. Only the public email/password sign-up form reaches
+						// here (social providers can't be enabled before an admin exists);
+						// mark them verified so they can later link a Google account.
 						if ((await countUsers(db)) === 0) {
-							return { data: { ...user, isAdmin: true } };
+							return {
+								data: { ...user, isAdmin: true, emailVerified: true },
+							};
 						}
+						// A social sign-in creating a brand-new account (not linking into
+						// an existing one — that path skips user-create entirely). Admission
+						// is invite-only except for an allowed-domain Google self-join.
+						const provider = socialProviderOf(hookCtx);
+						if (provider) {
+							const selfJoin =
+								provider === "google" &&
+								Boolean(social?.google) &&
+								isSelfJoinDomain(user.email, googleAllowedDomains);
+							// Only a provider-verified email may consume an invitation: an
+							// unverified email (e.g. a GitHub address the user has not
+							// confirmed) is no proof they own the invited address, so it must
+							// not claim the invite or any grant it carries.
+							const invited =
+								!selfJoin &&
+								user.emailVerified === true &&
+								Boolean(await getPendingInvitationByEmail(db, user.email));
+							if (!selfJoin && !invited) {
+								throw new APIError("FORBIDDEN", {
+									message:
+										"This account is not allowed to sign in; ask an instance admin for an invitation",
+								});
+							}
+						}
+						// Credential creations only reach here via createAccount (invitation
+						// accept or admin direct create); public sign-up is closed once a
+						// user exists, so they are already vouched.
 						return { data: user };
+					},
+					after: async (user, hookCtx) => {
+						// A social sign-in may consume a standing invitation (Google/GitHub
+						// onboarding). Credential invitation-accept consumes its own
+						// invitation in the route, so skip non-social creations here. Only a
+						// provider-verified email may claim the invite and any grant it
+						// carries (mirrors the before-hook admission check).
+						if (!socialProviderOf(hookCtx)) return;
+						if (!user.emailVerified) return;
+						const invitation = await getPendingInvitationByEmail(
+							db,
+							user.email,
+						);
+						if (!invitation) return;
+						await markInvitationAccepted(db, invitation.id);
+						if (invitation.grantAdmin) {
+							await updateUser(db, user.id, { isAdmin: true });
+						}
 					},
 				},
 			},
 		},
 	});
+}
+
+/**
+ * The social provider behind a user-create hook, or null for a credential
+ * sign-up. Better Auth drives social sign-in through two paths: the redirect
+ * callback (`/callback/:id`) and the ID-token flow (`/sign-in/social`, which
+ * never hits the callback).
+ */
+export function socialProviderOf(
+	hookCtx:
+		| {
+				path?: string;
+				params?: { id?: string };
+				body?: { provider?: string };
+		  }
+		| null
+		| undefined,
+): "google" | "github" | null {
+	const id =
+		hookCtx?.path === "/callback/:id"
+			? hookCtx.params?.id
+			: hookCtx?.path === "/sign-in/social"
+				? hookCtx.body?.provider
+				: undefined;
+	return id === "google" || id === "github" ? id : null;
 }
 
 export type Auth = ReturnType<typeof createAuth>;

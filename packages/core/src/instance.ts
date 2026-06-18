@@ -50,8 +50,9 @@ export type OauthProviderStatus = z.infer<typeof oauthProviderStatusSchema>;
 export const oauthSettingsSchema = z.object({
 	google: oauthProviderStatusSchema,
 	github: oauthProviderStatusSchema,
-	// Empty = any Google account may sign in. Otherwise a Google sign-in only
-	// provisions an account when its email domain is in this list.
+	// Google Workspace domains whose users may self-join (auto-provision) via
+	// Google sign-in without an invitation. Empty = no self-join: every member
+	// must be invited. Out-of-domain Google users can still join by invitation.
 	googleAllowedDomains: z.array(z.string()),
 });
 export type OauthSettings = z.infer<typeof oauthSettingsSchema>;
@@ -73,6 +74,10 @@ export type UpdateOauthSettingsInput = z.infer<
 export const authProvidersSchema = z.object({
 	google: z.boolean(),
 	github: z.boolean(),
+	// True only before the instance is claimed (no users yet). The login screen
+	// shows the one-time sign-up form to bootstrap the first super-admin; once a
+	// user exists, public sign-up is closed and the form is hidden.
+	selfSignupAvailable: z.boolean(),
 });
 export type AuthProviders = z.infer<typeof authProvidersSchema>;
 
@@ -95,15 +100,16 @@ export function normalizeAllowedDomains(domains: string[]): string[] {
 }
 
 /**
- * Whether an email may sign in given a Google domain allowlist. An empty list
- * means no restriction. Matching is exact on the part after "@" (case
- * insensitive); subdomains are not implicitly allowed.
+ * Whether an email's domain may self-join (auto-provision) via Google sign-in.
+ * An empty list means no domain self-joins — every member must be invited.
+ * Matching is exact on the part after "@" (case insensitive); subdomains are
+ * not implicitly allowed.
  */
-export function isEmailDomainAllowed(
+export function isSelfJoinDomain(
 	email: string,
 	allowedDomains: string[],
 ): boolean {
-	if (allowedDomains.length === 0) return true;
+	if (allowedDomains.length === 0) return false;
 	const domain = email.split("@").pop()?.toLowerCase();
 	if (!domain) return false;
 	return normalizeAllowedDomains(allowedDomains).includes(domain);

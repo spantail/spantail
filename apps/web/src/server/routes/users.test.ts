@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+import { createDb, findUserByEmail } from "@toxil/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
@@ -26,6 +28,10 @@ it("lists, creates, and grants admin (instance admin only)", async () => {
 	expect(bob.isAdmin).toBe(false);
 	// The generated password is returned exactly once for out-of-band delivery.
 	expect(bob.generatedPassword).toBeTruthy();
+	// Admin-created accounts are vouched and marked email-verified, so the user
+	// can later link a Google account.
+	const bobRow = await findUserByEmail(createDb(env.DB), "bob@example.com");
+	expect(bobRow?.emailVerified).toBe(true);
 
 	// Duplicate email is rejected.
 	const dup = await apiJson(

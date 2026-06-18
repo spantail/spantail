@@ -48,7 +48,7 @@ export async function listUsers(db: Database): Promise<UserRow[]> {
 export async function updateUser(
 	db: Database,
 	id: string,
-	patch: Partial<Pick<UserRow, "name" | "isAdmin">>,
+	patch: Partial<Pick<UserRow, "name" | "isAdmin" | "emailVerified">>,
 ): Promise<UserRow | undefined> {
 	const rows = await db
 		.update(user)

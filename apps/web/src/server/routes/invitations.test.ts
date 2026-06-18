@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+import { createDb, findUserByEmail } from "@toxil/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
@@ -79,6 +81,12 @@ it("invites a user, who accepts and signs in", async () => {
 	}[];
 	const newbie = users.find((u) => u.email === "newbie@example.com");
 	expect(newbie?.isAdmin).toBe(true);
+
+	// Admin-vouched onboarding marks the account email-verified so the user can
+	// later link a Google account (Better Auth won't link into an unverified
+	// local account).
+	const row = await findUserByEmail(createDb(env.DB), "newbie@example.com");
+	expect(row?.emailVerified).toBe(true);
 
 	// The invitee can sign in with the password they chose.
 	const signIn = await apiJson(
