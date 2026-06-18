@@ -154,9 +154,12 @@ export function ReportList({
 		onMove: (next) => {
 			const target = list[next];
 			if (target)
+				// replace: selection-only moves shouldn't stack history entries
+				// (holding j/k would otherwise flood Back/Forward).
 				navigate({
 					to: "/reports/$tab/$reportId",
 					params: { tab, reportId: target.id },
+					replace: true,
 				});
 		},
 		onReachEnd: () => {

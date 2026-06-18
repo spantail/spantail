@@ -58,9 +58,12 @@ export function MessageList({
 		onMove: (next) => {
 			const target = items[next];
 			if (target)
+				// replace: selection-only moves shouldn't stack history entries
+				// (holding j/k would otherwise flood Back/Forward).
 				navigate({
 					to: "/messages/$folder/$messageId",
 					params: { folder, messageId: target.id },
+					replace: true,
 				});
 		},
 		onReachEnd: () => {

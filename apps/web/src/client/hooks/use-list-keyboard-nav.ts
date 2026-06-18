@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect, useLayoutEffect, useRef } from "react";
 
 import { isTypingTarget, nextNavIndex } from "@/lib/keyboard";
 
@@ -34,8 +34,12 @@ export function useListKeyboardNav<E extends HTMLElement>({
 	enabled = true,
 }: UseListKeyboardNavOptions<E>): void {
 	// Latest values, read inside a listener that's bound once per `enabled`.
+	// Synced in a layout effect (not during render) so the handler only ever
+	// observes values from a committed render — safe under concurrent rendering.
 	const latest = useRef({ length, index, onMove, onOpen, onReachEnd });
-	latest.current = { length, index, onMove, onOpen, onReachEnd };
+	useLayoutEffect(() => {
+		latest.current = { length, index, onMove, onOpen, onReachEnd };
+	});
 
 	useEffect(() => {
 		if (!enabled) return;
