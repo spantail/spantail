@@ -9,6 +9,7 @@ import {
 	deleteUser,
 	findUserByEmail,
 	getInstanceSettings,
+	getOauthProvidersForUser,
 	getUserById,
 	listOauthProvidersByUser,
 	listUsers,
@@ -119,7 +120,8 @@ export const userRoutes = new Hono<AppEnv>()
 		if (input.isAdmin !== undefined) patch.isAdmin = input.isAdmin;
 		const updated = await updateUser(c.var.db, id, patch);
 		if (!updated) throw new AppError("not_found", "User not found");
-		return c.json(toManagedUser(updated));
+		const providers = await getOauthProvidersForUser(c.var.db, updated.id);
+		return c.json(toManagedUser(updated, providers));
 	})
 	.delete("/:id", async (c) => {
 		const { user: actor } = requireInstanceAdmin(c);

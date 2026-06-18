@@ -69,6 +69,23 @@ export async function listOauthProvidersByUser(
 	return byUser;
 }
 
+/** Social login providers linked to a single user (empty if password-only). */
+export async function getOauthProvidersForUser(
+	db: Database,
+	userId: string,
+): Promise<OauthProvider[]> {
+	const rows = await db
+		.select({ providerId: account.providerId })
+		.from(account)
+		.where(eq(account.userId, userId));
+	const providers: OauthProvider[] = [];
+	for (const row of rows) {
+		const parsed = oauthProviderSchema.safeParse(row.providerId);
+		if (parsed.success) providers.push(parsed.data);
+	}
+	return providers;
+}
+
 export async function updateUser(
 	db: Database,
 	id: string,
