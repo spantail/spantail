@@ -9,8 +9,8 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /** Next selection index in a list of `length` items when moving `dir` (1 = down,
- *  -1 = up). Clamps at both ends; from "none" (-1) moving down lands on the first
- *  item. Returns -1 only for an empty list. */
+ *  -1 = up). Clamps at both ends; from "none" (-1), moving down lands on the
+ *  first item and moving up on the last. Returns -1 only for an empty list. */
 export function nextNavIndex(
 	current: number,
 	length: number,
