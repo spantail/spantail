@@ -183,24 +183,50 @@ describe("generateDataset", () => {
 	it("publishes shares only for client monthly reports, each backed by R2", async () => {
 		const { dataset, rows } = await build();
 		const shares = rows("reportShares");
-		expect(shares.length).toBeGreaterThan(0);
+		const r2Keys = new Set(dataset.r2.map((o) => o.key));
 		// Every share is backed by exactly one R2 body.
 		expect(dataset.r2).toHaveLength(shares.length);
-		const r2Keys = new Set(dataset.r2.map((o) => o.key));
-
-		// Each share points at a single-workspace monthly report (from < to).
-		const reportById = new Map(rows("reports").map((r) => [r.id as string, r]));
 		for (const s of shares) {
 			expect(s.r2Key as string).toBe(`shares/${s.token}`);
 			expect(r2Keys.has(s.r2Key as string)).toBe(true);
-			const report = reportById.get(s.reportId as string);
-			const filters = report?.filters as {
+		}
+
+		// The internal workspace (Northwind) is the only non-client one.
+		const internalWsId = rows("workspaces").find((w) => w.slug === "northwind")
+			?.id as string;
+		const sharesByReport = new Map<string, number>();
+		for (const s of shares) {
+			const id = s.reportId as string;
+			sharesByReport.set(id, (sharesByReport.get(id) ?? 0) + 1);
+		}
+
+		// Invariant: every monthly report in a client workspace has exactly one
+		// share; an internal monthly report has none. Deterministic NOW, so we can
+		// assert exact counts without hard-coding a total.
+		let clientMonthlies = 0;
+		let internalMonthlies = 0;
+		for (const r of rows("reports")) {
+			const filters = r.filters as {
 				workspaceIds: string[];
 				dateRange: { from: string; to: string };
 			};
-			expect(filters.workspaceIds).toHaveLength(1);
-			expect(filters.dateRange.from < filters.dateRange.to).toBe(true);
+			const isMonthly =
+				filters.workspaceIds.length === 1 &&
+				filters.dateRange.from < filters.dateRange.to;
+			if (!isMonthly) continue;
+			const shareCount = sharesByReport.get(r.id as string) ?? 0;
+			if (filters.workspaceIds[0] === internalWsId) {
+				internalMonthlies++;
+				expect(shareCount).toBe(0);
+			} else {
+				clientMonthlies++;
+				expect(shareCount).toBe(1);
+			}
 		}
+		// Both branches are exercised by the demo world.
+		expect(clientMonthlies).toBeGreaterThan(0);
+		expect(internalMonthlies).toBeGreaterThan(0);
+		expect(shares).toHaveLength(clientMonthlies);
 	});
 
 	it("serializes to non-empty SQL", async () => {

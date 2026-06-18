@@ -91,7 +91,13 @@ const workPatternsConfigSchema = z.object({
 // (first is the anchor). Recipients are derived from membership, not declared.
 const reportRouteSchema = z.object({
 	sender: z.string().min(1),
-	workspaces: z.array(z.string().min(1)).min(2),
+	workspaces: z
+		.array(z.string().min(1))
+		.min(2)
+		.refine(
+			(ws) => new Set(ws).size === ws.length,
+			"a route's workspaces must be distinct",
+		),
 });
 
 const instanceConfigSchema = z.object({

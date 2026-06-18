@@ -444,7 +444,9 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			for (const entry of byWs.get(ws.key) ?? [])
 				pushTo(byDate, entry.date, entry);
 
-			for (const [date, entries] of [...byDate.entries()].sort()) {
+			for (const [date, entries] of [...byDate.entries()].sort(([a], [b]) =>
+				a < b ? -1 : a > b ? 1 : 0,
+			)) {
 				const scopedProjects = [
 					...new Map(entries.map((e) => [e.project.key, e.project])).values(),
 				];
@@ -529,7 +531,9 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		for (const k of route.workspaces)
 			for (const e of byWs.get(k) ?? []) pushTo(byDate, e.date, e);
 
-		for (const [date, entries] of [...byDate.entries()].sort()) {
+		for (const [date, entries] of [...byDate.entries()].sort(([a], [b]) =>
+			a < b ? -1 : a > b ? 1 : 0,
+		)) {
 			const scopedProjects = [
 				...new Map(entries.map((e) => [e.project.key, e.project])).values(),
 			];
