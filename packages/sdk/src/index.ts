@@ -288,17 +288,14 @@ export class ToxilClient {
 		return this.request("DELETE", `/work-entries/${id}`);
 	}
 
-	listReportTemplates(workspaceId: string): Promise<ReportTemplate[]> {
-		return this.request("GET", `/workspaces/${workspaceId}/report-templates`);
+	listReportTemplates(): Promise<ReportTemplate[]> {
+		return this.request("GET", "/report-templates");
 	}
 
 	createReportTemplate(
-		workspaceId: string,
 		input: CreateReportTemplateInput,
 	): Promise<ReportTemplate> {
-		return this.request("POST", `/workspaces/${workspaceId}/report-templates`, {
-			body: input,
-		});
+		return this.request("POST", "/report-templates", { body: input });
 	}
 
 	getReportTemplate(id: string): Promise<ReportTemplate> {
@@ -312,17 +309,14 @@ export class ToxilClient {
 		return this.request("PATCH", `/report-templates/${id}`, { body: input });
 	}
 
-	/** Admin-only: toggle enabled / set cadence (builtin or custom template). */
+	/** Manager-only: toggle enabled / set cadence (builtin or custom template). */
 	updateReportTemplateState(
-		workspaceId: string,
 		templateId: string,
 		input: UpdateReportTemplateStateInput,
 	): Promise<ReportTemplate> {
-		return this.request(
-			"PATCH",
-			`/workspaces/${workspaceId}/report-templates/${templateId}/state`,
-			{ body: input },
-		);
+		return this.request("PATCH", `/report-templates/${templateId}/state`, {
+			body: input,
+		});
 	}
 
 	deleteReportTemplate(id: string): Promise<void> {

@@ -25,9 +25,15 @@ export const loadAuth = createMiddleware<AppEnv>(async (c, next) => {
 	const auth = createAuth(c.env, c.var.db);
 	const session = await auth.api.getSession({ headers: c.req.raw.headers });
 	if (session) {
-		const { id, name, email, isAdmin } = session.user;
+		const { id, name, email, isAdmin, canManageTemplates } = session.user;
 		c.set("auth", {
-			user: { id, name, email, isAdmin: isAdmin ?? false },
+			user: {
+				id,
+				name,
+				email,
+				isAdmin: isAdmin ?? false,
+				canManageTemplates: canManageTemplates ?? false,
+			},
 			via: "session",
 		});
 	}
@@ -60,6 +66,7 @@ async function resolvePat(
 			name: user.name,
 			email: user.email,
 			isAdmin: user.isAdmin ?? false,
+			canManageTemplates: user.canManageTemplates ?? false,
 		},
 		via: "pat",
 		scopes: row.scopes,

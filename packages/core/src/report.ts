@@ -66,8 +66,6 @@ export type ReportFiltersInput = z.infer<typeof reportFiltersInputSchema>;
 
 export const reportTemplateSchema = z.object({
 	id: z.string(),
-	// Null only for builtin templates, which are code-defined, not workspace rows.
-	workspaceId: z.string().nullable(),
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).nullable(),
 	body: z.string().min(1).max(50000),

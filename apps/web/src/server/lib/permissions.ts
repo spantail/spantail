@@ -32,6 +32,20 @@ export function requireInstanceAdmin(c: Context<AppEnv>): AuthContext {
 }
 
 /**
+ * Asserts the caller may manage instance-wide report templates: either a full
+ * instance admin or a user granted the template-author capability. PAT callers
+ * must also hold the "write" scope. Templates are instance-scoped formats, so
+ * authoring is not tied to any workspace role.
+ */
+export function requireTemplateManager(c: Context<AppEnv>): AuthContext {
+	const auth = requireScope(c, "write");
+	if (!auth.user.isAdmin && !auth.user.canManageTemplates) {
+		throw new AppError("forbidden", "Requires template management permission");
+	}
+	return auth;
+}
+
+/**
  * Asserts the current user is a member of the workspace with at least
  * `minRole`. Non-members get 404 (existence is not revealed); members with an
  * insufficient role get 403.

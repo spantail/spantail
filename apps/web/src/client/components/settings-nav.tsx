@@ -37,8 +37,11 @@ interface SettingsNavItem {
 interface SettingsNavGroup {
 	labelKey: string;
 	items: SettingsNavItem[];
-	/** Only shown to instance admins (system-wide settings). */
-	adminOnly?: boolean;
+	/**
+	 * Visibility gate. "admin" shows only to instance admins; "templateManager"
+	 * shows to instance admins or users with the template-author capability.
+	 */
+	visibility?: "admin" | "templateManager";
 }
 
 const GROUPS: SettingsNavGroup[] = [
@@ -60,6 +63,12 @@ const GROUPS: SettingsNavGroup[] = [
 				labelKey: "settings.nav.members",
 				icon: UsersIcon,
 			},
+		],
+	},
+	{
+		labelKey: "settings.nav.reporting",
+		visibility: "templateManager",
+		items: [
 			{
 				to: "/settings/templates",
 				labelKey: "settings.nav.templates",
@@ -89,7 +98,7 @@ const GROUPS: SettingsNavGroup[] = [
 	},
 	{
 		labelKey: "settings.nav.system",
-		adminOnly: true,
+		visibility: "admin",
 		items: [
 			{
 				to: "/settings/users",
@@ -110,13 +119,26 @@ const GROUPS: SettingsNavGroup[] = [
 	},
 ];
 
-export function SettingsNav({ isAdmin }: { isAdmin: boolean }) {
+export function SettingsNav({
+	isAdmin,
+	canManageTemplates,
+}: {
+	isAdmin: boolean;
+	canManageTemplates: boolean;
+}) {
 	const { t } = useTranslation();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+	const isVisible = (group: SettingsNavGroup): boolean => {
+		if (group.visibility === "admin") return isAdmin;
+		if (group.visibility === "templateManager")
+			return isAdmin || canManageTemplates;
+		return true;
+	};
+
 	return (
 		<nav className="flex shrink-0 flex-col gap-5 md:w-48">
-			{GROUPS.filter((group) => !group.adminOnly || isAdmin).map((group) => (
+			{GROUPS.filter(isVisible).map((group) => (
 				<div key={group.labelKey} className="flex flex-col gap-1">
 					<p className="text-muted-foreground px-2 pb-1 text-xs font-medium uppercase tracking-wider">
 						{t(group.labelKey)}

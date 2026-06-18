@@ -70,36 +70,27 @@ it("lists, creates, and grants admin (instance admin only)", async () => {
 
 it("deletes a user who authored a report template", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
-	const ws = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "UTC" },
-			admin,
-		)
-	).json()) as { id: string };
 
-	// A workspace admin authors a custom template, then is deleted instance-wide.
+	// A template author authors a custom template, then is deleted instance-wide.
 	const tina = await signUpUser("Tina", "tina@example.com");
-	await apiJson(
-		"POST",
-		`/api/v1/workspaces/${ws.id}/members`,
-		{ email: "tina@example.com", role: "admin" },
-		admin,
-	);
-	const template = await apiJson(
-		"POST",
-		`/api/v1/workspaces/${ws.id}/report-templates`,
-		{ name: "Tina template", body: "# {{ report.name }}" },
-		tina,
-	);
-	expect(template.status).toBe(201);
-
 	const users = (await (await apiGet("/api/v1/users", admin)).json()) as {
 		id: string;
 		email: string;
 	}[];
 	const tinaId = users.find((u) => u.email === "tina@example.com")?.id ?? "";
+	await apiJson(
+		"PATCH",
+		`/api/v1/users/${tinaId}`,
+		{ canManageTemplates: true },
+		admin,
+	);
+	const template = await apiJson(
+		"POST",
+		"/api/v1/report-templates",
+		{ name: "Tina template", body: "# {{ report.name }}" },
+		tina,
+	);
+	expect(template.status).toBe(201);
 
 	// created_by is set null on delete, so this must not fail the FK (no 500).
 	const del = await apiJson(
@@ -110,9 +101,9 @@ it("deletes a user who authored a report template", async () => {
 	);
 	expect(del.status).toBe(204);
 
-	// The workspace template survives, just without an author.
+	// The template survives, just without an author.
 	const list = (await (
-		await apiGet(`/api/v1/workspaces/${ws.id}/report-templates`, admin)
+		await apiGet("/api/v1/report-templates", admin)
 	).json()) as { name: string }[];
 	expect(list.some((t) => t.name === "Tina template")).toBe(true);
 });

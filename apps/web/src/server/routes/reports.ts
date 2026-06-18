@@ -20,6 +20,7 @@ import {
 	createReportDeliveries,
 	createReportShare,
 	deleteReport,
+	getInstanceSettings,
 	getReportById,
 	getReportTemplateById,
 	listMembersInAllWorkspaces,
@@ -63,10 +64,10 @@ export async function requireReportOwner(
 
 /**
  * Cross-workspace filters are limited to the union of the caller's
- * memberships, and a custom template must belong to a filtered workspace (its
- * body is baked into the rendered document). Returns the caller's memberships,
- * the template body to render with, and whether the template is enabled in the
- * report's anchor workspace (builtins read the workspace settings override).
+ * memberships. Templates are instance-scoped formats, independent of the
+ * report's scope, so any template may back any scope. Returns the caller's
+ * memberships, the template body to render with (baked into the document), and
+ * whether the template is enabled (builtins read the instance override).
  */
 async function validateFiltersAndTemplate(
 	c: Context<AppEnv>,
@@ -78,27 +79,19 @@ async function validateFiltersAndTemplate(
 	enabled: boolean;
 }> {
 	const workspaces = await requireScopeWorkspaces(c, workspaceIds);
-	const memberIds = new Set(workspaces.map((w) => w.id));
 
 	if (isBuiltinTemplateId(templateId)) {
 		const builtin = getBuiltinTemplate(templateId);
 		if (!builtin) throw new AppError("not_found", "Report template not found");
-		const anchor = workspaces.find((w) => w.id === workspaceIds[0]);
-		const enabled = anchor
-			? resolveBuiltinTemplateSettings(anchor.settings, templateId).enabled
-			: builtin.enabled;
+		const settings = await getInstanceSettings(c.var.db);
+		const enabled = resolveBuiltinTemplateSettings(
+			settings?.reportTemplateOverrides,
+			templateId,
+		).enabled;
 		return { workspaces, templateBody: builtin.body, enabled };
 	}
 	const template = await getReportTemplateById(c.var.db, templateId);
-	if (!template || !memberIds.has(template.workspaceId)) {
-		throw new AppError("not_found", "Report template not found");
-	}
-	if (!workspaceIds.includes(template.workspaceId)) {
-		throw new AppError(
-			"bad_request",
-			"Template must belong to a workspace in the report filters",
-		);
-	}
+	if (!template) throw new AppError("not_found", "Report template not found");
 	return { workspaces, templateBody: template.body, enabled: template.enabled };
 }
 

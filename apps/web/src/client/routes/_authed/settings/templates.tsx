@@ -32,7 +32,6 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { useWorkspace } from "@/lib/workspace";
 
 const PERIOD_UNITS: PeriodUnit[] = ["day", "week", "month", "custom"];
 
@@ -58,41 +57,29 @@ const EMPTY_DRAFT: TemplateDraft = {
 
 function TemplatesSection() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
-
-	if (!current) {
-		return (
-			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
-		);
-	}
-
-	// Keyed by workspace so a sidebar switch drops any in-progress draft
-	// instead of saving it into the newly selected workspace.
-	return <TemplatesContent key={current.id} workspaceId={current.id} />;
-}
-
-function TemplatesContent({ workspaceId }: { workspaceId: string }) {
-	const { t } = useTranslation();
-	const { current } = useWorkspace();
 	const [draft, setDraft] = useState<TemplateDraft>(EMPTY_DRAFT);
-	const isAdmin = current?.role === "admin" || current?.role === "owner";
+	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
+
+	if (me.isPending) {
+		return <p className="text-muted-foreground text-sm">{t("app.loading")}</p>;
+	}
+	// Templates are instance-scoped formats: instance admins and users granted
+	// the template-author capability may manage them.
+	const canManage =
+		(me.data?.user.isAdmin ?? false) ||
+		(me.data?.user.canManageTemplates ?? false);
 
 	return (
 		<div className="flex flex-col gap-4">
-			{isAdmin ? (
-				<TemplateFormCard
-					workspaceId={workspaceId}
-					draft={draft}
-					onDraftChange={setDraft}
-				/>
+			{canManage ? (
+				<TemplateFormCard draft={draft} onDraftChange={setDraft} />
 			) : (
 				<p className="text-muted-foreground text-sm">
-					{t("templates.adminOnlyHint")}
+					{t("templates.managerOnlyHint")}
 				</p>
 			)}
 			<TemplateListCard
-				workspaceId={workspaceId}
-				isAdmin={isAdmin}
+				canManage={canManage}
 				onEdit={(template) =>
 					setDraft({
 						editingId: template.id,
@@ -117,11 +104,9 @@ function TemplatesContent({ workspaceId }: { workspaceId: string }) {
 }
 
 function TemplateFormCard({
-	workspaceId,
 	draft,
 	onDraftChange,
 }: {
-	workspaceId: string;
 	draft: TemplateDraft;
 	onDraftChange: (draft: TemplateDraft) => void;
 }) {
@@ -139,13 +124,13 @@ function TemplateFormCard({
 			};
 			if (draft.editingId) {
 				const updated = await api.updateReportTemplate(draft.editingId, input);
-				// Cadence is template state, set via the separate admin route.
-				await api.updateReportTemplateState(workspaceId, draft.editingId, {
+				// Cadence is template state, set via the separate state route.
+				await api.updateReportTemplateState(draft.editingId, {
 					periodUnit: draft.periodUnit,
 				});
 				return updated;
 			}
-			return api.createReportTemplate(workspaceId, {
+			return api.createReportTemplate({
 				...input,
 				description: input.description ?? undefined,
 				periodUnit: draft.periodUnit,
@@ -153,7 +138,7 @@ function TemplateFormCard({
 		},
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({
-				queryKey: ["report-templates", workspaceId],
+				queryKey: ["report-templates"],
 			});
 			onDraftChange(EMPTY_DRAFT);
 			setError(null);
@@ -262,13 +247,11 @@ function TemplateFormCard({
 }
 
 function TemplateListCard({
-	workspaceId,
-	isAdmin,
+	canManage,
 	onEdit,
 	onDuplicate,
 }: {
-	workspaceId: string;
-	isAdmin: boolean;
+	canManage: boolean;
 	onEdit: (template: ReportTemplate) => void;
 	onDuplicate: (template: ReportTemplate) => void;
 }) {
@@ -277,13 +260,13 @@ function TemplateListCard({
 	const [error, setError] = useState<string | null>(null);
 
 	const templates = useQuery({
-		queryKey: ["report-templates", workspaceId],
-		queryFn: () => api.listReportTemplates(workspaceId),
+		queryKey: ["report-templates"],
+		queryFn: () => api.listReportTemplates(),
 	});
 
 	const invalidate = () =>
 		queryClient.invalidateQueries({
-			queryKey: ["report-templates", workspaceId],
+			queryKey: ["report-templates"],
 		});
 
 	const deleteMutation = useMutation({
@@ -297,7 +280,7 @@ function TemplateListCard({
 
 	const enabledMutation = useMutation({
 		mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) =>
-			api.updateReportTemplateState(workspaceId, id, { enabled }),
+			api.updateReportTemplateState(id, { enabled }),
 		onSuccess: async () => {
 			await invalidate();
 			setError(null);
@@ -351,7 +334,7 @@ function TemplateListCard({
 										{t(`templates.cadence.${template.periodUnit}`)}
 									</TableCell>
 									<TableCell className="text-right">
-										{isAdmin && (
+										{canManage && (
 											<>
 												<Button
 													variant="ghost"
