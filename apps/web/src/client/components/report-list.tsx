@@ -83,11 +83,11 @@ function ReportListItem({
 				{/* line 2 — template · single project */}
 				<span className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
 					<span className="truncate">{templateName}</span>
-					{projectChip && <span className="opacity-40">·</span>}
+					{projectChip && <span className="shrink-0 opacity-40">·</span>}
 					{projectChip && (
-						<span className="inline-flex shrink-0 items-center gap-1">
+						<span className="inline-flex min-w-0 items-center gap-1">
 							<Dot hue={projectChip.hue} size={6} />
-							{projectChip.name}
+							<span className="truncate">{projectChip.name}</span>
 						</span>
 					)}
 				</span>
