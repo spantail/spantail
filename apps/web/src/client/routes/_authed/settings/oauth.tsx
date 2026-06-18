@@ -175,7 +175,10 @@ function ProviderToggle({
 					<Checkbox
 						id={id}
 						checked={checked}
-						disabled={!configured}
+						// Block enabling an unconfigured provider, but keep an already
+						// (stale-)enabled one editable so an admin can still turn it off
+						// after its credentials are removed.
+						disabled={!configured && !checked}
 						onCheckedChange={(v) => onChange(v === true)}
 					/>
 					<Label htmlFor={id}>{label}</Label>
