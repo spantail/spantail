@@ -15,7 +15,10 @@ export type Invitation = z.infer<typeof invitationSchema>;
 
 /** Instance admin invites a user by email (email delivery on path). */
 export const createInvitationInputSchema = z.object({
-	email: z.email(),
+	// Lowercased so the stored invitation matches the email Better Auth records
+	// (it lowercases every account email); a Google/GitHub sign-in then resolves
+	// its standing invitation reliably regardless of how it was typed.
+	email: z.email().toLowerCase(),
 	grantAdmin: z.boolean().default(false),
 });
 export type CreateInvitationInput = z.infer<typeof createInvitationInputSchema>;

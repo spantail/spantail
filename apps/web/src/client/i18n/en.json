@@ -40,7 +40,8 @@
 		"description": "Set up your Toxil account for {{email}}.",
 		"invalid": "This invitation is invalid or has expired.",
 		"toLogin": "Go to login",
-		"acceptAction": "Create account"
+		"acceptAction": "Create account",
+		"googleHint": "Use the Google account for {{email}} to accept without a password."
 	},
 	"home": {
 		"subtitle": "{{date}} · your time at a glance."
@@ -537,8 +538,8 @@
 			"googleLabel": "Enable Google sign-in",
 			"githubLabel": "Enable GitHub sign-in",
 			"notConfiguredHint": "OAuth credentials are not configured for this provider. Set them as environment secrets to enable it.",
-			"allowedDomainsLabel": "Allowed email domains (Google)",
-			"allowedDomainsHint": "One domain per line. Leave empty to allow any Google account. Only matching domains may sign in with Google.",
+			"allowedDomainsLabel": "Google self-join domains",
+			"allowedDomainsHint": "One domain per line. Google users in these domains can join without an invitation. Leave empty to require an invitation for everyone; out-of-domain users can still be invited.",
 			"saveAction": "Save",
 			"statusEnabled": "Enabled",
 			"statusDisabled": "Disabled"

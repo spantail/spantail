@@ -30,6 +30,24 @@ function InvitePage() {
 		queryFn: () => api.getInvitation(token),
 		retry: false,
 	});
+	const providers = useQuery({
+		queryKey: ["authProviders"],
+		queryFn: () => api.getAuthProviders(),
+	});
+
+	async function acceptWithGoogle() {
+		setError(null);
+		// Starts Google sign-in; the standing invitation is consumed server-side
+		// when the chosen Google account's email matches the invited address.
+		// Control does not return here on success (the browser is redirected).
+		const result = await authClient.signIn.social({
+			provider: "google",
+			callbackURL: "/",
+		});
+		if (result.error) {
+			setError(result.error.message ?? t("errors.generic"));
+		}
+	}
 
 	const [name, setName] = useState("");
 	const [password, setPassword] = useState("");
@@ -88,33 +106,56 @@ function InvitePage() {
 						</div>
 					)}
 					{preview.isSuccess && (
-						<form onSubmit={onSubmit} className="flex flex-col gap-4">
-							<div className="flex flex-col gap-2">
-								<Label htmlFor="invite-name">{t("auth.name")}</Label>
-								<Input
-									id="invite-name"
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-									required
-								/>
-							</div>
-							<div className="flex flex-col gap-2">
-								<Label htmlFor="invite-password">{t("auth.password")}</Label>
-								<Input
-									id="invite-password"
-									type="password"
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									autoComplete="new-password"
-									minLength={8}
-									required
-								/>
-							</div>
-							{error && <p className="text-destructive text-sm">{error}</p>}
-							<Button type="submit" disabled={busy}>
-								{t("invite.acceptAction")}
-							</Button>
-						</form>
+						<>
+							<form onSubmit={onSubmit} className="flex flex-col gap-4">
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="invite-name">{t("auth.name")}</Label>
+									<Input
+										id="invite-name"
+										value={name}
+										onChange={(e) => setName(e.target.value)}
+										required
+									/>
+								</div>
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="invite-password">{t("auth.password")}</Label>
+									<Input
+										id="invite-password"
+										type="password"
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+										autoComplete="new-password"
+										minLength={8}
+										required
+									/>
+								</div>
+								{error && <p className="text-destructive text-sm">{error}</p>}
+								<Button type="submit" disabled={busy}>
+									{t("invite.acceptAction")}
+								</Button>
+							</form>
+							{providers.data?.google && (
+								<div className="mt-4 flex flex-col gap-3">
+									<div className="flex items-center gap-3">
+										<span className="bg-border h-px flex-1" />
+										<span className="text-muted-foreground text-xs">
+											{t("auth.orContinueWith")}
+										</span>
+										<span className="bg-border h-px flex-1" />
+									</div>
+									<Button
+										type="button"
+										variant="outline"
+										onClick={acceptWithGoogle}
+									>
+										{t("auth.continueWithGoogle")}
+									</Button>
+									<p className="text-muted-foreground text-xs">
+										{t("invite.googleHint", { email: preview.data.email })}
+									</p>
+								</div>
+							)}
+						</>
 					)}
 				</CardContent>
 			</Card>

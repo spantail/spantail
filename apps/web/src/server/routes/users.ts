@@ -64,9 +64,12 @@ export const userRoutes = new Hono<AppEnv>()
 			name: input.name,
 			password,
 		});
-		if (input.grantAdmin) {
-			await updateUser(c.var.db, userId, { isAdmin: true });
-		}
+		// Admin-created accounts are vouched: mark verified so the user can later
+		// link a Google account, and grant admin when requested.
+		await updateUser(c.var.db, userId, {
+			emailVerified: true,
+			...(input.grantAdmin ? { isAdmin: true } : {}),
+		});
 
 		const created = await getUserById(c.var.db, userId);
 		if (!created) throw new AppError("internal", "User creation failed");

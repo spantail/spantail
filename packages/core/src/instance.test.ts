@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isEmailDomainAllowed, normalizeAllowedDomains } from "./instance";
+import { isSelfJoinDomain, normalizeAllowedDomains } from "./instance";
 
 describe("normalizeAllowedDomains", () => {
 	it("lowercases, trims, strips a leading @, and drops blanks", () => {
@@ -16,31 +16,27 @@ describe("normalizeAllowedDomains", () => {
 	});
 });
 
-describe("isEmailDomainAllowed", () => {
-	it("allows any email when the list is empty", () => {
-		expect(isEmailDomainAllowed("anyone@whatever.io", [])).toBe(true);
+describe("isSelfJoinDomain", () => {
+	it("denies self-join for every email when the list is empty", () => {
+		expect(isSelfJoinDomain("anyone@whatever.io", [])).toBe(false);
 	});
 
 	it("allows an exact domain match, case-insensitively", () => {
-		expect(isEmailDomainAllowed("Jane@Example.com", ["example.com"])).toBe(
-			true,
-		);
-		expect(isEmailDomainAllowed("jane@example.com", ["@Example.com"])).toBe(
-			true,
-		);
+		expect(isSelfJoinDomain("Jane@Example.com", ["example.com"])).toBe(true);
+		expect(isSelfJoinDomain("jane@example.com", ["@Example.com"])).toBe(true);
 	});
 
 	it("rejects a domain that is not in the list", () => {
-		expect(isEmailDomainAllowed("eve@evil.com", ["example.com"])).toBe(false);
+		expect(isSelfJoinDomain("eve@evil.com", ["example.com"])).toBe(false);
 	});
 
 	it("does not implicitly allow subdomains", () => {
-		expect(isEmailDomainAllowed("user@sub.example.com", ["example.com"])).toBe(
+		expect(isSelfJoinDomain("user@sub.example.com", ["example.com"])).toBe(
 			false,
 		);
 	});
 
 	it("rejects malformed input with no domain part", () => {
-		expect(isEmailDomainAllowed("not-an-email", ["example.com"])).toBe(false);
+		expect(isSelfJoinDomain("not-an-email", ["example.com"])).toBe(false);
 	});
 });

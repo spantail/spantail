@@ -8,6 +8,7 @@ import {
 	updateOauthSettingsInputSchema,
 } from "@toxil/core";
 import {
+	countUsers,
 	getInstanceSettings,
 	type InstanceSettingsRow,
 	upsertInstanceOauthSettings,
@@ -95,6 +96,9 @@ export const instanceRoutes = new Hono<AppEnv>()
 		return c.json({
 			google: social.google !== undefined,
 			github: social.github !== undefined,
+			// Before the instance is claimed, the login screen offers a one-time
+			// sign-up form to bootstrap the first super-admin.
+			selfSignupAvailable: (await countUsers(c.var.db)) === 0,
 		} satisfies AuthProviders);
 	})
 	.get("/oauth", async (c) => {

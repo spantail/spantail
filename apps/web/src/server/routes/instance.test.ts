@@ -120,15 +120,25 @@ it("rejects enabling a provider without configured credentials", async () => {
 });
 
 it("exposes enabled providers publicly for the login screen", async () => {
-	type AuthProviders = { google: boolean; github: boolean };
+	type AuthProviders = {
+		google: boolean;
+		github: boolean;
+		selfSignupAvailable: boolean;
+	};
 
-	// Anonymous, nothing enabled yet.
+	// Anonymous, nothing enabled yet, and the instance is still unclaimed so the
+	// one-time bootstrap sign-up is available.
 	const before = (await (
 		await apiGet("/api/v1/instance/auth-providers")
 	).json()) as AuthProviders;
-	expect(before).toEqual({ google: false, github: false });
+	expect(before).toEqual({
+		google: false,
+		github: false,
+		selfSignupAvailable: true,
+	});
 
-	// Enable Google, then it shows up for anonymous callers.
+	// Enable Google, then it shows up for anonymous callers. Once the first user
+	// exists, public sign-up is closed.
 	const admin = await signUpUser("Admin", "admin@example.com");
 	await apiJson(
 		"PATCH",
@@ -139,5 +149,9 @@ it("exposes enabled providers publicly for the login screen", async () => {
 	const after = (await (
 		await apiGet("/api/v1/instance/auth-providers")
 	).json()) as AuthProviders;
-	expect(after).toEqual({ google: true, github: false });
+	expect(after).toEqual({
+		google: true,
+		github: false,
+		selfSignupAvailable: false,
+	});
 });
