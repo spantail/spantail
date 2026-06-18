@@ -1,3 +1,4 @@
+import { hueFromString } from "@/lib/hue";
 import { cn } from "@/lib/utils";
 
 /** Up to two uppercase initials from a display name. */
@@ -24,7 +25,7 @@ export function PersonAvatar({
 	size?: number;
 	className?: string;
 }) {
-	const hue = (name.charCodeAt(0) * 47 + (name.charCodeAt(1) || 0) * 13) % 360;
+	const hue = hueFromString(name);
 	return (
 		<span
 			aria-hidden

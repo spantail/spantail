@@ -192,6 +192,10 @@
 		"tab": {
 			"all": "すべて"
 		},
+		"rail": {
+			"library": "ライブラリ",
+			"templates": "テンプレート"
+		},
 		"filterAction": "フィルター",
 		"moreActions": "その他の操作",
 		"filter": {

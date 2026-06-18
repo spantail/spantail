@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import { ArrowLeftIcon, FileTextIcon, LayersIcon } from "lucide-react";
+import { ArrowLeftIcon, LayersIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Dot } from "@/components/dot";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarGroup,
+	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
@@ -15,6 +17,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { api } from "@/lib/api";
+import { templateHue } from "@/lib/hue";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -75,7 +78,8 @@ export function ReportsSidebar() {
 			</SidebarHeader>
 			<SidebarContent>
 				<SidebarGroup>
-					<SidebarMenu className="gap-1.5">
+					<SidebarGroupLabel>{t("reports.rail.library")}</SidebarGroupLabel>
+					<SidebarMenu>
 						<SidebarMenuItem>
 							<SidebarMenuButton
 								asChild
@@ -90,6 +94,11 @@ export function ReportsSidebar() {
 								</Link>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
+					</SidebarMenu>
+				</SidebarGroup>
+				<SidebarGroup>
+					<SidebarGroupLabel>{t("reports.rail.templates")}</SidebarGroupLabel>
+					<SidebarMenu className="gap-1.5">
 						{enabledTemplates.map((tpl) => (
 							<SidebarMenuItem key={tpl.id}>
 								<SidebarMenuButton
@@ -100,7 +109,7 @@ export function ReportsSidebar() {
 									onClick={dismiss}
 								>
 									<Link to="/reports/$tab" params={{ tab: tpl.id }}>
-										<FileTextIcon />
+										<Dot hue={templateHue(tpl.id)} />
 										<span>{tpl.name}</span>
 									</Link>
 								</SidebarMenuButton>
@@ -116,7 +125,7 @@ export function ReportsSidebar() {
 									onClick={dismiss}
 								>
 									<Link to="/reports/$tab" params={{ tab: id }}>
-										<FileTextIcon />
+										<Dot hue={templateHue(id)} className="opacity-50" />
 										<span className="text-muted-foreground">
 											{templateById.get(id)?.name ?? id}
 										</span>
