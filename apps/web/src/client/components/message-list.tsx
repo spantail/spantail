@@ -1,13 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MailFolder } from "@toxil/core";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { MessageListItem } from "@/components/message-list-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { invalidateMail } from "@/lib/query";
+
+const PAGE_SIZE = 50;
 
 export function MessageList({
 	folder,
@@ -26,6 +30,26 @@ export function MessageList({
 	const hasUnread = items.some(
 		(m) => m.scope === "received" && m.readAt === null,
 	);
+
+	// Infinite scroll: render a growing window of the folder, extended by the
+	// sentinel. Reset to the first page when the folder changes.
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+	const [prevFolder, setPrevFolder] = useState(folder);
+	if (folder !== prevFolder) {
+		setPrevFolder(folder);
+		setVisibleCount(PAGE_SIZE);
+	}
+	// Keep a deep-linked selection within the window so it stays highlighted.
+	const selectedIndex = selectedId
+		? items.findIndex((m) => m.id === selectedId)
+		: -1;
+	useEffect(() => {
+		if (selectedIndex >= 0)
+			setVisibleCount((count) =>
+				Math.max(count, Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE),
+			);
+	}, [selectedIndex]);
+	const visible = items.slice(0, visibleCount);
 
 	const markAll = useMutation({
 		mutationFn: () => api.markAllInboxRead(),
@@ -75,7 +99,7 @@ export function MessageList({
 					</div>
 				) : (
 					<div className="flex flex-col gap-1">
-						{items.map((item) => (
+						{visible.map((item) => (
 							<MessageListItem
 								key={item.id}
 								item={item}
@@ -83,6 +107,13 @@ export function MessageList({
 								selected={item.id === selectedId}
 							/>
 						))}
+						<InfiniteSentinel
+							hasNextPage={visibleCount < items.length}
+							isFetchingNextPage={false}
+							fetchNextPage={() =>
+								setVisibleCount((count) => count + PAGE_SIZE)
+							}
+						/>
 					</div>
 				)}
 			</div>

@@ -6,10 +6,11 @@ import {
 	type ReportMeta,
 } from "@toxil/core";
 import { FileTextIcon, PlusIcon, SlidersHorizontalIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FilterChip } from "@/components/filter-chip";
+import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { useReportDialogs } from "@/components/report-dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,8 @@ import { api } from "@/lib/api";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
+
+const PAGE_SIZE = 50;
 
 /** One report row: navigation only — actions live in the detail toolbar. */
 function ReportListItem({
@@ -174,6 +177,27 @@ export function ReportList({
 	const list = rows.filter(
 		(report) => (tab === "all" || report.templateId === tab) && matches(report),
 	);
+
+	// Infinite scroll: render a growing window of the filtered list, extended by
+	// the sentinel. Reset to the first page whenever the result set changes.
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+	const filterKey = `${tab}|${from}|${to}|${projectFilter}`;
+	const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+	if (filterKey !== prevFilterKey) {
+		setPrevFilterKey(filterKey);
+		setVisibleCount(PAGE_SIZE);
+	}
+	// Keep a deep-linked selection within the window so it stays highlighted.
+	const selectedIndex = selectedId
+		? list.findIndex((report) => report.id === selectedId)
+		: -1;
+	useEffect(() => {
+		if (selectedIndex >= 0)
+			setVisibleCount((count) =>
+				Math.max(count, Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE),
+			);
+	}, [selectedIndex]);
+	const visible = list.slice(0, visibleCount);
 
 	const enabledIds = new Set(enabledTemplates.map((tpl) => tpl.id));
 	const tabTemplate = templateById.get(tab);
@@ -374,7 +398,7 @@ export function ReportList({
 					emptyBody()
 				) : (
 					<div className="flex flex-col gap-1">
-						{list.map((report) => (
+						{visible.map((report) => (
 							<ReportListItem
 								key={report.id}
 								report={report}
@@ -385,6 +409,13 @@ export function ReportList({
 								selected={report.id === selectedId}
 							/>
 						))}
+						<InfiniteSentinel
+							hasNextPage={visibleCount < list.length}
+							isFetchingNextPage={false}
+							fetchNextPage={() =>
+								setVisibleCount((count) => count + PAGE_SIZE)
+							}
+						/>
 					</div>
 				)}
 			</div>
