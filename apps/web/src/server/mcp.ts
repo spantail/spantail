@@ -31,6 +31,7 @@ export function registerMcpRoute(app: Hono<AppEnv>): void {
 		const client = new ToxilClient({
 			baseUrl: new URL(c.req.url).origin,
 			token,
+			client: "mcp",
 			// In-process loopback into this same Worker; no network round trip.
 			fetch: async (input, init) =>
 				app.fetch(new Request(input, init), c.env, c.executionCtx),

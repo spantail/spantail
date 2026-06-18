@@ -1,0 +1,1 @@
+ALTER TABLE `work_entries` ADD `source` text DEFAULT 'web' NOT NULL;

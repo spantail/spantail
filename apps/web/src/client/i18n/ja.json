@@ -123,6 +123,13 @@
 		"deleteAction": "削除",
 		"closeAction": "閉じる",
 		"loggedBy": "{{name}} さんが記録",
+		"source": "登録元",
+		"sources": {
+			"web": "Web",
+			"cli": "CLI",
+			"mcp": "MCP",
+			"api": "API"
+		},
 		"empty": "まだ記録がありません。",
 		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
 		"goToSettings": "設定を開く",

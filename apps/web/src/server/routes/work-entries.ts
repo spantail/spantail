@@ -3,6 +3,7 @@ import {
 	listWorkEntriesQuerySchema,
 	todayInTimezone,
 	updateWorkEntryInputSchema,
+	type WorkEntrySource,
 	workEntryStatsQuerySchema,
 	workEntryTagsQuerySchema,
 } from "@toxil/core";
@@ -50,6 +51,19 @@ async function requireEntryAccess(
 	return entry;
 }
 
+/**
+ * Determines the client channel a create request came through. Session callers
+ * are the web SPA; PAT callers tag themselves via X-Toxil-Client (cli/mcp) and
+ * default to "api" (e.g. direct curl). This is informational metadata, so an
+ * unrecognized header value is ignored rather than rejected.
+ */
+function resolveSource(c: Context<AppEnv>): WorkEntrySource {
+	if (c.var.auth?.via === "session") return "web";
+	const hint = c.req.header("x-toxil-client");
+	if (hint === "cli" || hint === "mcp") return hint;
+	return "api";
+}
+
 function requireAuthor(c: Context<AppEnv>, entry: WorkEntryRow): void {
 	const { user } = requireAuth(c);
 	if (entry.userId !== user.id) {
@@ -81,6 +95,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			description: input.description,
 			note: input.note ?? null,
 			tags: input.tags,
+			source: resolveSource(c),
 		});
 		return c.json(entry, 201);
 	})

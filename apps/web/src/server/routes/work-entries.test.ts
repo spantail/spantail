@@ -1,7 +1,7 @@
 import { todayInTimezone } from "@toxil/core";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
@@ -50,6 +50,61 @@ it("creates an entry defaulting the date to today in the workspace timezone", as
 	const entry = (await res.json()) as { entryDate: string; tags: string[] };
 	expect(entry.entryDate).toBe(todayInTimezone("Asia/Tokyo"));
 	expect(entry.tags).toEqual(["api"]);
+});
+
+it("records the source from the auth channel and X-Toxil-Client hint", async () => {
+	const { admin, ws, project } = await setup();
+
+	// A session caller is the web SPA.
+	const viaSession = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 30,
+				description: "from the web",
+			},
+			admin,
+		)
+	).json()) as { source: string };
+	expect(viaSession.source).toBe("web");
+
+	// A write-scoped PAT stands in for the programmatic channels.
+	const { token } = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/tokens",
+			{ name: "dev", scopes: ["read", "write"] },
+			admin,
+		)
+	).json()) as { token: string };
+
+	const sourceFor = async (client?: string) => {
+		const res = await appFetch("/api/v1/work-entries", {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				authorization: `Bearer ${token}`,
+				...(client ? { "x-toxil-client": client } : {}),
+			},
+			body: JSON.stringify({
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 30,
+				description: "programmatic",
+			}),
+		});
+		expect(res.status).toBe(201);
+		return ((await res.json()) as { source: string }).source;
+	};
+
+	expect(await sourceFor("cli")).toBe("cli");
+	expect(await sourceFor("mcp")).toBe("mcp");
+	// A bare PAT (e.g. curl) and any unrecognized hint default to "api".
+	expect(await sourceFor()).toBe("api");
+	expect(await sourceFor("bogus")).toBe("api");
 });
 
 it("rejects projects from another workspace", async () => {

@@ -4,6 +4,11 @@ import { localDateSchema } from "./common";
 
 export const tagSchema = z.string().min(1).max(50);
 
+/** Client channel a work entry was created through. Server-determined, not user input. */
+export const workEntrySources = ["web", "cli", "mcp", "api"] as const;
+export const workEntrySourceSchema = z.enum(workEntrySources);
+export type WorkEntrySource = z.infer<typeof workEntrySourceSchema>;
+
 export const workEntrySchema = z.object({
 	id: z.string(),
 	workspaceId: z.string(),
@@ -16,6 +21,7 @@ export const workEntrySchema = z.object({
 	description: z.string().min(1).max(2000),
 	note: z.string().max(10000).nullable(),
 	tags: z.array(tagSchema).max(20),
+	source: workEntrySourceSchema,
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });

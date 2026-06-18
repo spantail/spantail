@@ -71,6 +71,13 @@ export interface ToxilClientOptions {
 	token?: string;
 	/** Custom fetch implementation (e.g. an in-process loopback in a Worker). */
 	fetch?: typeof fetch;
+	/**
+	 * Programmatic client hint sent as the X-Toxil-Client header, which the
+	 * server records as a work entry's source. Only "cli" / "mcp" are honored:
+	 * "web" and "api" are derived server-side from the auth channel, so they are
+	 * not offered here.
+	 */
+	client?: "cli" | "mcp";
 }
 
 export class ToxilApiError extends Error {
@@ -90,11 +97,13 @@ export class ToxilClient {
 	private readonly baseUrl: string;
 	private readonly token?: string;
 	private readonly fetchImpl: typeof fetch;
+	private readonly client?: "cli" | "mcp";
 
 	constructor(options: ToxilClientOptions) {
 		this.baseUrl = options.baseUrl.replace(/\/$/, "");
 		this.token = options.token;
 		this.fetchImpl = options.fetch ?? ((...args) => globalThis.fetch(...args));
+		this.client = options.client;
 	}
 
 	private async request<T>(
@@ -109,6 +118,7 @@ export class ToxilClient {
 
 		const headers: Record<string, string> = {};
 		if (this.token) headers.authorization = `Bearer ${this.token}`;
+		if (this.client) headers["x-toxil-client"] = this.client;
 		if (options.body !== undefined)
 			headers["content-type"] = "application/json";
 

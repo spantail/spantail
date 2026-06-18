@@ -40,7 +40,11 @@ export async function mcpCommand(
 	const server = new McpServer({ name: "toxil", version: VERSION });
 	registerToxilTools(
 		server,
-		new ToxilClient({ baseUrl: connection.baseUrl, token: connection.token }),
+		new ToxilClient({
+			baseUrl: connection.baseUrl,
+			token: connection.token,
+			client: "mcp",
+		}),
 	);
 	await server.connect(new StdioServerTransport());
 	return 0;

@@ -85,14 +85,24 @@ export function EntryDetail({
 				)}
 			</div>
 
-			{authorName && (
-				<div className="text-muted-foreground flex items-center gap-2 border-t pt-3 text-sm">
-					<span className="bg-secondary text-secondary-foreground flex size-6 items-center justify-center rounded-full text-[10px] font-semibold">
-						{initials(authorName)}
+			<div className="text-muted-foreground flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3 text-sm">
+				{authorName ? (
+					<span className="flex items-center gap-2">
+						<span className="bg-secondary text-secondary-foreground flex size-6 items-center justify-center rounded-full text-[10px] font-semibold">
+							{initials(authorName)}
+						</span>
+						{t("entries.loggedBy", { name: authorName })}
 					</span>
-					{t("entries.loggedBy", { name: authorName })}
-				</div>
-			)}
+				) : (
+					<span />
+				)}
+				<span className="flex items-center gap-1.5">
+					{t("entries.source")}
+					<Badge variant="outline">
+						{t(`entries.sources.${entry.source}`)}
+					</Badge>
+				</span>
+			</div>
 		</div>
 	);
 }

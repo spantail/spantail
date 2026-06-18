@@ -1,3 +1,4 @@
+import { workEntrySources } from "@toxil/core";
 import { sql } from "drizzle-orm";
 import {
 	index,
@@ -92,6 +93,8 @@ export const workEntries = sqliteTable(
 			.$type<string[]>()
 			.notNull()
 			.default([]),
+		// Client channel the entry was created through (web/cli/mcp/api).
+		source: text("source", { enum: workEntrySources }).notNull().default("web"),
 		createdAt: createdAtMs(),
 		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
