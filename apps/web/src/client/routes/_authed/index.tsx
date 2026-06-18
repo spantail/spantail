@@ -124,7 +124,8 @@ function Timeline({
 							entries={allEntries}
 							projects={projects.data ?? []}
 							onLoadMore={() => {
-								if (entries.hasNextPage) entries.fetchNextPage();
+								if (entries.hasNextPage && !entries.isFetchingNextPage)
+									entries.fetchNextPage();
 							}}
 						/>
 						<InfiniteSentinel

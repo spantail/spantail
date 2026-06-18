@@ -363,7 +363,8 @@ function ProjectPage() {
 							members={members.data ?? []}
 							showProject={false}
 							onLoadMore={() => {
-								if (entries.hasNextPage) entries.fetchNextPage();
+								if (entries.hasNextPage && !entries.isFetchingNextPage)
+									entries.fetchNextPage();
 							}}
 						/>
 						<InfiniteSentinel

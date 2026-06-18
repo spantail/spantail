@@ -156,7 +156,8 @@ export function ReportList({
 				});
 		},
 		onReachEnd: () => {
-			if (reports.hasNextPage) reports.fetchNextPage();
+			if (reports.hasNextPage && !reports.isFetchingNextPage)
+				reports.fetchNextPage();
 		},
 		containerRef,
 	});

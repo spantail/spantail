@@ -60,7 +60,7 @@ export function MessageList({
 				});
 		},
 		onReachEnd: () => {
-			if (query.hasNextPage) query.fetchNextPage();
+			if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
 		},
 		containerRef,
 	});
