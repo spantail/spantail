@@ -6,7 +6,7 @@ import {
 	type ReportMeta,
 } from "@toxil/core";
 import { FileTextIcon, PlusIcon, SlidersHorizontalIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FilterChip } from "@/components/filter-chip";
@@ -187,17 +187,18 @@ export function ReportList({
 		setPrevFilterKey(filterKey);
 		setVisibleCount(PAGE_SIZE);
 	}
-	// Keep a deep-linked selection within the window so it stays highlighted.
+	// Always extend the window to cover a deep-linked selection so it stays
+	// highlighted — derived each render, so it survives a filter reset even when
+	// the selected index is unchanged.
 	const selectedIndex = selectedId
 		? list.findIndex((report) => report.id === selectedId)
 		: -1;
-	useEffect(() => {
-		if (selectedIndex >= 0)
-			setVisibleCount((count) =>
-				Math.max(count, Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE),
-			);
-	}, [selectedIndex]);
-	const visible = list.slice(0, visibleCount);
+	const minForSelected =
+		selectedIndex >= 0
+			? Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE
+			: 0;
+	const effectiveCount = Math.max(visibleCount, minForSelected);
+	const visible = list.slice(0, effectiveCount);
 
 	const enabledIds = new Set(enabledTemplates.map((tpl) => tpl.id));
 	const tabTemplate = templateById.get(tab);
@@ -410,11 +411,9 @@ export function ReportList({
 							/>
 						))}
 						<InfiniteSentinel
-							hasNextPage={visibleCount < list.length}
+							hasNextPage={effectiveCount < list.length}
 							isFetchingNextPage={false}
-							fetchNextPage={() =>
-								setVisibleCount((count) => count + PAGE_SIZE)
-							}
+							fetchNextPage={() => setVisibleCount(effectiveCount + PAGE_SIZE)}
 						/>
 					</div>
 				)}

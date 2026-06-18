@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { MailFolder } from "@toxil/core";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
@@ -39,17 +39,18 @@ export function MessageList({
 		setPrevFolder(folder);
 		setVisibleCount(PAGE_SIZE);
 	}
-	// Keep a deep-linked selection within the window so it stays highlighted.
+	// Always extend the window to cover a deep-linked selection so it stays
+	// highlighted — derived each render, so it survives a folder reset even when
+	// the selected index is unchanged.
 	const selectedIndex = selectedId
 		? items.findIndex((m) => m.id === selectedId)
 		: -1;
-	useEffect(() => {
-		if (selectedIndex >= 0)
-			setVisibleCount((count) =>
-				Math.max(count, Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE),
-			);
-	}, [selectedIndex]);
-	const visible = items.slice(0, visibleCount);
+	const minForSelected =
+		selectedIndex >= 0
+			? Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE
+			: 0;
+	const effectiveCount = Math.max(visibleCount, minForSelected);
+	const visible = items.slice(0, effectiveCount);
 
 	const markAll = useMutation({
 		mutationFn: () => api.markAllInboxRead(),
@@ -108,11 +109,9 @@ export function MessageList({
 							/>
 						))}
 						<InfiniteSentinel
-							hasNextPage={visibleCount < items.length}
+							hasNextPage={effectiveCount < items.length}
 							isFetchingNextPage={false}
-							fetchNextPage={() =>
-								setVisibleCount((count) => count + PAGE_SIZE)
-							}
+							fetchNextPage={() => setVisibleCount(effectiveCount + PAGE_SIZE)}
 						/>
 					</div>
 				)}
