@@ -104,13 +104,19 @@ export function createAuth(
 			user: {
 				create: {
 					before: async (user, hookCtx) => {
-						// Google domain allowlist: only enforced when a Google sign-in
-						// would auto-provision a new user. Existing users (created by an
+						// Google domain allowlist: enforced when a Google sign-in would
+						// auto-provision a new user, on both sign-in paths — the redirect
+						// callback (/callback/:id) and the ID-token flow (/sign-in/social,
+						// which never hits the callback). Existing users (created by an
 						// admin) are already trusted and are not re-checked here.
+						const isGoogleSignIn =
+							(hookCtx?.path === "/callback/:id" &&
+								hookCtx.params?.id === "google") ||
+							(hookCtx?.path === "/sign-in/social" &&
+								hookCtx.body?.provider === "google");
 						if (
 							social?.google &&
-							hookCtx?.path === "/callback/:id" &&
-							hookCtx.params?.id === "google" &&
+							isGoogleSignIn &&
 							!isEmailDomainAllowed(user.email, googleAllowedDomains)
 						) {
 							throw new APIError("FORBIDDEN", {
