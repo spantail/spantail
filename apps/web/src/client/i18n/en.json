@@ -138,8 +138,9 @@
 	},
 	"reports": {
 		"title": "Reports",
+		"back": "Back to",
+		"backToWorkspace": "Back to {{name}}",
 		"newAction": "New report",
-		"description": "Reports belong to you and can combine entries from any of your workspaces.",
 		"newTitle": "New report",
 		"editTitle": "Edit report",
 		"duplicateTitle": "Duplicate report",
@@ -171,7 +172,6 @@
 		"editAction": "Edit",
 		"deleteAction": "Delete",
 		"duplicateAction": "New from last",
-		"empty": "No reports yet. Create one to get started.",
 		"archived": "Archived",
 		"noTemplates": "No report templates are enabled. Ask a workspace admin to enable one.",
 		"spanTooLong": "Date range must be 366 days or fewer.",
@@ -199,10 +199,17 @@
 			"cancel": "Cancel"
 		},
 		"view": {
-			"description": "Rendered Markdown output.",
-			"openAction": "View",
-			"downloadAction": "Download .md",
-			"closeAction": "Close"
+			"downloadAction": "Download .md"
+		},
+		"detail": {
+			"selectPrompt": "Select a report to read.",
+			"notFound": "This report is no longer available."
+		},
+		"toolbar": {
+			"close": "Close",
+			"prev": "Previous",
+			"next": "Next",
+			"position": "{{index}} of {{total}}"
 		},
 		"form": {
 			"presetPreview": "Currently resolves to {{from}} – {{to}}"

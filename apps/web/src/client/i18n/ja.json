@@ -137,8 +137,9 @@
 	},
 	"reports": {
 		"title": "レポート",
+		"back": "戻る",
+		"backToWorkspace": "{{name}} に戻る",
 		"newAction": "新規レポート",
-		"description": "レポートは個人に紐づき、所属するすべてのワークスペースの記録を横断して集計できます。",
 		"newTitle": "レポートを作成",
 		"editTitle": "レポートを編集",
 		"duplicateTitle": "レポートを複製",
@@ -170,7 +171,6 @@
 		"editAction": "編集",
 		"deleteAction": "削除",
 		"duplicateAction": "前回から作成",
-		"empty": "レポートはまだありません。[新規レポート] から作成しましょう。",
 		"archived": "アーカイブ",
 		"noTemplates": "有効なレポートテンプレートがありません。ワークスペース管理者に有効化を依頼してください。",
 		"spanTooLong": "期間は 366 日以内にしてください。",
@@ -198,10 +198,17 @@
 			"cancel": "キャンセル"
 		},
 		"view": {
-			"description": "生成された Markdown 出力。",
-			"openAction": "表示",
-			"downloadAction": ".md をダウンロード",
-			"closeAction": "閉じる"
+			"downloadAction": ".md をダウンロード"
+		},
+		"detail": {
+			"selectPrompt": "読むレポートを選択してください。",
+			"notFound": "このレポートは利用できなくなりました。"
+		},
+		"toolbar": {
+			"close": "閉じる",
+			"prev": "前へ",
+			"next": "次へ",
+			"position": "{{total}} 件中 {{index}} 件目"
 		},
 		"form": {
 			"presetPreview": "現在の解決結果: {{from}} – {{to}}"
