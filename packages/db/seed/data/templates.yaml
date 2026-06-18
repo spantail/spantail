@@ -1,0 +1,86 @@
+# Four instance-scoped custom templates: daily + monthly, in English and
+# Japanese. `bodyFrom` reuses a code-defined builtin body verbatim (kept DRY);
+# the Japanese variants carry their own translated body. `language` selects the
+# template a workspace's reports use. Builtins are disabled (see instance.yaml).
+- key: daily-en
+  name: Daily report
+  description: Entries grouped by project for a single day.
+  language: en
+  periodUnit: day
+  bodyFrom: builtin:daily
+- key: monthly-en
+  name: Monthly report
+  description: Per-project and per-member totals as tables.
+  language: en
+  periodUnit: month
+  bodyFrom: builtin:monthly
+
+- key: daily-ja
+  name: 日報
+  description: 1日分のエントリをプロジェクト別にまとめます。
+  language: ja
+  periodUnit: day
+  body: |
+    # {{ report.name }}
+
+    **期間:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
+
+    {% if totals.entries == 0 -%}
+    _この期間の稼働記録はありません。_
+
+    {% else -%}
+    {% for group in groups.by_project -%}
+    ## {{ group.name }} — {{ group.total_minutes | format_duration }}
+
+    {% for entry in group.entries -%}
+    - {{ entry.description }}（{{ entry.duration_minutes | format_duration }}、{{ entry.user_name }}{% if entry.tags.size > 0 %}、タグ: {{ entry.tags | join: ", " }}{% endif %}）
+    {% endfor %}
+    {% endfor -%}
+    {% endif -%}
+    {% if report.note -%}
+    ## 備考
+
+    {{ report.note }}
+
+    {% endif -%}
+    ---
+
+    _生成日時 {{ generated_date }}_
+- key: monthly-ja
+  name: 月報
+  description: プロジェクト別・メンバー別の合計を表で示します。
+  language: ja
+  periodUnit: month
+  body: |
+    # {{ report.name }}
+
+    **期間:** {{ period.from }} – {{ period.to }} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
+
+    {% if totals.entries == 0 -%}
+    _この期間の稼働記録はありません。_
+
+    {% else -%}
+    ## プロジェクト別
+
+    | プロジェクト | 件数 | 合計 |
+    | --- | --- | --- |
+    {% for group in groups.by_project -%}
+    | {{ group.name }} | {{ group.entries | size }} | {{ group.total_minutes | format_duration }} |
+    {% endfor %}
+    ## メンバー別
+
+    | メンバー | 件数 | 合計 |
+    | --- | --- | --- |
+    {% for group in groups.by_user -%}
+    | {{ group.name }} | {{ group.entries | size }} | {{ group.total_minutes | format_duration }} |
+    {% endfor %}
+    {% endif -%}
+    {% if report.note -%}
+    ## 備考
+
+    {{ report.note }}
+
+    {% endif -%}
+    ---
+
+    _生成日時 {{ generated_date }}_

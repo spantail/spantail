@@ -1,0 +1,10 @@
+# The singleton instance settings row. Email and social login stay disabled for
+# a local demo. The builtin templates are disabled so only the four custom
+# templates above are offered when composing a report.
+emailEnabled: false
+googleOAuthEnabled: false
+githubOAuthEnabled: false
+disableBuiltinTemplates:
+  - builtin:daily
+  - builtin:weekly
+  - builtin:monthly

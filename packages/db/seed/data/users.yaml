@@ -1,0 +1,19 @@
+# Demo users. All share the same password (see seed/README.md).
+# `key` is an internal reference only.
+- key: u-admin
+  name: Alice Nakamura
+  email: alice@northwind.example
+  isAdmin: true
+- key: u-author
+  name: Bilal Rahman
+  email: bilal@northwind.example
+  canManageTemplates: true
+- key: u-carol
+  name: Carol Mendoza
+  email: carol@northwind.example
+- key: u-dan
+  name: Daichi Sato
+  email: daichi@northwind.example
+- key: u-erin
+  name: Erin Walsh
+  email: erin@northwind.example

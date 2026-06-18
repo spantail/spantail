@@ -7,6 +7,7 @@ export default defineConfig({
 			"./apps/web/vitest.client.config.ts",
 			"./packages/cli/vitest.config.ts",
 			"./packages/core/vitest.config.ts",
+			"./packages/db/vitest.config.ts",
 			"./packages/sdk/vitest.config.ts",
 		],
 	},
