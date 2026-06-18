@@ -362,6 +362,9 @@ function ProjectPage() {
 							projects={project.data ? [project.data] : []}
 							members={members.data ?? []}
 							showProject={false}
+							onLoadMore={() => {
+								if (entries.hasNextPage) entries.fetchNextPage();
+							}}
 						/>
 						<InfiniteSentinel
 							hasNextPage={Boolean(entries.hasNextPage)}

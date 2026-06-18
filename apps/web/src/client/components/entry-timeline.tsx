@@ -1,10 +1,12 @@
 import type { Project, WorkEntry } from "@toxil/core";
 import { formatDuration } from "@toxil/core";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EntryActions } from "@/components/entry-actions";
 import { useEntryDialog } from "@/components/entry-dialog";
 import { Badge } from "@/components/ui/badge";
+import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { formatEntryDate } from "@/lib/format";
 
 export interface TimelineDay {
@@ -31,18 +33,41 @@ export function groupEntriesByDate(entries: WorkEntry[]): TimelineDay[] {
 interface EntryTimelineProps {
 	entries: WorkEntry[];
 	projects: Project[];
+	/** Loads the next page when keyboard nav reaches the last entry. */
+	onLoadMore?: () => void;
 }
 
 /** The personal work log: entries grouped under date headers. */
-export function EntryTimeline({ entries, projects }: EntryTimelineProps) {
+export function EntryTimeline({
+	entries,
+	projects,
+	onLoadMore,
+}: EntryTimelineProps) {
 	const { i18n } = useTranslation();
 	const { openView } = useEntryDialog();
 	const projectName = (id: string) =>
 		projects.find((p) => p.id === id)?.name ?? id;
 	const currentYear = String(new Date().getFullYear());
 
+	// Keyboard nav over the flat (cross-day) order; the highlight maps back to a
+	// row via its entry id.
+	const containerRef = useRef<HTMLDivElement>(null);
+	const [active, setActive] = useState(-1);
+	const indexById = new Map(entries.map((entry, i) => [entry.id, i]));
+	useListKeyboardNav({
+		length: entries.length,
+		index: active,
+		onMove: setActive,
+		onOpen: () => {
+			const entry = entries[active];
+			if (entry) openView(entry);
+		},
+		onReachEnd: onLoadMore,
+		containerRef,
+	});
+
 	return (
-		<div className="flex flex-col gap-6">
+		<div ref={containerRef} className="flex flex-col gap-6">
 			{groupEntriesByDate(entries).map((day) => (
 				<section key={day.date} className="flex flex-col gap-1">
 					<div className="flex items-baseline justify-between border-b pb-1">
@@ -66,7 +91,13 @@ export function EntryTimeline({ entries, projects }: EntryTimelineProps) {
 							// menu is a sibling so buttons are never nested.
 							<li
 								key={entry.id}
-								className="group hover:bg-muted/50 flex items-center gap-1 border-b transition-colors last:border-b-0"
+								data-nav-index={indexById.get(entry.id)}
+								data-nav-active={
+									active >= 0 && active === indexById.get(entry.id)
+										? ""
+										: undefined
+								}
+								className="group hover:bg-muted/50 data-[nav-active]:bg-muted flex items-center gap-1 border-b transition-colors last:border-b-0"
 							>
 								<button
 									type="button"

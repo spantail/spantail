@@ -1,12 +1,12 @@
 import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	formatDuration,
 	formatPeriodLabel,
 	type ReportMeta,
 } from "@toxil/core";
 import { FileTextIcon, PlusIcon, SlidersHorizontalIcon } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FilterChip } from "@/components/filter-chip";
@@ -29,6 +29,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { api } from "@/lib/api";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { cn } from "@/lib/utils";
@@ -42,15 +43,18 @@ function ReportListItem({
 	tab,
 	templateName,
 	selected,
+	index,
 }: {
 	report: ReportMeta;
 	tab: string;
 	templateName: string;
 	selected: boolean;
+	index: number;
 }) {
 	const { i18n } = useTranslation();
 	return (
 		<div
+			data-nav-index={index}
 			className={cn(
 				"rounded-xl transition-colors",
 				selected ? "bg-card ring-border shadow-sm ring-1" : "hover:bg-card/60",
@@ -104,6 +108,7 @@ export function ReportList({
 	selectedId?: string;
 }) {
 	const { t } = useTranslation();
+	const navigate = useNavigate();
 	const { workspaces } = useWorkspace();
 	const { openCreate } = useReportDialogs();
 	const { templateById, enabledTemplates, templatesReady } =
@@ -132,6 +137,29 @@ export function ReportList({
 			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
 	const list = reports.data?.pages.flat() ?? [];
+
+	// j/k move the selection straight to the report's route, so the right pane
+	// updates as you go. Selection is derived from the URL (selectedId).
+	const containerRef = useRef<HTMLDivElement>(null);
+	const activeIndex = selectedId
+		? list.findIndex((report) => report.id === selectedId)
+		: -1;
+	useListKeyboardNav({
+		length: list.length,
+		index: activeIndex,
+		onMove: (next) => {
+			const target = list[next];
+			if (target)
+				navigate({
+					to: "/reports/$tab/$reportId",
+					params: { tab, reportId: target.id },
+				});
+		},
+		onReachEnd: () => {
+			if (reports.hasNextPage) reports.fetchNextPage();
+		},
+		containerRef,
+	});
 
 	// Project catalog for the filter dropdown + chip labels. Reports are
 	// owner-scoped to the user's workspaces, so listing per workspace resolves
@@ -347,7 +375,7 @@ export function ReportList({
 				</div>
 			)}
 
-			<div className="min-h-0 flex-1 overflow-y-auto p-2">
+			<div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto p-2">
 				{reports.isPending || !templatesReady ? (
 					<div className="flex flex-col gap-1">
 						{[0, 1, 2, 3].map((i) => (
@@ -364,7 +392,7 @@ export function ReportList({
 					emptyBody()
 				) : (
 					<div className="flex flex-col gap-1">
-						{list.map((report) => (
+						{list.map((report, index) => (
 							<ReportListItem
 								key={report.id}
 								report={report}
@@ -373,6 +401,7 @@ export function ReportList({
 									templateById.get(report.templateId)?.name ?? report.templateId
 								}
 								selected={report.id === selectedId}
+								index={index}
 							/>
 						))}
 						<InfiniteSentinel

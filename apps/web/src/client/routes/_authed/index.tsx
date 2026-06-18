@@ -123,6 +123,9 @@ function Timeline({
 						<EntryTimeline
 							entries={allEntries}
 							projects={projects.data ?? []}
+							onLoadMore={() => {
+								if (entries.hasNextPage) entries.fetchNextPage();
+							}}
 						/>
 						<InfiniteSentinel
 							hasNextPage={Boolean(entries.hasNextPage)}

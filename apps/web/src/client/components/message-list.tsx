@@ -4,14 +4,17 @@ import {
 	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import type { MailFolder } from "@toxil/core";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { MessageListItem } from "@/components/message-list-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { api } from "@/lib/api";
 import { invalidateMail } from "@/lib/query";
 
@@ -25,6 +28,7 @@ export function MessageList({
 	selectedId?: string;
 }) {
 	const { t } = useTranslation();
+	const navigate = useNavigate();
 	const queryClient = useQueryClient();
 	// Paginated folder listing. Keyed apart from the toolbar's full-folder query
 	// (["mail", folder]) so the infinite-data cache shape doesn't collide.
@@ -37,6 +41,29 @@ export function MessageList({
 			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
 	const items = query.data?.pages.flat() ?? [];
+
+	// j/k move the selection straight to the message's route, so the reading pane
+	// updates as you go. Selection is derived from the URL (selectedId).
+	const containerRef = useRef<HTMLDivElement>(null);
+	const activeIndex = selectedId
+		? items.findIndex((item) => item.id === selectedId)
+		: -1;
+	useListKeyboardNav({
+		length: items.length,
+		index: activeIndex,
+		onMove: (next) => {
+			const target = items[next];
+			if (target)
+				navigate({
+					to: "/messages/$folder/$messageId",
+					params: { folder, messageId: target.id },
+				});
+		},
+		onReachEnd: () => {
+			if (query.hasNextPage) query.fetchNextPage();
+		},
+		containerRef,
+	});
 
 	// The Inbox "mark all read" affordance reads the authoritative unread count
 	// (paginated pages would miss unread items below the fold).
@@ -71,7 +98,7 @@ export function MessageList({
 					</Button>
 				)}
 			</div>
-			<div className="min-h-0 flex-1 overflow-y-auto p-2">
+			<div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto p-2">
 				{query.isPending ? (
 					<div className="flex flex-col gap-1">
 						{[0, 1, 2, 3].map((i) => (
@@ -95,12 +122,13 @@ export function MessageList({
 					</div>
 				) : (
 					<div className="flex flex-col gap-1">
-						{items.map((item) => (
+						{items.map((item, index) => (
 							<MessageListItem
 								key={item.id}
 								item={item}
 								folder={folder}
 								selected={item.id === selectedId}
+								index={index}
 							/>
 						))}
 						<InfiniteSentinel
