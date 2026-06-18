@@ -40,7 +40,8 @@ Every seeded user shares the password **`password`**:
   - **Bilal** & **Erin** — both shared across the two English clients (Acme +
     Globex).
   - **Carol** (Globex lead) — mostly Globex, helps Acme now and then.
-  - **Daichi** (桜 lead) — the Japanese client; his work logs are in Japanese.
+  - **Daichi** (桜 lead) — mostly the Japanese client; his 桜 work logs are in
+    Japanese (his lighter internal work, like everyone's, is in English).
 - Members log Mon–Fri for the last 45 days, but the days have texture: hours rise
   and fall around a typical ~8h, lines are worked at different cadences (daily /
   most days / weekly / a few days a month), the occasional weekday is taken off,

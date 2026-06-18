@@ -27,7 +27,8 @@ allocations:
     - { project: p-globex-cms, minutes: 195, cadence: daily }
     - { project: p-self-platform, minutes: 90, cadence: weekly }
     - { project: p-acme-mobile, minutes: 120, cadence: occasional }
-  # Daichi leads the Japanese client; his work logs are in Japanese.
+  # Daichi leads the Japanese client (桜 work logged in Japanese), with light
+  # internal Northwind work in English.
   u-dan:
     - { project: p-sakura-orders, minutes: 270, cadence: daily }
     - { project: p-sakura-inventory, minutes: 150, cadence: daily }
