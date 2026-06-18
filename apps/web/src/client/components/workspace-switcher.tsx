@@ -1,3 +1,4 @@
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronsUpDownIcon, ClockIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,7 +24,23 @@ export function WorkspaceSwitcher({ isAdmin }: { isAdmin: boolean }) {
 	const { t } = useTranslation();
 	const { isMobile } = useSidebar();
 	const { workspaces, current, setCurrentId } = useWorkspace();
+	const navigate = useNavigate();
+	const onWorkspaceRoute = useRouterState({
+		select: (s) => s.location.pathname.startsWith("/w/"),
+	});
 	const [createOpen, setCreateOpen] = useState(false);
+
+	// Switching always updates the persisted active workspace (which drives the
+	// top-level surfaces: settings, reports, log-work). On a workspace-scoped
+	// route the URL is the source of truth, so also navigate to the new
+	// workspace's dashboard — its projects differ, so the current project path
+	// would not resolve.
+	function selectWorkspace(workspace: (typeof workspaces)[number]) {
+		setCurrentId(workspace.id);
+		if (onWorkspaceRoute) {
+			navigate({ to: "/w/$wsSlug", params: { wsSlug: workspace.slug } });
+		}
+	}
 
 	return (
 		<SidebarMenu>
@@ -58,7 +75,7 @@ export function WorkspaceSwitcher({ isAdmin }: { isAdmin: boolean }) {
 						{workspaces.map((workspace) => (
 							<DropdownMenuItem
 								key={workspace.id}
-								onClick={() => setCurrentId(workspace.id)}
+								onClick={() => selectWorkspace(workspace)}
 								className="gap-2 p-2"
 							>
 								{workspace.name}

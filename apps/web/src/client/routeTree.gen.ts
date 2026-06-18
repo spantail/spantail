@@ -30,6 +30,7 @@ import { Route as MessagesFolderIndexRouteImport } from './routes/messages/$fold
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as ReportsTabReportIdRouteImport } from './routes/reports/$tab/$reportId'
 import { Route as MessagesFolderMessageIdRouteImport } from './routes/messages/$folder/$messageId'
+import { Route as AuthedWWsSlugRouteImport } from './routes/_authed/w.$wsSlug'
 import { Route as AuthedSettingsUsersRouteImport } from './routes/_authed/settings/users'
 import { Route as AuthedSettingsTokensRouteImport } from './routes/_authed/settings/tokens'
 import { Route as AuthedSettingsTemplatesRouteImport } from './routes/_authed/settings/templates'
@@ -40,7 +41,8 @@ import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/sett
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
 import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
 import { Route as AuthedSettingsAuthenticationRouteImport } from './routes/_authed/settings/authentication'
-import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects.$projectId'
+import { Route as AuthedWWsSlugIndexRouteImport } from './routes/_authed/w.$wsSlug.index'
+import { Route as AuthedWWsSlugProjectsProjectSlugRouteImport } from './routes/_authed/w.$wsSlug.projects.$projectSlug'
 
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
@@ -146,6 +148,11 @@ const MessagesFolderMessageIdRoute = MessagesFolderMessageIdRouteImport.update({
   path: '/$messageId',
   getParentRoute: () => MessagesFolderRoute,
 } as any)
+const AuthedWWsSlugRoute = AuthedWWsSlugRouteImport.update({
+  id: '/w/$wsSlug',
+  path: '/w/$wsSlug',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSettingsUsersRoute = AuthedSettingsUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -198,11 +205,17 @@ const AuthedSettingsAuthenticationRoute =
     path: '/authentication',
     getParentRoute: () => AuthedSettingsRoute,
   } as any)
-const AuthedProjectsProjectIdRoute = AuthedProjectsProjectIdRouteImport.update({
-  id: '/projects/$projectId',
-  path: '/projects/$projectId',
-  getParentRoute: () => AuthedRoute,
+const AuthedWWsSlugIndexRoute = AuthedWWsSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedWWsSlugRoute,
 } as any)
+const AuthedWWsSlugProjectsProjectSlugRoute =
+  AuthedWWsSlugProjectsProjectSlugRouteImport.update({
+    id: '/projects/$projectSlug',
+    path: '/projects/$projectSlug',
+    getParentRoute: () => AuthedWWsSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
@@ -220,7 +233,6 @@ export interface FileRoutesByFullPath {
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
-  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -231,11 +243,14 @@ export interface FileRoutesByFullPath {
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
   '/settings/users': typeof AuthedSettingsUsersRoute
+  '/w/$wsSlug': typeof AuthedWWsSlugRouteWithChildren
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/settings/': typeof AuthedSettingsIndexRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
   '/reports/$tab/': typeof ReportsTabIndexRoute
+  '/w/$wsSlug/': typeof AuthedWWsSlugIndexRoute
+  '/w/$wsSlug/projects/$projectSlug': typeof AuthedWWsSlugProjectsProjectSlugRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
@@ -248,7 +263,6 @@ export interface FileRoutesByTo {
   '/': typeof AuthedIndexRoute
   '/messages': typeof MessagesIndexRoute
   '/reports': typeof ReportsIndexRoute
-  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -264,6 +278,8 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthedSettingsIndexRoute
   '/messages/$folder': typeof MessagesFolderIndexRoute
   '/reports/$tab': typeof ReportsTabIndexRoute
+  '/w/$wsSlug': typeof AuthedWWsSlugIndexRoute
+  '/w/$wsSlug/projects/$projectSlug': typeof AuthedWWsSlugProjectsProjectSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -283,7 +299,6 @@ export interface FileRoutesById {
   '/_authed/': typeof AuthedIndexRoute
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
-  '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/_authed/settings/email': typeof AuthedSettingsEmailRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
@@ -294,11 +309,14 @@ export interface FileRoutesById {
   '/_authed/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/_authed/settings/tokens': typeof AuthedSettingsTokensRoute
   '/_authed/settings/users': typeof AuthedSettingsUsersRoute
+  '/_authed/w/$wsSlug': typeof AuthedWWsSlugRouteWithChildren
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
   '/reports/$tab/': typeof ReportsTabIndexRoute
+  '/_authed/w/$wsSlug/': typeof AuthedWWsSlugIndexRoute
+  '/_authed/w/$wsSlug/projects/$projectSlug': typeof AuthedWWsSlugProjectsProjectSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -318,7 +336,6 @@ export interface FileRouteTypes {
     | '/reset-password/$token'
     | '/messages/'
     | '/reports/'
-    | '/projects/$projectId'
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/general'
@@ -329,11 +346,14 @@ export interface FileRouteTypes {
     | '/settings/templates'
     | '/settings/tokens'
     | '/settings/users'
+    | '/w/$wsSlug'
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
     | '/settings/'
     | '/messages/$folder/'
     | '/reports/$tab/'
+    | '/w/$wsSlug/'
+    | '/w/$wsSlug/projects/$projectSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
@@ -346,7 +366,6 @@ export interface FileRouteTypes {
     | '/'
     | '/messages'
     | '/reports'
-    | '/projects/$projectId'
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/general'
@@ -362,6 +381,8 @@ export interface FileRouteTypes {
     | '/settings'
     | '/messages/$folder'
     | '/reports/$tab'
+    | '/w/$wsSlug'
+    | '/w/$wsSlug/projects/$projectSlug'
   id:
     | '__root__'
     | '/_authed'
@@ -380,7 +401,6 @@ export interface FileRouteTypes {
     | '/_authed/'
     | '/messages/'
     | '/reports/'
-    | '/_authed/projects/$projectId'
     | '/_authed/settings/authentication'
     | '/_authed/settings/email'
     | '/_authed/settings/general'
@@ -391,11 +411,14 @@ export interface FileRouteTypes {
     | '/_authed/settings/templates'
     | '/_authed/settings/tokens'
     | '/_authed/settings/users'
+    | '/_authed/w/$wsSlug'
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
     | '/_authed/settings/'
     | '/messages/$folder/'
     | '/reports/$tab/'
+    | '/_authed/w/$wsSlug/'
+    | '/_authed/w/$wsSlug/projects/$projectSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -557,6 +580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesFolderMessageIdRouteImport
       parentRoute: typeof MessagesFolderRoute
     }
+    '/_authed/w/$wsSlug': {
+      id: '/_authed/w/$wsSlug'
+      path: '/w/$wsSlug'
+      fullPath: '/w/$wsSlug'
+      preLoaderRoute: typeof AuthedWWsSlugRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/settings/users': {
       id: '/_authed/settings/users'
       path: '/users'
@@ -627,12 +657,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsAuthenticationRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
-    '/_authed/projects/$projectId': {
-      id: '/_authed/projects/$projectId'
-      path: '/projects/$projectId'
-      fullPath: '/projects/$projectId'
-      preLoaderRoute: typeof AuthedProjectsProjectIdRouteImport
-      parentRoute: typeof AuthedRoute
+    '/_authed/w/$wsSlug/': {
+      id: '/_authed/w/$wsSlug/'
+      path: '/'
+      fullPath: '/w/$wsSlug/'
+      preLoaderRoute: typeof AuthedWWsSlugIndexRouteImport
+      parentRoute: typeof AuthedWWsSlugRoute
+    }
+    '/_authed/w/$wsSlug/projects/$projectSlug': {
+      id: '/_authed/w/$wsSlug/projects/$projectSlug'
+      path: '/projects/$projectSlug'
+      fullPath: '/w/$wsSlug/projects/$projectSlug'
+      preLoaderRoute: typeof AuthedWWsSlugProjectsProjectSlugRouteImport
+      parentRoute: typeof AuthedWWsSlugRoute
     }
   }
 }
@@ -669,13 +706,27 @@ const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
   AuthedSettingsRouteChildren,
 )
 
+interface AuthedWWsSlugRouteChildren {
+  AuthedWWsSlugIndexRoute: typeof AuthedWWsSlugIndexRoute
+  AuthedWWsSlugProjectsProjectSlugRoute: typeof AuthedWWsSlugProjectsProjectSlugRoute
+}
+
+const AuthedWWsSlugRouteChildren: AuthedWWsSlugRouteChildren = {
+  AuthedWWsSlugIndexRoute: AuthedWWsSlugIndexRoute,
+  AuthedWWsSlugProjectsProjectSlugRoute: AuthedWWsSlugProjectsProjectSlugRoute,
+}
+
+const AuthedWWsSlugRouteWithChildren = AuthedWWsSlugRoute._addFileChildren(
+  AuthedWWsSlugRouteChildren,
+)
+
 interface AuthedRouteChildren {
   AuthedAccountRoute: typeof AuthedAccountRoute
   AuthedEntriesRoute: typeof AuthedEntriesRoute
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
   AuthedTemplatesRoute: typeof AuthedTemplatesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
-  AuthedProjectsProjectIdRoute: typeof AuthedProjectsProjectIdRoute
+  AuthedWWsSlugRoute: typeof AuthedWWsSlugRouteWithChildren
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
@@ -684,7 +735,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
   AuthedTemplatesRoute: AuthedTemplatesRoute,
   AuthedIndexRoute: AuthedIndexRoute,
-  AuthedProjectsProjectIdRoute: AuthedProjectsProjectIdRoute,
+  AuthedWWsSlugRoute: AuthedWWsSlugRouteWithChildren,
 }
 
 const AuthedRouteWithChildren =

@@ -1,3 +1,4 @@
+import { useRouterState } from "@tanstack/react-router";
 import type { WorkspaceWithRole } from "@toxil/core";
 import { createContext, useContext, useEffect, useState } from "react";
 
@@ -21,8 +22,18 @@ export function WorkspaceProvider({
 	const [selectedId, setSelectedId] = useState<string | null>(() =>
 		localStorage.getItem(STORAGE_KEY),
 	);
+	// On workspace-scoped routes (`/w/{slug}/...`) the URL is the source of
+	// truth; elsewhere (settings, reports, messages) the persisted last-visited
+	// workspace is. The selector returns the slug segment only, so this provider
+	// re-renders just when the active workspace changes, not on every navigation.
+	const urlSlug = useRouterState({
+		select: (s) => s.location.pathname.match(/^\/w\/([^/]+)/)?.[1] ?? null,
+	});
 	const current =
-		workspaces.find((w) => w.id === selectedId) ?? workspaces[0] ?? null;
+		(urlSlug ? workspaces.find((w) => w.slug === urlSlug) : undefined) ??
+		workspaces.find((w) => w.id === selectedId) ??
+		workspaces[0] ??
+		null;
 
 	useEffect(() => {
 		if (current) localStorage.setItem(STORAGE_KEY, current.id);

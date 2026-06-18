@@ -51,13 +51,17 @@ function useDismissOnMobile() {
 
 function NavItems({ items }: { items: NavItem[] }) {
 	const { t } = useTranslation();
+	const { current } = useWorkspace();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const dismissOnMobile = useDismissOnMobile();
+	// Home links to the redirect hub (`/`), which forwards to the active
+	// workspace dashboard; highlight it there too, not only on the bare path.
+	const dashboardPath = current ? `/w/${current.slug}` : null;
 
 	return (
 		<SidebarMenu>
 			{items.map((item) => {
-				const isActive = pathname === item.to;
+				const isActive = pathname === item.to || pathname === dashboardPath;
 				return (
 					<SidebarMenuItem key={item.key}>
 						<SidebarMenuButton
@@ -117,7 +121,8 @@ function ProjectsGroup() {
 						) : (
 							<SidebarMenu>
 								{active.map((project) => {
-									const isActive = pathname === `/projects/${project.id}`;
+									const isActive =
+										pathname === `/w/${current.slug}/projects/${project.slug}`;
 									return (
 										<SidebarMenuItem key={project.id}>
 											<SidebarMenuButton
@@ -130,8 +135,11 @@ function ProjectsGroup() {
 												}
 											>
 												<Link
-													to="/projects/$projectId"
-													params={{ projectId: project.id }}
+													to="/w/$wsSlug/projects/$projectSlug"
+													params={{
+														wsSlug: current.slug,
+														projectSlug: project.slug,
+													}}
 												>
 													<FolderIcon />
 													<span>{project.name}</span>

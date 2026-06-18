@@ -94,10 +94,6 @@ beforeEach(() => {
 					return json(zeroStats);
 				case "/api/v1/workspaces/ws1/projects":
 					return json([{ ...projectPayload, id: "p1", workspaceId: "ws1" }]);
-				case "/api/v1/projects/p1":
-					return json({ ...projectPayload, id: "p1", workspaceId: "ws1" });
-				case "/api/v1/projects/p2":
-					return json({ ...projectPayload, id: "p2", workspaceId: "ws2" });
 				default:
 					return json([]);
 			}
@@ -173,21 +169,30 @@ it("redirects the removed entries route to home", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
 	const router = await renderApp("/entries");
 
+	// `/entries` → `/` → the active workspace dashboard.
 	expect(await screen.findByText("Today")).toBeDefined();
-	expect(router.state.location.pathname).toBe("/");
+	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
-it("renders a project page for the current workspace", async () => {
+it("redirects the bare home route to the active workspace dashboard", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	const router = await renderApp("/projects/p1");
+	const router = await renderApp("/");
+
+	expect(await screen.findByText("Today")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/w/acme");
+});
+
+it("renders a project page addressed by its slug", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/w/acme/projects/website");
 
 	expect((await screen.findAllByText("Website")).length).toBeGreaterThan(0);
-	expect(router.state.location.pathname).toBe("/projects/p1");
+	expect(router.state.location.pathname).toBe("/w/acme/projects/website");
 });
 
 it("pre-selects the project when logging work from a project page", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	await renderApp("/projects/p1");
+	await renderApp("/w/acme/projects/website");
 	// Wait for the projects query so the contextual default can resolve.
 	await screen.findAllByText("Website");
 
@@ -199,12 +204,21 @@ it("pre-selects the project when logging work from a project page", async () => 
 	).toBeGreaterThan(0);
 });
 
-it("redirects a project of another workspace to home", async () => {
+it("shows a not-found message for an unknown project slug", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	const router = await renderApp("/projects/p2");
+	await renderApp("/w/acme/projects/ghost");
+
+	expect(
+		await screen.findByText("Project not found in this workspace."),
+	).toBeDefined();
+});
+
+it("redirects an unknown workspace slug to the active workspace", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/w/ghost");
 
 	expect(await screen.findByText("Today")).toBeDefined();
-	expect(router.state.location.pathname).toBe("/");
+	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
 it("renders the home dashboard and the empty timeline call to action", async () => {

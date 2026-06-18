@@ -62,17 +62,18 @@ export function EntryDialogProvider({
 	const [instanceId, setInstanceId] = useState(0);
 	const hasWorkspace = Boolean(current);
 
-	// On a project page, creating pre-selects that project (only while it is
-	// active — the form's select lists active projects only).
+	// On a project page (`/w/{wsSlug}/projects/{projectSlug}`), creating
+	// pre-selects that project (only while it is active — the form's select
+	// lists active projects only). The path carries the slug, so resolve it to
+	// the project id the form expects.
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
-	const routeProjectId = pathname.startsWith("/projects/")
-		? pathname.slice("/projects/".length)
-		: undefined;
-	const contextProjectId = (projects.data ?? []).some(
-		(project) => project.id === routeProjectId && project.status === "active",
-	)
-		? routeProjectId
-		: undefined;
+	const routeProjectSlug = pathname.match(
+		/^\/w\/[^/]+\/projects\/([^/]+)/,
+	)?.[1];
+	const contextProjectId = (projects.data ?? []).find(
+		(project) =>
+			project.slug === routeProjectSlug && project.status === "active",
+	)?.id;
 
 	const openCreate = useCallback(() => {
 		if (!hasWorkspace) return;
