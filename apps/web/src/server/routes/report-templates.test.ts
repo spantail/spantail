@@ -2,25 +2,24 @@ import { expect, it } from "vitest";
 
 import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
 
+/** admin is the bootstrap instance admin; member is a regular user. */
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const member = await signUpUser("Member", "member@example.com");
-	const outsider = await signUpUser("Outsider", "outsider@example.com");
-	const ws = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
-			admin,
-		)
-	).json()) as { id: string };
-	await apiJson(
-		"POST",
-		`/api/v1/workspaces/${ws.id}/members`,
-		{ email: "member@example.com" },
-		admin,
-	);
-	return { admin, member, outsider, ws };
+	return { admin, member };
+}
+
+/** Finds a user's id by email via the instance-admin user list. */
+async function userIdByEmail(adminCookie: string, email: string) {
+	const users = (await (
+		await apiGet("/api/v1/users", adminCookie)
+	).json()) as Array<{
+		id: string;
+		email: string;
+	}>;
+	const found = users.find((u) => u.email === email);
+	if (!found) throw new Error(`user ${email} not found`);
+	return found.id;
 }
 
 const templateInput = {
@@ -30,12 +29,12 @@ const templateInput = {
 	periodUnit: "day" as const,
 };
 
-it("lists builtins with cadence plus workspace templates", async () => {
-	const { admin, ws } = await setup();
+it("lists builtins with cadence plus custom templates", async () => {
+	const { admin } = await setup();
 
 	const created = await apiJson(
 		"POST",
-		`/api/v1/workspaces/${ws.id}/report-templates`,
+		"/api/v1/report-templates",
 		templateInput,
 		admin,
 	);
@@ -44,10 +43,7 @@ it("lists builtins with cadence plus workspace templates", async () => {
 		"day",
 	);
 
-	const res = await apiGet(
-		`/api/v1/workspaces/${ws.id}/report-templates`,
-		admin,
-	);
+	const res = await apiGet("/api/v1/report-templates", admin);
 	expect(res.status).toBe(200);
 	const list = (await res.json()) as Array<{
 		id: string;
@@ -70,47 +66,33 @@ it("lists builtins with cadence plus workspace templates", async () => {
 	]);
 });
 
-it("hides workspace templates from non-members", async () => {
-	const { outsider, ws } = await setup();
+it("lets any authenticated user read templates but not anonymous callers", async () => {
+	const { admin, member } = await setup();
+	await apiJson("POST", "/api/v1/report-templates", templateInput, admin);
 
-	expect(
-		(await apiGet(`/api/v1/workspaces/${ws.id}/report-templates`, outsider))
-			.status,
-	).toBe(404);
+	// Templates are instance-wide formats: every member can read the list.
+	const memberList = await apiGet("/api/v1/report-templates", member);
+	expect(memberList.status).toBe(200);
+	expect(((await memberList.json()) as unknown[]).length).toBeGreaterThan(3);
 
-	const res = await apiGet("/api/v1/workspaces/none/report-templates");
-	expect(res.status).toBe(401);
+	// Anonymous callers are rejected.
+	expect((await apiGet("/api/v1/report-templates")).status).toBe(401);
 });
 
-it("restricts custom template management to admins", async () => {
-	const { admin, member, outsider, ws } = await setup();
+it("restricts custom template management to admins and template authors", async () => {
+	const { admin, member } = await setup();
 
-	// Members can read but not create.
+	// A regular member can neither create...
 	expect(
-		(
-			await apiJson(
-				"POST",
-				`/api/v1/workspaces/${ws.id}/report-templates`,
-				templateInput,
-				member,
-			)
-		).status,
+		(await apiJson("POST", "/api/v1/report-templates", templateInput, member))
+			.status,
 	).toBe(403);
 
 	const template = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
-			templateInput,
-			admin,
-		)
+		await apiJson("POST", "/api/v1/report-templates", templateInput, admin)
 	).json()) as { id: string };
 
-	expect(
-		(await apiGet(`/api/v1/report-templates/${template.id}`, outsider)).status,
-	).toBe(404);
-
-	// Members cannot edit or delete.
+	// ...nor edit or delete.
 	expect(
 		(
 			await apiJson(
@@ -132,7 +114,7 @@ it("restricts custom template management to admins", async () => {
 		).status,
 	).toBe(403);
 
-	// Admins can.
+	// Admins can edit.
 	const updated = await apiJson(
 		"PATCH",
 		`/api/v1/report-templates/${template.id}`,
@@ -141,25 +123,35 @@ it("restricts custom template management to admins", async () => {
 	);
 	expect(updated.status).toBe(200);
 	expect(((await updated.json()) as { name: string }).name).toBe("Standup v2");
+
+	// Granting the template-author capability lets a non-admin manage too.
+	const memberId = await userIdByEmail(admin, "member@example.com");
 	expect(
 		(
 			await apiJson(
-				"DELETE",
-				`/api/v1/report-templates/${template.id}`,
-				undefined,
+				"PATCH",
+				`/api/v1/users/${memberId}`,
+				{ canManageTemplates: true },
 				admin,
 			)
 		).status,
-	).toBe(204);
+	).toBe(200);
+	const authored = await apiJson(
+		"POST",
+		"/api/v1/report-templates",
+		{ ...templateInput, name: "Authored" },
+		member,
+	);
+	expect(authored.status).toBe(201);
 });
 
-it("toggles enabled and cadence via the admin state route", async () => {
-	const { admin, member, ws } = await setup();
+it("toggles enabled and cadence via the state route", async () => {
+	const { admin, member } = await setup();
 
-	// Builtin: disable via workspace settings.
+	// Builtin: disable via the instance override.
 	const disableWeekly = await apiJson(
 		"PATCH",
-		`/api/v1/workspaces/${ws.id}/report-templates/builtin:weekly/state`,
+		"/api/v1/report-templates/builtin:weekly/state",
 		{ enabled: false },
 		admin,
 	);
@@ -170,7 +162,7 @@ it("toggles enabled and cadence via the admin state route", async () => {
 		(
 			await apiJson(
 				"PATCH",
-				`/api/v1/workspaces/${ws.id}/report-templates/builtin:daily/state`,
+				"/api/v1/report-templates/builtin:daily/state",
 				{ enabled: false },
 				member,
 			)
@@ -179,23 +171,18 @@ it("toggles enabled and cadence via the admin state route", async () => {
 
 	// Custom: flip enabled + cadence.
 	const template = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
-			templateInput,
-			admin,
-		)
+		await apiJson("POST", "/api/v1/report-templates", templateInput, admin)
 	).json()) as { id: string };
 	const state = await apiJson(
 		"PATCH",
-		`/api/v1/workspaces/${ws.id}/report-templates/${template.id}/state`,
+		`/api/v1/report-templates/${template.id}/state`,
 		{ enabled: false, periodUnit: "month" },
 		admin,
 	);
 	expect(state.status).toBe(200);
 
 	const list = (await (
-		await apiGet(`/api/v1/workspaces/${ws.id}/report-templates`, admin)
+		await apiGet("/api/v1/report-templates", admin)
 	).json()) as Array<{ id: string; enabled: boolean; periodUnit: string }>;
 	expect(list.find((t) => t.id === "builtin:weekly")?.enabled).toBe(false);
 	const custom = list.find((t) => t.id === template.id);
@@ -238,14 +225,17 @@ it("keeps builtin template bodies read-only but fetchable", async () => {
 });
 
 it("refuses to delete a template referenced by a report", async () => {
-	const { admin, ws } = await setup();
-	const template = (await (
+	const { admin } = await setup();
+	const ws = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
-			templateInput,
+			"/api/v1/workspaces",
+			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
 			admin,
 		)
+	).json()) as { id: string };
+	const template = (await (
+		await apiJson("POST", "/api/v1/report-templates", templateInput, admin)
 	).json()) as { id: string };
 	await apiJson(
 		"POST",

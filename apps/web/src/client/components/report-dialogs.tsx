@@ -74,11 +74,8 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		name: "",
 		nameEdited: false,
 		templateId: template.id,
-		workspaceIds: template.workspaceId
-			? [template.workspaceId]
-			: current
-				? [current.id]
-				: [],
+		// Templates carry no workspace; a new report defaults to the current one.
+		workspaceIds: current ? [current.id] : [],
 		projectIds: [],
 		rangeChoice: UNIT_PRESET[template.periodUnit],
 		from: "",

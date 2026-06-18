@@ -17,7 +17,6 @@ import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 import { memberRoutes } from "./members";
 import { workspaceProjectRoutes } from "./projects";
-import { workspaceReportTemplateRoutes } from "./report-templates";
 
 export const workspaceRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
@@ -74,5 +73,4 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		return c.json(updated);
 	})
 	.route("/:id/members", memberRoutes)
-	.route("/:id/projects", workspaceProjectRoutes)
-	.route("/:id/report-templates", workspaceReportTemplateRoutes);
+	.route("/:id/projects", workspaceProjectRoutes);

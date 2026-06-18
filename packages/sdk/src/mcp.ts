@@ -128,13 +128,11 @@ export function registerToxilTools(
 		{
 			title: "List report templates",
 			description:
-				"List report templates available in a workspace, including the builtin " +
+				"List the instance's report templates, including the builtin " +
 				"daily/weekly/monthly templates. Returns ids usable as a report's templateId.",
-			inputSchema: {
-				workspaceId: z.string().describe("Workspace id from list_workspaces"),
-			},
+			inputSchema: {},
 		},
-		({ workspaceId }) => run(() => client.listReportTemplates(workspaceId)),
+		() => run(() => client.listReportTemplates()),
 	);
 
 	server.registerTool(

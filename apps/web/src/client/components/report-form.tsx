@@ -117,14 +117,10 @@ export function ReportForm({
 	const [note, setNote] = useState(seed.note);
 	const [error, setError] = useState<string | null>(null);
 
-	// A custom template must belong to a filtered workspace, and disabled
+	// Templates are instance-wide formats, available for any scope. Disabled
 	// templates are archived — but always keep the current selection available.
 	const availableTemplates = templates.filter(
-		(template) =>
-			(template.builtin ||
-				(template.workspaceId &&
-					workspaceIds.includes(template.workspaceId))) &&
-			(template.enabled || template.id === templateId),
+		(template) => template.enabled || template.id === templateId,
 	);
 	const selectedTemplateId =
 		!templatesReady ||
@@ -153,7 +149,14 @@ export function ReportForm({
 				? formatPeriodLabel({ from, to })
 				: null
 			: formatPeriodLabel(resolveDateRange(rangeChoice, anchorTimezone));
-	const autoName = resolvedLabel ? `${resolvedLabel} ${userName}`.trim() : "";
+	// Smart default name: "<workspace> <user> <period>" when scoped to a single
+	// workspace, otherwise "<user> <period>" (cross-workspace or none selected).
+	const singleWorkspaceName = singleWorkspaceId
+		? (workspaces.find((w) => w.id === singleWorkspaceId)?.name ?? "")
+		: "";
+	const autoName = resolvedLabel
+		? [singleWorkspaceName, userName, resolvedLabel].filter(Boolean).join(" ")
+		: "";
 	const effectiveName = nameEdited ? name : autoName;
 	const spanTooLong =
 		rangeChoice === "custom" &&

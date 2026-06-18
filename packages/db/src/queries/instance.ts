@@ -1,3 +1,4 @@
+import type { ReportTemplateOverrides } from "@toxil/core";
 import { eq } from "drizzle-orm";
 
 import type { Database } from "../index";
@@ -32,6 +33,25 @@ export async function upsertInstanceSettings(
 		.onConflictDoUpdate({
 			target: instanceSettings.id,
 			set: { ...settings, updatedAt: new Date() },
+		})
+		.returning();
+	const row = rows[0];
+	if (!row) throw new Error("instance settings upsert returned no row");
+	return row;
+}
+
+export async function upsertInstanceReportTemplateOverrides(
+	db: Database,
+	reportTemplateOverrides: ReportTemplateOverrides,
+): Promise<InstanceSettingsRow> {
+	// Touches only the report-template overrides column; other settings keep
+	// their values (on insert they fall back to their schema defaults).
+	const rows = await db
+		.insert(instanceSettings)
+		.values({ id: SINGLETON_ID, reportTemplateOverrides })
+		.onConflictDoUpdate({
+			target: instanceSettings.id,
+			set: { reportTemplateOverrides, updatedAt: new Date() },
 		})
 		.returning();
 	const row = rows[0];

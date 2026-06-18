@@ -8,6 +8,9 @@ export const authUserSchema = z.object({
 	name: z.string(),
 	email: z.email(),
 	isAdmin: z.boolean(),
+	// May manage instance-wide report templates without being a full instance
+	// admin (instance admins can manage templates regardless of this flag).
+	canManageTemplates: z.boolean(),
 });
 export type AuthUser = z.infer<typeof authUserSchema>;
 
@@ -17,6 +20,8 @@ export const managedUserSchema = z.object({
 	name: z.string(),
 	email: z.email(),
 	isAdmin: z.boolean(),
+	// Whether this user may manage instance-wide report templates.
+	canManageTemplates: z.boolean(),
 	createdAt: z.string(),
 	// Social login providers linked to this account (empty for password-only
 	// users). Lets the admin see at a glance how each user signs in.
@@ -44,11 +49,12 @@ export const createdUserSchema = managedUserSchema.extend({
 });
 export type CreatedUser = z.infer<typeof createdUserSchema>;
 
-/** Instance admin edits a user's display name and/or admin flag. */
+/** Instance admin edits a user's display name, admin flag, and capabilities. */
 export const updateUserInputSchema = z
 	.object({
 		name: userNameSchema,
 		isAdmin: z.boolean(),
+		canManageTemplates: z.boolean(),
 	})
 	.partial();
 export type UpdateUserInput = z.infer<typeof updateUserInputSchema>;

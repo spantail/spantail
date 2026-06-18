@@ -5,7 +5,7 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 const PERIOD_UNITS = ["day", "week", "month", "custom"] as const;
 
 import { user } from "./auth";
-import { createdAtMs, workspaces } from "./domain";
+import { createdAtMs } from "./domain";
 
 const updatedAtMs = () =>
 	integer("updated_at", { mode: "timestamp_ms" })
@@ -13,35 +13,29 @@ const updatedAtMs = () =>
 		.$onUpdate(() => new Date())
 		.notNull();
 
-// Builtin templates are code-defined in @toxil/core, so every row here
-// belongs to a workspace.
-export const reportTemplates = sqliteTable(
-	"report_templates",
-	{
-		id: text("id").primaryKey(),
-		workspaceId: text("workspace_id")
-			.notNull()
-			.references(() => workspaces.id, { onDelete: "cascade" }),
-		name: text("name").notNull(),
-		description: text("description"),
-		// Markdown + Liquid.
-		body: text("body").notNull(),
-		// Admin-controlled: disabled templates are hidden from the report tabs.
-		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-		// Cadence used to default a report's period/name and the Duplicate step.
-		periodUnit: text("period_unit", { enum: PERIOD_UNITS })
-			.notNull()
-			.default("custom"),
-		// Nullable + set null on delete: keep the workspace's template when its
-		// author is removed (authorship is just dropped).
-		createdBy: text("created_by").references(() => user.id, {
-			onDelete: "set null",
-		}),
-		createdAt: createdAtMs(),
-		updatedAt: updatedAtMs(),
-	},
-	(table) => [index("report_templates_workspace_idx").on(table.workspaceId)],
-);
+// Templates are instance-scoped presentation formats: a report picks one
+// freely, independent of which workspaces/projects/period it covers. Builtin
+// templates are code-defined in @toxil/core; these rows are the custom ones.
+export const reportTemplates = sqliteTable("report_templates", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	description: text("description"),
+	// Markdown + Liquid.
+	body: text("body").notNull(),
+	// Admin-controlled: disabled templates are hidden from the report tabs.
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+	// Cadence used to default a report's period/name and the Duplicate step.
+	periodUnit: text("period_unit", { enum: PERIOD_UNITS })
+		.notNull()
+		.default("custom"),
+	// Nullable + set null on delete: keep the template when its author is
+	// removed (authorship is just dropped).
+	createdBy: text("created_by").references(() => user.id, {
+		onDelete: "set null",
+	}),
+	createdAt: createdAtMs(),
+	updatedAt: updatedAtMs(),
+});
 
 export const reports = sqliteTable(
 	"reports",

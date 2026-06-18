@@ -19,6 +19,13 @@ export const authOptions = {
 				defaultValue: false,
 				input: false,
 			},
+			// May manage instance-wide report templates without being a full
+			// instance admin. Granted by an admin; never settable by clients.
+			canManageTemplates: {
+				type: "boolean",
+				defaultValue: false,
+				input: false,
+			},
 		},
 	},
 } satisfies BetterAuthOptions;

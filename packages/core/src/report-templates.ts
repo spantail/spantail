@@ -95,12 +95,11 @@ function builtin(
 ): ReportTemplate {
 	return {
 		id: `builtin:${key}`,
-		workspaceId: null,
 		name,
 		description,
 		body,
 		builtin: true,
-		// Defaults; a workspace can override enabled/periodUnit in its settings.
+		// Defaults; an instance admin can override enabled/periodUnit per builtin.
 		enabled: true,
 		periodUnit,
 		createdBy: null,
@@ -137,36 +136,41 @@ export function getBuiltinTemplate(id: string): ReportTemplate | undefined {
 	return builtinReportTemplates.find((template) => template.id === id);
 }
 
-/** Admin-controlled per-workspace state for a template (builtin or custom). */
+/** Admin-controlled instance-wide state for a builtin template. */
 export interface ReportTemplateState {
 	enabled: boolean;
 	periodUnit: PeriodUnit;
 }
 
-const templateSettingsEntrySchema = z.object({
+const templateOverrideEntrySchema = z.object({
 	enabled: z.boolean().optional(),
 	periodUnit: periodUnitSchema.optional(),
 });
-const reportTemplateSettingsSchema = z.record(
-	z.string(),
-	templateSettingsEntrySchema,
-);
 
-/** Per-workspace builtin overrides live under settings.reportTemplateSettings. */
-function readTemplateSettings(
-	settings: Record<string, unknown> | null | undefined,
-): Record<string, z.infer<typeof templateSettingsEntrySchema>> {
-	const raw =
-		settings && typeof settings === "object"
-			? (settings as Record<string, unknown>).reportTemplateSettings
-			: undefined;
-	const parsed = reportTemplateSettingsSchema.safeParse(raw);
+/**
+ * Instance-wide enabled/cadence overrides for builtin templates, keyed by
+ * builtin id (e.g. "builtin:daily"). Builtin bodies are code-defined; only
+ * their state is configurable, and it now lives on the single instance row
+ * rather than per workspace.
+ */
+export const reportTemplateOverridesSchema = z.record(
+	z.string(),
+	templateOverrideEntrySchema,
+);
+export type ReportTemplateOverrides = z.infer<
+	typeof reportTemplateOverridesSchema
+>;
+
+function readOverrides(
+	overrides: ReportTemplateOverrides | null | undefined,
+): ReportTemplateOverrides {
+	const parsed = reportTemplateOverridesSchema.safeParse(overrides ?? {});
 	return parsed.success ? parsed.data : {};
 }
 
-/** Resolves a builtin's effective enabled/cadence for a workspace. */
+/** Resolves a builtin's effective enabled/cadence for the instance. */
 export function resolveBuiltinTemplateSettings(
-	settings: Record<string, unknown> | null | undefined,
+	overrides: ReportTemplateOverrides | null | undefined,
 	builtinId: string,
 ): ReportTemplateState {
 	const base = getBuiltinTemplate(builtinId);
@@ -174,7 +178,7 @@ export function resolveBuiltinTemplateSettings(
 		enabled: base?.enabled ?? true,
 		periodUnit: base?.periodUnit ?? "custom",
 	};
-	const override = readTemplateSettings(settings)[builtinId];
+	const override = readOverrides(overrides)[builtinId];
 	if (!override) return defaults;
 	return {
 		enabled: override.enabled ?? defaults.enabled,
@@ -182,14 +186,13 @@ export function resolveBuiltinTemplateSettings(
 	};
 }
 
-/** Returns new workspace settings with a builtin's state merged in. */
+/** Returns new instance overrides with a builtin's state merged in. */
 export function mergeBuiltinTemplateState(
-	settings: Record<string, unknown> | null | undefined,
+	overrides: ReportTemplateOverrides | null | undefined,
 	builtinId: string,
 	patch: Partial<ReportTemplateState>,
-): Record<string, unknown> {
-	const base = settings && typeof settings === "object" ? { ...settings } : {};
-	const all = { ...readTemplateSettings(settings) };
+): ReportTemplateOverrides {
+	const all = { ...readOverrides(overrides) };
 	all[builtinId] = { ...all[builtinId], ...patch };
-	return { ...base, reportTemplateSettings: all };
+	return all;
 }

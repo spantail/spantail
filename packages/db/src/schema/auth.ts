@@ -17,6 +17,11 @@ export const user = sqliteTable("user", {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 	isAdmin: integer("is_admin", { mode: "boolean" }).default(false),
+	// May manage instance-wide report templates without being a full instance
+	// admin. Granted by an instance admin; never settable by clients.
+	canManageTemplates: integer("can_manage_templates", {
+		mode: "boolean",
+	}).default(false),
 });
 
 export const session = sqliteTable(

@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	CheckIcon,
 	CopyIcon,
+	FileTextIcon,
 	MoreHorizontalIcon,
 	ShieldIcon,
 	ShieldOffIcon,
@@ -135,8 +136,10 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 	});
 
 	const updateMutation = useMutation({
-		mutationFn: (vars: { id: string; isAdmin: boolean }) =>
-			api.updateUser(vars.id, { isAdmin: vars.isAdmin }),
+		mutationFn: (vars: {
+			id: string;
+			patch: { isAdmin?: boolean; canManageTemplates?: boolean };
+		}) => api.updateUser(vars.id, vars.patch),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
 		onError: (err: Error) => setError(err.message),
 	});
@@ -311,26 +314,45 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 											)}
 										</TableCell>
 										<TableCell>
-											{user.isAdmin ? (
-												<Badge variant="secondary">
-													{t("settings.users.admin")}
-												</Badge>
-											) : (
-												<Badge variant="outline">
-													{t("settings.users.member")}
-												</Badge>
-											)}
+											<span className="flex flex-wrap items-center gap-1.5">
+												{user.isAdmin ? (
+													<Badge variant="secondary">
+														{t("settings.users.admin")}
+													</Badge>
+												) : (
+													<Badge variant="outline">
+														{t("settings.users.member")}
+													</Badge>
+												)}
+												{/* Admins manage templates implicitly, so only surface the
+												    capability badge for non-admins. */}
+												{!user.isAdmin && user.canManageTemplates && (
+													<Badge variant="outline">
+														{t("settings.users.templateAuthor")}
+													</Badge>
+												)}
+											</span>
 										</TableCell>
 										<TableCell className="text-right">
 											<UserRowActions
 												isAdmin={user.isAdmin}
+												canManageTemplates={user.canManageTemplates}
 												isSelf={isSelf}
 												disabled={updateMutation.isPending}
 												onToggleAdmin={() => {
 													setError(null);
 													updateMutation.mutate({
 														id: user.id,
-														isAdmin: !user.isAdmin,
+														patch: { isAdmin: !user.isAdmin },
+													});
+												}}
+												onToggleTemplateAuthor={() => {
+													setError(null);
+													updateMutation.mutate({
+														id: user.id,
+														patch: {
+															canManageTemplates: !user.canManageTemplates,
+														},
 													});
 												}}
 												onDelete={() => {
@@ -398,15 +420,19 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 
 function UserRowActions({
 	isAdmin,
+	canManageTemplates,
 	isSelf,
 	disabled,
 	onToggleAdmin,
+	onToggleTemplateAuthor,
 	onDelete,
 }: {
 	isAdmin: boolean;
+	canManageTemplates: boolean;
 	isSelf: boolean;
 	disabled: boolean;
 	onToggleAdmin: () => void;
+	onToggleTemplateAuthor: () => void;
 	onDelete: () => void;
 }) {
 	const { t } = useTranslation();
@@ -437,6 +463,19 @@ function UserRowActions({
 							? t("settings.users.revokeAdmin")
 							: t("settings.users.makeAdmin")}
 					</DropdownMenuItem>
+					{/* Admins already manage templates, so the capability toggle only
+					    applies to non-admins. */}
+					{!isAdmin && (
+						<DropdownMenuItem
+							disabled={disabled}
+							onClick={onToggleTemplateAuthor}
+						>
+							<FileTextIcon />
+							{canManageTemplates
+								? t("settings.users.revokeTemplateAuthor")
+								: t("settings.users.makeTemplateAuthor")}
+						</DropdownMenuItem>
+					)}
 					{!isSelf && (
 						<>
 							<DropdownMenuSeparator />

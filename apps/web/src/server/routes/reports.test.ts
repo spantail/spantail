@@ -244,7 +244,7 @@ it("passes the preset to templates only when one was chosen", async () => {
 	const template = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
+			"/api/v1/report-templates",
 			{ name: "Preset probe", body: "[{{ period.preset }}]{{ period.from }}" },
 			admin,
 		)
@@ -301,12 +301,12 @@ it("rejects filters outside the caller's workspace memberships", async () => {
 	expect(ghost.status).toBe(403);
 });
 
-it("hides workspace templates outside the caller's memberships", async () => {
+it("rejects reports outside the caller's memberships or with an unknown template", async () => {
 	const { admin, other, ws } = await setup();
 	const template = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
+			"/api/v1/report-templates",
 			{ name: "T", body: "{{ report.name }}" },
 			admin,
 		)
@@ -322,8 +322,8 @@ it("hides workspace templates outside the caller's memberships", async () => {
 		},
 		other,
 	);
-	// Membership check fires first (403); a template-only leak would be 404.
-	expect([403, 404]).toContain(res.status);
+	// The scope includes a workspace the caller isn't a member of.
+	expect(res.status).toBe(403);
 
 	const unknownTemplate = await apiJson(
 		"POST",
@@ -334,7 +334,7 @@ it("hides workspace templates outside the caller's memberships", async () => {
 	expect(unknownTemplate.status).toBe(404);
 });
 
-it("requires a custom template to belong to a filtered workspace", async () => {
+it("applies a custom template to any scope (templates are instance-scoped)", async () => {
 	const { admin, ws } = await setup();
 	const otherWs = (await (
 		await apiJson(
@@ -344,37 +344,37 @@ it("requires a custom template to belong to a filtered workspace", async () => {
 			admin,
 		)
 	).json()) as { id: string };
+	// One instance-wide template, created without any workspace context.
 	const template = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/workspaces/${otherWs.id}/report-templates`,
-			{ name: "Labs only", body: "{{ report.name }}" },
+			"/api/v1/report-templates",
+			{ name: "Shared", body: "{{ report.name }}" },
 			admin,
 		)
 	).json()) as { id: string };
 
-	const res = await apiJson(
+	// The same template backs reports for either workspace, with no requirement
+	// that the template "belong to" a filtered workspace.
+	const forAcme = await apiJson(
 		"POST",
 		"/api/v1/reports",
 		{ ...baseReport(ws.id), templateId: template.id },
 		admin,
 	);
-	expect(res.status).toBe(400);
-	expect(((await res.json()) as { error: { code: string } }).error.code).toBe(
-		"bad_request",
-	);
+	expect(forAcme.status).toBe(201);
 
-	const ok = await apiJson(
+	const forLabs = await apiJson(
 		"POST",
 		"/api/v1/reports",
 		{
-			...baseReport(ws.id),
+			...baseReport(otherWs.id),
 			templateId: template.id,
-			filters: { workspaceIds: [ws.id, otherWs.id], dateRange: "today" },
+			filters: { workspaceIds: [otherWs.id], dateRange: "today" },
 		},
 		admin,
 	);
-	expect(ok.status).toBe(201);
+	expect(forLabs.status).toBe(201);
 });
 
 it("rejects malformed or oversized date ranges at create", async () => {
@@ -459,7 +459,7 @@ it("rejects report writes that use a disabled template", async () => {
 	const template = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
+			"/api/v1/report-templates",
 			{ name: "Active", body: "{{ report.name }}" },
 			admin,
 		)
@@ -478,7 +478,7 @@ it("rejects report writes that use a disabled template", async () => {
 		(
 			await apiJson(
 				"PATCH",
-				`/api/v1/workspaces/${ws.id}/report-templates/${template.id}/state`,
+				`/api/v1/report-templates/${template.id}/state`,
 				{ enabled: false },
 				admin,
 			)
@@ -505,12 +505,12 @@ it("rejects report writes that use a disabled template", async () => {
 		).status,
 	).toBe(400);
 
-	// Builtins respect the per-workspace settings override too.
+	// Builtins respect the instance override too.
 	expect(
 		(
 			await apiJson(
 				"PATCH",
-				`/api/v1/workspaces/${ws.id}/report-templates/builtin:daily/state`,
+				"/api/v1/report-templates/builtin:daily/state",
 				{ enabled: false },
 				admin,
 			)
@@ -526,7 +526,7 @@ it("surfaces template rendering errors as bad_request and saves nothing", async 
 	const template = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/workspaces/${ws.id}/report-templates`,
+			"/api/v1/report-templates",
 			{ name: "Evil", body: "{% include 'secrets' %}" },
 			admin,
 		)

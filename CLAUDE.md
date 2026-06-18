@@ -52,14 +52,21 @@ pnpm deploy             # wrangler deploy (apps/web)
   to icons). The sidebar is workspace-scoped only: workspace switcher at the top, workspace
   navigation, and a single Settings cog pinned at the bottom that opens the Settings hub
   (`/settings`). Settings is one screen with a left sub-nav grouping every management section —
-  Workspace (general, projects, members, report templates) and Account (API tokens, password,
-  preferences: language + theme) — each a deep-linkable child route (`/settings/<section>`).
+  Workspace (general, projects, members), Account (API tokens, password, preferences: language +
+  theme), Reporting (report templates — instance-scoped, gated to instance admins and users with
+  the template-author capability), and System (instance admin only: user management, email,
+  social login) — each a deep-linkable child route (`/settings/<section>`).
   User-scoped surfaces — reports and the user menu (account, logout) — live in the header's
   top-right corner, never in the sidebar. New screens render inside this shell.
 - **Dates and time.** `work_entries.entry_date` is a local date string (`YYYY-MM-DD`) in the
   workspace's timezone. All timestamps are UTC. Durations are integer minutes.
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report filters
   must be validated against the union of the user's workspaces.
+- **Report templates are instance-scoped formats.** A template is a presentation format,
+  independent of any workspace, project, user, or period — a report freely combines any template
+  with any scope and date range at run time. Builtins are code-defined; their enabled/cadence
+  overrides live on the instance settings row. Managing templates requires instance admin or the
+  template-author capability (`user.canManageTemplates`), not a workspace role.
 - **Report templates are user input.** LiquidJS rendering must keep the safety settings
   (own-property access only, strict filters, parse/render/memory limits, file tags disabled).
   Rendered Markdown must be displayed without raw-HTML passthrough.

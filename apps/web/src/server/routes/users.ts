@@ -35,6 +35,7 @@ function toManagedUser(
 		name: row.name,
 		email: row.email,
 		isAdmin: row.isAdmin ?? false,
+		canManageTemplates: row.canManageTemplates ?? false,
 		createdAt: row.createdAt.toISOString(),
 		providers,
 	};
@@ -115,9 +116,13 @@ export const userRoutes = new Hono<AppEnv>()
 			}
 		}
 
-		const patch: Partial<Pick<UserRow, "name" | "isAdmin">> = {};
+		const patch: Partial<
+			Pick<UserRow, "name" | "isAdmin" | "canManageTemplates">
+		> = {};
 		if (input.name !== undefined) patch.name = input.name;
 		if (input.isAdmin !== undefined) patch.isAdmin = input.isAdmin;
+		if (input.canManageTemplates !== undefined)
+			patch.canManageTemplates = input.canManageTemplates;
 		const updated = await updateUser(c.var.db, id, patch);
 		if (!updated) throw new AppError("not_found", "User not found");
 		const providers = await getOauthProvidersForUser(c.var.db, updated.id);

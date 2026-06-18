@@ -41,13 +41,8 @@ export async function getReportTemplateById(
 
 export async function listReportTemplates(
 	db: Database,
-	workspaceId: string,
 ): Promise<ReportTemplateRow[]> {
-	return db
-		.select()
-		.from(reportTemplates)
-		.where(eq(reportTemplates.workspaceId, workspaceId))
-		.orderBy(reportTemplates.createdAt);
+	return db.select().from(reportTemplates).orderBy(reportTemplates.createdAt);
 }
 
 export async function updateReportTemplate(

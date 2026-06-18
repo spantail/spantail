@@ -89,7 +89,9 @@ export async function getOauthProvidersForUser(
 export async function updateUser(
 	db: Database,
 	id: string,
-	patch: Partial<Pick<UserRow, "name" | "isAdmin" | "emailVerified">>,
+	patch: Partial<
+		Pick<UserRow, "name" | "isAdmin" | "emailVerified" | "canManageTemplates">
+	>,
 ): Promise<UserRow | undefined> {
 	const rows = await db
 		.update(user)
