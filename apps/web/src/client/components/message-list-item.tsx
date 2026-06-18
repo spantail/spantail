@@ -12,10 +12,12 @@ export function MessageListItem({
 	item,
 	folder,
 	selected,
+	index,
 }: {
 	item: MailItem;
 	folder: MailFolder;
 	selected: boolean;
+	index: number;
 }) {
 	const { t, i18n } = useTranslation();
 	const actions = useMailActions();
@@ -27,6 +29,7 @@ export function MessageListItem({
 
 	return (
 		<div
+			data-nav-index={index}
 			className={cn(
 				"group relative rounded-xl transition-colors",
 				selected ? "bg-card ring-border shadow-sm ring-1" : "hover:bg-card/60",

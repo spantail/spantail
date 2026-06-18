@@ -25,6 +25,7 @@ import {
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
 import { formatEntryDate } from "@/lib/format";
+import { isTypingTarget } from "@/lib/keyboard";
 import { useWorkspace } from "@/lib/workspace";
 
 type EntryDialogState =
@@ -45,14 +46,6 @@ export function useEntryDialog(): EntryDialogContextValue {
 	if (!value)
 		throw new Error("useEntryDialog must be used inside EntryDialogProvider");
 	return value;
-}
-
-function isTypingTarget(target: EventTarget | null): boolean {
-	return (
-		target instanceof HTMLElement &&
-		(target.isContentEditable ||
-			["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
-	);
 }
 
 export function EntryDialogProvider({
