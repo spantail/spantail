@@ -12,12 +12,7 @@ import {
 } from "@toxil/core";
 import { hashPassword } from "better-auth/crypto";
 
-import {
-	type Language,
-	loadConfig,
-	type SeedConfig,
-	type WorkspaceConfig,
-} from "./schema";
+import { type Language, loadConfig, type SeedConfig } from "./schema";
 
 /** Shared password for every seeded user. Documented in seed/README.md. */
 export const SEED_PASSWORD = "password";
@@ -44,7 +39,6 @@ interface ResolvedUser {
 	key: string;
 	name: string;
 	email: string;
-	home: WorkspaceConfig;
 }
 interface ResolvedWorkspace {
 	id: string;
@@ -144,15 +138,12 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	const userRows: Row[] = [];
 	const accountRows: Row[] = [];
 	for (const u of config.users) {
-		const home = config.workspaces.find((w) => w.key === u.homeWorkspace);
-		if (!home) throw new Error(`unknown homeWorkspace for ${u.key}`);
 		const id = randomUUID();
 		const user: ResolvedUser = {
 			id,
 			key: u.key,
 			name: u.name,
 			email: u.email,
-			home,
 		};
 		usersByKey.set(u.key, user);
 		userRows.push({
@@ -279,16 +270,12 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	};
 
 	const entryRows: Row[] = [];
-	// user.key -> date -> entries (for daily reports)
-	const entriesByUserDate = new Map<string, Map<string, EntryRecord[]>>();
-	// user.key -> ws.key -> entries (for monthly reports)
+	// user.key -> ws.key -> entries (drives both daily and monthly reports)
 	const entriesByUserWs = new Map<string, Map<string, EntryRecord[]>>();
 
 	for (const user of usersByKey.values()) {
 		const allocation = config.workPatterns.allocations[user.key] ?? [];
-		const byDate = new Map<string, EntryRecord[]>();
 		const byWs = new Map<string, EntryRecord[]>();
-		entriesByUserDate.set(user.key, byDate);
 		entriesByUserWs.set(user.key, byWs);
 
 		allocation.forEach((line, lineIndex) => {
@@ -330,7 +317,6 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					createdAt,
 					updatedAt: createdAt,
 				});
-				pushTo(byDate, date, record);
 				pushTo(byWs, project.workspace.key, record);
 			});
 		});
@@ -342,15 +328,6 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	const shareRows: Row[] = [];
 	const r2: Array<{ key: string; body: string }> = [];
 	const readBefore = shiftDays(todayInTimezone("UTC", now), -3);
-
-	const recipientsForWorkspaces = (wsKeys: string[], senderKey: string) => {
-		const ids = new Map<string, ResolvedUser>();
-		for (const wsKey of wsKeys) {
-			const manager = managerByWs.get(wsKey);
-			if (manager && manager.key !== senderKey) ids.set(manager.id, manager);
-		}
-		return [...ids.values()];
-	};
 
 	const addDeliveries = (
 		report: {
@@ -387,73 +364,75 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		}
 	};
 
-	// Daily, cross-workspace, one per member per working day.
+	// Daily, per workspace: one report per member per workspace per working day,
+	// sent to that workspace's manager. Scoping to a single workspace keeps the
+	// frozen body within what the recipient (a member) is allowed to see.
 	for (const user of usersByKey.values()) {
-		const lang = user.home.language;
-		const tmpl = templateFor(lang, "day");
-		const byDate =
-			entriesByUserDate.get(user.key) ?? new Map<string, EntryRecord[]>();
-		for (const [date, entries] of [...byDate.entries()].sort()) {
-			const scopedWs = [
-				...new Map(entries.map((e) => [e.workspace.key, e.workspace])).values(),
-			];
-			const scopedProjects = [
-				...new Map(entries.map((e) => [e.project.key, e.project])).values(),
-			];
-			const name = lang === "ja" ? `日報 — ${date}` : `Daily report — ${date}`;
-			const createdAt = new Date(
-				zonedDateTimeToUtc(date, "18:30", user.home.timezone),
-			);
-			const filters: ReportFilters = {
-				workspaceIds: scopedWs.map((w) => w.id),
-				userIds: [user.id],
-				dateRange: { from: date, to: date },
-			};
-			const context: ReportContextInput = {
-				report: { name, note: null },
-				period: { from: date, to: date, preset: null },
-				timezone: user.home.timezone,
-				generatedAt: createdAt,
-				workspaces: scopedWs.map((w) => ({
-					id: w.id,
-					slug: w.slug,
-					name: w.name,
-					timezone: w.timezone,
-				})),
-				projects: scopedProjects.map((p) => ({
-					id: p.id,
-					slug: p.slug,
-					name: p.name,
-					workspaceId: p.workspace.id,
-				})),
-				users: [{ id: user.id, name: user.name }],
-				entries: entries.map(toEngineEntry),
-			};
-			const rendered = await renderReport(tmpl.body, context);
-			const id = randomUUID();
-			reportRows.push({
-				id,
-				name,
-				ownerUserId: user.id,
-				templateId: tmpl.id,
-				filters,
-				note: null,
-				totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
-				renderedMarkdown: rendered,
-				createdAt,
-				updatedAt: createdAt,
-			});
-			addDeliveries(
-				{ id, name, sender: user, rendered },
-				recipientsForWorkspaces(
-					scopedWs.map((w) => w.key),
-					user.key,
-				),
-				date,
-				date,
-				createdAt,
-				date <= readBefore,
-			);
+		const byWs =
+			entriesByUserWs.get(user.key) ?? new Map<string, EntryRecord[]>();
+		for (const ws of workspacesByUser.get(user.key) ?? []) {
+			const tmpl = templateFor(ws.language, "day");
+			const manager = managerByWs.get(ws.key);
+			const byDate = new Map<string, EntryRecord[]>();
+			for (const entry of byWs.get(ws.key) ?? [])
+				pushTo(byDate, entry.date, entry);
+
+			for (const [date, entries] of [...byDate.entries()].sort()) {
+				const scopedProjects = [
+					...new Map(entries.map((e) => [e.project.key, e.project])).values(),
+				];
+				const name =
+					ws.language === "ja"
+						? `日報 — ${ws.name} — ${date}`
+						: `Daily report — ${ws.name} — ${date}`;
+				const createdAt = new Date(
+					zonedDateTimeToUtc(date, "18:30", ws.timezone),
+				);
+				const filters: ReportFilters = {
+					workspaceIds: [ws.id],
+					userIds: [user.id],
+					dateRange: { from: date, to: date },
+				};
+				const context: ReportContextInput = {
+					report: { name, note: null },
+					period: { from: date, to: date, preset: null },
+					timezone: ws.timezone,
+					generatedAt: createdAt,
+					workspaces: [
+						{ id: ws.id, slug: ws.slug, name: ws.name, timezone: ws.timezone },
+					],
+					projects: scopedProjects.map((p) => ({
+						id: p.id,
+						slug: p.slug,
+						name: p.name,
+						workspaceId: ws.id,
+					})),
+					users: [{ id: user.id, name: user.name }],
+					entries: entries.map(toEngineEntry),
+				};
+				const rendered = await renderReport(tmpl.body, context);
+				const id = randomUUID();
+				reportRows.push({
+					id,
+					name,
+					ownerUserId: user.id,
+					templateId: tmpl.id,
+					filters,
+					note: null,
+					totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+					renderedMarkdown: rendered,
+					createdAt,
+					updatedAt: createdAt,
+				});
+				addDeliveries(
+					{ id, name, sender: user, rendered },
+					manager && manager.key !== user.key ? [manager] : [],
+					date,
+					date,
+					createdAt,
+					date <= readBefore,
+				);
+			}
 		}
 	}
 

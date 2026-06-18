@@ -20,7 +20,6 @@ const userConfigSchema = z.object({
 	email: z.email(),
 	isAdmin: z.boolean().default(false),
 	canManageTemplates: z.boolean().default(false),
-	homeWorkspace: z.string().min(1),
 });
 
 const workspaceConfigSchema = z.object({
@@ -142,10 +141,6 @@ function validateReferences(config: SeedConfig): void {
 		throw new Error(`Invalid seed data: ${msg}`);
 	};
 
-	for (const u of config.users) {
-		if (!wsKeys.has(u.homeWorkspace))
-			fail(`user ${u.key} homeWorkspace ${u.homeWorkspace} is unknown`);
-	}
 	for (const p of config.projects) {
 		if (!wsKeys.has(p.workspace))
 			fail(`project ${p.key} workspace ${p.workspace} is unknown`);

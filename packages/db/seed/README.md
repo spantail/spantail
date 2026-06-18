@@ -36,9 +36,11 @@ Every seeded user shares the password **`password`**:
 - Four custom report templates (daily + monthly, English + Japanese); the
   builtin templates are disabled. Reports use the template matching the
   workspace language.
-- Members file a cross-workspace daily report each weekday (sent to the relevant
-  workspace managers) and a per-workspace monthly report at month end (sent to
-  the manager, and — for client workspaces — published as a share link).
+- Each weekday, members file a per-workspace daily report (one per workspace they
+  worked in) sent to that workspace's manager, and at month end a per-workspace
+  monthly report sent to the manager — and, for client workspaces, published as a
+  share link. Reports are scoped to a single workspace, so a delivered report
+  never exposes another workspace's entries to its recipient.
 
 ## Editing the data
 
