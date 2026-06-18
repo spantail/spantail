@@ -54,8 +54,18 @@ describe("generateDataset", () => {
 			const key = `${e.userId}:${date}`;
 			perUserDay.set(key, (perUserDay.get(key) ?? 0) + minutes);
 		}
+		const totals = [...perUserDay.values()];
 		// Days should have texture, not a flat 8h — totals vary across the window.
-		expect(new Set(perUserDay.values()).size).toBeGreaterThan(1);
+		expect(new Set(totals).size).toBeGreaterThan(1);
+		// ...but stay in a believable band around a typical ~8h day, and average
+		// near it, so cadence/jitter can't silently drift totals far off.
+		for (const total of totals) {
+			expect(total).toBeGreaterThanOrEqual(150); // > ~2.5h
+			expect(total).toBeLessThanOrEqual(840); // < ~14h
+		}
+		const avg = totals.reduce((a, b) => a + b, 0) / totals.length;
+		expect(avg).toBeGreaterThan(420); // ~7h
+		expect(avg).toBeLessThan(540); // ~9h
 	});
 
 	it("computes monthly periods in each workspace timezone", async () => {
@@ -192,8 +202,12 @@ describe("generateDataset", () => {
 		}
 
 		// The internal workspace (Northwind) is the only non-client one.
-		const internalWsId = rows("workspaces").find((w) => w.slug === "northwind")
-			?.id as string;
+		const internalWs = rows("workspaces").find((w) => w.slug === "northwind");
+		expect(
+			internalWs,
+			"internal workspace (slug 'northwind') is missing",
+		).toBeDefined();
+		const internalWsId = internalWs?.id as string;
 		const sharesByReport = new Map<string, number>();
 		for (const s of shares) {
 			const id = s.reportId as string;
