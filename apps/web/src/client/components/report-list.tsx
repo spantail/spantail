@@ -154,7 +154,9 @@ export function ReportList({
 		[list],
 	);
 	// Reports arrive newest-first, so grouping by creation month yields months in
-	// descending order. Each row keeps its flat index for keyboard nav.
+	// descending order. Each row keeps its flat index for keyboard nav. The key
+	// is built from the local Date (not the raw UTC prefix) so a report's month
+	// header always matches the localized date shown in its row.
 	const monthGroups = useMemo(() => {
 		const groups: {
 			key: string;
@@ -162,13 +164,14 @@ export function ReportList({
 			rows: { report: ReportMeta; index: number }[];
 		}[] = [];
 		list.forEach((report, index) => {
-			const key = report.createdAt.slice(0, 7); // YYYY-MM
+			const created = new Date(report.createdAt);
+			const key = `${created.getFullYear()}-${created.getMonth()}`;
 			let group = groups.find((g) => g.key === key);
 			if (!group) {
-				const label = new Date(`${key}-01T00:00:00`).toLocaleDateString(
-					i18n.language,
-					{ month: "long", year: "numeric" },
-				);
+				const label = created.toLocaleDateString(i18n.language, {
+					month: "long",
+					year: "numeric",
+				});
 				group = { key, label, rows: [] };
 				groups.push(group);
 			}

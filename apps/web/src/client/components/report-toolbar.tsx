@@ -131,6 +131,8 @@ export function ReportToolbar({
 				variant="outline"
 				size="sm"
 				className="ml-1 h-9"
+				aria-label={t("reports.view.downloadAction")}
+				title={t("reports.view.downloadAction")}
 				onClick={() => downloadReportMarkdown(report)}
 			>
 				<DownloadIcon />
