@@ -39,7 +39,10 @@ function Home() {
 					<Button className="mt-2" onClick={() => setCreateOpen(true)}>
 						{t("workspace.createAction")}
 					</Button>
-					<CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} />
+					<CreateWorkspaceDialog
+						open={createOpen}
+						onOpenChange={setCreateOpen}
+					/>
 				</>
 			)}
 		</div>
