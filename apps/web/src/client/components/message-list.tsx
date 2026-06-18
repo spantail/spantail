@@ -7,7 +7,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import type { MailFolder } from "@toxil/core";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
@@ -40,14 +40,18 @@ export function MessageList({
 		getNextPageParam: (lastPage, allPages) =>
 			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
-	const items = query.data?.pages.flat() ?? [];
+	// Flatten once per fetched page set, with an id→index map so keyboard nav's
+	// per-keystroke active-index lookup stays O(1) even on large folders.
+	const items = useMemo(() => query.data?.pages.flat() ?? [], [query.data]);
+	const indexById = useMemo(
+		() => new Map(items.map((item, i) => [item.id, i])),
+		[items],
+	);
 
 	// j/k move the selection straight to the message's route, so the reading pane
 	// updates as you go. Selection is derived from the URL (selectedId).
 	const containerRef = useRef<HTMLDivElement>(null);
-	const activeIndex = selectedId
-		? items.findIndex((item) => item.id === selectedId)
-		: -1;
+	const activeIndex = selectedId ? (indexById.get(selectedId) ?? -1) : -1;
 	useListKeyboardNav({
 		length: items.length,
 		index: activeIndex,

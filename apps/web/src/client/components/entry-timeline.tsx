@@ -1,6 +1,6 @@
 import type { Project, WorkEntry } from "@toxil/core";
 import { formatDuration } from "@toxil/core";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EntryActions } from "@/components/entry-actions";
@@ -50,10 +50,15 @@ export function EntryTimeline({
 	const currentYear = String(new Date().getFullYear());
 
 	// Keyboard nav over the flat (cross-day) order; the highlight maps back to a
-	// row via its entry id.
+	// row via its entry id. Derive the grouping and the id→index map once per
+	// entry list so rapid j/k key repeats only update highlight/scroll.
+	const days = useMemo(() => groupEntriesByDate(entries), [entries]);
+	const indexById = useMemo(
+		() => new Map(entries.map((entry, i) => [entry.id, i])),
+		[entries],
+	);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(-1);
-	const indexById = new Map(entries.map((entry, i) => [entry.id, i]));
 	useListKeyboardNav({
 		length: entries.length,
 		index: active,
@@ -68,7 +73,7 @@ export function EntryTimeline({
 
 	return (
 		<div ref={containerRef} className="flex flex-col gap-6">
-			{groupEntriesByDate(entries).map((day) => (
+			{days.map((day) => (
 				<section key={day.date} className="flex flex-col gap-1">
 					<div className="flex items-baseline justify-between border-b pb-1">
 						<h3 className="font-heading text-sm font-semibold">

@@ -6,7 +6,7 @@ import {
 	type ReportMeta,
 } from "@toxil/core";
 import { FileTextIcon, PlusIcon, SlidersHorizontalIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { FilterChip } from "@/components/filter-chip";
@@ -136,14 +136,18 @@ export function ReportList({
 		getNextPageParam: (lastPage, allPages) =>
 			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
-	const list = reports.data?.pages.flat() ?? [];
+	// Flatten once per fetched page set, with an id→index map so keyboard nav's
+	// per-keystroke active-index lookup stays O(1) even on large tabs.
+	const list = useMemo(() => reports.data?.pages.flat() ?? [], [reports.data]);
+	const indexById = useMemo(
+		() => new Map(list.map((report, i) => [report.id, i])),
+		[list],
+	);
 
 	// j/k move the selection straight to the report's route, so the right pane
 	// updates as you go. Selection is derived from the URL (selectedId).
 	const containerRef = useRef<HTMLDivElement>(null);
-	const activeIndex = selectedId
-		? list.findIndex((report) => report.id === selectedId)
-		: -1;
+	const activeIndex = selectedId ? (indexById.get(selectedId) ?? -1) : -1;
 	useListKeyboardNav({
 		length: list.length,
 		index: activeIndex,
