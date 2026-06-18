@@ -22,7 +22,8 @@ describe("generateDataset", () => {
 		expect(rows("user")).toHaveLength(5);
 		expect(rows("account")).toHaveLength(5);
 		expect(rows("workspaces")).toHaveLength(4);
-		expect(rows("workspaceMembers")).toHaveLength(12);
+		// 5 internal + Acme 3 + Globex 3 + 桜 2.
+		expect(rows("workspaceMembers")).toHaveLength(13);
 		expect(rows("projects")).toHaveLength(12);
 		expect(rows("reportTemplates")).toHaveLength(4);
 		expect(rows("instanceSettings")).toHaveLength(1);
@@ -36,7 +37,7 @@ describe("generateDataset", () => {
 		expect(users.filter((u) => u.canManageTemplates === true)).toHaveLength(1);
 	});
 
-	it("logs 8h on weekdays only", async () => {
+	it("logs varied hours on weekdays only, in quarter-hour units", async () => {
 		const { rows } = await build();
 		const entries = rows("workEntries");
 		expect(entries.length).toBeGreaterThan(0);
@@ -47,14 +48,14 @@ describe("generateDataset", () => {
 			const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
 			expect(dow).toBeGreaterThanOrEqual(1);
 			expect(dow).toBeLessThanOrEqual(5);
-			expect(e.durationMinutes as number).toBeGreaterThan(0);
+			const minutes = e.durationMinutes as number;
+			expect(minutes).toBeGreaterThan(0);
+			expect(minutes % 15).toBe(0);
 			const key = `${e.userId}:${date}`;
-			perUserDay.set(
-				key,
-				(perUserDay.get(key) ?? 0) + (e.durationMinutes as number),
-			);
+			perUserDay.set(key, (perUserDay.get(key) ?? 0) + minutes);
 		}
-		for (const total of perUserDay.values()) expect(total).toBe(480);
+		// Days should have texture, not a flat 8h — totals vary across the window.
+		expect(new Set(perUserDay.values()).size).toBeGreaterThan(1);
 	});
 
 	it("computes monthly periods in each workspace timezone", async () => {
@@ -141,16 +142,64 @@ describe("generateDataset", () => {
 		}
 	});
 
+	it("delivers cross-workspace reports only to members of every workspace", async () => {
+		const { rows } = await build();
+		const reports = rows("reports");
+		const deliveries = rows("reportDeliveries");
+
+		// Membership: workspaceId -> set of member userIds.
+		const membersByWs = new Map<string, Set<string>>();
+		for (const m of rows("workspaceMembers")) {
+			const set = membersByWs.get(m.workspaceId as string) ?? new Set<string>();
+			set.add(m.userId as string);
+			membersByWs.set(m.workspaceId as string, set);
+		}
+		const reportById = new Map(reports.map((r) => [r.id as string, r]));
+
+		const crossWorkspace = reports.filter(
+			(r) => (r.filters as { workspaceIds: string[] }).workspaceIds.length > 1,
+		);
+		expect(crossWorkspace.length).toBeGreaterThan(0);
+
+		const crossIds = new Set(crossWorkspace.map((r) => r.id));
+		const crossDeliveries = deliveries.filter((d) => crossIds.has(d.reportId));
+		// A cross-workspace report that exists purely to be undeliverable would
+		// defeat the demo — these are actually sent.
+		expect(crossDeliveries.length).toBeGreaterThan(0);
+
+		for (const d of crossDeliveries) {
+			const report = reportById.get(d.reportId as string);
+			const workspaceIds = (report?.filters as { workspaceIds: string[] })
+				.workspaceIds;
+			for (const wsId of workspaceIds) {
+				expect(membersByWs.get(wsId)?.has(d.recipientUserId as string)).toBe(
+					true,
+				);
+			}
+			expect(d.recipientUserId).not.toBe(d.senderUserId);
+		}
+	});
+
 	it("publishes shares only for client monthly reports, each backed by R2", async () => {
 		const { dataset, rows } = await build();
 		const shares = rows("reportShares");
-		// 3 client workspaces × 3 members = 9, for the single completed month.
-		expect(shares).toHaveLength(9);
-		expect(dataset.r2).toHaveLength(9);
+		expect(shares.length).toBeGreaterThan(0);
+		// Every share is backed by exactly one R2 body.
+		expect(dataset.r2).toHaveLength(shares.length);
 		const r2Keys = new Set(dataset.r2.map((o) => o.key));
+
+		// Each share points at a single-workspace monthly report (from < to).
+		const reportById = new Map(rows("reports").map((r) => [r.id as string, r]));
 		for (const s of shares) {
 			expect(s.r2Key as string).toBe(`shares/${s.token}`);
 			expect(r2Keys.has(s.r2Key as string)).toBe(true);
+			const report = reportById.get(s.reportId as string);
+			const filters = report?.filters as {
+				workspaceIds: string[];
+				dateRange: { from: string; to: string };
+			};
+			expect(filters.workspaceIds).toHaveLength(1);
+			expect(filters.dateRange.from < filters.dateRange.to).toBe(true);
 		}
 	});
 

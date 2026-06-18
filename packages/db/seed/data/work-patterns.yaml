@@ -1,42 +1,44 @@
-# How each member fills a working day. Every weekday a member logs exactly
-# 480 minutes (8h), split across the listed projects. Descriptions and tags are
-# picked deterministically from the pools below (rotated by day), keeping reruns
-# reproducible. Each project's language decides the description language.
+# How each member fills their week. Each line is a project, the *typical* minutes
+# spent on it on a day it is worked, and how often it is worked (`cadence`):
+#   daily      — every working day (the member's main engagement)
+#   often      — most days (a regular secondary engagement)
+#   weekly     — about once a week (light internal work)
+#   occasional — a few days a month (cross-client help work)
+# The generator jitters the minutes per day and takes the occasional day off, so
+# totals land around 8h but rise and fall. Everything is derived deterministically
+# from the user + date, so reruns are reproducible. A project's language (its
+# workspace) decides the language of the logged work.
 allocations:
+  # Alice runs Northwind: mostly internal, with occasional 桜 liaison work (JA).
   u-admin:
-    - { project: p-self-platform, minutes: 240 }
-    - { project: p-sakura-inventory, minutes: 240 }
+    - { project: p-self-platform, minutes: 270, cadence: daily }
+    - { project: p-self-tooling, minutes: 150, cadence: daily }
+    - { project: p-self-devops, minutes: 90, cadence: often }
+    - { project: p-sakura-inventory, minutes: 120, cadence: occasional }
+  # Bilal is shared across both English clients, with light internal work.
   u-author:
-    - { project: p-self-tooling, minutes: 180 }
-    - { project: p-acme-warehouse, minutes: 300 }
+    - { project: p-acme-warehouse, minutes: 210, cadence: daily }
+    - { project: p-globex-portal, minutes: 180, cadence: daily }
+    - { project: p-acme-data, minutes: 120, cadence: often }
+    - { project: p-self-tooling, minutes: 90, cadence: weekly }
+  # Carol leads Globex, helps Acme now and then, and dips into the platform.
   u-carol:
-    - { project: p-self-platform, minutes: 120 }
-    - { project: p-acme-mobile, minutes: 180 }
-    - { project: p-globex-portal, minutes: 180 }
+    - { project: p-globex-analytics, minutes: 240, cadence: daily }
+    - { project: p-globex-cms, minutes: 195, cadence: daily }
+    - { project: p-self-platform, minutes: 90, cadence: weekly }
+    - { project: p-acme-mobile, minutes: 120, cadence: occasional }
+  # Daichi leads the Japanese client; his work logs are in Japanese.
   u-dan:
-    - { project: p-acme-data, minutes: 180 }
-    - { project: p-globex-cms, minutes: 120 }
-    - { project: p-sakura-orders, minutes: 180 }
+    - { project: p-sakura-orders, minutes: 270, cadence: daily }
+    - { project: p-sakura-inventory, minutes: 150, cadence: daily }
+    - { project: p-sakura-dashboard, minutes: 90, cadence: often }
+    - { project: p-self-tooling, minutes: 90, cadence: weekly }
+  # Erin is the other engineer shared across both English clients.
   u-erin:
-    - { project: p-globex-analytics, minutes: 240 }
-    - { project: p-sakura-dashboard, minutes: 240 }
-
-# Sentence templates; `{project}` is replaced with the project name.
-descriptions:
-  en:
-    - Implemented features for {project}
-    - Reviewed pull requests on {project}
-    - Fixed bugs in {project}
-    - Wrote tests for {project}
-    - Refactored modules in {project}
-    - Updated documentation for {project}
-  ja:
-    - "{project} の機能を実装"
-    - "{project} のプルリクをレビュー"
-    - "{project} の不具合を修正"
-    - "{project} のテストを追加"
-    - "{project} のモジュールをリファクタ"
-    - "{project} のドキュメントを更新"
+    - { project: p-acme-mobile, minutes: 195, cadence: daily }
+    - { project: p-globex-portal, minutes: 195, cadence: daily }
+    - { project: p-self-devops, minutes: 120, cadence: often }
+    - { project: p-acme-data, minutes: 90, cadence: occasional }
 
 tags:
   en: [feature, review, bugfix, test, refactor, docs]

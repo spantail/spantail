@@ -12,7 +12,12 @@ import {
 } from "@toxil/core";
 import { hashPassword } from "better-auth/crypto";
 
-import { type Language, loadConfig, type SeedConfig } from "./schema";
+import {
+	type Cadence,
+	type Language,
+	loadConfig,
+	type SeedConfig,
+} from "./schema";
 
 /** Shared password for every seeded user. Documented in seed/README.md. */
 export const SEED_PASSWORD = "password";
@@ -54,6 +59,7 @@ interface ResolvedProject {
 	key: string;
 	slug: string;
 	name: string;
+	activities: string[];
 	workspace: ResolvedWorkspace;
 }
 interface EntryRecord {
@@ -69,6 +75,40 @@ interface EntryRecord {
 
 function pick<T>(pool: T[], index: number): T {
 	return pool[index % pool.length] as T;
+}
+
+/** Deterministic 32-bit FNV-1a hash; keeps per-day jitter reproducible. */
+function hashString(s: string): number {
+	let h = 0x811c9dc5;
+	for (let i = 0; i < s.length; i++) {
+		h ^= s.charCodeAt(i);
+		h = Math.imul(h, 0x01000193);
+	}
+	return h >>> 0;
+}
+
+/** Rounds minutes to the nearest quarter hour, never below 15. */
+function roundMinutes(n: number): number {
+	return Math.max(15, Math.round(n / 15) * 15);
+}
+
+// Per-line daily multipliers (mean 1.0, so a line's baseline is its honest
+// typical) with enough spread that daily totals rise and fall around ~8h
+// instead of sitting flat.
+const MINUTE_FACTORS = [0.75, 0.9, 1, 1, 1.1, 1.25];
+
+/** Whether a `cadence` line is worked on a given day (deterministic). */
+function cadenceActive(
+	cadence: Cadence,
+	userKey: string,
+	date: string,
+	projectKey: string,
+): boolean {
+	if (cadence === "daily") return true;
+	const h = hashString(`${cadence}:${userKey}:${date}:${projectKey}`);
+	if (cadence === "often") return h % 3 !== 0; // most days
+	if (cadence === "weekly") return h % 5 === 0; // ~once a week
+	return h % 6 === 0; // occasional — a few days a month
 }
 
 function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V): void {
@@ -172,6 +212,8 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	const memberRows: Row[] = [];
 	const managerByWs = new Map<string, ResolvedUser>();
 	const workspacesByUser = new Map<string, ResolvedWorkspace[]>();
+	// ws.key -> set of member user.keys, for resolving cross-workspace recipients.
+	const memberKeysByWs = new Map<string, Set<string>>();
 	for (const m of config.members) {
 		const ws = wsByKey.get(m.workspace);
 		const user = usersByKey.get(m.user);
@@ -182,6 +224,9 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			role: m.role,
 			createdAt: baseCreatedAt,
 		});
+		const members = memberKeysByWs.get(ws.key) ?? new Set<string>();
+		members.add(user.key);
+		memberKeysByWs.set(ws.key, members);
 		// owner wins over admin as the manager.
 		if (
 			m.role === "owner" ||
@@ -205,6 +250,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			key: p.key,
 			slug: p.slug,
 			name: p.name,
+			activities: p.activities,
 			workspace: ws,
 		};
 		projByKey.set(p.key, proj);
@@ -278,26 +324,36 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		const byWs = new Map<string, EntryRecord[]>();
 		entriesByUserWs.set(user.key, byWs);
 
-		allocation.forEach((line, lineIndex) => {
+		allocation.forEach((line) => {
 			const project = projByKey.get(line.project);
 			if (!project) throw new Error(`unknown project ${line.project}`);
 			const { timezone, language } = project.workspace;
-			weekdaysFor(timezone).forEach((date, dayIndex) => {
-				const descTemplate = pick(
-					config.workPatterns.descriptions[language],
-					dayIndex + lineIndex,
+			const tagPool = config.workPatterns.tags[language];
+			weekdaysFor(timezone).forEach((date) => {
+				// A whole day off (~1 weekday in 18), taken consistently across the
+				// member's projects so the day simply has no entries.
+				if (hashString(`off:${user.key}:${date}`) % 18 === 0) return;
+				// Non-daily lines (internal / help work) only land on some days.
+				if (!cadenceActive(line.cadence, user.key, date, project.key)) return;
+				const seed = `${user.key}:${date}:${project.key}`;
+				const minutes = roundMinutes(
+					line.minutes * pick(MINUTE_FACTORS, hashString(`min:${seed}`)),
 				);
-				const description = descTemplate.split("{project}").join(project.name);
-				const tags = [
-					pick(config.workPatterns.tags[language], dayIndex + lineIndex + 2),
-				];
+				const description = pick(project.activities, hashString(`act:${seed}`));
+				const tagIndex = hashString(`tag:${seed}`);
+				const tags = [pick(tagPool, tagIndex)];
+				// ~1 entry in 3 carries a second, distinct tag.
+				if (hashString(`tag2:${seed}`) % 3 === 0) {
+					const second = pick(tagPool, tagIndex + 1);
+					if (second !== tags[0]) tags.push(second);
+				}
 				const record: EntryRecord = {
 					id: randomUUID(),
 					user,
 					workspace: project.workspace,
 					project,
 					date,
-					minutes: line.minutes,
+					minutes,
 					description,
 					tags,
 				};
@@ -308,7 +364,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					projectId: project.id,
 					userId: user.id,
 					entryDate: date,
-					durationMinutes: line.minutes,
+					durationMinutes: minutes,
 					startedAt: null,
 					endedAt: null,
 					description,
@@ -364,6 +420,15 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		}
 	};
 
+	// Workspaces a member rolls up into a combined cross-workspace daily report
+	// instead of a per-workspace one (see the route loop below).
+	const routeWsByUser = new Map<string, Set<string>>();
+	for (const route of config.reportRoutes) {
+		const set = routeWsByUser.get(route.sender) ?? new Set<string>();
+		for (const w of route.workspaces) set.add(w);
+		routeWsByUser.set(route.sender, set);
+	}
+
 	// Daily, per workspace: one report per member per workspace per working day,
 	// sent to that workspace's manager. Scoping to a single workspace keeps the
 	// frozen body within what the recipient (a member) is allowed to see.
@@ -371,6 +436,8 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		const byWs =
 			entriesByUserWs.get(user.key) ?? new Map<string, EntryRecord[]>();
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
+			// Covered by a cross-workspace route → reported there, not here.
+			if (routeWsByUser.get(user.key)?.has(ws.key)) continue;
 			const tmpl = templateFor(ws.language, "day");
 			const manager = managerByWs.get(ws.key);
 			const byDate = new Map<string, EntryRecord[]>();
@@ -433,6 +500,94 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					date <= readBefore,
 				);
 			}
+		}
+	}
+
+	// Cross-workspace daily: a member who spans several workspaces files one
+	// combined daily report covering them all. It may go only to people who are
+	// members of every listed workspace, so the frozen body never exposes a
+	// workspace the recipient isn't in (the same rule the app's "Send to"
+	// enforces). The first workspace anchors the timezone and template language.
+	for (const route of config.reportRoutes) {
+		const sender = usersByKey.get(route.sender);
+		if (!sender) throw new Error(`unknown route sender ${route.sender}`);
+		const routeWs = route.workspaces.map((k) => {
+			const ws = wsByKey.get(k);
+			if (!ws) throw new Error(`unknown route workspace ${k}`);
+			return ws;
+		});
+		const anchor = routeWs[0] as ResolvedWorkspace;
+		const tmpl = templateFor(anchor.language, "day");
+		const recipients = [...usersByKey.values()].filter(
+			(u) =>
+				u.key !== sender.key &&
+				route.workspaces.every((k) => memberKeysByWs.get(k)?.has(u.key)),
+		);
+		const byWs =
+			entriesByUserWs.get(sender.key) ?? new Map<string, EntryRecord[]>();
+		const byDate = new Map<string, EntryRecord[]>();
+		for (const k of route.workspaces)
+			for (const e of byWs.get(k) ?? []) pushTo(byDate, e.date, e);
+
+		for (const [date, entries] of [...byDate.entries()].sort()) {
+			const scopedProjects = [
+				...new Map(entries.map((e) => [e.project.key, e.project])).values(),
+			];
+			const label = routeWs.map((w) => w.name).join(" + ");
+			const name =
+				anchor.language === "ja"
+					? `日報 — ${label} — ${date}`
+					: `Daily report — ${label} — ${date}`;
+			const createdAt = new Date(
+				zonedDateTimeToUtc(date, "18:45", anchor.timezone),
+			);
+			const filters: ReportFilters = {
+				workspaceIds: routeWs.map((w) => w.id),
+				userIds: [sender.id],
+				dateRange: { from: date, to: date },
+			};
+			const context: ReportContextInput = {
+				report: { name, note: null },
+				period: { from: date, to: date, preset: null },
+				timezone: anchor.timezone,
+				generatedAt: createdAt,
+				workspaces: routeWs.map((w) => ({
+					id: w.id,
+					slug: w.slug,
+					name: w.name,
+					timezone: w.timezone,
+				})),
+				projects: scopedProjects.map((p) => ({
+					id: p.id,
+					slug: p.slug,
+					name: p.name,
+					workspaceId: p.workspace.id,
+				})),
+				users: [{ id: sender.id, name: sender.name }],
+				entries: entries.map(toEngineEntry),
+			};
+			const rendered = await renderReport(tmpl.body, context);
+			const id = randomUUID();
+			reportRows.push({
+				id,
+				name,
+				ownerUserId: sender.id,
+				templateId: tmpl.id,
+				filters,
+				note: null,
+				totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+				renderedMarkdown: rendered,
+				createdAt,
+				updatedAt: createdAt,
+			});
+			addDeliveries(
+				{ id, name, sender, rendered },
+				recipients,
+				date,
+				date,
+				createdAt,
+				date <= readBefore,
+			);
 		}
 	}
 
