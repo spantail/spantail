@@ -364,3 +364,35 @@ it("scopes inbox reads to the recipient", async () => {
 			.status,
 	).toBe(404);
 });
+
+it("paginates a mailbox folder", async () => {
+	const { owner, member, report, memberId } = await setup();
+	// Three separate sends → three distinct received items for the member.
+	for (let i = 0; i < 3; i++) {
+		expect(
+			(
+				await apiJson(
+					"POST",
+					`/api/v1/reports/${report.id}/send`,
+					{ recipientUserIds: [memberId] },
+					owner,
+				)
+			).status,
+		).toBe(201);
+	}
+	const ids = async (qs: string) =>
+		(
+			(await (await apiGet(`/api/v1/inbox${qs}`, member)).json()) as Array<{
+				id: string;
+			}>
+		).map((m) => m.id);
+
+	const all = await ids("?folder=inbox");
+	expect(all).toHaveLength(3);
+	const page1 = await ids("?folder=inbox&limit=2");
+	const page2 = await ids("?folder=inbox&limit=2&offset=2");
+	expect(page1).toHaveLength(2);
+	expect(page2).toHaveLength(1);
+	// Stable, disjoint, and covering the whole folder.
+	expect(new Set([...page1, ...page2])).toEqual(new Set(all));
+});

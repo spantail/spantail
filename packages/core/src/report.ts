@@ -134,6 +134,32 @@ export type Report = z.infer<typeof reportSchema>;
 export const reportMetaSchema = reportSchema.omit({ renderedMarkdown: true });
 export type ReportMeta = z.infer<typeof reportMetaSchema>;
 
+/**
+ * Query for a report listing. Filters are applied server-side so a paginated
+ * page is populated even when the result set is skewed (templateId is the tab;
+ * from/to overlap the report's period; projectId scopes by project). limit is
+ * optional: omitted returns the full filtered set (prev/next navigation needs
+ * it); the list view passes limit/offset to scroll.
+ */
+export const listReportsQuerySchema = z.object({
+	templateId: z.string().optional(),
+	projectId: z.string().optional(),
+	from: localDateSchema.optional(),
+	to: localDateSchema.optional(),
+	limit: z.coerce.number().int().min(1).max(200).optional(),
+	offset: z.coerce.number().int().min(0).optional(),
+});
+export type ListReportsQuery = z.infer<typeof listReportsQuerySchema>;
+// z.coerce fields have an `unknown` input type; clients send numbers.
+export type ListReportsQueryData = {
+	templateId?: string;
+	projectId?: string;
+	from?: string;
+	to?: string;
+	limit?: number;
+	offset?: number;
+};
+
 export const createReportInputSchema = z.object({
 	name: z.string().min(1).max(100),
 	templateId: z.string().min(1),

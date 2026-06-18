@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { invalidateReports } from "@/lib/query";
 import { useWorkspace } from "@/lib/workspace";
 
 const PRESETS: DateRangePreset[] = [
@@ -188,7 +189,7 @@ export function ReportForm({
 				: api.createReport(input);
 		},
 		onSuccess: async (report) => {
-			await queryClient.invalidateQueries({ queryKey: ["reports"] });
+			invalidateReports(queryClient);
 			await queryClient.invalidateQueries({ queryKey: ["report", report.id] });
 			setError(null);
 			onComplete(report);

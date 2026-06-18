@@ -1,7 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import type { MailFolder } from "@toxil/core";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
@@ -22,35 +26,26 @@ export function MessageList({
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const query = useQuery({
-		queryKey: ["mail", folder],
-		queryFn: () => api.listInbox(folder),
+	// Paginated folder listing. Keyed apart from the toolbar's full-folder query
+	// (["mail", folder]) so the infinite-data cache shape doesn't collide.
+	const query = useInfiniteQuery({
+		queryKey: ["mail", folder, "list"],
+		queryFn: ({ pageParam }) =>
+			api.listInbox(folder, { limit: PAGE_SIZE, offset: pageParam }),
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, allPages) =>
+			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
-	const items = query.data ?? [];
-	const hasUnread = items.some(
-		(m) => m.scope === "received" && m.readAt === null,
-	);
+	const items = query.data?.pages.flat() ?? [];
 
-	// Infinite scroll: render a growing window of the folder, extended by the
-	// sentinel. Reset to the first page when the folder changes.
-	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-	const [prevFolder, setPrevFolder] = useState(folder);
-	if (folder !== prevFolder) {
-		setPrevFolder(folder);
-		setVisibleCount(PAGE_SIZE);
-	}
-	// Always extend the window to cover a deep-linked selection so it stays
-	// highlighted — derived each render, so it survives a folder reset even when
-	// the selected index is unchanged.
-	const selectedIndex = selectedId
-		? items.findIndex((m) => m.id === selectedId)
-		: -1;
-	const minForSelected =
-		selectedIndex >= 0
-			? Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE
-			: 0;
-	const effectiveCount = Math.max(visibleCount, minForSelected);
-	const visible = items.slice(0, effectiveCount);
+	// The Inbox "mark all read" affordance reads the authoritative unread count
+	// (paginated pages would miss unread items below the fold).
+	const unread = useQuery({
+		queryKey: ["inbox-unread"],
+		queryFn: () => api.getInboxUnreadCount(),
+		enabled: folder === "inbox",
+	});
+	const hasUnread = folder === "inbox" && (unread.data?.count ?? 0) > 0;
 
 	const markAll = useMutation({
 		mutationFn: () => api.markAllInboxRead(),
@@ -100,7 +95,7 @@ export function MessageList({
 					</div>
 				) : (
 					<div className="flex flex-col gap-1">
-						{visible.map((item) => (
+						{items.map((item) => (
 							<MessageListItem
 								key={item.id}
 								item={item}
@@ -109,9 +104,9 @@ export function MessageList({
 							/>
 						))}
 						<InfiniteSentinel
-							hasNextPage={effectiveCount < items.length}
-							isFetchingNextPage={false}
-							fetchNextPage={() => setVisibleCount(effectiveCount + PAGE_SIZE)}
+							hasNextPage={Boolean(query.hasNextPage)}
+							isFetchingNextPage={query.isFetchingNextPage}
+							fetchNextPage={() => query.fetchNextPage()}
 						/>
 					</div>
 				)}

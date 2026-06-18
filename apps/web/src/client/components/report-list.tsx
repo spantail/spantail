@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
 	formatDuration,
@@ -109,11 +109,29 @@ export function ReportList({
 	const { templateById, enabledTemplates, templatesReady } =
 		useReportTemplates();
 
-	const reports = useQuery({
-		queryKey: ["reports"],
-		queryFn: () => api.listReports(),
+	// Auxiliary filters (local). Off by default: empty period keeps everything,
+	// project "all" keeps all. Filters are applied server-side so each fetched
+	// page is populated even when the result set is skewed.
+	const [from, setFrom] = useState("");
+	const [to, setTo] = useState("");
+	const [projectFilter, setProjectFilter] = useState("all");
+
+	const reports = useInfiniteQuery({
+		queryKey: ["reports", "list", tab, from, to, projectFilter],
+		queryFn: ({ pageParam }) =>
+			api.listReports({
+				templateId: tab === "all" ? undefined : tab,
+				from: from || undefined,
+				to: to || undefined,
+				projectId: projectFilter === "all" ? undefined : projectFilter,
+				limit: PAGE_SIZE,
+				offset: pageParam,
+			}),
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, allPages) =>
+			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
-	const rows = reports.data ?? [];
+	const list = reports.data?.pages.flat() ?? [];
 
 	// Project catalog for the filter dropdown + chip labels. Reports are
 	// owner-scoped to the user's workspaces, so listing per workspace resolves
@@ -125,24 +143,18 @@ export function ReportList({
 		})),
 	});
 	const projectById = new Map<string, string>();
-	const projectWorkspaceById = new Map<string, string>();
 	for (const query of projectQueries) {
 		for (const project of query.data ?? []) {
 			projectById.set(project.id, project.name);
-			projectWorkspaceById.set(project.id, project.workspaceId);
 		}
 	}
 	const projectOptions = [...projectById.entries()]
 		.map(([id, name]) => ({ id, name }))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
-	// Auxiliary filters (local). Off by default: empty period keeps everything,
-	// project "all" keeps all.
-	const [from, setFrom] = useState("");
-	const [to, setTo] = useState("");
-	const [projectFilter, setProjectFilter] = useState("all");
 	const periodActive = from !== "" || to !== "";
 	const projectActive = projectFilter !== "all";
+	const filtersActive = periodActive || projectActive;
 	const activeFilterCount = (periodActive ? 1 : 0) + (projectActive ? 1 : 0);
 	const periodLabel =
 		from && to
@@ -156,50 +168,6 @@ export function ReportList({
 		setProjectFilter("all");
 	};
 
-	const matches = (report: ReportMeta) => {
-		const range = report.filters.dateRange;
-		// Period overlap (inclusive); an empty bound is "open" on that side.
-		if (from && range.to < from) return false;
-		if (to && range.from > to) return false;
-		if (projectFilter !== "all") {
-			const ids = report.filters.projectIds;
-			if (ids?.length) {
-				if (!ids.includes(projectFilter)) return false;
-			} else {
-				// An all-projects report only spans its own workspaces' projects.
-				const ws = projectWorkspaceById.get(projectFilter);
-				if (ws && !report.filters.workspaceIds.includes(ws)) return false;
-			}
-		}
-		return true;
-	};
-
-	const list = rows.filter(
-		(report) => (tab === "all" || report.templateId === tab) && matches(report),
-	);
-
-	// Infinite scroll: render a growing window of the filtered list, extended by
-	// the sentinel. Reset to the first page whenever the result set changes.
-	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-	const filterKey = `${tab}|${from}|${to}|${projectFilter}`;
-	const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
-	if (filterKey !== prevFilterKey) {
-		setPrevFilterKey(filterKey);
-		setVisibleCount(PAGE_SIZE);
-	}
-	// Always extend the window to cover a deep-linked selection so it stays
-	// highlighted — derived each render, so it survives a filter reset even when
-	// the selected index is unchanged.
-	const selectedIndex = selectedId
-		? list.findIndex((report) => report.id === selectedId)
-		: -1;
-	const minForSelected =
-		selectedIndex >= 0
-			? Math.ceil((selectedIndex + 1) / PAGE_SIZE) * PAGE_SIZE
-			: 0;
-	const effectiveCount = Math.max(visibleCount, minForSelected);
-	const visible = list.slice(0, effectiveCount);
-
 	const enabledIds = new Set(enabledTemplates.map((tpl) => tpl.id));
 	const tabTemplate = templateById.get(tab);
 	const archived = tab !== "all" && !enabledIds.has(tab);
@@ -211,12 +179,9 @@ export function ReportList({
 		tabTemplate?.enabled === true ? tabTemplate : enabledTemplates[0];
 
 	const emptyBody = () => {
-		const unfilteredCount =
-			tab === "all"
-				? rows.length
-				: rows.filter((report) => report.templateId === tab).length;
-		// Genuine "no reports yet" on an enabled template tab → offer to create.
-		if (unfilteredCount === 0 && !archived && tabTemplate) {
+		// Filtering is server-side, so an empty list with filters off means the
+		// tab genuinely has no reports → offer to create on an enabled template tab.
+		if (!filtersActive && !archived && tabTemplate) {
 			return (
 				<div className="flex flex-col items-center gap-3 px-4 py-16 text-center">
 					<div className="bg-muted text-muted-foreground flex size-11 items-center justify-center rounded-full">
@@ -232,7 +197,7 @@ export function ReportList({
 			);
 		}
 		// No enabled templates at all (fresh workspace).
-		if (tab === "all" && rows.length === 0 && enabledTemplates.length === 0) {
+		if (tab === "all" && !filtersActive && enabledTemplates.length === 0) {
 			return (
 				<p className="text-muted-foreground px-4 py-16 text-center text-sm">
 					{t("reports.noTemplates")}
@@ -399,7 +364,7 @@ export function ReportList({
 					emptyBody()
 				) : (
 					<div className="flex flex-col gap-1">
-						{visible.map((report) => (
+						{list.map((report) => (
 							<ReportListItem
 								key={report.id}
 								report={report}
@@ -411,9 +376,9 @@ export function ReportList({
 							/>
 						))}
 						<InfiniteSentinel
-							hasNextPage={effectiveCount < list.length}
-							isFetchingNextPage={false}
-							fetchNextPage={() => setVisibleCount(effectiveCount + PAGE_SIZE)}
+							hasNextPage={Boolean(reports.hasNextPage)}
+							isFetchingNextPage={reports.isFetchingNextPage}
+							fetchNextPage={() => reports.fetchNextPage()}
 						/>
 					</div>
 				)}

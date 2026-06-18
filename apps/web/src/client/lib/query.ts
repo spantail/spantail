@@ -36,6 +36,16 @@ export function invalidateMail(client: QueryClient): void {
 	client.invalidateQueries({ queryKey: ["inbox-unread"] });
 }
 
+/**
+ * Refreshes report listings after a create/delete: the paginated list and the
+ * toolbar's full set (both under ["reports"]), plus the sidebar's in-use
+ * template ids, which gate the archived-template tabs.
+ */
+export function invalidateReports(client: QueryClient): void {
+	client.invalidateQueries({ queryKey: ["reports"] });
+	client.invalidateQueries({ queryKey: ["report-template-ids"] });
+}
+
 /** Refreshes a report's discussion (reactions + comments) after a change. */
 export function invalidateReportDiscussion(
 	client: QueryClient,
