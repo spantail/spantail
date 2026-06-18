@@ -436,30 +436,45 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		}
 	}
 
-	// Monthly, per workspace, for completed months inside the window.
-	const anchorUtc = todayInTimezone("UTC", now);
-	const windowStart = shiftDays(anchorUtc, -(WINDOW_DAYS - 1));
-	const [ay = 0, am = 1] = anchorUtc.split("-").map(Number);
-	const targetMonths: Array<{ first: string; last: string; ym: string }> = [];
-	for (let offset = 1; offset <= 2; offset++) {
-		const first = new Date(Date.UTC(ay, am - 1 - offset, 1));
-		const firstStr = first.toISOString().slice(0, 10);
-		const lastStr = lastDayOfMonth(first.getUTCFullYear(), first.getUTCMonth());
-		if (lastStr <= anchorUtc && lastStr >= windowStart) {
-			targetMonths.push({
-				first: firstStr,
-				last: lastStr,
-				ym: firstStr.slice(0, 7),
-			});
+	// Monthly, per workspace, for months that have completed within the window —
+	// computed in each workspace's timezone so a month is neither dropped nor
+	// created early near a local month boundary.
+	const monthsByTz = new Map<
+		string,
+		Array<{ first: string; last: string; ym: string }>
+	>();
+	const completedMonthsFor = (timezone: string) => {
+		const cached = monthsByTz.get(timezone);
+		if (cached) return cached;
+		const anchor = todayInTimezone(timezone, now);
+		const windowStart = shiftDays(anchor, -(WINDOW_DAYS - 1));
+		const [ay = 0, am = 1] = anchor.split("-").map(Number);
+		const months: Array<{ first: string; last: string; ym: string }> = [];
+		for (let offset = 1; offset <= 2; offset++) {
+			const first = new Date(Date.UTC(ay, am - 1 - offset, 1));
+			const firstStr = first.toISOString().slice(0, 10);
+			const lastStr = lastDayOfMonth(
+				first.getUTCFullYear(),
+				first.getUTCMonth(),
+			);
+			if (lastStr <= anchor && lastStr >= windowStart) {
+				months.push({
+					first: firstStr,
+					last: lastStr,
+					ym: firstStr.slice(0, 7),
+				});
+			}
 		}
-	}
+		monthsByTz.set(timezone, months);
+		return months;
+	};
 
 	for (const user of usersByKey.values()) {
 		const byWs =
 			entriesByUserWs.get(user.key) ?? new Map<string, EntryRecord[]>();
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
 			const tmpl = templateFor(ws.language, "month");
-			for (const month of targetMonths) {
+			for (const month of completedMonthsFor(ws.timezone)) {
 				const entries = (byWs.get(ws.key) ?? []).filter(
 					(e) => e.date >= month.first && e.date <= month.last,
 				);

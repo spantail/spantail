@@ -57,6 +57,33 @@ describe("generateDataset", () => {
 		for (const total of perUserDay.values()) expect(total).toBe(480);
 	});
 
+	it("computes monthly periods in each workspace timezone", async () => {
+		// 2026-07-01T00:00Z: Tokyo is already Jul 1 (June is complete locally),
+		// while Los Angeles is still Jun 30 (June is not complete locally).
+		const dataset = await generateDataset(new Date("2026-07-01T00:00:00Z"));
+		const rows = (name: string): Row[] =>
+			dataset.tables.find((t) => t.table === name)?.rows ?? [];
+		const tzById = new Map(
+			rows("workspaces").map((w) => [w.id as string, w.timezone as string]),
+		);
+		const juneTimezones = new Set<string | undefined>();
+		for (const r of rows("reports")) {
+			const filters = r.filters as {
+				workspaceIds: string[];
+				dateRange: { from: string; to: string };
+			};
+			// Monthly reports span more than a day and start on the 1st.
+			if (
+				filters.dateRange.from === "2026-06-01" &&
+				filters.dateRange.to !== "2026-06-01"
+			) {
+				juneTimezones.add(tzById.get(filters.workspaceIds[0] ?? ""));
+			}
+		}
+		expect(juneTimezones.has("Asia/Tokyo")).toBe(true);
+		expect(juneTimezones.has("America/Los_Angeles")).toBe(false);
+	});
+
 	it("dates entries in the workspace timezone, not the author's home", async () => {
 		// 06:00Z: Tokyo is already Fri 2026-06-19; Los Angeles is still Thu 06-18.
 		const dataset = await generateDataset(new Date("2026-06-19T06:00:00Z"));
