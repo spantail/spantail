@@ -7,6 +7,7 @@ import {
 	getBuiltinTemplate,
 	hashSharePasscode,
 	isBuiltinTemplateId,
+	listReportsQuerySchema,
 	type ReportFilters,
 	type ReportFiltersInput,
 	renderReport,
@@ -27,6 +28,7 @@ import {
 	listProjectsByIds,
 	listReportMetaByOwner,
 	listReportSharesByReport,
+	listReportTemplateIdsByOwner,
 	listUsersByIds,
 	listWorkEntriesForReport,
 	listWorkspacesForUser,
@@ -187,8 +189,9 @@ async function renderReportDocument(
 export const reportRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
+		const query = validate(listReportsQuerySchema, c.req.query());
 		// Metadata only: the rendered body is fetched on demand via GET /:id.
-		const metas = await listReportMetaByOwner(c.var.db, user.id);
+		const metas = await listReportMetaByOwner(c.var.db, user.id, query);
 		// totalMinutes is an aggregate of workspace entries (report content), so it
 		// is redacted for reports whose scope the owner no longer fully covers —
 		// mirroring the membership re-check that gates the full report read.
@@ -202,6 +205,12 @@ export const reportRoutes = new Hono<AppEnv>()
 					: { ...report, totalMinutes: null },
 			),
 		);
+	})
+	// Static segment registered before "/:id" so it never matches it. Lets the
+	// sidebar surface archived-template tabs without loading every report.
+	.get("/template-ids", async (c) => {
+		const { user } = requireScope(c, "read");
+		return c.json(await listReportTemplateIdsByOwner(c.var.db, user.id));
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");

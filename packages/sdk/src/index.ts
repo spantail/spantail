@@ -19,6 +19,8 @@ import type {
 	EmailSettings,
 	Invitation,
 	InvitationPreview,
+	ListInboxQueryData,
+	ListReportsQueryData,
 	ListWorkEntriesQueryData,
 	MailFolder,
 	MailFolderCounts,
@@ -324,8 +326,13 @@ export class ToxilClient {
 	}
 
 	/** Metadata only (no rendered body); fetch the full report with getReport. */
-	listReports(): Promise<ReportMeta[]> {
-		return this.request("GET", "/reports");
+	listReports(query: ListReportsQueryData = {}): Promise<ReportMeta[]> {
+		return this.request("GET", "/reports", { query });
+	}
+
+	/** Distinct template ids that own at least one of the caller's reports. */
+	listReportTemplateIdsInUse(): Promise<string[]> {
+		return this.request("GET", "/reports/template-ids");
 	}
 
 	createReport(input: CreateReportInput): Promise<Report> {
@@ -377,8 +384,11 @@ export class ToxilClient {
 	}
 
 	/** Lists a mailbox folder. Defaults to the Inbox. */
-	listInbox(folder: MailFolder = "inbox"): Promise<MailItem[]> {
-		return this.request("GET", "/inbox", { query: { folder } });
+	listInbox(
+		folder: MailFolder = "inbox",
+		query: Omit<ListInboxQueryData, "folder"> = {},
+	): Promise<MailItem[]> {
+		return this.request("GET", "/inbox", { query: { folder, ...query } });
 	}
 
 	getMailboxCounts(): Promise<MailFolderCounts> {

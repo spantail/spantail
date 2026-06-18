@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { invalidateReports } from "@/lib/query";
 
 /**
  * Confirm + delete a report (owner-only). Trigger-less so callers supply their
@@ -40,7 +41,7 @@ export function DeleteReportConfirm({
 		mutationFn: () => api.deleteReport(reportId),
 		onSuccess: async () => {
 			queryClient.removeQueries({ queryKey: ["report", reportId] });
-			await queryClient.invalidateQueries({ queryKey: ["reports"] });
+			invalidateReports(queryClient);
 			onDeleted();
 		},
 	});

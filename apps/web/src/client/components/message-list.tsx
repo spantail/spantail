@@ -1,13 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import type { MailFolder } from "@toxil/core";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { MessageListItem } from "@/components/message-list-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { invalidateMail } from "@/lib/query";
+
+const PAGE_SIZE = 50;
 
 export function MessageList({
 	folder,
@@ -18,14 +26,26 @@ export function MessageList({
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const query = useQuery({
-		queryKey: ["mail", folder],
-		queryFn: () => api.listInbox(folder),
+	// Paginated folder listing. Keyed apart from the toolbar's full-folder query
+	// (["mail", folder]) so the infinite-data cache shape doesn't collide.
+	const query = useInfiniteQuery({
+		queryKey: ["mail", folder, "list"],
+		queryFn: ({ pageParam }) =>
+			api.listInbox(folder, { limit: PAGE_SIZE, offset: pageParam }),
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, allPages) =>
+			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
-	const items = query.data ?? [];
-	const hasUnread = items.some(
-		(m) => m.scope === "received" && m.readAt === null,
-	);
+	const items = query.data?.pages.flat() ?? [];
+
+	// The Inbox "mark all read" affordance reads the authoritative unread count
+	// (paginated pages would miss unread items below the fold).
+	const unread = useQuery({
+		queryKey: ["inbox-unread"],
+		queryFn: () => api.getInboxUnreadCount(),
+		enabled: folder === "inbox",
+	});
+	const hasUnread = folder === "inbox" && (unread.data?.count ?? 0) > 0;
 
 	const markAll = useMutation({
 		mutationFn: () => api.markAllInboxRead(),
@@ -83,6 +103,11 @@ export function MessageList({
 								selected={item.id === selectedId}
 							/>
 						))}
+						<InfiniteSentinel
+							hasNextPage={Boolean(query.hasNextPage)}
+							isFetchingNextPage={query.isFetchingNextPage}
+							fetchNextPage={() => query.fetchNextPage()}
+						/>
 					</div>
 				)}
 			</div>

@@ -1,4 +1,4 @@
-import { mailFolderSchema, setMailFlagsInputSchema } from "@toxil/core";
+import { listInboxQuerySchema, setMailFlagsInputSchema } from "@toxil/core";
 import {
 	countFolders,
 	countUnreadInbox,
@@ -25,9 +25,12 @@ import type { AppEnv } from "../types";
 export const inboxRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
-		const folder = validate(mailFolderSchema, c.req.query("folder") ?? "inbox");
+		const { folder, limit, offset } = validate(
+			listInboxQuerySchema,
+			c.req.query(),
+		);
 		// Date timestamps + boolean flags serialize straight to the API shape.
-		const rows = await listMailbox(c.var.db, user.id, folder);
+		const rows = await listMailbox(c.var.db, user.id, folder, limit, offset);
 		return c.json(rows);
 	})
 	// Static segments registered before "/:id" so they never match it.

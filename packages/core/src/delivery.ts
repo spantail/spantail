@@ -31,6 +31,24 @@ export const mailFolderSchema = z.enum([
 export type MailFolder = z.infer<typeof mailFolderSchema>;
 
 /**
+ * Query for a mailbox folder listing. limit is optional: omitted returns the
+ * full folder (prev/next navigation needs it); the list view passes limit/offset
+ * to scroll.
+ */
+export const listInboxQuerySchema = z.object({
+	folder: mailFolderSchema.default("inbox"),
+	limit: z.coerce.number().int().min(1).max(200).optional(),
+	offset: z.coerce.number().int().min(0).optional(),
+});
+export type ListInboxQuery = z.infer<typeof listInboxQuerySchema>;
+// z.coerce fields have an `unknown` input type; clients send numbers.
+export type ListInboxQueryData = {
+	folder?: MailFolder;
+	limit?: number;
+	offset?: number;
+};
+
+/**
  * Which side of a delivery the caller is looking at: a received copy (per-row)
  * or a sent batch (grouped). Determines the flag target — received flags key on
  * the delivery id, sent flags on the batch id.

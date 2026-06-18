@@ -1,6 +1,7 @@
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
+import { projects } from "../schema/domain";
 import { reports } from "../schema/reports";
 
 export type ReportRow = typeof reports.$inferSelect;
@@ -42,12 +43,54 @@ export async function getReportById(
 	return db.select().from(reports).where(eq(reports.id, id)).get();
 }
 
-/** List metadata only (no rendered_markdown), newest first. */
+export interface ListReportsFilter {
+	templateId?: string;
+	projectId?: string;
+	from?: string;
+	to?: string;
+	// Omit limit to return the full filtered set (used for prev/next navigation).
+	limit?: number;
+	offset?: number;
+}
+
+/**
+ * List metadata only (no rendered_markdown), newest first. Filters are applied
+ * in SQL so a paginated page is always populated. `projectIds`/`workspaceIds`
+ * live in the `filters` JSON, matched via json_extract / json_each (mirroring
+ * the work-entries tag filter). Date strings (YYYY-MM-DD) compare chronologically.
+ */
 export async function listReportMetaByOwner(
 	db: Database,
 	ownerUserId: string,
+	filter: ListReportsFilter,
 ): Promise<ReportMetaRow[]> {
-	return db
+	const conditions = [eq(reports.ownerUserId, ownerUserId)];
+	if (filter.templateId)
+		conditions.push(eq(reports.templateId, filter.templateId));
+	// Period overlap with the report's stored absolute range.
+	if (filter.from)
+		conditions.push(
+			sql`json_extract(${reports.filters}, '$.dateRange.to') >= ${filter.from}`,
+		);
+	if (filter.to)
+		conditions.push(
+			sql`json_extract(${reports.filters}, '$.dateRange.from') <= ${filter.to}`,
+		);
+	// Project filter: a report listing explicit projectIds matches when it
+	// includes the project; an all-projects report (no projectIds) matches when
+	// it spans the project's workspace.
+	if (filter.projectId)
+		conditions.push(
+			sql`(
+				(json_array_length(coalesce(json_extract(${reports.filters}, '$.projectIds'), '[]')) > 0
+					and exists (select 1 from json_each(json_extract(${reports.filters}, '$.projectIds')) where value = ${filter.projectId}))
+				or
+				(json_array_length(coalesce(json_extract(${reports.filters}, '$.projectIds'), '[]')) = 0
+					and exists (select 1 from json_each(json_extract(${reports.filters}, '$.workspaceIds'))
+						where value = (select ${projects.workspaceId} from ${projects} where ${projects.id} = ${filter.projectId})))
+			)`,
+		);
+	const query = db
 		.select({
 			id: reports.id,
 			name: reports.name,
@@ -60,8 +103,25 @@ export async function listReportMetaByOwner(
 			updatedAt: reports.updatedAt,
 		})
 		.from(reports)
-		.where(eq(reports.ownerUserId, ownerUserId))
-		.orderBy(desc(reports.createdAt));
+		.where(and(...conditions))
+		// id breaks createdAt ties so offset paging is stable.
+		.orderBy(desc(reports.createdAt), desc(reports.id))
+		.$dynamic();
+	if (filter.limit !== undefined)
+		query.limit(filter.limit).offset(filter.offset ?? 0);
+	return query;
+}
+
+/** Distinct template ids that own at least one of the caller's reports. */
+export async function listReportTemplateIdsByOwner(
+	db: Database,
+	ownerUserId: string,
+): Promise<string[]> {
+	const rows = await db
+		.selectDistinct({ templateId: reports.templateId })
+		.from(reports)
+		.where(eq(reports.ownerUserId, ownerUserId));
+	return rows.map((r) => r.templateId);
 }
 
 export async function updateReport(

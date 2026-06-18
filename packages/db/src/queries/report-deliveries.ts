@@ -94,8 +94,10 @@ async function listReceived(
 	db: Database,
 	userId: string,
 	folder: MailFolder,
+	limit?: number,
+	offset?: number,
 ): Promise<MailItemRow[]> {
-	const rows = await db
+	const query = db
 		.select({
 			id: reportDeliveries.id,
 			batchId: reportDeliveries.batchId,
@@ -124,7 +126,11 @@ async function listReceived(
 		.where(
 			and(eq(reportDeliveries.recipientUserId, userId), flagPredicate(folder)),
 		)
-		.orderBy(desc(reportDeliveries.createdAt));
+		// id breaks createdAt ties so offset paging is stable.
+		.orderBy(desc(reportDeliveries.createdAt), desc(reportDeliveries.id))
+		.$dynamic();
+	if (limit !== undefined) query.limit(limit).offset(offset ?? 0);
+	const rows = await query;
 
 	return rows.map((r) => ({
 		id: r.id,
@@ -152,8 +158,10 @@ async function listSent(
 	db: Database,
 	userId: string,
 	folder: MailFolder,
+	limit?: number,
+	offset?: number,
 ): Promise<MailItemRow[]> {
-	const rows = await db
+	const query = db
 		.select({
 			// A stable representative delivery id for the batch — the detail route
 			// opens it and the server resolves the sent scope from the sender.
@@ -187,7 +195,11 @@ async function listSent(
 			and(eq(reportDeliveries.senderUserId, userId), flagPredicate(folder)),
 		)
 		.groupBy(batchKey)
-		.orderBy(desc(sql`min(${reportDeliveries.createdAt})`));
+		// batchKey breaks createdAt ties so offset paging is stable.
+		.orderBy(desc(sql`min(${reportDeliveries.createdAt})`), desc(batchKey))
+		.$dynamic();
+	if (limit !== undefined) query.limit(limit).offset(offset ?? 0);
+	const rows = await query;
 
 	return rows.map((r) => ({
 		id: r.id,
@@ -218,16 +230,26 @@ export async function listMailbox(
 	db: Database,
 	userId: string,
 	folder: MailFolder,
+	limit?: number,
+	offset?: number,
 ): Promise<MailItemRow[]> {
-	if (folder === "inbox") return listReceived(db, userId, folder);
-	if (folder === "sent") return listSent(db, userId, folder);
+	if (folder === "inbox")
+		return listReceived(db, userId, folder, limit, offset);
+	if (folder === "sent") return listSent(db, userId, folder, limit, offset);
+	// Merged folders interleave both scopes newest-first. The merged item at any
+	// global index draws from at most that index of either branch, so fetching
+	// offset+limit from each branch is enough to slice the requested page (or
+	// the whole branch when unbounded).
+	const off = offset ?? 0;
+	const cap = limit === undefined ? undefined : off + limit;
 	const [received, sent] = await Promise.all([
-		listReceived(db, userId, folder),
-		listSent(db, userId, folder),
+		listReceived(db, userId, folder, cap, 0),
+		listSent(db, userId, folder, cap, 0),
 	]);
-	return [...received, ...sent].sort(
+	const merged = [...received, ...sent].sort(
 		(a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
 	);
+	return limit === undefined ? merged : merged.slice(off, off + limit);
 }
 
 async function getDeliveryFlags(
@@ -522,6 +544,60 @@ export async function countUnreadInbox(
 	return row?.count ?? 0;
 }
 
+/** Received items matching a folder predicate (mirrors listReceived's filter). */
+async function countReceived(
+	db: Database,
+	userId: string,
+	folder: MailFolder,
+): Promise<number> {
+	const row = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(reportDeliveries)
+		.leftJoin(
+			deliveryFlags,
+			and(
+				eq(deliveryFlags.userId, userId),
+				eq(deliveryFlags.scope, "received"),
+				eq(deliveryFlags.targetId, reportDeliveries.id),
+			),
+		)
+		.where(
+			and(eq(reportDeliveries.recipientUserId, userId), flagPredicate(folder)),
+		)
+		.get();
+	return row?.count ?? 0;
+}
+
+/** Sent batches matching a folder predicate (mirrors listSent's grouping). */
+async function countSentBatches(
+	db: Database,
+	userId: string,
+	folder: MailFolder,
+): Promise<number> {
+	const groups = db
+		.select({ batchId: batchKey })
+		.from(reportDeliveries)
+		.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
+		.leftJoin(
+			deliveryFlags,
+			and(
+				eq(deliveryFlags.userId, userId),
+				eq(deliveryFlags.scope, "sent"),
+				eq(deliveryFlags.targetId, batchKey),
+			),
+		)
+		.where(
+			and(eq(reportDeliveries.senderUserId, userId), flagPredicate(folder)),
+		)
+		.groupBy(batchKey)
+		.as("sent_groups");
+	const row = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(groups)
+		.get();
+	return row?.count ?? 0;
+}
+
 /** Counts for the mailbox sidebar — every folder plus the unread Inbox badge. */
 export async function countFolders(
 	db: Database,
@@ -534,28 +610,24 @@ export async function countFolders(
 	archive: number;
 	trash: number;
 }> {
-	const folders: MailFolder[] = [
-		"inbox",
-		"starred",
-		"sent",
-		"archive",
-		"trash",
-	];
-	const [entries, unread] = await Promise.all([
-		Promise.all(
-			folders.map(
-				async (f) => [f, (await listMailbox(db, userId, f)).length] as const,
-			),
-		),
+	// Folder semantics mirror listMailbox: inbox is received-only, sent is
+	// sent-only, and starred/archive/trash span both scopes.
+	const [inbox, starred, sent, archive, trash, unread] = await Promise.all([
+		countReceived(db, userId, "inbox"),
+		Promise.all([
+			countReceived(db, userId, "starred"),
+			countSentBatches(db, userId, "starred"),
+		]).then(([r, s]) => r + s),
+		countSentBatches(db, userId, "sent"),
+		Promise.all([
+			countReceived(db, userId, "archive"),
+			countSentBatches(db, userId, "archive"),
+		]).then(([r, s]) => r + s),
+		Promise.all([
+			countReceived(db, userId, "trash"),
+			countSentBatches(db, userId, "trash"),
+		]).then(([r, s]) => r + s),
 		countUnreadInbox(db, userId),
 	]);
-	const byFolder = Object.fromEntries(entries) as Record<MailFolder, number>;
-	return {
-		inbox: byFolder.inbox,
-		unread,
-		starred: byFolder.starred,
-		sent: byFolder.sent,
-		archive: byFolder.archive,
-		trash: byFolder.trash,
-	};
+	return { inbox, unread, starred, sent, archive, trash };
 }

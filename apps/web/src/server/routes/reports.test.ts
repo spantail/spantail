@@ -545,3 +545,107 @@ it("surfaces template rendering errors as bad_request and saves nothing", async 
 	// Nothing was persisted.
 	expect(await (await apiGet("/api/v1/reports", admin)).json()).toEqual([]);
 });
+
+it("filters and paginates the report list server-side", async () => {
+	const { admin, ws, project } = await setup();
+	const project2 = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "two", name: "Two" },
+			admin,
+		)
+	).json()) as { id: string };
+	const create = (
+		name: string,
+		dateRange: { from: string; to: string },
+		projectIds?: string[],
+	) =>
+		apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name,
+				templateId: "builtin:daily",
+				filters: {
+					workspaceIds: [ws.id],
+					...(projectIds ? { projectIds } : {}),
+					dateRange,
+				},
+			},
+			admin,
+		);
+	expect(
+		(await create("Jan", { from: "2025-01-01", to: "2025-01-31" })).status,
+	).toBe(201);
+	expect(
+		(
+			await create("Feb", { from: "2025-02-01", to: "2025-02-28" }, [
+				project.id,
+			])
+		).status,
+	).toBe(201);
+	expect(
+		(await create("Mar", { from: "2025-03-01", to: "2025-03-31" })).status,
+	).toBe(201);
+	expect(
+		(
+			await create("Apr", { from: "2025-04-01", to: "2025-04-30" }, [
+				project2.id,
+			])
+		).status,
+	).toBe(201);
+
+	const fetchList = async (qs: string) =>
+		(await (await apiGet(`/api/v1/reports${qs}`, admin)).json()) as Array<{
+			id: string;
+			name: string;
+		}>;
+	const names = async (qs: string) =>
+		(await fetchList(qs)).map((r) => r.name).sort();
+
+	// Pagination is stable (a total order), so pages are disjoint and complete —
+	// without asserting the order, which createdAt ties may resolve by id.
+	const page1 = (await fetchList("?limit=2")).map((r) => r.id);
+	const page2 = (await fetchList("?limit=2&offset=2")).map((r) => r.id);
+	expect(page1).toHaveLength(2);
+	expect(page2).toHaveLength(2);
+	expect(new Set([...page1, ...page2]).size).toBe(4);
+
+	// Period overlap with the report's stored range.
+	expect(await names("?from=2025-02-15")).toEqual(["Apr", "Feb", "Mar"]);
+	expect(await names("?to=2025-01-15")).toEqual(["Jan"]);
+
+	// Project filter: explicit-projectIds reports match only their projects; an
+	// all-projects report (Jan, Mar) matches any project in its workspaces.
+	expect(await names(`?projectId=${project.id}`)).toEqual([
+		"Feb",
+		"Jan",
+		"Mar",
+	]);
+	expect(await names(`?projectId=${project2.id}`)).toEqual([
+		"Apr",
+		"Jan",
+		"Mar",
+	]);
+
+	// templateId is the tab filter; an unused template returns nothing.
+	expect(await names("?templateId=builtin:weekly")).toEqual([]);
+	expect(await names("?templateId=builtin:daily")).toEqual([
+		"Apr",
+		"Feb",
+		"Jan",
+		"Mar",
+	]);
+});
+
+it("lists distinct template ids in use", async () => {
+	const { admin, ws } = await setup();
+	expect(
+		await (await apiGet("/api/v1/reports/template-ids", admin)).json(),
+	).toEqual([]);
+	await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin);
+	expect(
+		await (await apiGet("/api/v1/reports/template-ids", admin)).json(),
+	).toEqual(["builtin:daily"]);
+});

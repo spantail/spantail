@@ -27,20 +27,18 @@ export function ReportsSidebar() {
 		| string
 		| undefined;
 
-	const reports = useQuery({
-		queryKey: ["reports"],
-		queryFn: () => api.listReports(),
+	// Just the template ids in use — not the full report list — so the sidebar
+	// stays cheap when a user owns many reports.
+	const templateIds = useQuery({
+		queryKey: ["report-template-ids"],
+		queryFn: () => api.listReportTemplateIdsInUse(),
 	});
 
 	// Disabled templates that still own reports become archived menu items so no
 	// document is orphaned (mirrors the old tab strip).
 	const enabledIds = new Set(enabledTemplates.map((tpl) => tpl.id));
 	const archivedIds = [
-		...new Set(
-			(reports.data ?? [])
-				.map((r) => r.templateId)
-				.filter((id) => !enabledIds.has(id)),
-		),
+		...new Set((templateIds.data ?? []).filter((id) => !enabledIds.has(id))),
 	];
 
 	const dismiss = () => setOpenMobile(false);
