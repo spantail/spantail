@@ -121,7 +121,7 @@ export function ReportList({
 	const navigate = useNavigate();
 	const { workspaces } = useWorkspace();
 	const { openCreate } = useReportDialogs();
-	const { templateById, enabledTemplates, templatesReady } =
+	const { templateById, enabledTemplates, templatesReady, createTargetForTab } =
 		useReportTemplates();
 
 	// Auxiliary filters (local). Off by default: empty period keeps everything,
@@ -259,8 +259,7 @@ export function ReportList({
 		tab === "all" ? t("reports.tab.all") : (tabTemplate?.name ?? tab);
 	// New report targets the current tab's template when it's enabled, else the
 	// first enabled template (so the button still works on All/archived tabs).
-	const createTarget =
-		tabTemplate?.enabled === true ? tabTemplate : enabledTemplates[0];
+	const createTarget = createTargetForTab(tab);
 
 	const emptyBody = () => {
 		// Filtering is server-side, so an empty list with filters off means the
