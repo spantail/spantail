@@ -4,10 +4,12 @@ import {
 	fireEvent,
 	render,
 	screen,
+	waitFor,
 	within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { queryClient } from "@/lib/query";
 import { App, createAppRouter } from "./app";
 
 const NOW = "2026-06-12T00:00:00.000Z";
@@ -113,6 +115,12 @@ beforeEach(() => {
 afterEach(() => {
 	cleanup();
 	vi.unstubAllGlobals();
+	// The query cache is a module singleton, so reset it between tests to stop
+	// one test's `me`/workspace data from leaking into the next.
+	queryClient.clear();
+	// The workspace provider persists the active workspace here; clear it so
+	// each test starts from a known (empty) selection.
+	localStorage.clear();
 });
 
 async function renderApp(initialPath: string) {
@@ -230,4 +238,50 @@ it("renders the home dashboard and the empty timeline call to action", async () 
 	expect(
 		await screen.findByRole("button", { name: "Log your first entry" }),
 	).toBeDefined();
+});
+
+it("keeps the URL-selected workspace active after leaving the scoped route", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	// Last-visited is Acme (the first membership), but the user deep-links into
+	// Beta — the URL must win even after navigating to a top-level surface.
+	localStorage.setItem("toxil.ws", "ws1");
+	const twoWorkspaceMe = {
+		...mePayload,
+		memberships: [
+			mePayload.memberships[0],
+			{
+				id: "ws2",
+				slug: "beta",
+				name: "Beta",
+				timezone: "Asia/Tokyo",
+				settings: {},
+				createdAt: NOW,
+				archivedAt: null,
+				role: "owner",
+			},
+		],
+	};
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input instanceof Request ? input.url : input));
+			switch (url.pathname) {
+				case "/api/v1/me":
+					return json(twoWorkspaceMe);
+				case "/api/v1/work-entries/stats":
+					return json(zeroStats);
+				default:
+					return json([]);
+			}
+		}),
+	);
+
+	const router = await renderApp("/w/beta");
+	await screen.findByText("Today");
+	expect(router.state.location.pathname).toBe("/w/beta");
+
+	// Going back to the home hub must forward to Beta, not the stale first
+	// workspace, proving the URL selection was folded into state.
+	router.navigate({ to: "/" });
+	await waitFor(() => expect(router.state.location.pathname).toBe("/w/beta"));
 });

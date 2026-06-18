@@ -35,8 +35,15 @@ export function WorkspaceProvider({
 		workspaces[0] ??
 		null;
 
+	// Fold the resolved workspace back into state so a URL-driven selection
+	// survives leaving the scoped route: without this, navigating from `/w/acme`
+	// to a top-level surface (settings, reports, home) would drop `urlSlug` and
+	// fall back to a stale `selectedId`. Re-setting the same id is a no-op, so
+	// this does not loop.
 	useEffect(() => {
-		if (current) localStorage.setItem(STORAGE_KEY, current.id);
+		if (!current) return;
+		setSelectedId(current.id);
+		localStorage.setItem(STORAGE_KEY, current.id);
 	}, [current]);
 
 	return (
