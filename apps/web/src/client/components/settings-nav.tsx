@@ -3,6 +3,7 @@ import {
 	FileTextIcon,
 	FolderIcon,
 	KeyIcon,
+	KeyRoundIcon,
 	LockIcon,
 	MailIcon,
 	SettingsIcon,
@@ -27,7 +28,8 @@ interface SettingsNavItem {
 		| "/settings/password"
 		| "/settings/preferences"
 		| "/settings/users"
-		| "/settings/email";
+		| "/settings/email"
+		| "/settings/oauth";
 	labelKey: string;
 	icon: React.ComponentType<{ className?: string }>;
 }
@@ -98,6 +100,11 @@ const GROUPS: SettingsNavGroup[] = [
 				to: "/settings/email",
 				labelKey: "settings.nav.email",
 				icon: MailIcon,
+			},
+			{
+				to: "/settings/oauth",
+				labelKey: "settings.nav.oauth",
+				icon: KeyRoundIcon,
 			},
 		],
 	},

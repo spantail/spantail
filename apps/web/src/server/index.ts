@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { createAuth } from "./auth";
 import { errorResponse } from "./lib/errors";
+import { resolveSocialConfig } from "./lib/oauth";
 import { registerMcpRoute } from "./mcp";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
@@ -54,7 +55,8 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
 			403,
 		);
 	}
-	return createAuth(c.env, c.var.db, c.executionCtx).handler(c.req.raw);
+	const social = await resolveSocialConfig(c.env, c.var.db);
+	return createAuth(c.env, c.var.db, c.executionCtx, social).handler(c.req.raw);
 });
 
 const v1 = new Hono<AppEnv>();

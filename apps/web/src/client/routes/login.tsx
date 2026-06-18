@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/login")({
@@ -27,6 +29,23 @@ function LoginPage() {
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+	const providers = useQuery({
+		queryKey: ["authProviders"],
+		queryFn: () => api.getAuthProviders(),
+	});
+
+	async function signInSocial(provider: "google" | "github") {
+		setError(null);
+		// Redirects the browser to the provider; control does not return here on
+		// success. Surface an error only if the call fails before redirecting.
+		const result = await authClient.signIn.social({
+			provider,
+			callbackURL: "/",
+		});
+		if (result.error) {
+			setError(result.error.message ?? t("errors.generic"));
+		}
+	}
 
 	async function onSubmit(event: React.FormEvent) {
 		event.preventDefault();
@@ -98,6 +117,35 @@ function LoginPage() {
 								: t("auth.signupAction")}
 						</Button>
 					</form>
+					{(providers.data?.google || providers.data?.github) && (
+						<div className="mt-4 flex flex-col gap-3">
+							<div className="flex items-center gap-3">
+								<span className="bg-border h-px flex-1" />
+								<span className="text-muted-foreground text-xs">
+									{t("auth.orContinueWith")}
+								</span>
+								<span className="bg-border h-px flex-1" />
+							</div>
+							{providers.data?.google && (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => signInSocial("google")}
+								>
+									{t("auth.continueWithGoogle")}
+								</Button>
+							)}
+							{providers.data?.github && (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={() => signInSocial("github")}
+								>
+									{t("auth.continueWithGithub")}
+								</Button>
+							)}
+						</div>
+					)}
 					{mode === "login" && (
 						<button
 							type="button"

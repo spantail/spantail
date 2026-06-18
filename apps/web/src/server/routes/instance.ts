@@ -1,16 +1,22 @@
 import {
+	type AuthProviders,
 	type EmailEnabled,
 	type EmailSettings,
+	normalizeAllowedDomains,
+	type OauthSettings,
 	updateEmailSettingsInputSchema,
+	updateOauthSettingsInputSchema,
 } from "@toxil/core";
 import {
 	getInstanceSettings,
 	type InstanceSettingsRow,
+	upsertInstanceOauthSettings,
 	upsertInstanceSettings,
 } from "@toxil/db";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
+import { oauthProviderConfigured, resolveSocialConfig } from "../lib/oauth";
 import { requireInstanceAdmin } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import type { AppEnv } from "../types";
@@ -20,6 +26,23 @@ function toEmailSettings(row: InstanceSettingsRow | undefined): EmailSettings {
 		emailEnabled: row?.emailEnabled ?? false,
 		emailFromAddress: row?.emailFromAddress ?? null,
 		emailFromName: row?.emailFromName ?? null,
+	};
+}
+
+function toOauthSettings(
+	env: Env,
+	row: InstanceSettingsRow | undefined,
+): OauthSettings {
+	return {
+		google: {
+			enabled: row?.googleOAuthEnabled ?? false,
+			configured: oauthProviderConfigured(env, "google"),
+		},
+		github: {
+			enabled: row?.githubOAuthEnabled ?? false,
+			configured: oauthProviderConfigured(env, "github"),
+		},
+		googleAllowedDomains: row?.googleAllowedDomains ?? [],
 	};
 }
 
@@ -64,4 +87,52 @@ export const instanceRoutes = new Hono<AppEnv>()
 					: input.emailFromName,
 		});
 		return c.json(toEmailSettings(row));
+	})
+	// Public: tells the login screen which social buttons to show. A provider is
+	// "on" only when an admin enabled it and its credentials are configured.
+	.get("/auth-providers", async (c) => {
+		const social = await resolveSocialConfig(c.env, c.var.db);
+		return c.json({
+			google: social.google !== undefined,
+			github: social.github !== undefined,
+		} satisfies AuthProviders);
+	})
+	.get("/oauth", async (c) => {
+		requireInstanceAdmin(c);
+		return c.json(toOauthSettings(c.env, await getInstanceSettings(c.var.db)));
+	})
+	.patch("/oauth", async (c) => {
+		requireInstanceAdmin(c);
+		const input = validate(updateOauthSettingsInputSchema, await c.req.json());
+
+		// Omitted fields keep their current values.
+		const current = await getInstanceSettings(c.var.db);
+		const googleOAuthEnabled =
+			input.googleOAuthEnabled ?? current?.googleOAuthEnabled ?? false;
+		const githubOAuthEnabled =
+			input.githubOAuthEnabled ?? current?.githubOAuthEnabled ?? false;
+
+		// Enabling a provider without credentials would surface a broken button, so
+		// reject it (mirrors the email "from address required to enable" rule).
+		if (googleOAuthEnabled && !oauthProviderConfigured(c.env, "google")) {
+			throw new AppError(
+				"bad_request",
+				"Google OAuth credentials are not configured on this instance",
+			);
+		}
+		if (githubOAuthEnabled && !oauthProviderConfigured(c.env, "github")) {
+			throw new AppError(
+				"bad_request",
+				"GitHub OAuth credentials are not configured on this instance",
+			);
+		}
+
+		const row = await upsertInstanceOauthSettings(c.var.db, {
+			googleOAuthEnabled,
+			githubOAuthEnabled,
+			googleAllowedDomains: normalizeAllowedDomains(
+				input.googleAllowedDomains ?? current?.googleAllowedDomains ?? [],
+			),
+		});
+		return c.json(toOauthSettings(c.env, row));
 	});

@@ -27,7 +27,10 @@
 		"resetPasswordTitle": "Set a new password",
 		"resetPasswordDescription": "Choose a new password for your account.",
 		"resetPasswordAction": "Reset password",
-		"resetInvalid": "This reset link is invalid or has expired."
+		"resetInvalid": "This reset link is invalid or has expired.",
+		"orContinueWith": "or continue with",
+		"continueWithGoogle": "Continue with Google",
+		"continueWithGithub": "Continue with GitHub"
 	},
 	"errors": {
 		"generic": "Something went wrong. Please try again."
@@ -405,7 +408,8 @@
 			"password": "Password",
 			"preferences": "Preferences",
 			"systemUsers": "User management",
-			"email": "Email"
+			"email": "Email",
+			"oauth": "Social login"
 		},
 		"systemAdminOnly": "Only instance admins can access this section.",
 		"slug": "Slug",
@@ -525,6 +529,19 @@
 			"statusEnabled": "Enabled",
 			"statusDisabled": "Disabled",
 			"adminBanner": "Email delivery applies to the whole instance and is visible only to instance admins."
+		},
+		"oauth": {
+			"title": "Social login",
+			"description": "Let users sign in with Google or GitHub. Each provider is off until you enable it, and only available once its OAuth client credentials are configured on this instance.",
+			"adminBanner": "Social login applies to the whole instance and is visible only to instance admins.",
+			"googleLabel": "Enable Google sign-in",
+			"githubLabel": "Enable GitHub sign-in",
+			"notConfiguredHint": "OAuth credentials are not configured for this provider. Set them as environment secrets to enable it.",
+			"allowedDomainsLabel": "Allowed email domains (Google)",
+			"allowedDomainsHint": "One domain per line. Leave empty to allow any Google account. Only matching domains may sign in with Google.",
+			"saveAction": "Save",
+			"statusEnabled": "Enabled",
+			"statusDisabled": "Disabled"
 		},
 		"adminBannerLead": "Instance administration.",
 		"general": {

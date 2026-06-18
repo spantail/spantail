@@ -2,6 +2,7 @@ import type {
 	AcceptInvitationInput,
 	AddWorkspaceMemberInputData,
 	ApiToken,
+	AuthProviders,
 	AuthUser,
 	Comment,
 	CreatedUser,
@@ -24,6 +25,7 @@ import type {
 	MailItem,
 	MailItemDetail,
 	ManagedUser,
+	OauthSettings,
 	Project,
 	ReactionEmoji,
 	ReactionSummary,
@@ -38,6 +40,7 @@ import type {
 	SetMailFlagsInput,
 	UnreadCount,
 	UpdateEmailSettingsInput,
+	UpdateOauthSettingsInput,
 	UpdateProjectInput,
 	UpdateReportInput,
 	UpdateReportTemplateInput,
@@ -185,6 +188,19 @@ export class ToxilClient {
 
 	updateEmailSettings(input: UpdateEmailSettingsInput): Promise<EmailSettings> {
 		return this.request("PATCH", "/instance/email", { body: input });
+	}
+
+	/** Public: which social login providers the login screen should offer. */
+	getAuthProviders(): Promise<AuthProviders> {
+		return this.request("GET", "/instance/auth-providers");
+	}
+
+	getOauthSettings(): Promise<OauthSettings> {
+		return this.request("GET", "/instance/oauth");
+	}
+
+	updateOauthSettings(input: UpdateOauthSettingsInput): Promise<OauthSettings> {
+		return this.request("PATCH", "/instance/oauth", { body: input });
 	}
 
 	listWorkspaces(): Promise<WorkspaceWithRole[]> {

@@ -27,7 +27,10 @@
 		"resetPasswordTitle": "新しいパスワードを設定",
 		"resetPasswordDescription": "アカウントの新しいパスワードを設定してください。",
 		"resetPasswordAction": "パスワードを再設定",
-		"resetInvalid": "この再設定リンクは無効か、有効期限が切れています。"
+		"resetInvalid": "この再設定リンクは無効か、有効期限が切れています。",
+		"orContinueWith": "または次でログイン",
+		"continueWithGoogle": "Google でログイン",
+		"continueWithGithub": "GitHub でログイン"
 	},
 	"errors": {
 		"generic": "問題が発生しました。もう一度お試しください。"
@@ -404,7 +407,8 @@
 			"password": "パスワード",
 			"preferences": "環境設定",
 			"systemUsers": "ユーザー管理",
-			"email": "メール"
+			"email": "メール",
+			"oauth": "ソーシャルログイン"
 		},
 		"systemAdminOnly": "このセクションはインスタンス管理者のみがアクセスできます。",
 		"slug": "スラッグ",
@@ -524,6 +528,19 @@
 			"statusEnabled": "有効",
 			"statusDisabled": "無効",
 			"adminBanner": "メール配信はインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。"
+		},
+		"oauth": {
+			"title": "ソーシャルログイン",
+			"description": "Google または GitHub でのログインを許可します。各プロバイダは既定でオフで、有効化するとログインできます。利用するには、このインスタンスに OAuth クライアント認証情報が設定されている必要があります。",
+			"adminBanner": "ソーシャルログインはインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。",
+			"googleLabel": "Google ログインを有効化",
+			"githubLabel": "GitHub ログインを有効化",
+			"notConfiguredHint": "このプロバイダの OAuth 認証情報が設定されていません。環境変数（シークレット）に設定すると有効化できます。",
+			"allowedDomainsLabel": "許可するメールドメイン（Google）",
+			"allowedDomainsHint": "1 行に 1 ドメイン。空欄の場合はすべての Google アカウントを許可します。指定したドメインのみ Google でログインできます。",
+			"saveAction": "保存",
+			"statusEnabled": "有効",
+			"statusDisabled": "無効"
 		},
 		"adminBannerLead": "インスタンス管理。",
 		"general": {

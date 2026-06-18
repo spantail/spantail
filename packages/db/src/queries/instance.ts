@@ -38,3 +38,26 @@ export async function upsertInstanceSettings(
 	if (!row) throw new Error("instance settings upsert returned no row");
 	return row;
 }
+
+export async function upsertInstanceOauthSettings(
+	db: Database,
+	settings: {
+		googleOAuthEnabled: boolean;
+		githubOAuthEnabled: boolean;
+		googleAllowedDomains: string[];
+	},
+): Promise<InstanceSettingsRow> {
+	// Touches only the OAuth columns; the email columns keep their values (on
+	// insert they fall back to their schema defaults).
+	const rows = await db
+		.insert(instanceSettings)
+		.values({ id: SINGLETON_ID, ...settings })
+		.onConflictDoUpdate({
+			target: instanceSettings.id,
+			set: { ...settings, updatedAt: new Date() },
+		})
+		.returning();
+	const row = rows[0];
+	if (!row) throw new Error("instance settings upsert returned no row");
+	return row;
+}
