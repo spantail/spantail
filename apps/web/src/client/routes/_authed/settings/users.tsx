@@ -274,7 +274,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 							<TableRow>
 								<TableHead>{t("auth.name")}</TableHead>
 								<TableHead>{t("auth.email")}</TableHead>
-								<TableHead>{t("settings.users.signin")}</TableHead>
+								<TableHead>{t("settings.users.authentication")}</TableHead>
 								<TableHead>{t("settings.users.role")}</TableHead>
 								<TableHead />
 							</TableRow>

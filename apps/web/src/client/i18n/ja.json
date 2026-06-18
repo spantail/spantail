@@ -405,7 +405,7 @@
 			"members": "メンバー",
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
-			"signin": "サインイン",
+			"authentication": "認証",
 			"preferences": "環境設定",
 			"systemUsers": "ユーザー管理",
 			"email": "メール",
@@ -478,7 +478,7 @@
 			},
 			"match": "パスワードが一致しています"
 		},
-		"signin": {
+		"authentication": {
 			"title": "連携アカウント",
 			"description": "Google または GitHub アカウントを連携するとそれでサインインできます。使わなくなった連携は解除できます。",
 			"connected": "連携済み",
@@ -499,7 +499,7 @@
 		},
 		"users": {
 			"title": "ユーザー",
-			"signin": "サインイン",
+			"authentication": "認証",
 			"role": "ロール",
 			"admin": "管理者",
 			"member": "メンバー",

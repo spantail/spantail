@@ -17,7 +17,7 @@ import { authClient } from "@/lib/auth-client";
 
 // Where the OAuth provider returns after a link round-trip: back to this screen
 // so the freshly linked account shows immediately.
-const linkCallbackPath = "/settings/sign-in";
+const linkCallbackPath = "/settings/authentication";
 
 const PROVIDERS: {
 	id: OauthProvider;
@@ -60,7 +60,7 @@ export function ConnectedAccountsCard() {
 			}
 		},
 		onSuccess: async () => {
-			toast.success(t("settings.signin.disconnected"));
+			toast.success(t("settings.authentication.disconnected"));
 			await queryClient.invalidateQueries({ queryKey: ["linked-accounts"] });
 		},
 		onError: (err: Error) => toast.error(err.message),
@@ -94,16 +94,18 @@ export function ConnectedAccountsCard() {
 		<Card>
 			<CardHeader>
 				<CardTitle className="font-heading text-base">
-					{t("settings.signin.title")}
+					{t("settings.authentication.title")}
 				</CardTitle>
-				<CardDescription>{t("settings.signin.description")}</CardDescription>
+				<CardDescription>
+					{t("settings.authentication.description")}
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				{accounts.isPending || providers.isPending ? (
 					<p className="text-muted-foreground text-sm">{t("app.loading")}</p>
 				) : rows.length === 0 ? (
 					<p className="text-muted-foreground text-sm">
-						{t("settings.signin.noneAvailable")}
+						{t("settings.authentication.noneAvailable")}
 					</p>
 				) : (
 					<ul className="flex max-w-md flex-col divide-y">
@@ -120,8 +122,8 @@ export function ConnectedAccountsCard() {
 											<span className="text-sm font-medium">{name}</span>
 											<span className="text-muted-foreground text-xs">
 												{isLinked
-													? t("settings.signin.connected")
-													: t("settings.signin.notConnected")}
+													? t("settings.authentication.connected")
+													: t("settings.authentication.notConnected")}
 											</span>
 										</div>
 									</div>
@@ -132,12 +134,12 @@ export function ConnectedAccountsCard() {
 											disabled={isLastAccount || unlinkMutation.isPending}
 											title={
 												isLastAccount
-													? t("settings.signin.lastAccount")
+													? t("settings.authentication.lastAccount")
 													: undefined
 											}
 											onClick={() => unlinkMutation.mutate(id)}
 										>
-											{t("settings.signin.disconnect")}
+											{t("settings.authentication.disconnect")}
 										</Button>
 									) : (
 										<Button
@@ -145,7 +147,7 @@ export function ConnectedAccountsCard() {
 											size="sm"
 											onClick={() => connect(id)}
 										>
-											{t("settings.signin.connect")}
+											{t("settings.authentication.connect")}
 										</Button>
 									)}
 								</li>

@@ -406,7 +406,7 @@
 			"members": "Members",
 			"templates": "Report templates",
 			"tokens": "API tokens",
-			"signin": "Sign-in",
+			"authentication": "Authentication",
 			"preferences": "Preferences",
 			"systemUsers": "User management",
 			"email": "Email",
@@ -479,7 +479,7 @@
 			},
 			"match": "Passwords match"
 		},
-		"signin": {
+		"authentication": {
 			"title": "Connected accounts",
 			"description": "Link a Google or GitHub account to sign in with it, or disconnect one you no longer use.",
 			"connected": "Connected",
@@ -500,7 +500,7 @@
 		},
 		"users": {
 			"title": "Users",
-			"signin": "Sign-in",
+			"authentication": "Authentication",
 			"role": "Role",
 			"admin": "Admin",
 			"member": "Member",

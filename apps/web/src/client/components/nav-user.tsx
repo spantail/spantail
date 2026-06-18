@@ -60,7 +60,7 @@ export function NavUser({ user }: { user: AuthUser }) {
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem asChild>
-						<Link to="/settings/sign-in">
+						<Link to="/settings/authentication">
 							<UserIcon />
 							{t("nav.account")}
 						</Link>
