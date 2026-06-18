@@ -195,7 +195,13 @@ function validateReferences(config: SeedConfig): void {
 		set.add(m.user);
 		membersByWs.set(m.workspace, set);
 	}
+	// One combined cross-workspace report per sender: duplicate senders would
+	// skip per-workspace dailies for the union and emit overlapping reports.
+	const routeSenders = new Set<string>();
 	for (const route of config.reportRoutes) {
+		if (routeSenders.has(route.sender))
+			fail(`report route sender ${route.sender} appears more than once`);
+		routeSenders.add(route.sender);
 		if (!userKeys.has(route.sender))
 			fail(`report route references unknown sender ${route.sender}`);
 		for (const w of route.workspaces) {
