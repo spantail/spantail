@@ -129,8 +129,13 @@ export function createAuth(
 								provider === "google" &&
 								Boolean(social?.google) &&
 								isSelfJoinDomain(user.email, googleAllowedDomains);
+							// Only a provider-verified email may consume an invitation: an
+							// unverified email (e.g. a GitHub address the user has not
+							// confirmed) is no proof they own the invited address, so it must
+							// not claim the invite or any grant it carries.
 							const invited =
 								!selfJoin &&
+								user.emailVerified === true &&
 								Boolean(await getPendingInvitationByEmail(db, user.email));
 							if (!selfJoin && !invited) {
 								throw new APIError("FORBIDDEN", {
@@ -147,8 +152,11 @@ export function createAuth(
 					after: async (user, hookCtx) => {
 						// A social sign-in may consume a standing invitation (Google/GitHub
 						// onboarding). Credential invitation-accept consumes its own
-						// invitation in the route, so skip non-social creations here.
+						// invitation in the route, so skip non-social creations here. Only a
+						// provider-verified email may claim the invite and any grant it
+						// carries (mirrors the before-hook admission check).
 						if (!socialProviderOf(hookCtx)) return;
+						if (!user.emailVerified) return;
 						const invitation = await getPendingInvitationByEmail(
 							db,
 							user.email,
