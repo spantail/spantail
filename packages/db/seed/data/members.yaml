@@ -1,6 +1,14 @@
-# Each workspace has exactly 3 members, one of whom manages it (owner/admin).
-# The manager is the recipient of daily/monthly reports for that workspace.
-# Users deliberately span multiple client workspaces.
+# Northwind is a software consultancy: everyone is a member of the internal
+# workspace, and is staffed onto one or more client workspaces. The manager
+# (owner/admin) of a workspace is the recipient of its daily/monthly reports.
+#
+#   Northwind (internal) — owner: Alice; all five are members.
+#   Acme Robotics  (EN)  — lead: Bilal;  staffed: Bilal, Erin, Carol (help).
+#   Globex Media   (EN)  — lead: Carol;  staffed: Carol, Bilal, Erin.
+#   桜トレーディング (JA)  — lead: Daichi; staffed: Daichi, Alice (JA liaison).
+#
+# Bilal and Erin are both shared across the two English clients, so they file a
+# combined cross-workspace daily report (see report-routes.yaml).
 - workspace: ws-self
   user: u-admin
   role: owner
@@ -10,22 +18,28 @@
 - workspace: ws-self
   user: u-carol
   role: member
+- workspace: ws-self
+  user: u-dan
+  role: member
+- workspace: ws-self
+  user: u-erin
+  role: member
 
 - workspace: ws-acme
   user: u-author
   role: admin
 - workspace: ws-acme
-  user: u-carol
+  user: u-erin
   role: member
 - workspace: ws-acme
-  user: u-dan
+  user: u-carol
   role: member
 
 - workspace: ws-globex
   user: u-carol
   role: admin
 - workspace: ws-globex
-  user: u-dan
+  user: u-author
   role: member
 - workspace: ws-globex
   user: u-erin
@@ -34,9 +48,6 @@
 - workspace: ws-sakura
   user: u-dan
   role: admin
-- workspace: ws-sakura
-  user: u-erin
-  role: member
 - workspace: ws-sakura
   user: u-admin
   role: member

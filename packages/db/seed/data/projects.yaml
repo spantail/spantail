@@ -1,64 +1,120 @@
-# Three active projects per workspace. Names follow the workspace language.
+# Three active projects per workspace. Names and `activities` follow the
+# workspace language. `activities` are concrete task phrases the work-entry
+# generator draws from (rotated deterministically per user/day), so the demo
+# reads like real work instead of "Implemented features for X" on repeat.
 - key: p-self-platform
   workspace: ws-self
   slug: platform
   name: Platform Core
   description: Core services and APIs.
+  activities:
+    - Implemented the workspace invitation flow
+    - Added cursor pagination to the entries API
+    - Hardened report-scope permission checks
+    - Reviewed the D1 query-layer refactor
+    - Fixed a timezone bug in daily rollups
 - key: p-self-tooling
   workspace: ws-self
   slug: tooling
   name: Internal Tools
   description: Internal developer tooling.
+  activities:
+    - Built the local seed-data generator
+    - Improved the CLI login UX
+    - Added a migration linter to CI
+    - Triaged inbound bug reports
 - key: p-self-devops
   workspace: ws-self
   slug: devops
   name: DevOps
   description: CI/CD and infrastructure.
+  activities:
+    - Tuned the Workers deploy pipeline
+    - Set up preview deployments for PRs
+    - Investigated a production latency spike
+    - Rotated R2 bucket credentials
 
 - key: p-acme-warehouse
   workspace: ws-acme
   slug: warehouse
   name: Warehouse App
   description: Warehouse management application.
+  activities:
+    - Wired up the pick-and-pack workflow screens
+    - Fixed inventory count reconciliation
+    - Added barcode scanning support
+    - Reviewed the stock-transfer module
 - key: p-acme-mobile
   workspace: ws-acme
   slug: mobile
   name: Mobile Client
   description: Customer-facing mobile client.
+  activities:
+    - Implemented offline order caching
+    - Polished the onboarding screens
+    - Fixed push-notification delivery on iOS
 - key: p-acme-data
   workspace: ws-acme
   slug: data
   name: Data Pipeline
   description: Batch and streaming data pipeline.
+  activities:
+    - Backfilled the sensor telemetry tables
+    - Optimized the nightly aggregation job
+    - Added schema validation to ingestion
 
 - key: p-globex-portal
   workspace: ws-globex
   slug: portal
   name: Web Portal
   description: Public web portal.
+  activities:
+    - Rebuilt the article landing pages
+    - Improved Core Web Vitals on the home page
+    - Fixed SSR hydration mismatches
 - key: p-globex-analytics
   workspace: ws-globex
   slug: analytics
   name: Analytics
   description: Product analytics and dashboards.
+  activities:
+    - Modeled the subscriber funnel dashboard
+    - Added retention cohort charts
+    - Validated event tracking across the portal
 - key: p-globex-cms
   workspace: ws-globex
   slug: cms
   name: CMS Migration
   description: Headless CMS migration.
+  activities:
+    - Mapped legacy content types to the headless CMS
+    - Migrated the media library to R2
+    - Wrote redirects for archived URLs
 
 - key: p-sakura-inventory
   workspace: ws-sakura
   slug: inventory
   name: 在庫管理システム
   description: 倉庫の在庫を管理するシステム。
+  activities:
+    - 入庫処理の画面を実装
+    - 在庫数の集計バグを修正
+    - 倉庫間移動のレビュー対応
 - key: p-sakura-orders
   workspace: ws-sakura
   slug: orders
   name: 受発注API
   description: 受発注を処理するAPI。
+  activities:
+    - 発注エンドポイントを実装
+    - 在庫引当のロジックを修正
+    - APIの結合テストを追加
 - key: p-sakura-dashboard
   workspace: ws-sakura
   slug: dashboard
   name: 管理ダッシュボード
   description: 社内向けの管理ダッシュボード。
+  activities:
+    - 売上サマリ画面を作成
+    - 権限まわりの不具合を修正
+    - グラフ表示のパフォーマンスを改善

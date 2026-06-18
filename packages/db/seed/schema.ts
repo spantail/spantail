@@ -44,6 +44,8 @@ const projectConfigSchema = z.object({
 	slug: slugSchema,
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).optional(),
+	// Concrete task phrases the generator draws from; authored in the workspace language.
+	activities: z.array(z.string().min(1).max(200)).min(1),
 });
 
 const templateConfigSchema = z
@@ -62,21 +64,40 @@ const templateConfigSchema = z
 		"a template needs exactly one of `body` or `bodyFrom`",
 	);
 
+// How often a member works a project: `daily` every working day, the rest on a
+// deterministic subset (often ≈ most days, weekly ≈ once a week, occasional ≈ a
+// few days a month) so a week is mostly the main engagement with lighter
+// internal and cross-client help mixed in.
+export const cadenceSchema = z
+	.enum(["daily", "often", "weekly", "occasional"])
+	.default("daily");
+export type Cadence = z.infer<typeof cadenceSchema>;
+
 const allocationLineSchema = z.object({
 	project: z.string().min(1),
 	minutes: z.number().int().positive(),
+	cadence: cadenceSchema,
 });
 
 const workPatternsConfigSchema = z.object({
 	allocations: z.record(z.string(), z.array(allocationLineSchema).min(1)),
-	descriptions: z.object({
-		en: z.array(z.string().min(1)).min(1),
-		ja: z.array(z.string().min(1)).min(1),
-	}),
 	tags: z.object({
 		en: z.array(tagSchema).min(1),
 		ja: z.array(tagSchema).min(1),
 	}),
+});
+
+// A combined cross-workspace daily report: one sender, the workspaces it spans
+// (first is the anchor). Recipients are derived from membership, not declared.
+const reportRouteSchema = z.object({
+	sender: z.string().min(1),
+	workspaces: z
+		.array(z.string().min(1))
+		.min(2)
+		.refine(
+			(ws) => new Set(ws).size === ws.length,
+			"a route's workspaces must be distinct",
+		),
 });
 
 const instanceConfigSchema = z.object({
@@ -92,6 +113,7 @@ export type MemberConfig = z.infer<typeof memberConfigSchema>;
 export type ProjectConfig = z.infer<typeof projectConfigSchema>;
 export type TemplateConfig = z.infer<typeof templateConfigSchema>;
 export type WorkPatternsConfig = z.infer<typeof workPatternsConfigSchema>;
+export type ReportRouteConfig = z.infer<typeof reportRouteSchema>;
 export type InstanceConfig = z.infer<typeof instanceConfigSchema>;
 
 export interface SeedConfig {
@@ -101,6 +123,7 @@ export interface SeedConfig {
 	projects: ProjectConfig[];
 	templates: TemplateConfig[];
 	workPatterns: WorkPatternsConfig;
+	reportRoutes: ReportRouteConfig[];
 	instance: InstanceConfig;
 }
 
@@ -126,6 +149,7 @@ export function loadConfig(): SeedConfig {
 		projects: read("projects.yaml", z.array(projectConfigSchema).min(1)),
 		templates: read("templates.yaml", z.array(templateConfigSchema).min(1)),
 		workPatterns: read("work-patterns.yaml", workPatternsConfigSchema),
+		reportRoutes: read("report-routes.yaml", z.array(reportRouteSchema)),
 		instance: read("instance.yaml", instanceConfigSchema),
 	};
 	validateReferences(config);
@@ -161,5 +185,40 @@ function validateReferences(config: SeedConfig): void {
 					`allocation for ${userKey} references unknown project ${line.project}`,
 				);
 		}
+	}
+
+	// Members per workspace, used to check both sender membership and that a
+	// cross-workspace route resolves to at least one valid recipient.
+	const membersByWs = new Map<string, Set<string>>();
+	for (const m of config.members) {
+		const set = membersByWs.get(m.workspace) ?? new Set<string>();
+		set.add(m.user);
+		membersByWs.set(m.workspace, set);
+	}
+	// One combined cross-workspace report per sender: duplicate senders would
+	// skip per-workspace dailies for the union and emit overlapping reports.
+	const routeSenders = new Set<string>();
+	for (const route of config.reportRoutes) {
+		if (routeSenders.has(route.sender))
+			fail(`report route sender ${route.sender} appears more than once`);
+		routeSenders.add(route.sender);
+		if (!userKeys.has(route.sender))
+			fail(`report route references unknown sender ${route.sender}`);
+		for (const w of route.workspaces) {
+			if (!wsKeys.has(w))
+				fail(`report route references unknown workspace ${w}`);
+			if (!membersByWs.get(w)?.has(route.sender))
+				fail(`report route sender ${route.sender} is not a member of ${w}`);
+		}
+		// Mirror the app rule: a recipient must belong to every listed workspace.
+		const eligible = [...userKeys].filter(
+			(u) =>
+				u !== route.sender &&
+				route.workspaces.every((w) => membersByWs.get(w)?.has(u)),
+		);
+		if (eligible.length === 0)
+			fail(
+				`report route for ${route.sender} has no recipient in all of ${route.workspaces.join(", ")}`,
+			);
 	}
 }
