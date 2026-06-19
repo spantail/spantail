@@ -26,4 +26,7 @@ PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `work_entries_workspace_date_idx` ON `work_entries` (`workspace_id`,`entry_date`);--> statement-breakpoint
 CREATE INDEX `work_entries_project_idx` ON `work_entries` (`project_id`);--> statement-breakpoint
 CREATE INDEX `work_entries_user_idx` ON `work_entries` (`user_id`);--> statement-breakpoint
-ALTER TABLE `projects` ADD `hue` integer DEFAULT 264 NOT NULL;
+ALTER TABLE `projects` ADD `hue` integer DEFAULT 264 NOT NULL;--> statement-breakpoint
+-- Backfill pre-existing rows with the previous id-derived hue (mirrors the old
+-- hueFromString render fallback) so upgraded workspaces keep distinct colors.
+UPDATE `projects` SET `hue` = (unicode(substr(`id`, 1, 1)) * 47 + unicode(substr(`id`, 2, 1)) * 13) % 360;

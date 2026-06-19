@@ -550,3 +550,29 @@ it("lets an entry orphaned by project deletion be edited without a project", asy
 	expect(body.projectId).toBeNull();
 	expect(body.description).toBe("Edited while unassigned");
 });
+
+it("rejects unassigning a live entry from its project", async () => {
+	const { admin, ws, project } = await setup();
+	const entry = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 30,
+				description: "Live entry",
+			},
+			admin,
+		)
+	).json()) as { id: string };
+
+	// The project still exists, so nulling its project is not allowed.
+	const res = await apiJson(
+		"PATCH",
+		`/api/v1/work-entries/${entry.id}`,
+		{ projectId: null },
+		admin,
+	);
+	expect(res.status).toBe(400);
+});

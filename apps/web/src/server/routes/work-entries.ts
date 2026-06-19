@@ -123,6 +123,14 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const entry = await requireEntryAccess(c, c.req.param("id"));
 		requireAuthor(c, entry);
 		const input = validate(updateWorkEntryInputSchema, await c.req.json());
+		// A null projectId is only allowed to preserve an already-orphaned entry
+		// (its project was deleted); live entries cannot be unassigned.
+		if (input.projectId === null && entry.projectId !== null) {
+			throw new AppError(
+				"bad_request",
+				"Cannot unassign an entry from its project",
+			);
+		}
 		if (input.projectId) {
 			await requireProjectInWorkspace(c, input.projectId, entry.workspaceId);
 		}
