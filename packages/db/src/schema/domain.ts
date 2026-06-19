@@ -57,9 +57,9 @@ export const projects = sqliteTable(
 		slug: text("slug").notNull(),
 		name: text("name").notNull(),
 		description: text("description"),
-		// Optional explicit color marker (OKLCH hue 0–359). Null derives a hue
-		// from the project id at render time.
-		hue: integer("hue"),
+		// Color marker (OKLCH hue 0–359). Always set; the create form picks one
+		// and this default covers rows created without an explicit color.
+		hue: integer("hue").notNull().default(264),
 		status: text("status", { enum: ["active", "archived"] })
 			.notNull()
 			.default("active"),

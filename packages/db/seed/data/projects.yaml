@@ -6,6 +6,7 @@
   workspace: ws-self
   slug: platform
   name: Platform Core
+  hue: 240
   description: Core services and APIs.
   activities:
     - Implemented the workspace invitation flow
@@ -17,6 +18,7 @@
   workspace: ws-self
   slug: tooling
   name: Internal Tools
+  hue: 160
   description: Internal developer tooling.
   activities:
     - Built the local seed-data generator
@@ -27,6 +29,7 @@
   workspace: ws-self
   slug: devops
   name: DevOps
+  hue: 20
   description: CI/CD and infrastructure.
   activities:
     - Tuned the Workers deploy pipeline
@@ -38,6 +41,7 @@
   workspace: ws-acme
   slug: warehouse
   name: Warehouse App
+  hue: 40
   description: Warehouse management application.
   activities:
     - Wired up the pick-and-pack workflow screens
@@ -48,6 +52,7 @@
   workspace: ws-acme
   slug: mobile
   name: Mobile Client
+  hue: 200
   description: Customer-facing mobile client.
   activities:
     - Implemented offline order caching
@@ -57,6 +62,7 @@
   workspace: ws-acme
   slug: data
   name: Data Pipeline
+  hue: 264
   description: Batch and streaming data pipeline.
   activities:
     - Backfilled the sensor telemetry tables
@@ -67,6 +73,7 @@
   workspace: ws-globex
   slug: portal
   name: Web Portal
+  hue: 300
   description: Public web portal.
   activities:
     - Rebuilt the article landing pages
@@ -76,6 +83,7 @@
   workspace: ws-globex
   slug: analytics
   name: Analytics
+  hue: 120
   description: Product analytics and dashboards.
   activities:
     - Modeled the subscriber funnel dashboard
@@ -85,6 +93,7 @@
   workspace: ws-globex
   slug: cms
   name: CMS Migration
+  hue: 340
   description: Headless CMS migration.
   activities:
     - Mapped legacy content types to the headless CMS
@@ -95,6 +104,7 @@
   workspace: ws-sakura
   slug: inventory
   name: 在庫管理システム
+  hue: 80
   description: 倉庫の在庫を管理するシステム。
   activities:
     - 入庫処理の画面を実装
@@ -104,6 +114,7 @@
   workspace: ws-sakura
   slug: orders
   name: 受発注API
+  hue: 200
   description: 受発注を処理するAPI。
   activities:
     - 発注エンドポイントを実装
@@ -113,6 +124,7 @@
   workspace: ws-sakura
   slug: dashboard
   name: 管理ダッシュボード
+  hue: 264
   description: 社内向けの管理ダッシュボード。
   activities:
     - 売上サマリ画面を作成

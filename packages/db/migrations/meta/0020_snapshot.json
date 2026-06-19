@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "31fea72b-ea4a-423c-b37f-f5d14fd6f633",
+  "id": "211209c7-6328-4d4e-9f4b-056cfd1c5734",
   "prevId": "a25a3761-70d6-404c-9810-286232a66615",
   "tables": {
     "account": {
@@ -912,8 +912,9 @@
           "name": "hue",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": 264
         },
         "status": {
           "name": "status",

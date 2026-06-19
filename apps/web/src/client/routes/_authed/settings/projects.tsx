@@ -61,7 +61,6 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { projectHue } from "@/lib/hue";
 import { invalidateWorkEntryData } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
@@ -72,12 +71,14 @@ export const Route = createFileRoute("/_authed/settings/projects")({
 
 // Hand-picked OKLCH hues offered by the color picker (mirrors the design kit).
 const PROJECT_HUES = [264, 240, 200, 160, 120, 80, 40, 20, 340, 300];
+// Matches the `hue` column default in the db schema.
+const DEFAULT_PROJECT_HUE = 264;
 
 function ColorPicker({
 	value,
 	onChange,
 }: {
-	value: number | null;
+	value: number;
 	onChange: (hue: number) => void;
 }) {
 	const { t } = useTranslation();
@@ -128,7 +129,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 	const workspaceId = current?.id ?? "";
 	const [slug, setSlug] = useState("");
 	const [name, setName] = useState("");
-	const [hue, setHue] = useState<number | null>(null);
+	const [hue, setHue] = useState<number>(DEFAULT_PROJECT_HUE);
 	const [error, setError] = useState<string | null>(null);
 	const [editing, setEditing] = useState<Project | null>(null);
 	const [deleting, setDeleting] = useState<Project | null>(null);
@@ -143,13 +144,12 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 		queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] });
 
 	const createMutation = useMutation({
-		mutationFn: () =>
-			api.createProject(workspaceId, { slug, name, hue: hue ?? undefined }),
+		mutationFn: () => api.createProject(workspaceId, { slug, name, hue }),
 		onSuccess: async () => {
 			await refresh();
 			setSlug("");
 			setName("");
-			setHue(null);
+			setHue(DEFAULT_PROJECT_HUE);
 			setError(null);
 			toast.success(t("settings.projects.toast.created"));
 		},
@@ -242,7 +242,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 							>
 								<TableCell>
 									<span className="flex items-center gap-2">
-										<Dot hue={projectHue(project)} />
+										<Dot hue={project.hue} />
 										{project.name}
 									</span>
 								</TableCell>
@@ -355,7 +355,7 @@ function ProjectEditDialog({
 	const [name, setName] = useState("");
 	const [slug, setSlug] = useState("");
 	const [description, setDescription] = useState("");
-	const [hue, setHue] = useState<number | null>(null);
+	const [hue, setHue] = useState<number>(DEFAULT_PROJECT_HUE);
 	const [error, setError] = useState<string | null>(null);
 
 	// Seed the form whenever a different project is opened for editing.

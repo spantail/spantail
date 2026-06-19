@@ -5,8 +5,8 @@ import { slugSchema } from "./common";
 export const projectStatusSchema = z.enum(["active", "archived"]);
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 
-/** Optional explicit color marker, stored as an OKLCH hue (0–359). Null falls
- * back to a hue derived from the project id. */
+/** A project's color marker, stored as an OKLCH hue (0–359). Always set: the
+ * create form picks one and the column defaults when omitted. */
 export const projectHueSchema = z.number().int().min(0).max(359);
 
 export const projectSchema = z.object({
@@ -15,7 +15,7 @@ export const projectSchema = z.object({
 	slug: slugSchema,
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).nullable(),
-	hue: projectHueSchema.nullable(),
+	hue: projectHueSchema,
 	status: projectStatusSchema,
 	createdAt: z.string(),
 	archivedAt: z.string().nullable(),
@@ -35,7 +35,7 @@ export const updateProjectInputSchema = z
 		name: z.string().min(1).max(100),
 		slug: slugSchema,
 		description: z.string().max(1000).nullable(),
-		hue: projectHueSchema.nullable(),
+		hue: projectHueSchema,
 		status: projectStatusSchema,
 	})
 	.partial();

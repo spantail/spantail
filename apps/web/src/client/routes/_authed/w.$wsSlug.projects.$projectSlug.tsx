@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/select";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
-import { projectHue } from "@/lib/hue";
 import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
@@ -167,7 +166,7 @@ function ProjectPage() {
 			{/* No page-level log button: the header one pre-selects this project. */}
 			<div className="flex flex-col gap-1.5">
 				<div className="flex items-center gap-2">
-					<Dot hue={projectHue(project)} size={10} />
+					<Dot hue={project.hue} size={10} />
 					<h1 className="font-heading text-xl font-semibold tracking-tight">
 						{project.name}
 					</h1>

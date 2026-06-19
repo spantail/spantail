@@ -15,12 +15,3 @@ const BUILTIN_TEMPLATE_HUE: Record<string, number> = {
 export function templateHue(templateId: string): number {
 	return BUILTIN_TEMPLATE_HUE[templateId] ?? hueFromString(templateId);
 }
-
-/** A project's marker hue: its explicit color when set, else a stable hash of
- *  the id so every project keeps a consistent color. */
-export function projectHue(project: {
-	id: string;
-	hue: number | null;
-}): number {
-	return project.hue ?? hueFromString(project.id);
-}

@@ -32,7 +32,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { api } from "@/lib/api";
-import { projectHue, templateHue } from "@/lib/hue";
+import { templateHue } from "@/lib/hue";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
@@ -219,7 +219,7 @@ export function ReportList({
 		for (const project of query.data ?? []) {
 			projectById.set(project.id, {
 				name: project.name,
-				hue: projectHue(project),
+				hue: project.hue,
 			});
 		}
 	}
