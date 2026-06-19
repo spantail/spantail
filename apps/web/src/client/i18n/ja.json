@@ -72,20 +72,17 @@
 		}
 	},
 	"dashboard": {
-		"today": "今日",
+		"lastWeek": "先週",
 		"thisWeek": "今週",
+		"lastMonth": "先月",
 		"thisMonth": "今月",
-		"entryCount_other": "{{count}}件",
-		"vsLastWeek": "先週比 {{duration}}",
-		"activity": "アクティビティ",
-		"dailyFocusAvg": "日々の集中 · 平均 {{avg}}/日",
+		"period": "期間",
+		"dailyFocus": "日々の集中",
 		"avgLabel": "平均 {{value}}",
-		"range14": "14日",
-		"range28": "28日",
 		"byProject": "プロジェクト別",
 		"byUser": "メンバー別",
-		"totalThisMonth": "{{total}} · 今月",
-		"noData": "今月の記録はまだありません。"
+		"noData": "この期間の記録はまだありません。",
+		"viewAll": "すべて表示"
 	},
 	"timeline": {
 		"title": "作業ログ",

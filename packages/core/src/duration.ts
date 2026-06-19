@@ -25,3 +25,8 @@ export function formatDuration(minutes: number): string {
 	if (m === 0) return `${h}h`;
 	return `${h}h ${String(m).padStart(2, "0")}m`;
 }
+
+/** Formats integer minutes as decimal hours, e.g. `65.9h` — for compact dials. */
+export function formatHours(minutes: number): string {
+	return `${(minutes / 60).toFixed(1)}h`;
+}

@@ -72,21 +72,17 @@
 		}
 	},
 	"dashboard": {
-		"today": "Today",
+		"lastWeek": "Last week",
 		"thisWeek": "This week",
+		"lastMonth": "Last month",
 		"thisMonth": "This month",
-		"entryCount_one": "{{count}} entry",
-		"entryCount_other": "{{count}} entries",
-		"vsLastWeek": "vs last week {{duration}}",
-		"activity": "Activity",
-		"dailyFocusAvg": "Daily focus · avg {{avg}}/day",
+		"period": "Period",
+		"dailyFocus": "Daily focus",
 		"avgLabel": "avg {{value}}",
-		"range14": "14d",
-		"range28": "28d",
 		"byProject": "By project",
 		"byUser": "By member",
-		"totalThisMonth": "{{total}} · this month",
-		"noData": "No activity yet this month."
+		"noData": "No activity in this period.",
+		"viewAll": "View all"
 	},
 	"timeline": {
 		"title": "Your work log",

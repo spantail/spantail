@@ -6,6 +6,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
+import {
+	type HomePeriod,
+	PeriodSelector,
+} from "@/components/dashboard/period-selector";
 import { Dot } from "@/components/dot";
 import { EntryList } from "@/components/entry-list";
 import { FilterChip } from "@/components/filter-chip";
@@ -67,6 +71,7 @@ function ProjectPage() {
 	// popover and are off by default: empty dates and a null member/tag keep
 	// every entry. They flow into the server query so results stay correct
 	// across the entry list's pagination.
+	const [period, setPeriod] = useState<HomePeriod>("this_month");
 	const [from, setFrom] = useState("");
 	const [to, setTo] = useState("");
 	const [member, setMember] = useState<string | null>(null);
@@ -164,25 +169,31 @@ function ProjectPage() {
 	return (
 		<div className="flex flex-col gap-7">
 			{/* No page-level log button: the header one pre-selects this project. */}
-			<div className="flex flex-col gap-1.5">
-				<div className="flex items-center gap-2">
-					<Dot hue={project.hue} size={10} />
-					<h1 className="font-heading text-xl font-semibold tracking-tight">
-						{project.name}
-					</h1>
-					<Badge
-						variant={project.status === "active" ? "outline" : "secondary"}
-					>
-						{t(`settings.projects.status.${project.status}`)}
-					</Badge>
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<div className="flex flex-col gap-1.5">
+					<div className="flex items-center gap-2">
+						<Dot hue={project.hue} size={10} />
+						<h1 className="font-heading text-xl font-semibold tracking-tight">
+							{project.name}
+						</h1>
+						<Badge
+							variant={project.status === "active" ? "outline" : "secondary"}
+						>
+							{t(`settings.projects.status.${project.status}`)}
+						</Badge>
+					</div>
+					{project.description && (
+						<p className="text-muted-foreground text-sm">
+							{project.description}
+						</p>
+					)}
 				</div>
-				{project.description && (
-					<p className="text-muted-foreground text-sm">{project.description}</p>
-				)}
+				<PeriodSelector value={period} onChange={setPeriod} />
 			</div>
 			<DashboardStats
 				scope={{ workspaceId: current.id, projectId: project.id }}
 				breakdown="user"
+				period={period}
 			/>
 			<section className="flex flex-col gap-3">
 				<div className="flex items-center justify-between gap-3">

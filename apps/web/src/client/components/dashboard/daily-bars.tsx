@@ -13,63 +13,59 @@ import { formatEntryDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface DailyBarsProps {
-	/** Ascending daily series; the longest window the toggle can show. */
+	/** Zero-filled daily series for the selected period (ascending). */
 	daily: DailyBar[];
+	/** Period total minutes, shown in the header. */
+	total: number;
+	/** Localized period label (e.g. "This month"). */
+	periodLabel: string;
+	/** Tailwind bg utility for the bars; defaults to neutral foreground. */
+	barClassName?: string;
 	className?: string;
 }
 
-type Range = "14" | "28";
-
 /**
- * Per-day CSS bar chart (no chart library). Adds an average reference line,
- * dimmed weekends, a hover focus state, and a 14d/28d window toggle so the
- * chart actually says something about *when* and *how steadily* work happens.
+ * Per-day CSS bar chart (no chart library) for the selected period. Adds an
+ * average reference line, dimmed weekends, and a hover focus state so the chart
+ * says something about *when* and *how steadily* work happens. The window is
+ * driven by the external period selector — this just renders what it is given.
  */
-export function DailyBars({ daily, className }: DailyBarsProps) {
+export function DailyBars({
+	daily,
+	total,
+	periodLabel,
+	barClassName = "bg-foreground",
+	className,
+}: DailyBarsProps) {
 	const { t, i18n } = useTranslation();
-	const [range, setRange] = useState<Range>("14");
 	const [hover, setHover] = useState<number | null>(null);
 
-	const days = range === "28" ? daily : daily.slice(-14);
-	const max = Math.max(1, ...days.map((day) => day.minutes));
+	const max = Math.max(1, ...daily.map((day) => day.minutes));
+	// Average over working days (days with logged time), not the whole window —
+	// idle/future days shouldn't drag the "typical day" line down.
+	const workingDays = daily.filter((day) => day.minutes > 0);
 	const avg = Math.round(
-		days.reduce((sum, day) => sum + day.minutes, 0) / Math.max(1, days.length),
+		workingDays.reduce((sum, day) => sum + day.minutes, 0) /
+			Math.max(1, workingDays.length),
 	);
-	const labelStep = days.length > 20 ? 4 : 2;
 
 	return (
 		<Card className={cn("[--card-spacing:--spacing(5)]", className)}>
-			<CardHeader className="flex items-start justify-between gap-2 pb-2">
-				<div>
+			<CardHeader className="flex items-center justify-between pb-2">
+				<div className="flex items-baseline gap-2">
 					<CardTitle className="text-sm font-semibold">
-						{t("dashboard.activity")}
+						{t("dashboard.dailyFocus")}
 					</CardTitle>
-					<p className="text-muted-foreground text-xs">
-						{t("dashboard.dailyFocusAvg", { avg: formatDuration(avg) })}
-					</p>
+					<span className="text-muted-foreground text-xs">{periodLabel}</span>
 				</div>
-				<div className="bg-muted/50 inline-flex items-center gap-1 rounded-lg border p-1 text-sm">
-					{(["14", "28"] as const).map((value) => (
-						<button
-							key={value}
-							type="button"
-							onClick={() => setRange(value)}
-							className={cn(
-								"rounded-md px-3 py-1 font-medium transition-colors",
-								range === value
-									? "bg-card text-foreground shadow-sm"
-									: "text-muted-foreground hover:text-foreground",
-							)}
-						>
-							{t(value === "14" ? "dashboard.range14" : "dashboard.range28")}
-						</button>
-					))}
-				</div>
+				<span className="text-muted-foreground text-sm tabular-nums">
+					{formatDuration(total)}
+				</span>
 			</CardHeader>
 			<CardContent>
 				<div className="relative">
-					<div className="flex h-32 items-end gap-[3px]">
-						{days.map((day, i) => (
+					<div className="flex h-[104px] items-end gap-[3px]">
+						{daily.map((day, i) => (
 							<Tooltip key={day.date}>
 								<TooltipTrigger asChild>
 									<button
@@ -83,7 +79,8 @@ export function DailyBars({ daily, className }: DailyBarsProps) {
 									>
 										<div
 											className={cn(
-												"bg-foreground w-full rounded-[3px] transition-all",
+												"w-full rounded-[3px] transition-all",
+												barClassName,
 												day.minutes === 0 && "bg-border",
 											)}
 											style={
@@ -124,14 +121,18 @@ export function DailyBars({ daily, className }: DailyBarsProps) {
 					)}
 				</div>
 				<div className="mt-1.5 flex gap-[3px]">
-					{days.map((day, i) => (
-						<div
-							key={day.date}
-							className="text-muted-foreground flex-1 text-center text-[10px] tabular-nums"
-						>
-							{i % labelStep === 0 ? Number(day.date.slice(8)) : ""}
-						</div>
-					))}
+					{daily.map((day) => {
+						const dayNum = Number(day.date.slice(8));
+						// Label odd days only, matching the mockup's spacing.
+						return (
+							<div
+								key={day.date}
+								className="text-muted-foreground flex-1 text-center text-[10px] tabular-nums"
+							>
+								{dayNum % 2 === 1 ? dayNum : ""}
+							</div>
+						);
+					})}
 				</div>
 			</CardContent>
 		</Card>
