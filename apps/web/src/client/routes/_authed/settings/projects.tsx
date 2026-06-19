@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Dot } from "@/components/dot";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { hueFromString } from "@/lib/hue";
 import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/settings/projects")({
@@ -141,7 +143,12 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 					<TableBody>
 						{(projects.data ?? []).map((project) => (
 							<TableRow key={project.id}>
-								<TableCell>{project.name}</TableCell>
+								<TableCell>
+									<span className="flex items-center gap-2">
+										<Dot hue={hueFromString(project.id)} />
+										{project.name}
+									</span>
+								</TableCell>
 								<TableCell className="text-muted-foreground">
 									{project.slug}
 								</TableCell>

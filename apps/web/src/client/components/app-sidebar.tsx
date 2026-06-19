@@ -1,12 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-	ChevronRightIcon,
-	FolderIcon,
-	HomeIcon,
-	SettingsIcon,
-} from "lucide-react";
+import { ChevronRightIcon, HomeIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Dot } from "@/components/dot";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -29,6 +25,8 @@ import {
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { useProjects } from "@/hooks/use-projects";
+import { hueFromString } from "@/lib/hue";
+import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
 interface NavItem {
@@ -69,7 +67,7 @@ function NavItems({ items }: { items: NavItem[] }) {
 							isActive={isActive}
 							tooltip={t(item.key)}
 							onClick={dismissOnMobile}
-							className={isActive ? undefined : "text-sidebar-foreground/70"}
+							className={cn("h-9", !isActive && "text-sidebar-foreground/70")}
 						>
 							<Link to={item.to}>
 								<item.icon />
@@ -119,7 +117,7 @@ function ProjectsGroup() {
 								{t("nav.projectsEmpty")}
 							</p>
 						) : (
-							<SidebarMenu>
+							<SidebarMenu className="gap-0.5">
 								{active.map((project) => {
 									const isActive =
 										pathname === `/w/${current.slug}/projects/${project.slug}`;
@@ -130,9 +128,10 @@ function ProjectsGroup() {
 												isActive={isActive}
 												tooltip={project.name}
 												onClick={dismissOnMobile}
-												className={
-													isActive ? undefined : "text-sidebar-foreground/70"
-												}
+												className={cn(
+													"h-9",
+													!isActive && "text-sidebar-foreground/70",
+												)}
 											>
 												<Link
 													to="/w/$wsSlug/projects/$projectSlug"
@@ -141,7 +140,7 @@ function ProjectsGroup() {
 														projectSlug: project.slug,
 													}}
 												>
-													<FolderIcon />
+													<Dot hue={hueFromString(project.id)} size={12} />
 													<span>{project.name}</span>
 												</Link>
 											</SidebarMenuButton>
@@ -173,7 +172,7 @@ function SettingsMenu() {
 					isActive={isActive}
 					tooltip={t("nav.settings")}
 					onClick={dismissOnMobile}
-					className={isActive ? undefined : "text-sidebar-foreground/70"}
+					className={cn("h-9", !isActive && "text-sidebar-foreground/70")}
 				>
 					<Link to="/settings">
 						<SettingsIcon />
