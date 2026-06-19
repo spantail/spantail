@@ -178,7 +178,7 @@ it("redirects the removed entries route to home", async () => {
 	const router = await renderApp("/entries");
 
 	// `/entries` → `/` → the active workspace dashboard.
-	expect(await screen.findByText("Today")).toBeDefined();
+	expect(await screen.findByText("Daily focus")).toBeDefined();
 	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
@@ -186,7 +186,7 @@ it("redirects the bare home route to the active workspace dashboard", async () =
 	getSession.mockResolvedValue({ data: sessionPayload });
 	const router = await renderApp("/");
 
-	expect(await screen.findByText("Today")).toBeDefined();
+	expect(await screen.findByText("Daily focus")).toBeDefined();
 	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
@@ -225,7 +225,7 @@ it("redirects an unknown workspace slug to the active workspace", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
 	const router = await renderApp("/w/ghost");
 
-	expect(await screen.findByText("Today")).toBeDefined();
+	expect(await screen.findByText("Daily focus")).toBeDefined();
 	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
@@ -233,8 +233,8 @@ it("renders the home dashboard and the empty timeline call to action", async () 
 	getSession.mockResolvedValue({ data: sessionPayload });
 	await renderApp("/");
 
-	expect(await screen.findByText("Today")).toBeDefined();
-	expect(await screen.findByText("This month")).toBeDefined();
+	expect(await screen.findByText("Daily focus")).toBeDefined();
+	expect(await screen.findByText("By project")).toBeDefined();
 	expect(
 		await screen.findByRole("button", { name: "Log your first entry" }),
 	).toBeDefined();
@@ -277,7 +277,7 @@ it("keeps the URL-selected workspace active after leaving the scoped route", asy
 	);
 
 	const router = await renderApp("/w/beta");
-	await screen.findByText("Today");
+	await screen.findByText("Daily focus");
 	expect(router.state.location.pathname).toBe("/w/beta");
 
 	// Going back to the home hub must forward to Beta, not the stale first

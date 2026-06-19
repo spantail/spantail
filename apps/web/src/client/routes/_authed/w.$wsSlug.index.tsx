@@ -1,9 +1,15 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { todayInTimezone } from "@toxil/core";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
+import { HomeInbox } from "@/components/dashboard/home-inbox";
+import {
+	type HomePeriod,
+	PeriodSelector,
+} from "@/components/dashboard/period-selector";
 import { useEntryDialog } from "@/components/entry-dialog";
 import { EntryTimeline } from "@/components/entry-timeline";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
@@ -39,6 +45,7 @@ function Timeline({
 	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
 	const { openCreate } = useEntryDialog();
+	const [period, setPeriod] = useState<HomePeriod>("this_month");
 	const today = todayInTimezone(current?.timezone ?? "UTC");
 	const dateLabel = formatEntryDate(today, i18n.language, {
 		weekday: "long",
@@ -63,15 +70,24 @@ function Timeline({
 
 	return (
 		<div className="flex flex-col gap-7">
-			<div>
-				<h1 className="font-heading text-xl font-semibold tracking-tight">
-					{t("nav.home")}
-				</h1>
-				<p className="text-muted-foreground mt-0.5 text-sm">
-					{t("home.subtitle", { date: dateLabel })}
-				</p>
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<div>
+					<h1 className="font-heading text-xl font-semibold tracking-tight">
+						{t("nav.home")}
+					</h1>
+					<p className="text-muted-foreground mt-0.5 text-sm">
+						{t("home.subtitle", { date: dateLabel })}
+					</p>
+				</div>
+				<PeriodSelector value={period} onChange={setPeriod} />
 			</div>
-			<DashboardStats scope={{ workspaceId, userId }} breakdown="project" />
+			<DashboardStats
+				scope={{ workspaceId, userId }}
+				breakdown="project"
+				period={period}
+				layout="stacked"
+				aside={<HomeInbox />}
+			/>
 			<section className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold">
 					{t("timeline.title")}
