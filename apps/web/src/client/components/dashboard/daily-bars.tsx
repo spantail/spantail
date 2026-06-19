@@ -62,9 +62,9 @@ export function DailyBars({
 					{formatDuration(total)}
 				</span>
 			</CardHeader>
-			<CardContent>
-				<div className="relative">
-					<div className="flex h-[104px] items-end gap-[3px]">
+			<CardContent className="flex flex-1 flex-col">
+				<div className="relative flex flex-1 flex-col">
+					<div className="flex min-h-[104px] flex-1 items-end gap-[3px]">
 						{daily.map((day, i) => (
 							<Tooltip key={day.date}>
 								<TooltipTrigger asChild>

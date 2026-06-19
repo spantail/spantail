@@ -91,7 +91,7 @@ export function DashboardStats({
 				</div>
 			</div>
 		) : (
-			<div className="grid items-start gap-4 lg:grid-cols-5">
+			<div className="grid gap-4 lg:grid-cols-5">
 				{chart}
 				{donut}
 			</div>
