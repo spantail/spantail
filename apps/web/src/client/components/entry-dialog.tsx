@@ -159,7 +159,20 @@ export function EntryDialogProvider({
 			{children}
 			{current && (
 				<Dialog open={state !== null} onOpenChange={(open) => !open && close()}>
-					<DialogContent size="2xl">
+					<DialogContent
+						size="2xl"
+						onOpenAutoFocus={(e) => {
+							if (state?.mode !== "view") return;
+							// Radix focuses the first tabbable element by default — in
+							// view mode that is the Delete button, making a stray Enter
+							// destructive. Send focus to the close (X) button so Enter
+							// merely dismisses.
+							e.preventDefault();
+							(e.currentTarget as HTMLElement)
+								.querySelector<HTMLElement>('[data-slot="dialog-close"]')
+								?.focus();
+						}}
+					>
 						<DialogHeader>
 							<DialogTitle>
 								{viewEntry
