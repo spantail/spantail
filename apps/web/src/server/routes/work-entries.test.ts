@@ -500,3 +500,53 @@ it("denies anonymous and non-member access", async () => {
 	).toBe(404);
 	void admin;
 });
+
+it("lets an entry orphaned by project deletion be edited without a project", async () => {
+	const { admin, ws, project } = await setup();
+	const entry = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 60,
+				description: "Original",
+			},
+			admin,
+		)
+	).json()) as { id: string };
+
+	// Orphan the entry: archive then delete its project.
+	await apiJson(
+		"PATCH",
+		`/api/v1/projects/${project.id}`,
+		{ status: "archived" },
+		admin,
+	);
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/projects/${project.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// Editing other fields while keeping projectId null succeeds.
+	const updated = await apiJson(
+		"PATCH",
+		`/api/v1/work-entries/${entry.id}`,
+		{ projectId: null, description: "Edited while unassigned" },
+		admin,
+	);
+	expect(updated.status).toBe(200);
+	const body = (await updated.json()) as {
+		projectId: string | null;
+		description: string;
+	};
+	expect(body.projectId).toBeNull();
+	expect(body.description).toBe("Edited while unassigned");
+});

@@ -26,6 +26,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { invalidateWorkEntryData } from "@/lib/query";
 
+// Sentinel select value for "no project" (Radix Select forbids an empty value).
+const NO_PROJECT = "__none__";
+
 interface EntryFormProps {
 	workspaceId: string;
 	timezone: string;
@@ -107,8 +110,11 @@ export function EntryForm({
 }: EntryFormProps) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
+	// Editing an entry orphaned by a project deletion: keep it assignable to
+	// "no project" so its other fields stay editable without forcing a project.
+	const canUnassign = Boolean(initial) && initial?.projectId == null;
 	const [projectId, setProjectId] = useState(
-		initial?.projectId ?? defaultProjectId ?? "",
+		initial ? (initial.projectId ?? NO_PROJECT) : (defaultProjectId ?? ""),
 	);
 	const [entryDate, setEntryDate] = useState(
 		initial?.entryDate ?? todayInTimezone(timezone),
@@ -175,7 +181,6 @@ export function EntryForm({
 						? zonedDateTimeToUtc(entryDate, endTime, timezone)
 						: undefined;
 			const payload = {
-				projectId,
 				entryDate,
 				durationMinutes: Number(duration),
 				description,
@@ -188,11 +193,18 @@ export function EntryForm({
 			return initial
 				? api.updateWorkEntry(initial.id, {
 						...payload,
+						projectId: projectId === NO_PROJECT ? null : projectId,
 						note: payload.note ?? null,
 						startedAt: startedAt ?? null,
 						endedAt: endedAt ?? null,
 					})
-				: api.createWorkEntry({ workspaceId, ...payload, startedAt, endedAt });
+				: api.createWorkEntry({
+						workspaceId,
+						projectId,
+						...payload,
+						startedAt,
+						endedAt,
+					});
 		},
 		onSuccess: () => {
 			invalidateWorkEntryData(queryClient, workspaceId);
@@ -232,6 +244,11 @@ export function EntryForm({
 						<SelectValue placeholder={t("entries.selectProject")} />
 					</SelectTrigger>
 					<SelectContent>
+						{canUnassign && (
+							<SelectItem value={NO_PROJECT}>
+								{t("entries.noProject")}
+							</SelectItem>
+						)}
 						{activeProjects.map((project) => (
 							<SelectItem key={project.id} value={project.id}>
 								{project.name}

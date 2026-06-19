@@ -134,6 +134,7 @@
 		},
 		"empty": "No entries yet.",
 		"noProjects": "No active projects. Create one in workspace settings first.",
+		"noProject": "No project",
 		"goToSettings": "Open settings",
 		"filter": {
 			"member": "Member",

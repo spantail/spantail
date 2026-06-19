@@ -47,7 +47,9 @@ export type CreateWorkEntryInputData = z.input<
 
 export const updateWorkEntryInputSchema = z
 	.object({
-		projectId: z.string(),
+		// Nullable so an entry orphaned by a project deletion can be edited
+		// without being forced to reassign a project.
+		projectId: z.string().nullable(),
 		entryDate: localDateSchema,
 		durationMinutes: z.number().int().positive(),
 		startedAt: z.iso.datetime().nullable(),
