@@ -64,9 +64,14 @@ export function Donut({
 			</CardHeader>
 			<CardContent>
 				{items.length === 0 || total === 0 ? (
-					<p className="text-muted-foreground text-sm">
+					// Keep the populated-donut height so the stacked home row (and the
+					// height-matched inbox beside it) doesn't collapse on an empty period.
+					<div
+						className="text-muted-foreground flex items-center text-sm"
+						style={{ minHeight: SIZE }}
+					>
 						{t("dashboard.noData")}
-					</p>
+					</div>
 				) : (
 					<div className="flex items-center gap-5">
 						<div
