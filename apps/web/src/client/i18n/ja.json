@@ -85,7 +85,7 @@
 		"viewAll": "すべて表示"
 	},
 	"timeline": {
-		"title": "作業ログ",
+		"title": "タイムライン",
 		"empty": "まだ記録がありません。",
 		"emptyCta": "最初の作業を記録する",
 		"shortcutHint": "ヒント: どの画面でも C キーで記録できます。",
