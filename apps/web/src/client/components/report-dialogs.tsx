@@ -1,11 +1,19 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import {
 	deriveNextPeriod,
 	type PeriodUnit,
 	type ReportMeta,
 	type ReportTemplate,
 } from "@toxil/core";
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+	useLayoutEffect,
+	useRef,
+	useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { ReportForm, type ReportFormSeed } from "@/components/report-form";
@@ -16,6 +24,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { isTypingTarget } from "@/lib/keyboard";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -59,8 +68,13 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const { workspaces, current } = useWorkspace();
-	const { templates, templatesReady, reportTemplateState } =
+	const { templates, templatesReady, reportTemplateState, createTargetForTab } =
 		useReportTemplates();
+	// The active template tab, when a reports route is mounted, picks which
+	// template `c` creates from (mirrors the list's New button).
+	const tab = useParams({ strict: false, select: (p) => p.tab }) as
+		| string
+		| undefined;
 	const [form, setForm] = useState<FormState | null>(null);
 	// Remount key so the form re-derives its initial state on every open.
 	const [instanceId, setInstanceId] = useState(0);
@@ -138,6 +152,30 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	};
 
 	const closeForm = () => setForm(null);
+
+	// `c` opens the create dialog from anywhere on the reports screen (mirrors
+	// the entry dialog's shortcut). A latest-callback ref keeps a single window
+	// listener while always reading the current tab and template pool.
+	const trigger = useRef<() => void>(() => {});
+	useLayoutEffect(() => {
+		trigger.current = () => {
+			const target = createTargetForTab(tab ?? "all");
+			if (target) openCreate(target);
+		};
+	});
+	useEffect(() => {
+		function onKeyDown(e: KeyboardEvent) {
+			if (e.key !== "c" || e.metaKey || e.ctrlKey || e.altKey) return;
+			if (e.repeat || e.isComposing || e.defaultPrevented) return;
+			if (isTypingTarget(e.target)) return;
+			// A bare keypress in an open dialog/menu may be Radix typeahead input.
+			if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+			e.preventDefault();
+			trigger.current();
+		}
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, []);
 
 	return (
 		<ReportDialogsContext.Provider

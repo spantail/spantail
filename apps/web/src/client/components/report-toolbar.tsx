@@ -97,10 +97,6 @@ export function ReportToolbar({
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-48">
-					<DropdownMenuItem onClick={() => downloadReportMarkdown(report)}>
-						<DownloadIcon />
-						{t("reports.view.downloadAction")}
-					</DropdownMenuItem>
 					<DropdownMenuItem onSelect={() => setSending(true)}>
 						<SendIcon />
 						{t("reports.send.sendAction")}
@@ -131,6 +127,19 @@ export function ReportToolbar({
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
+			<Button
+				variant="outline"
+				size="sm"
+				className="ml-1 h-9"
+				aria-label={t("reports.view.downloadAction")}
+				title={t("reports.view.downloadAction")}
+				onClick={() => downloadReportMarkdown(report)}
+			>
+				<DownloadIcon />
+				<span className="hidden lg:inline">
+					{t("reports.view.downloadAction")}
+				</span>
+			</Button>
 
 			<div className="ml-auto flex items-center gap-1">
 				{index >= 0 && items.length > 0 && (

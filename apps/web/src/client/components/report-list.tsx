@@ -9,6 +9,7 @@ import { FileTextIcon, PlusIcon, SlidersHorizontalIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Dot } from "@/components/dot";
 import { FilterChip } from "@/components/filter-chip";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { useReportDialogs } from "@/components/report-dialogs";
@@ -31,72 +32,81 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { api } from "@/lib/api";
+import { hueFromString, templateHue } from "@/lib/hue";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
 
-/** One report row: navigation only — actions live in the detail toolbar. */
+/** One report row: navigation only — actions live in the detail toolbar.
+ *  A leading dot keys the report to its template; a smaller dot tags its single
+ *  project (when scoped to exactly one). */
 function ReportListItem({
 	report,
 	tab,
 	templateName,
+	projectChip,
 	selected,
 	index,
 }: {
 	report: ReportMeta;
 	tab: string;
 	templateName: string;
+	projectChip: { name: string; hue: number } | null;
 	selected: boolean;
 	index: number;
 }) {
 	const { i18n } = useTranslation();
 	return (
-		<div
+		<Link
 			data-nav-index={index}
+			to="/reports/$tab/$reportId"
+			params={{ tab, reportId: report.id }}
 			className={cn(
-				"rounded-xl transition-colors",
-				selected ? "bg-card ring-border shadow-sm ring-1" : "hover:bg-card/60",
+				"relative flex w-full items-start gap-3 border-b px-4 py-3 text-left transition-colors",
+				selected ? "bg-secondary" : "hover:bg-muted/50",
 			)}
 		>
-			<Link
-				to="/reports/$tab/$reportId"
-				params={{ tab, reportId: report.id }}
-				className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left"
-			>
-				<span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
-					<FileTextIcon className="size-4" />
+			{selected && (
+				<span
+					aria-hidden
+					className="bg-primary absolute inset-y-1 left-0 w-[3px] rounded-r-full"
+				/>
+			)}
+			<Dot hue={templateHue(report.templateId)} className="mt-[7px]" />
+			<span className="min-w-0 flex-1">
+				{/* line 1 — report name */}
+				<span className="text-foreground/90 block truncate text-sm font-medium">
+					{report.name}
 				</span>
-				<span className="min-w-0 flex-1">
-					{/* line 1 — report name · period */}
-					<span className="flex items-baseline gap-2">
-						<span className="text-foreground/90 min-w-0 truncate text-sm font-medium">
-							{report.name}
+				{/* line 2 — template · single project */}
+				<span className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
+					<span className="truncate">{templateName}</span>
+					{projectChip && <span className="shrink-0 opacity-40">·</span>}
+					{projectChip && (
+						<span className="inline-flex min-w-0 items-center gap-1">
+							<Dot hue={projectChip.hue} size={6} />
+							<span className="truncate">{projectChip.name}</span>
 						</span>
-						<span className="text-muted-foreground ml-auto shrink-0 text-xs whitespace-nowrap tabular-nums">
-							{formatPeriodLabel(report.filters.dateRange)}
-						</span>
-					</span>
-					{/* line 2 — template · updated date · total */}
-					<span className="mt-0.5 flex items-baseline gap-2">
-						<span className="text-muted-foreground min-w-0 truncate text-xs">
-							{templateName}
-							{" · "}
-							{new Date(report.updatedAt).toLocaleDateString(i18n.language, {
-								month: "short",
-								day: "numeric",
-							})}
-						</span>
-						{report.totalMinutes != null && (
-							<span className="text-muted-foreground ml-auto shrink-0 text-xs tabular-nums">
-								{formatDuration(report.totalMinutes)}
-							</span>
-						)}
-					</span>
+					)}
 				</span>
-			</Link>
-		</div>
+			</span>
+			{/* generated date over total */}
+			<span className="flex shrink-0 flex-col items-end gap-0.5 pt-px text-xs tabular-nums">
+				<span className="text-muted-foreground whitespace-nowrap">
+					{new Date(report.createdAt).toLocaleDateString(i18n.language, {
+						month: "short",
+						day: "numeric",
+					})}
+				</span>
+				{report.totalMinutes != null && (
+					<span className="text-foreground/70 font-medium whitespace-nowrap">
+						{formatDuration(report.totalMinutes)}
+					</span>
+				)}
+			</span>
+		</Link>
 	);
 }
 
@@ -107,11 +117,11 @@ export function ReportList({
 	tab: string;
 	selectedId?: string;
 }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
 	const { workspaces } = useWorkspace();
 	const { openCreate } = useReportDialogs();
-	const { templateById, enabledTemplates, templatesReady } =
+	const { templateById, enabledTemplates, templatesReady, createTargetForTab } =
 		useReportTemplates();
 
 	// Auxiliary filters (local). Off by default: empty period keeps everything,
@@ -143,6 +153,32 @@ export function ReportList({
 		() => new Map(list.map((report, i) => [report.id, i])),
 		[list],
 	);
+	// Reports arrive newest-first, so grouping by creation month yields months in
+	// descending order. Each row keeps its flat index for keyboard nav. The key
+	// is built from the local Date (not the raw UTC prefix) so a report's month
+	// header always matches the localized date shown in its row.
+	const monthGroups = useMemo(() => {
+		const groups: {
+			key: string;
+			label: string;
+			rows: { report: ReportMeta; index: number }[];
+		}[] = [];
+		list.forEach((report, index) => {
+			const created = new Date(report.createdAt);
+			const key = `${created.getFullYear()}-${created.getMonth()}`;
+			let group = groups.find((g) => g.key === key);
+			if (!group) {
+				const label = created.toLocaleDateString(i18n.language, {
+					month: "long",
+					year: "numeric",
+				});
+				group = { key, label, rows: [] };
+				groups.push(group);
+			}
+			group.rows.push({ report, index });
+		});
+		return groups;
+	}, [list, i18n.language]);
 
 	// j/k move the selection straight to the report's route, so the right pane
 	// updates as you go. Selection is derived from the URL (selectedId).
@@ -188,6 +224,18 @@ export function ReportList({
 		.map(([id, name]) => ({ id, name }))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
+	// A row shows a project chip only when the report is scoped to a single,
+	// resolvable project — multi-project / all-project reports stay unlabelled.
+	const projectChipFor = (
+		report: ReportMeta,
+	): { name: string; hue: number } | null => {
+		const ids = report.filters.projectIds;
+		const id = ids?.length === 1 ? ids[0] : undefined;
+		if (!id) return null;
+		const name = projectById.get(id);
+		return name ? { name, hue: hueFromString(id) } : null;
+	};
+
 	const periodActive = from !== "" || to !== "";
 	const projectActive = projectFilter !== "all";
 	const filtersActive = periodActive || projectActive;
@@ -211,8 +259,7 @@ export function ReportList({
 		tab === "all" ? t("reports.tab.all") : (tabTemplate?.name ?? tab);
 	// New report targets the current tab's template when it's enabled, else the
 	// first enabled template (so the button still works on All/archived tabs).
-	const createTarget =
-		tabTemplate?.enabled === true ? tabTemplate : enabledTemplates[0];
+	const createTarget = createTargetForTab(tab);
 
 	const emptyBody = () => {
 		// Filtering is server-side, so an empty list with filters off means the
@@ -348,15 +395,14 @@ export function ReportList({
 						</PopoverContent>
 					</Popover>
 					<Button
-						size="sm"
-						className="h-8"
+						size="icon"
+						className="size-8"
 						disabled={!createTarget}
 						aria-label={t("reports.newAction")}
 						title={t("reports.newAction")}
 						onClick={() => createTarget && openCreate(createTarget)}
 					>
 						<PlusIcon className="size-3.5" />
-						<span className="hidden sm:inline">{t("reports.newAction")}</span>
 					</Button>
 				</div>
 			</div>
@@ -383,12 +429,12 @@ export function ReportList({
 				</div>
 			)}
 
-			<div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto p-2">
+			<div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto">
 				{reports.isPending || !templatesReady ? (
-					<div className="flex flex-col gap-1">
+					<div className="flex flex-col">
 						{[0, 1, 2, 3].map((i) => (
-							<div key={i} className="flex items-center gap-3 px-3 py-3">
-								<Skeleton className="size-9 shrink-0 rounded-lg" />
+							<div key={i} className="flex items-center gap-3 px-4 py-3">
+								<Skeleton className="size-2 shrink-0 rounded-full" />
 								<div className="flex-1 space-y-2 py-0.5">
 									<Skeleton className="h-3 w-2/3" />
 									<Skeleton className="h-3 w-1/2" />
@@ -399,25 +445,34 @@ export function ReportList({
 				) : list.length === 0 ? (
 					emptyBody()
 				) : (
-					<div className="flex flex-col gap-1">
-						{list.map((report, index) => (
-							<ReportListItem
-								key={report.id}
-								report={report}
-								tab={tab}
-								templateName={
-									templateById.get(report.templateId)?.name ?? report.templateId
-								}
-								selected={report.id === selectedId}
-								index={index}
-							/>
+					<>
+						{monthGroups.map((group) => (
+							<div key={group.key}>
+								<div className="text-muted-foreground/70 bg-background/85 sticky top-0 z-[1] border-b px-4 py-1.5 text-[11px] font-medium tracking-wider uppercase backdrop-blur">
+									{group.label}
+								</div>
+								{group.rows.map(({ report, index }) => (
+									<ReportListItem
+										key={report.id}
+										report={report}
+										tab={tab}
+										templateName={
+											templateById.get(report.templateId)?.name ??
+											report.templateId
+										}
+										projectChip={projectChipFor(report)}
+										selected={report.id === selectedId}
+										index={index}
+									/>
+								))}
+							</div>
 						))}
 						<InfiniteSentinel
 							hasNextPage={Boolean(reports.hasNextPage)}
 							isFetchingNextPage={reports.isFetchingNextPage}
 							fetchNextPage={() => reports.fetchNextPage()}
 						/>
-					</div>
+					</>
 				)}
 			</div>
 		</div>

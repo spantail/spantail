@@ -19,6 +19,12 @@ export interface ReportTemplates {
 	templatesReady: boolean;
 	/** Resolves a report's template (for read-only state and Duplicate cadence). */
 	reportTemplateState: (report: ReportMeta) => ReportTemplate | undefined;
+	/**
+	 * Template a new report should use from a given tab: the tab's own template
+	 * when it's enabled, else the first enabled template — so creating works on
+	 * the All/archived tabs too. Undefined when no template is enabled.
+	 */
+	createTargetForTab: (tab: string) => ReportTemplate | undefined;
 }
 
 /**
@@ -49,11 +55,17 @@ export function useReportTemplates(): ReportTemplates {
 		report: ReportMeta,
 	): ReportTemplate | undefined => templateById.get(report.templateId);
 
+	const createTargetForTab = (tab: string): ReportTemplate | undefined => {
+		const tabTemplate = templateById.get(tab);
+		return tabTemplate?.enabled === true ? tabTemplate : enabledTemplates[0];
+	};
+
 	return {
 		templates,
 		templateById,
 		enabledTemplates,
 		templatesReady,
 		reportTemplateState,
+		createTargetForTab,
 	};
 }

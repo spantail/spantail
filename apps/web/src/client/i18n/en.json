@@ -193,6 +193,10 @@
 		"tab": {
 			"all": "All"
 		},
+		"rail": {
+			"library": "Reports",
+			"templates": "Templates"
+		},
 		"filterAction": "Filter",
 		"moreActions": "More actions",
 		"filter": {

@@ -75,7 +75,7 @@ function ReportReadingPane() {
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="mx-auto flex w-full max-w-3xl flex-col gap-7 px-8 py-8">
 					{/* The report name is the markdown's own H1 — no extra title header. */}
-					<MarkdownView markdown={report.renderedMarkdown} />
+					<MarkdownView markdown={report.renderedMarkdown} variant="report" />
 					<ReportDiscussion reportId={report.id} />
 				</div>
 			</div>
