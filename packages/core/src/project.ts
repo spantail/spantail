@@ -26,6 +26,7 @@ export const createProjectInputSchema = z.object({
 	slug: slugSchema,
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).optional(),
+	hue: projectHueSchema.optional(),
 });
 export type CreateProjectInput = z.infer<typeof createProjectInputSchema>;
 

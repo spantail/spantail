@@ -70,8 +70,42 @@ export const Route = createFileRoute("/_authed/settings/projects")({
 	component: ProjectsSection,
 });
 
-// Hand-picked OKLCH hues offered by the colour picker (mirrors the design kit).
+// Hand-picked OKLCH hues offered by the color picker (mirrors the design kit).
 const PROJECT_HUES = [264, 240, 200, 160, 120, 80, 40, 20, 340, 300];
+
+function ColorPicker({
+	value,
+	onChange,
+}: {
+	value: number | null;
+	onChange: (hue: number) => void;
+}) {
+	const { t } = useTranslation();
+	return (
+		<div className="flex flex-wrap gap-2">
+			{PROJECT_HUES.map((option) => {
+				const selected = value === option;
+				return (
+					<button
+						key={option}
+						type="button"
+						aria-label={`${t("settings.projects.color")} ${option}`}
+						aria-pressed={selected}
+						onClick={() => onChange(option)}
+						className={cn(
+							"flex size-7 items-center justify-center rounded-full transition-transform hover:scale-110",
+							selected &&
+								"ring-foreground ring-offset-background ring-2 ring-offset-2",
+						)}
+						style={{ background: `oklch(0.62 0.17 ${option})` }}
+					>
+						{selected && <CheckIcon className="size-3.5 text-white" />}
+					</button>
+				);
+			})}
+		</div>
+	);
+}
 
 function ProjectsSection() {
 	const { t } = useTranslation();
@@ -94,6 +128,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 	const workspaceId = current?.id ?? "";
 	const [slug, setSlug] = useState("");
 	const [name, setName] = useState("");
+	const [hue, setHue] = useState<number | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [editing, setEditing] = useState<Project | null>(null);
 	const [deleting, setDeleting] = useState<Project | null>(null);
@@ -108,11 +143,13 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 		queryClient.invalidateQueries({ queryKey: ["projects", workspaceId] });
 
 	const createMutation = useMutation({
-		mutationFn: () => api.createProject(workspaceId, { slug, name }),
+		mutationFn: () =>
+			api.createProject(workspaceId, { slug, name, hue: hue ?? undefined }),
 		onSuccess: async () => {
 			await refresh();
 			setSlug("");
 			setName("");
+			setHue(null);
 			setError(null);
 			toast.success(t("settings.projects.toast.created"));
 		},
@@ -148,40 +185,44 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 			<CardContent className="flex flex-col gap-4">
 				{canManage && (
 					<form
-						className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+						className="flex flex-col gap-4"
 						onSubmit={(e) => {
 							e.preventDefault();
 							createMutation.mutate();
 						}}
 					>
-						<div className="flex flex-col gap-2">
-							<Label htmlFor="prj-name">{t("settings.projects.name")}</Label>
-							<Input
-								id="prj-name"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								required
-							/>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="prj-name">{t("settings.projects.name")}</Label>
+								<Input
+									id="prj-name"
+									value={name}
+									onChange={(e) => setName(e.target.value)}
+									required
+								/>
+							</div>
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="prj-slug">{t("settings.slug")}</Label>
+								<Input
+									id="prj-slug"
+									value={slug}
+									onChange={(e) => setSlug(e.target.value)}
+									placeholder={t("settings.projects.slugPlaceholder")}
+									pattern="[a-z0-9][a-z0-9-]*"
+									required
+								/>
+							</div>
 						</div>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="prj-slug">{t("settings.slug")}</Label>
-							<Input
-								id="prj-slug"
-								value={slug}
-								onChange={(e) => setSlug(e.target.value)}
-								placeholder={t("settings.projects.slugPlaceholder")}
-								pattern="[a-z0-9][a-z0-9-]*"
-								required
-							/>
+							<Label>{t("settings.projects.color")}</Label>
+							<ColorPicker value={hue} onChange={setHue} />
 						</div>
-						<div className="flex items-end">
+						{error && <p className="text-destructive text-sm">{error}</p>}
+						<div>
 							<Button type="submit" disabled={createMutation.isPending}>
 								{t("settings.createAction")}
 							</Button>
 						</div>
-						{error && (
-							<p className="text-destructive text-sm sm:col-span-3">{error}</p>
-						)}
 					</form>
 				)}
 				<Table>
@@ -381,29 +422,8 @@ function ProjectEditDialog({
 						/>
 					</div>
 					<div className="flex flex-col gap-2 sm:col-span-2">
-						<Label>{t("settings.projects.colour")}</Label>
-						<div className="flex flex-wrap gap-2">
-							{PROJECT_HUES.map((option) => {
-								const selected = hue === option;
-								return (
-									<button
-										key={option}
-										type="button"
-										aria-label={`${t("settings.projects.colour")} ${option}`}
-										aria-pressed={selected}
-										onClick={() => setHue(option)}
-										className={cn(
-											"flex size-7 items-center justify-center rounded-full transition-transform hover:scale-110",
-											selected &&
-												"ring-foreground ring-offset-background ring-2 ring-offset-2",
-										)}
-										style={{ background: `oklch(0.62 0.17 ${option})` }}
-									>
-										{selected && <CheckIcon className="size-3.5 text-white" />}
-									</button>
-								);
-							})}
-						</div>
+						<Label>{t("settings.projects.color")}</Label>
+						<ColorPicker value={hue} onChange={setHue} />
 					</div>
 					<div className="flex flex-col gap-2 sm:col-span-2">
 						<Label htmlFor="pe-desc">

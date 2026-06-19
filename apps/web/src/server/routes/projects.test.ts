@@ -90,7 +90,7 @@ it("archives a project via status and hides nothing from members", async () => {
 	expect(denied.status).toBe(404);
 });
 
-it("updates a project's name, slug, colour and description", async () => {
+it("updates a project's name, slug, color and description", async () => {
 	const { admin, ws } = await setup();
 	const project = (await (
 		await apiJson(
@@ -123,6 +123,19 @@ it("updates a project's name, slug, colour and description", async () => {
 	expect(body.slug).toBe("toxil-web");
 	expect(body.description).toBe("The web client");
 	expect(body.hue).toBe(200);
+});
+
+it("creates a project with an explicit colour hue", async () => {
+	const { admin, ws } = await setup();
+	const created = await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/projects`,
+		{ slug: "toxil", name: "Toxil", hue: 160 },
+		admin,
+	);
+	expect(created.status).toBe(201);
+	const project = (await created.json()) as { hue: number | null };
+	expect(project.hue).toBe(160);
 });
 
 it("rejects updating a slug to one already used in the workspace", async () => {

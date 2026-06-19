@@ -12,6 +12,7 @@ export async function createProject(
 		slug: string;
 		name: string;
 		description?: string;
+		hue?: number;
 	},
 ): Promise<ProjectRow> {
 	const rows = await db

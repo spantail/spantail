@@ -445,7 +445,7 @@
 			"unarchive": "アーカイブ解除",
 			"delete": "削除",
 			"actions": "プロジェクトの操作",
-			"colour": "カラー",
+			"color": "カラー",
 			"status": {
 				"active": "稼働中",
 				"archived": "アーカイブ済み"

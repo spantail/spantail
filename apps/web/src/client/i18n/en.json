@@ -446,13 +446,13 @@
 			"unarchive": "Unarchive",
 			"delete": "Delete",
 			"actions": "Project actions",
-			"colour": "Colour",
+			"color": "Color",
 			"status": {
 				"active": "Active",
 				"archived": "Archived"
 			},
 			"editTitle": "Edit project",
-			"editDescription": "Update this project's name, slug, colour and description.",
+			"editDescription": "Update this project's name, slug, color and description.",
 			"descriptionLabel": "Description",
 			"descriptionPlaceholder": "What is this project about?",
 			"slugPlaceholder": "my-project",
