@@ -113,6 +113,7 @@ export function projectFixture(
 		slug,
 		name: slug.toUpperCase(),
 		description: null,
+		hue: null,
 		status,
 		createdAt: "2026-06-01T00:00:00Z",
 		archivedAt: null,

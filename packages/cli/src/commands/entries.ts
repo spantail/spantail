@@ -97,7 +97,9 @@ export async function entriesList(
 			entries.map((entry) => [
 				entry.entryDate,
 				formatDuration(entry.durationMinutes),
-				slugById.get(entry.projectId) ?? entry.projectId,
+				entry.projectId
+					? (slugById.get(entry.projectId) ?? entry.projectId)
+					: "(no project)",
 				truncate(entry.description, 60),
 				entry.tags.join(","),
 			]),

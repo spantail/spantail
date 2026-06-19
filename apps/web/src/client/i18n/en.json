@@ -58,7 +58,8 @@
 	"projects": {
 		"notFound": "Project not found in this workspace.",
 		"backHome": "Back to home",
-		"entriesTitle": "Entries"
+		"entriesTitle": "Entries",
+		"unassigned": "No project"
 	},
 	"workspace": {
 		"label": "Workspaces",
@@ -439,13 +440,35 @@
 		"projects": {
 			"title": "Projects",
 			"name": "Project name",
+			"description": "Create projects, edit their details, and archive ones you no longer track. Archived projects can be deleted.",
+			"edit": "Edit",
 			"archive": "Archive",
 			"unarchive": "Unarchive",
+			"delete": "Delete",
+			"actions": "Project actions",
+			"colour": "Colour",
 			"status": {
 				"active": "Active",
 				"archived": "Archived"
 			},
-			"description": "Create projects and archive ones you no longer track."
+			"editTitle": "Edit project",
+			"editDescription": "Update this project's name, slug, colour and description.",
+			"descriptionLabel": "Description",
+			"descriptionPlaceholder": "What is this project about?",
+			"slugPlaceholder": "my-project",
+			"save": "Save changes",
+			"deleteTitle": "Delete project",
+			"deleteDescription": "This permanently removes the project from your workspace.",
+			"deleteWarningTitle": "This action cannot be undone",
+			"deleteWarningBody": "Deleting “{{name}}” permanently removes the project. Time entries logged against it are kept but no longer assigned to any project.",
+			"deleteConfirm": "Delete project",
+			"toast": {
+				"created": "Project created.",
+				"updated": "Project updated.",
+				"deleted": "Project deleted.",
+				"archived": "Project archived.",
+				"unarchived": "Project unarchived."
+			}
 		},
 		"members": {
 			"title": "Members",

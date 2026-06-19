@@ -25,7 +25,7 @@ export interface ReportContextInput {
 	entries: Array<{
 		id: string;
 		workspaceId: string;
-		projectId: string;
+		projectId: string | null;
 		userId: string;
 		entryDate: string;
 		durationMinutes: number;
@@ -142,8 +142,12 @@ export function buildReportContext(
 		id: entry.id,
 		workspace_id: entry.workspaceId,
 		workspace_name: named(workspaceNames, entry.workspaceId),
-		project_id: entry.projectId,
-		project_name: named(projectNames, entry.projectId),
+		// Entries whose project was deleted have a null projectId; group them
+		// together under a stable empty key with a clear placeholder name.
+		project_id: entry.projectId ?? "",
+		project_name: entry.projectId
+			? named(projectNames, entry.projectId)
+			: "(no project)",
 		user_id: entry.userId,
 		user_name: named(userNames, entry.userId),
 		entry_date: entry.entryDate,

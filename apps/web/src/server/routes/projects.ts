@@ -4,6 +4,7 @@ import {
 } from "@toxil/core";
 import {
 	createProject,
+	deleteProject,
 	getProjectById,
 	getProjectBySlug,
 	listProjects,
@@ -52,6 +53,19 @@ export const projectRoutes = new Hono<AppEnv>()
 		if (!project) throw new AppError("not_found", "Project not found");
 		await requireWorkspaceAccess(c, project.workspaceId, "admin");
 		const input = validate(updateProjectInputSchema, await c.req.json());
+		if (input.slug !== undefined && input.slug !== project.slug) {
+			const existing = await getProjectBySlug(
+				c.var.db,
+				project.workspaceId,
+				input.slug,
+			);
+			if (existing && existing.id !== project.id) {
+				throw new AppError(
+					"conflict",
+					"A project with this slug already exists",
+				);
+			}
+		}
 		const updated = await updateProject(c.var.db, project.id, {
 			...input,
 			...(input.status === undefined
@@ -59,4 +73,16 @@ export const projectRoutes = new Hono<AppEnv>()
 				: { archivedAt: input.status === "archived" ? new Date() : null }),
 		});
 		return c.json(updated);
+	})
+	.delete("/:id", async (c) => {
+		requireScope(c, "write");
+		const project = await getProjectById(c.var.db, c.req.param("id"));
+		if (!project) throw new AppError("not_found", "Project not found");
+		await requireWorkspaceAccess(c, project.workspaceId, "admin");
+		// Only archived projects can be deleted, mirroring the UI guard.
+		if (project.status !== "archived") {
+			throw new AppError("conflict", "Archive the project before deleting it");
+		}
+		await deleteProject(c.var.db, project.id);
+		return c.body(null, 204);
 	});

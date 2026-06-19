@@ -12,7 +12,8 @@ export type WorkEntrySource = z.infer<typeof workEntrySourceSchema>;
 export const workEntrySchema = z.object({
 	id: z.string(),
 	workspaceId: z.string(),
-	projectId: z.string(),
+	// Null when the project the entry was logged against has been deleted.
+	projectId: z.string().nullable(),
 	userId: z.string(),
 	entryDate: localDateSchema,
 	durationMinutes: z.number().int().positive(),
@@ -69,8 +70,10 @@ export const workEntryStatsSchema = z.object({
 	entryCount: z.number().int().min(0),
 	// Ascending by date; only dates that have entries (clients zero-fill).
 	byDate: z.array(z.object({ date: localDateSchema, ...statBucketFields })),
-	// Descending by minutes.
-	byProject: z.array(z.object({ projectId: z.string(), ...statBucketFields })),
+	// Descending by minutes. projectId is null for entries whose project was deleted.
+	byProject: z.array(
+		z.object({ projectId: z.string().nullable(), ...statBucketFields }),
+	),
 	byUser: z.array(z.object({ userId: z.string(), ...statBucketFields })),
 });
 export type WorkEntryStats = z.infer<typeof workEntryStatsSchema>;

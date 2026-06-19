@@ -130,6 +130,35 @@ it("computes totals and group ordering in the context", () => {
 	expect(context.entries[0]?.user_name).toBe("Alice");
 });
 
+it("groups entries from a deleted project under a no-project placeholder", () => {
+	const context = buildReportContext({
+		...fixture,
+		entries: [
+			entry("e1", "p1", "u1", "2026-05-25", 60, "Kept its project", []),
+			// projectId is null when the project was deleted (ON DELETE SET NULL).
+			{
+				id: "e2",
+				workspaceId: "ws1",
+				projectId: null,
+				userId: "u1",
+				entryDate: "2026-05-26",
+				durationMinutes: 30,
+				description: "Orphaned by a project deletion",
+				note: null,
+				tags: [],
+			},
+		],
+	}) as {
+		groups: { by_project: Array<{ key: string; name?: string }> };
+		entries: Array<{ project_id: string; project_name: string }>;
+	};
+	const orphan = context.entries.find((e) => e.project_id === "");
+	expect(orphan?.project_name).toBe("(no project)");
+	expect(context.groups.by_project.map((g) => g.name)).toContain(
+		"(no project)",
+	);
+});
+
 it("exposes all three builtins", () => {
 	expect(builtinReportTemplates.map((t) => t.id)).toEqual([
 		"builtin:daily",

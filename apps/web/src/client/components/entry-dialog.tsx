@@ -122,8 +122,10 @@ export function EntryDialogProvider({
 		enabled: Boolean(current) && isOthersEntry,
 	});
 	const viewProjectName = viewEntry
-		? ((projects.data ?? []).find((p) => p.id === viewEntry.projectId)?.name ??
-			viewEntry.projectId)
+		? viewEntry.projectId
+			? ((projects.data ?? []).find((p) => p.id === viewEntry.projectId)
+					?.name ?? viewEntry.projectId)
+			: t("projects.unassigned")
 		: "";
 	const viewDateLabel = viewEntry
 		? formatEntryDate(viewEntry.entryDate, i18n.language, {

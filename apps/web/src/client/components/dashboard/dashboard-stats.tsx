@@ -182,14 +182,16 @@ export function DashboardStats({ scope, breakdown }: DashboardStatsProps) {
 		},
 	];
 
-	const projectName = (id: string) =>
-		projects.data?.find((p) => p.id === id)?.name ?? id;
+	const projectName = (id: string | null) =>
+		id
+			? (projects.data?.find((p) => p.id === id)?.name ?? id)
+			: t("projects.unassigned");
 	const memberName = (id: string) =>
 		members.data?.find((m) => m.userId === id)?.name ?? id;
 	const items =
 		breakdown === "project"
 			? monthly.data.byProject.map((row) => ({
-					key: row.projectId,
+					key: row.projectId ?? "__unassigned__",
 					label: projectName(row.projectId),
 					minutes: row.minutes,
 				}))
