@@ -156,7 +156,7 @@ export function DashboardStats({
 			daily={daily}
 			total={total}
 			periodLabel={periodLabel}
-			barClassName={layout === "stacked" ? "bg-brand" : undefined}
+			barClassName="bg-brand"
 			className={chartCol}
 		/>,
 		<Donut
