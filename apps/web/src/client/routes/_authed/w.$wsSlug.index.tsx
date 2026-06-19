@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { todayInTimezone } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -45,6 +45,7 @@ function Timeline({
 	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
 	const { openCreate } = useEntryDialog();
+	const navigate = useNavigate();
 	const [period, setPeriod] = useState<HomePeriod>("this_month");
 	const today = todayInTimezone(current?.timezone ?? "UTC");
 	const dateLabel = formatEntryDate(today, i18n.language, {
@@ -117,6 +118,21 @@ function Timeline({
 								if (entries.hasNextPage && !entries.isFetchingNextPage)
 									entries.fetchNextPage();
 							}}
+							onCreateReport={(day) =>
+								// Hand off to the reports shell, which opens a seeded create
+								// dialog (daily template, scoped to just this day + this
+								// workspace) from the search params — see ReportDialogsProvider.
+								navigate({
+									to: "/reports/$tab",
+									params: { tab: "builtin:daily" },
+									search: {
+										create: "builtin:daily",
+										from: day.date,
+										to: day.date,
+										ws: workspaceId,
+									},
+								})
+							}
 						/>
 						<InfiniteSentinel
 							hasNextPage={Boolean(entries.hasNextPage)}

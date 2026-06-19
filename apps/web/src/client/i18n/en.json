@@ -85,10 +85,11 @@
 		"viewAll": "View all"
 	},
 	"timeline": {
-		"title": "Your work log",
+		"title": "Timeline",
 		"empty": "No entries yet.",
 		"emptyCta": "Log your first entry",
-		"shortcutHint": "Tip: press C anywhere to log work."
+		"shortcutHint": "Tip: press C anywhere to log work.",
+		"createReport": "Create daily report for {{date}}"
 	},
 	"entries": {
 		"newTitle": "Log work",
