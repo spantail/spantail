@@ -12,6 +12,7 @@ export async function createProject(
 		slug: string;
 		name: string;
 		description?: string;
+		hue?: number;
 	},
 ): Promise<ProjectRow> {
 	const rows = await db
@@ -65,7 +66,10 @@ export async function updateProject(
 	db: Database,
 	id: string,
 	patch: Partial<
-		Pick<ProjectRow, "name" | "description" | "status" | "archivedAt">
+		Pick<
+			ProjectRow,
+			"name" | "slug" | "description" | "hue" | "status" | "archivedAt"
+		>
 	>,
 ): Promise<ProjectRow | undefined> {
 	const rows = await db
@@ -74,4 +78,10 @@ export async function updateProject(
 		.where(eq(projects.id, id))
 		.returning();
 	return rows[0];
+}
+
+/** Deletes a project. Entries logged against it are kept; their project_id is
+ * set to null by the `work_entries` foreign key (`ON DELETE SET NULL`). */
+export async function deleteProject(db: Database, id: string): Promise<void> {
+	await db.delete(projects).where(eq(projects.id, id));
 }

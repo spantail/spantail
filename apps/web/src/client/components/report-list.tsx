@@ -32,7 +32,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { api } from "@/lib/api";
-import { hueFromString, templateHue } from "@/lib/hue";
+import { templateHue } from "@/lib/hue";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
@@ -214,14 +214,17 @@ export function ReportList({
 			queryFn: () => api.listProjects(workspace.id),
 		})),
 	});
-	const projectById = new Map<string, string>();
+	const projectById = new Map<string, { name: string; hue: number }>();
 	for (const query of projectQueries) {
 		for (const project of query.data ?? []) {
-			projectById.set(project.id, project.name);
+			projectById.set(project.id, {
+				name: project.name,
+				hue: project.hue,
+			});
 		}
 	}
 	const projectOptions = [...projectById.entries()]
-		.map(([id, name]) => ({ id, name }))
+		.map(([id, { name }]) => ({ id, name }))
 		.sort((a, b) => a.name.localeCompare(b.name));
 
 	// A row shows a project chip only when the report is scoped to a single,
@@ -232,8 +235,8 @@ export function ReportList({
 		const ids = report.filters.projectIds;
 		const id = ids?.length === 1 ? ids[0] : undefined;
 		if (!id) return null;
-		const name = projectById.get(id);
-		return name ? { name, hue: hueFromString(id) } : null;
+		const project = projectById.get(id);
+		return project ? { name: project.name, hue: project.hue } : null;
 	};
 
 	const periodActive = from !== "" || to !== "";
@@ -421,7 +424,7 @@ export function ReportList({
 					)}
 					{projectActive && (
 						<FilterChip
-							label={projectById.get(projectFilter) ?? projectFilter}
+							label={projectById.get(projectFilter)?.name ?? projectFilter}
 							removeLabel={t("reports.filter.remove")}
 							onClear={() => setProjectFilter("all")}
 						/>

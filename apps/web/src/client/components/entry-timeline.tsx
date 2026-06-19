@@ -43,10 +43,12 @@ export function EntryTimeline({
 	projects,
 	onLoadMore,
 }: EntryTimelineProps) {
-	const { i18n } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const { openView } = useEntryDialog();
-	const projectName = (id: string) =>
-		projects.find((p) => p.id === id)?.name ?? id;
+	const projectName = (id: string | null) =>
+		id
+			? (projects.find((p) => p.id === id)?.name ?? id)
+			: t("projects.unassigned");
 	const currentYear = String(new Date().getFullYear());
 
 	// Keyboard nav over the flat (cross-day) order; the highlight maps back to a

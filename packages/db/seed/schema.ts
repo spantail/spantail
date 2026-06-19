@@ -44,6 +44,8 @@ const projectConfigSchema = z.object({
 	slug: slugSchema,
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).optional(),
+	// Color marker as an OKLCH hue (0–359).
+	hue: z.number().int().min(0).max(359),
 	// Concrete task phrases the generator draws from; authored in the workspace language.
 	activities: z.array(z.string().min(1).max(200)).min(1),
 });

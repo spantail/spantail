@@ -58,7 +58,8 @@
 	"projects": {
 		"notFound": "このワークスペースにプロジェクトが見つかりません。",
 		"backHome": "ホームへ戻る",
-		"entriesTitle": "記録"
+		"entriesTitle": "記録",
+		"unassigned": "プロジェクトなし"
 	},
 	"workspace": {
 		"label": "ワークスペース",
@@ -132,6 +133,7 @@
 		},
 		"empty": "まだ記録がありません。",
 		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
+		"noProject": "プロジェクトなし",
 		"goToSettings": "設定を開く",
 		"filter": {
 			"member": "メンバー",
@@ -438,13 +440,35 @@
 		"projects": {
 			"title": "プロジェクト",
 			"name": "プロジェクト名",
+			"description": "プロジェクトを作成・編集し、追跡しなくなったものはアーカイブできます。アーカイブ済みのプロジェクトは削除できます。",
+			"edit": "編集",
 			"archive": "アーカイブ",
 			"unarchive": "アーカイブ解除",
+			"delete": "削除",
+			"actions": "プロジェクトの操作",
+			"color": "カラー",
 			"status": {
 				"active": "稼働中",
 				"archived": "アーカイブ済み"
 			},
-			"description": "プロジェクトを作成し、追跡しなくなったものはアーカイブできます。"
+			"editTitle": "プロジェクトを編集",
+			"editDescription": "プロジェクトの名前・スラッグ・カラー・説明を更新します。",
+			"descriptionLabel": "説明",
+			"descriptionPlaceholder": "このプロジェクトの概要",
+			"slugPlaceholder": "my-project",
+			"save": "変更を保存",
+			"deleteTitle": "プロジェクトを削除",
+			"deleteDescription": "このプロジェクトをワークスペースから完全に削除します。",
+			"deleteWarningTitle": "この操作は取り消せません",
+			"deleteWarningBody": "「{{name}}」を削除すると、プロジェクトは完全に削除されます。記録された作業エントリーは保持されますが、どのプロジェクトにも紐付かなくなります。",
+			"deleteConfirm": "プロジェクトを削除",
+			"toast": {
+				"created": "プロジェクトを作成しました。",
+				"updated": "プロジェクトを更新しました。",
+				"deleted": "プロジェクトを削除しました。",
+				"archived": "プロジェクトをアーカイブしました。",
+				"unarchived": "アーカイブを解除しました。"
+			}
 		},
 		"members": {
 			"title": "メンバー",

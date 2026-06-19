@@ -276,6 +276,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			slug: p.slug,
 			name: p.name,
 			description: p.description ?? null,
+			hue: p.hue,
 			status: "active",
 			createdAt: baseCreatedAt,
 			archivedAt: null,

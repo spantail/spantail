@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { useProjects } from "@/hooks/use-projects";
-import { hueFromString } from "@/lib/hue";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -140,7 +139,7 @@ function ProjectsGroup() {
 														projectSlug: project.slug,
 													}}
 												>
-													<Dot hue={hueFromString(project.id)} size={12} />
+													<Dot hue={project.hue} size={12} />
 													<span>{project.name}</span>
 												</Link>
 											</SidebarMenuButton>

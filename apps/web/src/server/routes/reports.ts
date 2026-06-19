@@ -146,7 +146,9 @@ async function renderReportDocument(
 	});
 	const entries = filterEntriesByTags(rows, filters.tags);
 	const [projects, users] = await Promise.all([
-		listProjectsByIds(c.var.db, [...new Set(entries.map((e) => e.projectId))]),
+		listProjectsByIds(c.var.db, [
+			...new Set(entries.flatMap((e) => (e.projectId ? [e.projectId] : []))),
+		]),
 		listUsersByIds(c.var.db, [...new Set(entries.map((e) => e.userId))]),
 	]);
 

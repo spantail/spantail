@@ -36,8 +36,10 @@ export function EntryList({
 }: EntryListProps) {
 	const { t, i18n } = useTranslation();
 	const { openView } = useEntryDialog();
-	const projectName = (id: string) =>
-		projects.find((p) => p.id === id)?.name ?? id;
+	const projectName = (id: string | null) =>
+		id
+			? (projects.find((p) => p.id === id)?.name ?? id)
+			: t("projects.unassigned");
 	const memberName = (id: string) =>
 		members.find((m) => m.userId === id)?.name ?? id;
 

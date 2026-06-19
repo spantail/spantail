@@ -272,6 +272,10 @@ export class ToxilClient {
 		return this.request("PATCH", `/projects/${id}`, { body: input });
 	}
 
+	deleteProject(id: string): Promise<void> {
+		return this.request("DELETE", `/projects/${id}`);
+	}
+
 	listWorkEntries(query: ListWorkEntriesQueryData): Promise<WorkEntry[]> {
 		return this.request("GET", "/work-entries", { query });
 	}

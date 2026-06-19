@@ -88,7 +88,11 @@ export interface WorkEntryStatsResult {
 	totalMinutes: number;
 	entryCount: number;
 	byDate: Array<{ date: string; minutes: number; count: number }>;
-	byProject: Array<{ projectId: string; minutes: number; count: number }>;
+	byProject: Array<{
+		projectId: string | null;
+		minutes: number;
+		count: number;
+	}>;
 	byUser: Array<{ userId: string; minutes: number; count: number }>;
 }
 

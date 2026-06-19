@@ -89,3 +89,170 @@ it("archives a project via status and hides nothing from members", async () => {
 	const denied = await apiGet(`/api/v1/projects/${created.id}`, outsider);
 	expect(denied.status).toBe(404);
 });
+
+it("updates a project's name, slug, color and description", async () => {
+	const { admin, ws } = await setup();
+	const project = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "toxil", name: "Toxil" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	const updated = await apiJson(
+		"PATCH",
+		`/api/v1/projects/${project.id}`,
+		{
+			name: "Toxil Web",
+			slug: "toxil-web",
+			description: "The web client",
+			hue: 200,
+		},
+		admin,
+	);
+	expect(updated.status).toBe(200);
+	const body = (await updated.json()) as {
+		name: string;
+		slug: string;
+		description: string | null;
+		hue: number | null;
+	};
+	expect(body.name).toBe("Toxil Web");
+	expect(body.slug).toBe("toxil-web");
+	expect(body.description).toBe("The web client");
+	expect(body.hue).toBe(200);
+});
+
+it("creates a project with an explicit colour hue", async () => {
+	const { admin, ws } = await setup();
+	const created = await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/projects`,
+		{ slug: "toxil", name: "Toxil", hue: 160 },
+		admin,
+	);
+	expect(created.status).toBe(201);
+	const project = (await created.json()) as { hue: number | null };
+	expect(project.hue).toBe(160);
+});
+
+it("rejects updating a slug to one already used in the workspace", async () => {
+	const { admin, ws } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/projects`,
+		{ slug: "alpha", name: "Alpha" },
+		admin,
+	);
+	const beta = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "beta", name: "Beta" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	const conflict = await apiJson(
+		"PATCH",
+		`/api/v1/projects/${beta.id}`,
+		{ slug: "alpha" },
+		admin,
+	);
+	expect(conflict.status).toBe(409);
+});
+
+it("deletes an archived project and orphans its entries instead of cascading", async () => {
+	const { admin, ws } = await setup();
+	const project = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "toxil", name: "Toxil" },
+			admin,
+		)
+	).json()) as { id: string };
+	const entry = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 60,
+				description: "Logged against a soon-deleted project",
+			},
+			admin,
+		)
+	).json()) as { id: string };
+
+	// Active projects cannot be deleted; archive first.
+	const tooEarly = await apiJson(
+		"DELETE",
+		`/api/v1/projects/${project.id}`,
+		undefined,
+		admin,
+	);
+	expect(tooEarly.status).toBe(409);
+
+	await apiJson(
+		"PATCH",
+		`/api/v1/projects/${project.id}`,
+		{ status: "archived" },
+		admin,
+	);
+	const deleted = await apiJson(
+		"DELETE",
+		`/api/v1/projects/${project.id}`,
+		undefined,
+		admin,
+	);
+	expect(deleted.status).toBe(204);
+
+	// The project is gone...
+	expect((await apiGet(`/api/v1/projects/${project.id}`, admin)).status).toBe(
+		404,
+	);
+	// ...but its entry survives with a null projectId (ON DELETE SET NULL).
+	const entries = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{ id: string; projectId: string | null }>;
+	const survivor = entries.find((e) => e.id === entry.id);
+	expect(survivor).toBeDefined();
+	expect(survivor?.projectId).toBeNull();
+});
+
+it("forbids non-admins from deleting projects", async () => {
+	const { admin, ws } = await setup();
+	const member = await signUpUser("Member", "member@example.com");
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "member@example.com" },
+		admin,
+	);
+	const project = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "toxil", name: "Toxil" },
+			admin,
+		)
+	).json()) as { id: string };
+	await apiJson(
+		"PATCH",
+		`/api/v1/projects/${project.id}`,
+		{ status: "archived" },
+		admin,
+	);
+
+	const denied = await apiJson(
+		"DELETE",
+		`/api/v1/projects/${project.id}`,
+		undefined,
+		member,
+	);
+	expect(denied.status).toBe(403);
+});

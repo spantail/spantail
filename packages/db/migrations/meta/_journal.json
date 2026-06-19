@@ -141,6 +141,13 @@
       "when": 1781796281996,
       "tag": "0019_opposite_random",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1781843533674,
+      "tag": "0020_clever_forgotten_one",
+      "breakpoints": true
     }
   ]
 }

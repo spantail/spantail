@@ -57,6 +57,9 @@ export const projects = sqliteTable(
 		slug: text("slug").notNull(),
 		name: text("name").notNull(),
 		description: text("description"),
+		// Color marker (OKLCH hue 0–359). Always set; the create form picks one
+		// and this default covers rows created without an explicit color.
+		hue: integer("hue").notNull().default(264),
 		status: text("status", { enum: ["active", "archived"] })
 			.notNull()
 			.default("active"),
@@ -76,9 +79,11 @@ export const workEntries = sqliteTable(
 		workspaceId: text("workspace_id")
 			.notNull()
 			.references(() => workspaces.id, { onDelete: "cascade" }),
-		projectId: text("project_id")
-			.notNull()
-			.references(() => projects.id, { onDelete: "cascade" }),
+		// Nullable: deleting a project sets this to null rather than cascading,
+		// so the work history is preserved as un-assigned entries.
+		projectId: text("project_id").references(() => projects.id, {
+			onDelete: "set null",
+		}),
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
