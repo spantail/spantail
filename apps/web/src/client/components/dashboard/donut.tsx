@@ -114,7 +114,7 @@ export function Donut({
 									return circle;
 								})}
 							</svg>
-							<div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+							<div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
 								<span className="font-heading text-2xl font-semibold tabular-nums">
 									{formatHours(centerMinutes)}
 								</span>

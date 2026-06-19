@@ -134,7 +134,13 @@ export function DashboardStats({
 		breakdown === "project"
 			? data.byProject.map((row) => ({
 					key: row.projectId ?? "__unassigned__",
-					label: projectById(row.projectId)?.name ?? t("projects.unassigned"),
+					// Only a null projectId is truly unassigned; a non-null id that
+					// the (possibly still-loading) project list can't resolve falls
+					// back to the id, never mislabeled as "No project".
+					label:
+						row.projectId === null
+							? t("projects.unassigned")
+							: (projectById(row.projectId)?.name ?? row.projectId),
 					minutes: row.minutes,
 					hue: projectById(row.projectId)?.hue ?? null,
 				}))
