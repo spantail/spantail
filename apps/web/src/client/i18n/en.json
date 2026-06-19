@@ -89,7 +89,7 @@
 		"empty": "No entries yet.",
 		"emptyCta": "Log your first entry",
 		"shortcutHint": "Tip: press C anywhere to log work.",
-		"createReport": "Create daily report"
+		"createReport": "Create daily report for {{date}}"
 	},
 	"entries": {
 		"newTitle": "Log work",
