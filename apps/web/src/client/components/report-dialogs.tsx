@@ -186,22 +186,32 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	const seedFromLink = useRef<(s: typeof search) => void>(() => {});
 	useLayoutEffect(() => {
 		seedFromLink.current = (s) => {
-			const template =
-				templates.find((tpl) => tpl.id === s.create) ??
-				(s.create ? createTargetForTab(s.create) : undefined);
+			// Resolve through createTargetForTab so a disabled template (which the
+			// API still lists) falls back to an enabled one — a disabled seed would
+			// render a form that the reports API rejects on save.
+			const template = s.create ? createTargetForTab(s.create) : undefined;
 			if (!template) return;
+			// Keep the report scoped to the workspace the link came from: the reports
+			// shell otherwise derives `current` from persisted state, which can drift
+			// from the originating workspace in multi-tab sessions.
+			const wsId =
+				s.ws && workspaces.some((w) => w.id === s.ws) ? s.ws : current?.id;
+			const base = newSeed(template);
 			const custom = Boolean(s.from && s.to);
 			open({
 				editingId: null,
 				titleKey: "reports.newTitle",
-				seed: custom
-					? {
-							...newSeed(template),
-							rangeChoice: "custom",
-							from: s.from ?? "",
-							to: s.to ?? "",
-						}
-					: newSeed(template),
+				seed: {
+					...base,
+					workspaceIds: wsId ? [wsId] : base.workspaceIds,
+					...(custom
+						? {
+								rangeChoice: "custom" as const,
+								from: s.from ?? "",
+								to: s.to ?? "",
+							}
+						: {}),
+				},
 			});
 		};
 	});
@@ -217,6 +227,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 				create: undefined,
 				from: undefined,
 				to: undefined,
+				ws: undefined,
 			}),
 		});
 	}, [search, templatesReady, navigate]);

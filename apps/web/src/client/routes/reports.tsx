@@ -18,6 +18,8 @@ export interface ReportsSearch {
 	create?: string;
 	from?: string;
 	to?: string;
+	/** Originating workspace, so the seeded report stays scoped to it. */
+	ws?: string;
 }
 
 function asString(value: unknown): string | undefined {
@@ -32,6 +34,7 @@ export const Route = createFileRoute("/reports")({
 		create: asString(search.create),
 		from: asString(search.from),
 		to: asString(search.to),
+		ws: asString(search.ws),
 	}),
 	beforeLoad: async () => {
 		const { data } = await authClient.getSession();
