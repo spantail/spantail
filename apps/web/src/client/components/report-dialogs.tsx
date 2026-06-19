@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
 	deriveNextPeriod,
 	type PeriodUnit,
@@ -67,6 +67,8 @@ interface FormState {
 export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
+	// Deep-link seed (e.g. the home timeline's "create daily report" button).
+	const search = useSearch({ from: "/reports" });
 	const { workspaces, current } = useWorkspace();
 	const { templates, templatesReady, reportTemplateState, createTargetForTab } =
 		useReportTemplates();
@@ -176,6 +178,48 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, []);
+
+	// A deep link with `?create=<templateId>&from=&to=` opens a pre-seeded create
+	// dialog scoped to that range. A latest-callback ref keeps the seeding logic
+	// (which reads the template pool and current workspace) out of the effect's
+	// dependencies, so it runs only when the params actually change.
+	const seedFromLink = useRef<(s: typeof search) => void>(() => {});
+	useLayoutEffect(() => {
+		seedFromLink.current = (s) => {
+			const template =
+				templates.find((tpl) => tpl.id === s.create) ??
+				(s.create ? createTargetForTab(s.create) : undefined);
+			if (!template) return;
+			const custom = Boolean(s.from && s.to);
+			open({
+				editingId: null,
+				titleKey: "reports.newTitle",
+				seed: custom
+					? {
+							...newSeed(template),
+							rangeChoice: "custom",
+							from: s.from ?? "",
+							to: s.to ?? "",
+						}
+					: newSeed(template),
+			});
+		};
+	});
+	useEffect(() => {
+		if (!search.create || !templatesReady) return;
+		seedFromLink.current(search);
+		// Clear the deep-link params so a refresh or Back doesn't reopen the dialog.
+		navigate({
+			to: ".",
+			replace: true,
+			search: (prev) => ({
+				...prev,
+				create: undefined,
+				from: undefined,
+				to: undefined,
+			}),
+		});
+	}, [search, templatesReady, navigate]);
 
 	return (
 		<ReportDialogsContext.Provider

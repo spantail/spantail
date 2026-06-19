@@ -88,7 +88,8 @@
 		"title": "作業ログ",
 		"empty": "まだ記録がありません。",
 		"emptyCta": "最初の作業を記録する",
-		"shortcutHint": "ヒント: どの画面でも C キーで記録できます。"
+		"shortcutHint": "ヒント: どの画面でも C キーで記録できます。",
+		"createReport": "日報を作成"
 	},
 	"entries": {
 		"newTitle": "作業を記録",
