@@ -1,12 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-	ChevronRightIcon,
-	FolderIcon,
-	HomeIcon,
-	SettingsIcon,
-} from "lucide-react";
+import { ChevronRightIcon, HomeIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { Dot } from "@/components/dot";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -29,6 +25,7 @@ import {
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { useProjects } from "@/hooks/use-projects";
+import { hueFromString } from "@/lib/hue";
 import { useWorkspace } from "@/lib/workspace";
 
 interface NavItem {
@@ -141,7 +138,7 @@ function ProjectsGroup() {
 														projectSlug: project.slug,
 													}}
 												>
-													<FolderIcon />
+													<Dot hue={hueFromString(project.id)} size={12} />
 													<span>{project.name}</span>
 												</Link>
 											</SidebarMenuButton>
