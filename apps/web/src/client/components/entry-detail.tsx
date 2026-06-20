@@ -1,14 +1,35 @@
 import { formatDuration, type WorkEntry } from "@toxil/core";
-import { CalendarIcon, ClockIcon, FolderIcon } from "lucide-react";
+import {
+	CalendarIcon,
+	ClockIcon,
+	CodeIcon,
+	FolderIcon,
+	GlobeIcon,
+	type LucideIcon,
+	PlugIcon,
+	TerminalIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Dot } from "@/components/dot";
 import { MarkdownView } from "@/components/markdown-view";
+import { PersonAvatar } from "@/components/person-avatar";
 import { Badge } from "@/components/ui/badge";
+
+/** Provenance chip icon per logging route. */
+const SOURCE_ICONS: Record<WorkEntry["source"], LucideIcon> = {
+	web: GlobeIcon,
+	cli: TerminalIcon,
+	mcp: PlugIcon,
+	api: CodeIcon,
+};
 
 interface EntryDetailProps {
 	entry: WorkEntry;
 	projectName: string;
+	/** Project's OKLCH hue for the color dot; null when unassigned. */
+	projectHue: number | null;
 	dateLabel: string;
 	/** Local start–end time range, when both ends are recorded. */
 	timeRange: string | null;
@@ -24,11 +45,14 @@ interface EntryDetailProps {
 export function EntryDetail({
 	entry,
 	projectName,
+	projectHue,
 	dateLabel,
 	timeRange,
 	authorName,
 }: EntryDetailProps) {
 	const { t } = useTranslation();
+	const SourceIcon = SOURCE_ICONS[entry.source];
+	const sourceLabel = t(`entries.sources.${entry.source}`);
 
 	return (
 		<div className="flex flex-col gap-5">
@@ -36,7 +60,16 @@ export function EntryDetail({
 				<MetaItem
 					icon={<FolderIcon className="size-3.5" />}
 					label={t("entries.project")}
-					value={projectName}
+					value={
+						projectHue != null ? (
+							<span className="flex items-center gap-1.5">
+								<Dot hue={projectHue} />
+								{projectName}
+							</span>
+						) : (
+							projectName
+						)
+					}
 				/>
 				<MetaItem
 					icon={<CalendarIcon className="size-3.5" />}
@@ -85,22 +118,23 @@ export function EntryDetail({
 				)}
 			</div>
 
-			<div className="text-muted-foreground flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t pt-3 text-sm">
+			<div className="flex items-center justify-between gap-3 border-t pt-3">
 				{authorName ? (
-					<span className="flex items-center gap-2">
-						<span className="bg-secondary text-secondary-foreground flex size-6 items-center justify-center rounded-full text-[10px] font-semibold">
-							{initials(authorName)}
+					<div className="flex min-w-0 items-center gap-2">
+						<PersonAvatar name={authorName} size={24} />
+						<span className="text-muted-foreground truncate text-sm">
+							{authorName}
 						</span>
-						{t("entries.loggedBy", { name: authorName })}
-					</span>
+					</div>
 				) : (
 					<span />
 				)}
-				<span className="flex items-center gap-1.5">
-					{t("entries.source")}
-					<Badge variant="outline">
-						{t(`entries.sources.${entry.source}`)}
-					</Badge>
+				<span
+					title={`${t("entries.source")} ${sourceLabel}`}
+					className="inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium"
+				>
+					<SourceIcon className="text-muted-foreground size-3" />
+					{sourceLabel}
 				</span>
 			</div>
 		</div>
@@ -135,14 +169,4 @@ function MetaItem({
 			</div>
 		</div>
 	);
-}
-
-function initials(name: string): string {
-	return name
-		.split(/\s+/)
-		.filter(Boolean)
-		.map((word) => word[0])
-		.join("")
-		.slice(0, 2)
-		.toUpperCase();
 }

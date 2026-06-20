@@ -121,12 +121,15 @@ export function EntryDialogProvider({
 		queryFn: () => api.listMembers(current?.id as string),
 		enabled: Boolean(current) && isOthersEntry,
 	});
+	const viewProject = viewEntry?.projectId
+		? (projects.data ?? []).find((p) => p.id === viewEntry.projectId)
+		: undefined;
 	const viewProjectName = viewEntry
 		? viewEntry.projectId
-			? ((projects.data ?? []).find((p) => p.id === viewEntry.projectId)
-					?.name ?? viewEntry.projectId)
+			? (viewProject?.name ?? viewEntry.projectId)
 			: t("projects.unassigned")
 		: "";
+	const viewProjectHue = viewProject?.hue ?? null;
 	const viewDateLabel = viewEntry
 		? formatEntryDate(viewEntry.entryDate, i18n.language, {
 				year: "numeric",
@@ -193,6 +196,7 @@ export function EntryDialogProvider({
 								<EntryDetail
 									entry={state.entry}
 									projectName={viewProjectName}
+									projectHue={viewProjectHue}
 									dateLabel={viewDateLabel}
 									timeRange={viewTimeRange}
 									authorName={viewAuthorName}
