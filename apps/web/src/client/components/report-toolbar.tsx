@@ -9,7 +9,7 @@ import {
 	PencilIcon,
 	PlusIcon,
 	SendIcon,
-	Share2Icon,
+	ShareIcon,
 	Trash2Icon,
 	XIcon,
 } from "lucide-react";
@@ -103,7 +103,7 @@ export function ReportToolbar({
 				title={t("reports.shares.shareAction")}
 				onClick={() => setSharing(true)}
 			>
-				<Share2Icon />
+				<ShareIcon />
 			</Button>
 			{!readOnly && (
 				<Button
@@ -141,7 +141,7 @@ export function ReportToolbar({
 						className="gap-2.5 px-2 py-1.5 md:hidden"
 						onSelect={() => setSharing(true)}
 					>
-						<Share2Icon />
+						<ShareIcon />
 						{t("reports.shares.shareAction")}
 					</DropdownMenuItem>
 					{!readOnly && (
