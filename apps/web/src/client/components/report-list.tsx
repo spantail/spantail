@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	formatDuration,
@@ -191,17 +191,6 @@ export function ReportList({
 	const { templateById, enabledTemplates, templatesReady, createTargetForTab } =
 		useReportTemplates();
 
-	// Total reports for the tab, shown beside the title. Reuses the unpaginated
-	// ["reports"] cache the detail toolbar already loads for prev/next, so it
-	// adds no fetch when a report is open.
-	const allReports = useQuery({
-		queryKey: ["reports"],
-		queryFn: () => api.listReports(),
-	});
-	const tabCount = (allReports.data ?? []).filter(
-		(report) => tab === "all" || report.templateId === tab,
-	).length;
-
 	// Auxiliary filters (local). Off by default: empty period keeps everything,
 	// project "all" keeps all. Filters are applied server-side so each fetched
 	// page is populated even when the result set is skewed.
@@ -382,9 +371,13 @@ export function ReportList({
 					<h2 className="font-heading truncate text-base font-semibold tracking-tight">
 						{title}
 					</h2>
-					{allReports.data && (
+					{/* The list is paginated, so the exact total is only known once
+					    every page is loaded — small tabs load fully on the first page,
+					    larger ones fill in as you scroll. Avoids a second unpaginated
+					    fetch just to show a number. */}
+					{!reports.isPending && !reports.hasNextPage && (
 						<span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-							{tabCount}
+							{list.length}
 						</span>
 					)}
 					{archived && (
