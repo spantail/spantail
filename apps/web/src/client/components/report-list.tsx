@@ -159,12 +159,13 @@ function ReportNewButton({
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-56">
-					<DropdownMenuLabel className="text-muted-foreground/70 text-[11px] font-medium tracking-wider uppercase">
+					<DropdownMenuLabel className="text-muted-foreground/70 px-2 py-1.5 text-[11px] font-medium tracking-wider uppercase">
 						{t("reports.newFromTemplate")}
 					</DropdownMenuLabel>
 					{templates.map((template) => (
 						<DropdownMenuItem
 							key={template.id}
+							className="gap-2.5 px-2 py-1.5"
 							onClick={() => onCreate(template)}
 						>
 							<Dot hue={templateHue(template.id)} />

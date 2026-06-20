@@ -131,14 +131,14 @@ export function ReportToolbar({
 				<DropdownMenuContent align="start" className="w-48">
 					{/* Mobile only: the actions promoted to the bar on desktop. */}
 					<DropdownMenuItem
-						className="md:hidden"
+						className="gap-2.5 px-2 py-1.5 md:hidden"
 						onSelect={() => setSending(true)}
 					>
 						<SendIcon />
 						{t("reports.send.sendAction")}
 					</DropdownMenuItem>
 					<DropdownMenuItem
-						className="md:hidden"
+						className="gap-2.5 px-2 py-1.5 md:hidden"
 						onSelect={() => setSharing(true)}
 					>
 						<Share2Icon />
@@ -146,7 +146,7 @@ export function ReportToolbar({
 					</DropdownMenuItem>
 					{!readOnly && (
 						<DropdownMenuItem
-							className="md:hidden"
+							className="gap-2.5 px-2 py-1.5 md:hidden"
 							onClick={() => openDuplicate(report)}
 						>
 							<PlusIcon />
@@ -155,18 +155,25 @@ export function ReportToolbar({
 					)}
 					<DropdownMenuSeparator className="md:hidden" />
 					{!readOnly && (
-						<DropdownMenuItem onClick={() => openEdit(report)}>
+						<DropdownMenuItem
+							className="gap-2.5 px-2 py-1.5"
+							onClick={() => openEdit(report)}
+						>
 							<PencilIcon />
 							{t("reports.editAction")}
 						</DropdownMenuItem>
 					)}
-					<DropdownMenuItem onSelect={() => downloadReportMarkdown(report)}>
+					<DropdownMenuItem
+						className="gap-2.5 px-2 py-1.5"
+						onSelect={() => downloadReportMarkdown(report)}
+					>
 						<DownloadIcon />
 						{t("reports.view.downloadAction")}
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						variant="destructive"
+						className="gap-2.5 px-2 py-1.5"
 						onSelect={() => setDeleting(true)}
 					>
 						<Trash2Icon />
