@@ -191,7 +191,7 @@
 			"createAction": "Create the first {{template}} report"
 		},
 		"tab": {
-			"all": "All"
+			"all": "All reports"
 		},
 		"rail": {
 			"library": "Reports",

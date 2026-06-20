@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueries, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	formatDuration,
@@ -139,7 +139,7 @@ function ReportNewButton({
 		<div className="flex items-stretch">
 			<Button
 				size="sm"
-				className="h-8 rounded-r-none pr-2 pl-2.5"
+				className="h-8 rounded-r-none border-r-0 pr-2 pl-2.5"
 				disabled={!createTarget}
 				aria-label={t("reports.newAction")}
 				title={t("reports.newAction")}
@@ -151,7 +151,7 @@ function ReportNewButton({
 				<DropdownMenuTrigger asChild>
 					<Button
 						size="sm"
-						className="border-primary-foreground/20 h-8 rounded-l-none border-l px-1.5"
+						className="border-l-primary-foreground/20 h-8 rounded-l-none px-1.5"
 						disabled={templates.length === 0}
 						aria-label={t("reports.newFromTemplateAction")}
 					>
@@ -190,6 +190,17 @@ export function ReportList({
 	const { openCreate } = useReportDialogs();
 	const { templateById, enabledTemplates, templatesReady, createTargetForTab } =
 		useReportTemplates();
+
+	// Total reports for the tab, shown beside the title. Reuses the unpaginated
+	// ["reports"] cache the detail toolbar already loads for prev/next, so it
+	// adds no fetch when a report is open.
+	const allReports = useQuery({
+		queryKey: ["reports"],
+		queryFn: () => api.listReports(),
+	});
+	const tabCount = (allReports.data ?? []).filter(
+		(report) => tab === "all" || report.templateId === tab,
+	).length;
 
 	// Auxiliary filters (local). Off by default: empty period keeps everything,
 	// project "all" keeps all. Filters are applied server-side so each fetched
@@ -366,25 +377,33 @@ export function ReportList({
 
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			<div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
-				<h2 className="font-heading min-w-0 truncate text-base font-semibold tracking-tight">
-					{title}
+			<div className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+				<div className="flex min-w-0 flex-1 items-baseline gap-2">
+					<h2 className="font-heading truncate text-base font-semibold tracking-tight">
+						{title}
+					</h2>
+					{allReports.data && (
+						<span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+							{tabCount}
+						</span>
+					)}
 					{archived && (
-						<span className="text-muted-foreground ml-1.5 text-xs font-normal">
+						<span className="text-muted-foreground shrink-0 text-xs font-normal">
 							({t("reports.archived")})
 						</span>
 					)}
-				</h2>
+				</div>
 				<div className="flex shrink-0 items-center gap-1">
 					<Popover>
 						<PopoverTrigger asChild>
 							<Button
-								variant={activeFilterCount ? "secondary" : "ghost"}
+								variant={activeFilterCount ? "secondary" : "outline"}
 								size="sm"
 								className="h-8"
+								aria-label={t("reports.filterAction")}
+								title={t("reports.filterAction")}
 							>
 								<SlidersHorizontalIcon className="size-3.5" />
-								{t("reports.filterAction")}
 								{activeFilterCount > 0 && (
 									<span className="bg-foreground text-background ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
 										{activeFilterCount}

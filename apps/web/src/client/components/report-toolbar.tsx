@@ -74,7 +74,7 @@ export function ReportToolbar({
 			<Button
 				variant="ghost"
 				size="icon"
-				className="size-9"
+				className="text-muted-foreground size-9"
 				aria-label={t("reports.toolbar.close")}
 				title={t("reports.toolbar.close")}
 				onClick={close}
@@ -82,12 +82,13 @@ export function ReportToolbar({
 				<XIcon />
 			</Button>
 			<div className="bg-border mx-1 h-5 w-px" aria-hidden />
-			{/* Frequently used actions sit directly in the bar; the rest collapse
-			    into the overflow menu so it stays compact on narrow widths. */}
+			{/* Frequently used actions sit directly in the bar on desktop; on the
+			    mobile full-width detail view they fold into the overflow menu so the
+			    prev/next controls always stay on-screen. */}
 			<Button
 				variant="ghost"
 				size="icon"
-				className="size-9"
+				className="text-muted-foreground hidden size-9 md:inline-flex"
 				aria-label={t("reports.send.sendAction")}
 				title={t("reports.send.sendAction")}
 				onClick={() => setSending(true)}
@@ -97,7 +98,7 @@ export function ReportToolbar({
 			<Button
 				variant="ghost"
 				size="icon"
-				className="size-9"
+				className="text-muted-foreground hidden size-9 md:inline-flex"
 				aria-label={t("reports.shares.shareAction")}
 				title={t("reports.shares.shareAction")}
 				onClick={() => setSharing(true)}
@@ -108,7 +109,7 @@ export function ReportToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-9"
+					className="text-muted-foreground hidden size-9 md:inline-flex"
 					aria-label={t("reports.duplicateAction")}
 					title={t("reports.duplicateAction")}
 					onClick={() => openDuplicate(report)}
@@ -121,13 +122,38 @@ export function ReportToolbar({
 					<Button
 						variant="ghost"
 						size="icon"
-						className="size-9"
+						className="text-muted-foreground size-9"
 						aria-label={t("reports.moreActions")}
 					>
 						<MoreVerticalIcon />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-48">
+					{/* Mobile only: the actions promoted to the bar on desktop. */}
+					<DropdownMenuItem
+						className="md:hidden"
+						onSelect={() => setSending(true)}
+					>
+						<SendIcon />
+						{t("reports.send.sendAction")}
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						className="md:hidden"
+						onSelect={() => setSharing(true)}
+					>
+						<Share2Icon />
+						{t("reports.shares.shareAction")}
+					</DropdownMenuItem>
+					{!readOnly && (
+						<DropdownMenuItem
+							className="md:hidden"
+							onClick={() => openDuplicate(report)}
+						>
+							<PlusIcon />
+							{t("reports.duplicateAction")}
+						</DropdownMenuItem>
+					)}
+					<DropdownMenuSeparator className="md:hidden" />
 					{!readOnly && (
 						<DropdownMenuItem onClick={() => openEdit(report)}>
 							<PencilIcon />
@@ -161,7 +187,7 @@ export function ReportToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-9"
+					className="text-muted-foreground size-9"
 					aria-label={t("reports.toolbar.prev")}
 					title={t("reports.toolbar.prev")}
 					disabled={!prev}
@@ -172,7 +198,7 @@ export function ReportToolbar({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="size-9"
+					className="text-muted-foreground size-9"
 					aria-label={t("reports.toolbar.next")}
 					title={t("reports.toolbar.next")}
 					disabled={!next}
