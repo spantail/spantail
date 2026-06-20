@@ -121,7 +121,6 @@
 		"editAction": "編集",
 		"deleteAction": "削除",
 		"closeAction": "閉じる",
-		"loggedBy": "{{name}} さんが記録",
 		"source": "登録元",
 		"sources": {
 			"web": "Web",

@@ -121,7 +121,6 @@
 		"editAction": "Edit",
 		"deleteAction": "Delete",
 		"closeAction": "Close",
-		"loggedBy": "Logged by {{name}}",
 		"source": "Logged via",
 		"sources": {
 			"web": "Web",
