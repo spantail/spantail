@@ -150,6 +150,8 @@
 		"back": "Back to",
 		"backToWorkspace": "Back to {{name}}",
 		"newAction": "New report",
+		"newFromTemplate": "New from template",
+		"newFromTemplateAction": "New report from template",
 		"newTitle": "New report",
 		"editTitle": "Edit report",
 		"duplicateTitle": "Duplicate report",
@@ -208,6 +210,7 @@
 		"delete": {
 			"title": "Delete this report?",
 			"description": "This permanently deletes the report and its share links. This cannot be undone.",
+			"descriptionNamed": "“{{name}}” will be permanently deleted, along with its share links. This cannot be undone.",
 			"confirm": "Delete",
 			"cancel": "Cancel"
 		},

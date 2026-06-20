@@ -150,6 +150,8 @@
 		"back": "戻る",
 		"backToWorkspace": "{{name}} に戻る",
 		"newAction": "新規レポート",
+		"newFromTemplate": "テンプレートから作成",
+		"newFromTemplateAction": "テンプレートから新規レポート",
 		"newTitle": "レポートを作成",
 		"editTitle": "レポートを編集",
 		"duplicateTitle": "レポートを複製",
@@ -208,6 +210,7 @@
 		"delete": {
 			"title": "このレポートを削除しますか?",
 			"description": "レポートと共有リンクを完全に削除します。元に戻せません。",
+			"descriptionNamed": "「{{name}}」と共有リンクを完全に削除します。元に戻せません。",
 			"confirm": "削除",
 			"cancel": "キャンセル"
 		},
