@@ -77,7 +77,9 @@ export function DashboardStats({
 	});
 
 	const chartCol = layout === "split" ? "lg:col-span-3" : undefined;
-	const donutCol = layout === "split" ? "lg:col-span-2" : undefined;
+	// The donut keeps the same 2/5 width in both layouts; in `stacked` the row is
+	// a 5-col grid (donut + 3-col aside), matching the project detail "By member".
+	const donutCol = "lg:col-span-2";
 
 	// Arrange the two widgets per layout. The aside renders in both states so
 	// the inbox shows immediately rather than waiting on the stats query.
@@ -85,9 +87,9 @@ export function DashboardStats({
 		layout === "stacked" ? (
 			<div className="flex flex-col gap-4">
 				{chart}
-				<div className="grid gap-4 lg:grid-cols-2">
+				<div className="grid gap-4 lg:grid-cols-5">
 					{donut}
-					{aside}
+					<div className="lg:col-span-3">{aside}</div>
 				</div>
 			</div>
 		) : (
