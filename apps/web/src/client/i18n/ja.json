@@ -53,7 +53,8 @@
 		"projectsEmpty": "稼働中のプロジェクトはありません",
 		"reports": "レポート",
 		"settings": "設定",
-		"account": "アカウント"
+		"account": "アカウント",
+		"userMenu": "ユーザーメニュー"
 	},
 	"projects": {
 		"notFound": "このワークスペースにプロジェクトが見つかりません。",

@@ -28,6 +28,7 @@ export function NavUser({ user }: { user: AuthUser }) {
 				<Button
 					variant="ghost"
 					size="icon"
+					aria-label={t("nav.userMenu")}
 					className="rounded-full data-[state=open]:bg-accent"
 				>
 					<PersonAvatar name={user.name} size={32} />

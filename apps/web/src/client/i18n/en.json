@@ -53,7 +53,8 @@
 		"projectsEmpty": "No active projects yet",
 		"reports": "Reports",
 		"settings": "Settings",
-		"account": "Account"
+		"account": "Account",
+		"userMenu": "User menu"
 	},
 	"projects": {
 		"notFound": "Project not found in this workspace.",
