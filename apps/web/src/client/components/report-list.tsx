@@ -4,8 +4,14 @@ import {
 	formatDuration,
 	formatPeriodLabel,
 	type ReportMeta,
+	type ReportTemplate,
 } from "@toxil/core";
-import { FileTextIcon, PlusIcon, SlidersHorizontalIcon } from "lucide-react";
+import {
+	ChevronDownIcon,
+	FileTextIcon,
+	PlusIcon,
+	SlidersHorizontalIcon,
+} from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +20,13 @@ import { FilterChip } from "@/components/filter-chip";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { useReportDialogs } from "@/components/report-dialogs";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -107,6 +120,60 @@ function ReportListItem({
 				)}
 			</span>
 		</Link>
+	);
+}
+
+/** Split "New report" button: the primary half creates from the tab's default
+ *  template; the chevron opens a menu to start from any enabled template. */
+function ReportNewButton({
+	createTarget,
+	templates,
+	onCreate,
+}: {
+	createTarget: ReportTemplate | undefined;
+	templates: ReportTemplate[];
+	onCreate: (template: ReportTemplate) => void;
+}) {
+	const { t } = useTranslation();
+	return (
+		<div className="flex items-stretch">
+			<Button
+				size="sm"
+				className="h-8 rounded-r-none pr-2 pl-2.5"
+				disabled={!createTarget}
+				aria-label={t("reports.newAction")}
+				title={t("reports.newAction")}
+				onClick={() => createTarget && onCreate(createTarget)}
+			>
+				<PlusIcon className="size-3.5" />
+			</Button>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						size="sm"
+						className="border-primary-foreground/20 h-8 rounded-l-none border-l px-1.5"
+						disabled={templates.length === 0}
+						aria-label={t("reports.newFromTemplateAction")}
+					>
+						<ChevronDownIcon className="size-3.5" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-56">
+					<DropdownMenuLabel className="text-muted-foreground/70 text-[11px] font-medium tracking-wider uppercase">
+						{t("reports.newFromTemplate")}
+					</DropdownMenuLabel>
+					{templates.map((template) => (
+						<DropdownMenuItem
+							key={template.id}
+							onClick={() => onCreate(template)}
+						>
+							<Dot hue={templateHue(template.id)} />
+							<span className="truncate">{template.name}</span>
+						</DropdownMenuItem>
+					))}
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</div>
 	);
 }
 
@@ -397,16 +464,11 @@ export function ReportList({
 							</div>
 						</PopoverContent>
 					</Popover>
-					<Button
-						size="icon"
-						className="size-8"
-						disabled={!createTarget}
-						aria-label={t("reports.newAction")}
-						title={t("reports.newAction")}
-						onClick={() => createTarget && openCreate(createTarget)}
-					>
-						<PlusIcon className="size-3.5" />
-					</Button>
+					<ReportNewButton
+						createTarget={createTarget}
+						templates={enabledTemplates}
+						onCreate={openCreate}
+					/>
 				</div>
 			</div>
 

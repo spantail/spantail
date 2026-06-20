@@ -27,11 +27,14 @@ export function DeleteReportConfirm({
 	open,
 	onOpenChange,
 	reportId,
+	reportName,
 	onDeleted,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	reportId: string;
+	/** When known, the description names the report being deleted. */
+	reportName?: string;
 	onDeleted: () => void;
 }) {
 	const { t } = useTranslation();
@@ -52,7 +55,9 @@ export function DeleteReportConfirm({
 				<AlertDialogHeader>
 					<AlertDialogTitle>{t("reports.delete.title")}</AlertDialogTitle>
 					<AlertDialogDescription>
-						{t("reports.delete.description")}
+						{reportName
+							? t("reports.delete.descriptionNamed", { name: reportName })
+							: t("reports.delete.description")}
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>

@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import type { Report, ReportMeta } from "@toxil/core";
 import {
-	ChevronLeftIcon,
+	ArrowLeftIcon,
 	ChevronRightIcon,
-	CopyPlusIcon,
 	DownloadIcon,
-	MoreHorizontalIcon,
+	MoreVerticalIcon,
 	PencilIcon,
+	PlusIcon,
 	SendIcon,
 	Share2Icon,
 	Trash2Icon,
@@ -82,9 +82,40 @@ export function ReportToolbar({
 				<XIcon />
 			</Button>
 			<div className="bg-border mx-1 h-5 w-px" aria-hidden />
-			{/* Secondary actions collapse into an overflow menu so the bar stays
-			    compact — at mobile widths the explicit buttons would push the
-			    prev/next group off-screen. */}
+			{/* Frequently used actions sit directly in the bar; the rest collapse
+			    into the overflow menu so it stays compact on narrow widths. */}
+			<Button
+				variant="ghost"
+				size="icon"
+				className="size-9"
+				aria-label={t("reports.send.sendAction")}
+				title={t("reports.send.sendAction")}
+				onClick={() => setSending(true)}
+			>
+				<SendIcon />
+			</Button>
+			<Button
+				variant="ghost"
+				size="icon"
+				className="size-9"
+				aria-label={t("reports.shares.shareAction")}
+				title={t("reports.shares.shareAction")}
+				onClick={() => setSharing(true)}
+			>
+				<Share2Icon />
+			</Button>
+			{!readOnly && (
+				<Button
+					variant="ghost"
+					size="icon"
+					className="size-9"
+					aria-label={t("reports.duplicateAction")}
+					title={t("reports.duplicateAction")}
+					onClick={() => openDuplicate(report)}
+				>
+					<PlusIcon />
+				</Button>
+			)}
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -93,30 +124,20 @@ export function ReportToolbar({
 						className="size-9"
 						aria-label={t("reports.moreActions")}
 					>
-						<MoreHorizontalIcon />
+						<MoreVerticalIcon />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-48">
-					<DropdownMenuItem onSelect={() => setSending(true)}>
-						<SendIcon />
-						{t("reports.send.sendAction")}
-					</DropdownMenuItem>
-					<DropdownMenuItem onSelect={() => setSharing(true)}>
-						<Share2Icon />
-						{t("reports.shares.shareAction")}
-					</DropdownMenuItem>
-					{!readOnly && (
-						<DropdownMenuItem onClick={() => openDuplicate(report)}>
-							<CopyPlusIcon />
-							{t("reports.duplicateAction")}
-						</DropdownMenuItem>
-					)}
 					{!readOnly && (
 						<DropdownMenuItem onClick={() => openEdit(report)}>
 							<PencilIcon />
 							{t("reports.editAction")}
 						</DropdownMenuItem>
 					)}
+					<DropdownMenuItem onSelect={() => downloadReportMarkdown(report)}>
+						<DownloadIcon />
+						{t("reports.view.downloadAction")}
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						variant="destructive"
@@ -127,19 +148,6 @@ export function ReportToolbar({
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
-			<Button
-				variant="outline"
-				size="sm"
-				className="ml-1 h-9"
-				aria-label={t("reports.view.downloadAction")}
-				title={t("reports.view.downloadAction")}
-				onClick={() => downloadReportMarkdown(report)}
-			>
-				<DownloadIcon />
-				<span className="hidden lg:inline">
-					{t("reports.view.downloadAction")}
-				</span>
-			</Button>
 
 			<div className="ml-auto flex items-center gap-1">
 				{index >= 0 && items.length > 0 && (
@@ -159,7 +167,7 @@ export function ReportToolbar({
 					disabled={!prev}
 					onClick={() => prev && open(prev.id)}
 				>
-					<ChevronLeftIcon />
+					<ArrowLeftIcon />
 				</Button>
 				<Button
 					variant="ghost"
@@ -178,6 +186,7 @@ export function ReportToolbar({
 				open={deleting}
 				onOpenChange={setDeleting}
 				reportId={report.id}
+				reportName={report.name}
 				onDeleted={close}
 			/>
 			{sending && (
