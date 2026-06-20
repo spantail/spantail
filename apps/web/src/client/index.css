@@ -138,3 +138,13 @@
 		@apply font-sans;
 	}
 }
+
+/* Taller dropdown rows to match the design mockup. Override the shadcn
+   component's default vertical padding via its data-slot hook (no TSX edits).
+   Left unlayered so it wins over the component's layered `py-1` utility. */
+[data-slot="dropdown-menu-item"],
+[data-slot="dropdown-menu-checkbox-item"],
+[data-slot="dropdown-menu-radio-item"],
+[data-slot="dropdown-menu-sub-trigger"] {
+	@apply py-1.5;
+}
