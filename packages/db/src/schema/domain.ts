@@ -21,6 +21,7 @@ export const workspaces = sqliteTable("workspaces", {
 	slug: text("slug").notNull().unique(),
 	name: text("name").notNull(),
 	timezone: text("timezone").notNull(),
+	accentColor: text("accent_color").notNull().default("neutral"),
 	settings: text("settings", { mode: "json" })
 		.$type<Record<string, unknown>>()
 		.notNull()

@@ -46,6 +46,16 @@ export function WorkspaceProvider({
 		localStorage.setItem(STORAGE_KEY, current.id);
 	}, [current]);
 
+	// Apply the active workspace's accent color theme to the document. The
+	// [data-accent] attribute drives the OKLCH theme tokens in index.css, so the
+	// whole app recolors when the workspace (or its setting) changes.
+	useEffect(() => {
+		document.documentElement.setAttribute(
+			"data-accent",
+			current?.accentColor ?? "neutral",
+		);
+	}, [current?.accentColor]);
+
 	return (
 		<WorkspaceContext.Provider
 			value={{ workspaces, current, setCurrentId: setSelectedId }}

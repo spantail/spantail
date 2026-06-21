@@ -6,6 +6,7 @@ import {
 	KeyIcon,
 	KeyRoundIcon,
 	MailIcon,
+	PaletteIcon,
 	SettingsIcon,
 	ShieldIcon,
 	SlidersHorizontalIcon,
@@ -23,6 +24,7 @@ interface SettingsNavItem {
 		| "/settings/general"
 		| "/settings/projects"
 		| "/settings/members"
+		| "/settings/appearance"
 		| "/settings/templates"
 		| "/settings/tokens"
 		| "/settings/authentication"
@@ -62,6 +64,11 @@ const GROUPS: SettingsNavGroup[] = [
 				to: "/settings/members",
 				labelKey: "settings.nav.members",
 				icon: UsersIcon,
+			},
+			{
+				to: "/settings/appearance",
+				labelKey: "settings.nav.appearance",
+				icon: PaletteIcon,
 			},
 		],
 	},

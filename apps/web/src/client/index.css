@@ -52,26 +52,37 @@
 	--radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Color tokens are derived from a workspace accent theme. `--th` (theme hue)
+   and `--tc` (neutral tint chroma) are set by the [data-accent] blocks below,
+   so neutrals, surfaces, borders and the brand accent all shift together. The
+   default (neutral / no attribute) keeps `--tc: 0`, reproducing the original
+   achromatic palette exactly; only `--brand-*` differs per accent. */
 :root {
+	--th: 0;
+	--tc: 0;
+	--brand-c: 0;
+	--brand-l: 0.45;
+	--brand-l-d: 0.72;
+
 	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
+	--foreground: oklch(0.145 calc(var(--tc) * 1.4) var(--th));
 	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
+	--card-foreground: oklch(0.145 calc(var(--tc) * 1.4) var(--th));
 	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
+	--popover-foreground: oklch(0.145 calc(var(--tc) * 1.4) var(--th));
 	--primary: oklch(0.205 0 0);
 	--primary-foreground: oklch(0.985 0 0);
-	--brand: oklch(0.535 0.205 264);
+	--brand: oklch(var(--brand-l) var(--brand-c) var(--th));
 	--brand-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
+	--secondary: oklch(0.97 calc(var(--tc) * 2) var(--th));
 	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
+	--muted: oklch(0.97 calc(var(--tc) * 2) var(--th));
+	--muted-foreground: oklch(0.556 var(--tc) var(--th));
+	--accent: oklch(0.97 calc(var(--tc) * 2) var(--th));
 	--accent-foreground: oklch(0.205 0 0);
 	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
+	--border: oklch(0.922 calc(var(--tc) * 2.2) var(--th));
+	--input: oklch(0.922 calc(var(--tc) * 2.2) var(--th));
 	--ring: oklch(0.708 0 0);
 	--chart-1: oklch(0.87 0 0);
 	--chart-2: oklch(0.556 0 0);
@@ -79,32 +90,32 @@
 	--chart-4: oklch(0.371 0 0);
 	--chart-5: oklch(0.269 0 0);
 	--radius: 0.625rem;
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.145 0 0);
+	--sidebar: oklch(0.985 calc(var(--tc) * 1.6) var(--th));
+	--sidebar-foreground: oklch(0.145 calc(var(--tc) * 1.4) var(--th));
 	--sidebar-primary: oklch(0.205 0 0);
 	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.97 0 0);
+	--sidebar-accent: oklch(0.97 calc(var(--tc) * 2) var(--th));
 	--sidebar-accent-foreground: oklch(0.205 0 0);
-	--sidebar-border: oklch(0.922 0 0);
+	--sidebar-border: oklch(0.922 calc(var(--tc) * 2.2) var(--th));
 	--sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
-	--background: oklch(0.145 0 0);
+	--background: oklch(0.145 calc(var(--tc) * 2.2) var(--th));
 	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
+	--card: oklch(0.205 calc(var(--tc) * 2.2) var(--th));
 	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
+	--popover: oklch(0.205 calc(var(--tc) * 2.2) var(--th));
 	--popover-foreground: oklch(0.985 0 0);
 	--primary: oklch(0.922 0 0);
 	--primary-foreground: oklch(0.205 0 0);
-	--brand: oklch(0.62 0.19 264);
+	--brand: oklch(var(--brand-l-d) var(--brand-c) var(--th));
 	--brand-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.269 0 0);
+	--secondary: oklch(0.269 calc(var(--tc) * 3) var(--th));
 	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
+	--muted: oklch(0.269 calc(var(--tc) * 3) var(--th));
+	--muted-foreground: oklch(0.708 var(--tc) var(--th));
+	--accent: oklch(0.269 calc(var(--tc) * 3) var(--th));
 	--accent-foreground: oklch(0.985 0 0);
 	--destructive: oklch(0.704 0.191 22.216);
 	--border: oklch(1 0 0 / 10%);
@@ -115,14 +126,81 @@
 	--chart-3: oklch(0.439 0 0);
 	--chart-4: oklch(0.371 0 0);
 	--chart-5: oklch(0.269 0 0);
-	--sidebar: oklch(0.205 0 0);
+	--sidebar: oklch(0.205 calc(var(--tc) * 2.4) var(--th));
 	--sidebar-foreground: oklch(0.985 0 0);
 	--sidebar-primary: oklch(0.488 0.243 264.376);
 	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.269 0 0);
+	--sidebar-accent: oklch(0.269 calc(var(--tc) * 3) var(--th));
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Workspace accent themes. Each sets the hue/chroma drivers consumed by the
+   token formulas above; light and dark pick `--brand-l` vs `--brand-l-d`
+   automatically. "neutral" is the achromatic default. */
+:root[data-accent="neutral"] {
+	--th: 0;
+	--tc: 0;
+	--brand-c: 0;
+	--brand-l: 0.45;
+	--brand-l-d: 0.72;
+}
+:root[data-accent="red"] {
+	--th: 25;
+	--tc: 0.008;
+	--brand-c: 0.19;
+	--brand-l: 0.58;
+	--brand-l-d: 0.64;
+}
+:root[data-accent="orange"] {
+	--th: 55;
+	--tc: 0.009;
+	--brand-c: 0.16;
+	--brand-l: 0.65;
+	--brand-l-d: 0.72;
+}
+:root[data-accent="amber"] {
+	--th: 90;
+	--tc: 0.01;
+	--brand-c: 0.14;
+	--brand-l: 0.7;
+	--brand-l-d: 0.8;
+}
+:root[data-accent="green"] {
+	--th: 150;
+	--tc: 0.008;
+	--brand-c: 0.15;
+	--brand-l: 0.6;
+	--brand-l-d: 0.7;
+}
+:root[data-accent="teal"] {
+	--th: 195;
+	--tc: 0.008;
+	--brand-c: 0.1;
+	--brand-l: 0.6;
+	--brand-l-d: 0.7;
+}
+:root[data-accent="blue"] {
+	--th: 250;
+	--tc: 0.007;
+	--brand-c: 0.16;
+	--brand-l: 0.55;
+	--brand-l-d: 0.64;
+}
+:root[data-accent="violet"] {
+	--th: 295;
+	--tc: 0.008;
+	--brand-c: 0.18;
+	--brand-l: 0.55;
+	--brand-l-d: 0.64;
+}
+:root[data-accent="pink"] {
+	--th: 345;
+	--tc: 0.008;
+	--brand-c: 0.18;
+	--brand-l: 0.6;
+	--brand-l-d: 0.66;
 }
 
 @layer base {

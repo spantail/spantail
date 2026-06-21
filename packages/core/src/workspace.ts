@@ -5,11 +5,28 @@ import { slugSchema, timezoneSchema } from "./common";
 export const workspaceRoleSchema = z.enum(["owner", "admin", "member"]);
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
 
+// Accent color theme, scoped to a workspace and shared by all its members.
+// "neutral" (achromatic) is the default; the rest are well-separated hues for
+// at-a-glance workspace identification. Drives the [data-accent] CSS theme.
+export const workspaceAccentColorSchema = z.enum([
+	"neutral",
+	"red",
+	"orange",
+	"amber",
+	"green",
+	"teal",
+	"blue",
+	"violet",
+	"pink",
+]);
+export type WorkspaceAccentColor = z.infer<typeof workspaceAccentColorSchema>;
+
 export const workspaceSchema = z.object({
 	id: z.string(),
 	slug: slugSchema,
 	name: z.string().min(1).max(100),
 	timezone: timezoneSchema,
+	accentColor: workspaceAccentColorSchema,
 	settings: z.record(z.string(), z.unknown()),
 	createdAt: z.string(),
 	archivedAt: z.string().nullable(),
@@ -28,6 +45,7 @@ export const updateWorkspaceInputSchema = z
 		slug: slugSchema,
 		name: z.string().min(1).max(100),
 		timezone: timezoneSchema,
+		accentColor: workspaceAccentColorSchema,
 		archived: z.boolean(),
 	})
 	.partial();
