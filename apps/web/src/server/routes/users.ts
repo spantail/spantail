@@ -7,6 +7,7 @@ import {
 import {
 	countAdmins,
 	deleteUser,
+	deleteUserSessions,
 	findUserByEmail,
 	getInstanceSettings,
 	getOauthProvidersForUser,
@@ -36,6 +37,7 @@ function toManagedUser(
 		email: row.email,
 		isAdmin: row.isAdmin ?? false,
 		canManageTemplates: row.canManageTemplates ?? false,
+		disabled: row.disabled ?? false,
 		createdAt: row.createdAt.toISOString(),
 		providers,
 	};
@@ -82,6 +84,7 @@ export const userRoutes = new Hono<AppEnv>()
 		await updateUser(c.var.db, userId, {
 			emailVerified: true,
 			...(input.grantAdmin ? { isAdmin: true } : {}),
+			...(input.grantTemplateAuthor ? { canManageTemplates: true } : {}),
 		});
 
 		const created = await getUserById(c.var.db, userId);
@@ -116,15 +119,33 @@ export const userRoutes = new Hono<AppEnv>()
 			}
 		}
 
+		// Disable guards: never lock yourself out, and never disable the last
+		// instance admin (which would also lock everyone out of system management).
+		if (input.disabled === true && !(target.disabled ?? false)) {
+			if (target.id === actor.id) {
+				throw new AppError("forbidden", "You cannot disable your own account");
+			}
+			if ((target.isAdmin ?? false) && (await countAdmins(c.var.db)) <= 1) {
+				throw new AppError(
+					"forbidden",
+					"Cannot disable the last instance admin",
+				);
+			}
+		}
+
 		const patch: Partial<
-			Pick<UserRow, "name" | "isAdmin" | "canManageTemplates">
+			Pick<UserRow, "name" | "isAdmin" | "canManageTemplates" | "disabled">
 		> = {};
 		if (input.name !== undefined) patch.name = input.name;
 		if (input.isAdmin !== undefined) patch.isAdmin = input.isAdmin;
 		if (input.canManageTemplates !== undefined)
 			patch.canManageTemplates = input.canManageTemplates;
+		if (input.disabled !== undefined) patch.disabled = input.disabled;
 		const updated = await updateUser(c.var.db, id, patch);
 		if (!updated) throw new AppError("not_found", "User not found");
+		// Disabling must lock the account out immediately, including Better Auth's
+		// own session endpoints the SPA route guards call, so drop its sessions.
+		if (input.disabled === true) await deleteUserSessions(c.var.db, id);
 		const providers = await getOauthProvidersForUser(c.var.db, updated.id);
 		return c.json(toManagedUser(updated, providers));
 	})

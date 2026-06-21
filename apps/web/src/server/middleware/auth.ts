@@ -24,7 +24,9 @@ export const loadAuth = createMiddleware<AppEnv>(async (c, next) => {
 
 	const auth = createAuth(c.env, c.var.db);
 	const session = await auth.api.getSession({ headers: c.req.raw.headers });
-	if (session) {
+	// A disabled account is locked out immediately: ignore its still-valid
+	// session so every authenticated route sees an anonymous caller (401).
+	if (session && !session.user.disabled) {
 		const { id, name, email, isAdmin, canManageTemplates } = session.user;
 		c.set("auth", {
 			user: {
@@ -54,6 +56,9 @@ async function resolvePat(
 	}
 	const user = await getUserById(c.var.db, row.userId);
 	if (!user) throw new AppError("unauthorized", "Invalid API token");
+	// Disabled accounts are locked out immediately, including their API tokens.
+	if (user.disabled)
+		throw new AppError("unauthorized", "This account is disabled");
 
 	const lastUsed = row.lastUsedAt?.getTime() ?? 0;
 	if (Date.now() - lastUsed > LAST_USED_THROTTLE_MS) {

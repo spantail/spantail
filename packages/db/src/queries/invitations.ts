@@ -12,6 +12,7 @@ export async function createInvitation(
 		tokenHash: string;
 		invitedByUserId: string;
 		grantAdmin: boolean;
+		grantCanManageTemplates: boolean;
 		expiresAt: Date;
 	},
 ): Promise<InvitationRow> {

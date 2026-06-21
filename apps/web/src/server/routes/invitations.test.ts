@@ -98,6 +98,42 @@ it("invites a user, who accepts and signs in", async () => {
 	expect(signIn.status).toBe(200);
 });
 
+it("grants the template-author capability on accept", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	await enableEmail(admin);
+
+	const invited = await apiJson(
+		"POST",
+		"/api/v1/invitations",
+		{ email: "author@example.com", grantTemplateAuthor: true },
+		admin,
+	);
+	expect(invited.status).toBe(201);
+	// The pending invitation echoes the grant for the admin list.
+	const pending = (await (
+		await apiGet("/api/v1/invitations", admin)
+	).json()) as { grantTemplateAuthor: boolean }[];
+	expect(pending[0]?.grantTemplateAuthor).toBe(true);
+
+	const token = lastInviteToken();
+	const accepted = await apiJson(
+		"POST",
+		`/api/v1/invitations/accept/${token}`,
+		{ name: "Author", password: "newpassword123" },
+		undefined,
+	);
+	expect(accepted.status).toBe(201);
+
+	const users = (await (await apiGet("/api/v1/users", admin)).json()) as {
+		email: string;
+		isAdmin: boolean;
+		canManageTemplates: boolean;
+	}[];
+	const author = users.find((u) => u.email === "author@example.com");
+	expect(author?.isAdmin).toBe(false);
+	expect(author?.canManageTemplates).toBe(true);
+});
+
 it("rejects an invalid invitation token", async () => {
 	await signUpUser("Admin", "admin@example.com");
 	expect(

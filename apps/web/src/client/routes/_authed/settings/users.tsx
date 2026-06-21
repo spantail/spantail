@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+	BanIcon,
 	CheckIcon,
+	CircleCheckIcon,
 	CopyIcon,
 	FileTextIcon,
 	MoreHorizontalIcon,
@@ -86,6 +88,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 	const [email, setEmail] = useState("");
 	const [name, setName] = useState("");
 	const [grantAdmin, setGrantAdmin] = useState(false);
+	const [grantTemplateAuthor, setGrantTemplateAuthor] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [generatedPassword, setGeneratedPassword] = useState<string | null>(
 		null,
@@ -112,11 +115,13 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 		setEmail("");
 		setName("");
 		setGrantAdmin(false);
+		setGrantTemplateAuthor(false);
 		setError(null);
 	}
 
 	const createMutation = useMutation({
-		mutationFn: () => api.createUser({ email, name, grantAdmin }),
+		mutationFn: () =>
+			api.createUser({ email, name, grantAdmin, grantTemplateAuthor }),
 		onSuccess: async (created) => {
 			await queryClient.invalidateQueries({ queryKey: ["users"] });
 			setGeneratedPassword(created.generatedPassword ?? null);
@@ -127,7 +132,8 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 	});
 
 	const inviteMutation = useMutation({
-		mutationFn: () => api.createInvitation({ email, grantAdmin }),
+		mutationFn: () =>
+			api.createInvitation({ email, grantAdmin, grantTemplateAuthor }),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["invitations"] });
 			resetForm();
@@ -138,7 +144,11 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 	const updateMutation = useMutation({
 		mutationFn: (vars: {
 			id: string;
-			patch: { isAdmin?: boolean; canManageTemplates?: boolean };
+			patch: {
+				isAdmin?: boolean;
+				canManageTemplates?: boolean;
+				disabled?: boolean;
+			};
 		}) => api.updateUser(vars.id, vars.patch),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
 		onError: (err: Error) => setError(err.message),
@@ -218,6 +228,16 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 								{t("settings.users.grantAdmin")}
 							</Label>
 						</div>
+						<div className="flex items-center gap-2 text-sm">
+							<Checkbox
+								id="user-grant-template-author"
+								checked={grantTemplateAuthor}
+								onCheckedChange={(v) => setGrantTemplateAuthor(v === true)}
+							/>
+							<Label htmlFor="user-grant-template-author">
+								{t("settings.users.grantTemplateAuthor")}
+							</Label>
+						</div>
 						<div>
 							<Button type="submit" disabled={submitting}>
 								{emailEnabled
@@ -286,7 +306,10 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 							{(users.data ?? []).map((user) => {
 								const isSelf = user.id === currentUserId;
 								return (
-									<TableRow key={user.id}>
+									<TableRow
+										key={user.id}
+										className={user.disabled ? "opacity-60" : undefined}
+									>
 										<TableCell>
 											{user.name}
 											{isSelf && (
@@ -331,12 +354,18 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 														{t("settings.users.templateAuthor")}
 													</Badge>
 												)}
+												{user.disabled && (
+													<Badge variant="destructive">
+														{t("settings.users.disabled")}
+													</Badge>
+												)}
 											</span>
 										</TableCell>
 										<TableCell className="text-right">
 											<UserRowActions
 												isAdmin={user.isAdmin}
 												canManageTemplates={user.canManageTemplates}
+												isDisabled={user.disabled}
 												isSelf={isSelf}
 												disabled={updateMutation.isPending}
 												onToggleAdmin={() => {
@@ -353,6 +382,13 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 														patch: {
 															canManageTemplates: !user.canManageTemplates,
 														},
+													});
+												}}
+												onToggleDisabled={() => {
+													setError(null);
+													updateMutation.mutate({
+														id: user.id,
+														patch: { disabled: !user.disabled },
 													});
 												}}
 												onDelete={() => {
@@ -391,9 +427,17 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 									<TableRow key={invitation.id}>
 										<TableCell>{invitation.email}</TableCell>
 										<TableCell>
-											{invitation.grantAdmin
-												? t("settings.users.admin")
-												: t("settings.users.member")}
+											<span className="flex flex-wrap items-center gap-1.5">
+												{invitation.grantAdmin
+													? t("settings.users.admin")
+													: t("settings.users.member")}
+												{!invitation.grantAdmin &&
+													invitation.grantTemplateAuthor && (
+														<Badge variant="outline">
+															{t("settings.users.templateAuthor")}
+														</Badge>
+													)}
+											</span>
 										</TableCell>
 										<TableCell className="text-muted-foreground">
 											{new Date(invitation.expiresAt).toLocaleDateString()}
@@ -421,18 +465,22 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 function UserRowActions({
 	isAdmin,
 	canManageTemplates,
+	isDisabled,
 	isSelf,
 	disabled,
 	onToggleAdmin,
 	onToggleTemplateAuthor,
+	onToggleDisabled,
 	onDelete,
 }: {
 	isAdmin: boolean;
 	canManageTemplates: boolean;
+	isDisabled: boolean;
 	isSelf: boolean;
 	disabled: boolean;
 	onToggleAdmin: () => void;
 	onToggleTemplateAuthor: () => void;
+	onToggleDisabled: () => void;
 	onDelete: () => void;
 }) {
 	const { t } = useTranslation();
@@ -474,6 +522,15 @@ function UserRowActions({
 							{canManageTemplates
 								? t("settings.users.revokeTemplateAuthor")
 								: t("settings.users.makeTemplateAuthor")}
+						</DropdownMenuItem>
+					)}
+					{/* Disabling locks the account out of sign-in; not offered for self. */}
+					{!isSelf && (
+						<DropdownMenuItem disabled={disabled} onClick={onToggleDisabled}>
+							{isDisabled ? <CircleCheckIcon /> : <BanIcon />}
+							{isDisabled
+								? t("settings.users.enableUser")
+								: t("settings.users.disableUser")}
 						</DropdownMenuItem>
 					)}
 					{!isSelf && (

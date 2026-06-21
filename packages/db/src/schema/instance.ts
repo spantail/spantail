@@ -61,6 +61,13 @@ export const userInvitations = sqliteTable(
 		grantAdmin: integer("grant_admin", { mode: "boolean" })
 			.notNull()
 			.default(false),
+		// Whether accepting this invitation also grants the template-author
+		// capability (manage instance-wide report templates without being admin).
+		grantCanManageTemplates: integer("grant_can_manage_templates", {
+			mode: "boolean",
+		})
+			.notNull()
+			.default(false),
 		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
 		acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
 		createdAt: createdAtMs(),

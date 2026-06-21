@@ -22,6 +22,8 @@ export const managedUserSchema = z.object({
 	isAdmin: z.boolean(),
 	// Whether this user may manage instance-wide report templates.
 	canManageTemplates: z.boolean(),
+	// Disabled accounts cannot sign in, but remain visible to other admins.
+	disabled: z.boolean(),
 	createdAt: z.string(),
 	// Social login providers linked to this account (empty for password-only
 	// users). Lets the admin see at a glance how each user signs in.
@@ -39,6 +41,8 @@ export const createUserInputSchema = z.object({
 	email: z.email(),
 	name: userNameSchema,
 	grantAdmin: z.boolean().default(false),
+	// Grant the template-author capability on creation.
+	grantTemplateAuthor: z.boolean().default(false),
 });
 export type CreateUserInput = z.infer<typeof createUserInputSchema>;
 export type CreateUserInputData = z.input<typeof createUserInputSchema>;
@@ -55,6 +59,8 @@ export const updateUserInputSchema = z
 		name: userNameSchema,
 		isAdmin: z.boolean(),
 		canManageTemplates: z.boolean(),
+		// Disable/enable the account (blocks/restores sign-in).
+		disabled: z.boolean(),
 	})
 	.partial();
 export type UpdateUserInput = z.infer<typeof updateUserInputSchema>;

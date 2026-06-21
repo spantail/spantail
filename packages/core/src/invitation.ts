@@ -7,6 +7,8 @@ export const invitationSchema = z.object({
 	id: z.string(),
 	email: z.email(),
 	grantAdmin: z.boolean(),
+	// Whether accepting also grants the template-author capability.
+	grantTemplateAuthor: z.boolean(),
 	expiresAt: z.string(),
 	acceptedAt: z.string().nullable(),
 	createdAt: z.string(),
@@ -20,6 +22,8 @@ export const createInvitationInputSchema = z.object({
 	// its standing invitation reliably regardless of how it was typed.
 	email: z.email().toLowerCase(),
 	grantAdmin: z.boolean().default(false),
+	// Grant the template-author capability when the invitation is accepted.
+	grantTemplateAuthor: z.boolean().default(false),
 });
 export type CreateInvitationInput = z.infer<typeof createInvitationInputSchema>;
 export type CreateInvitationInputData = z.input<

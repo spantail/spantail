@@ -34,6 +34,7 @@ function toInvitation(row: InvitationRow): Invitation {
 		id: row.id,
 		email: row.email,
 		grantAdmin: row.grantAdmin,
+		grantTemplateAuthor: row.grantCanManageTemplates,
 		expiresAt: row.expiresAt.toISOString(),
 		acceptedAt: row.acceptedAt ? row.acceptedAt.toISOString() : null,
 		createdAt: row.createdAt.toISOString(),
@@ -91,6 +92,7 @@ export const invitationRoutes = new Hono<AppEnv>()
 			tokenHash: await hashInviteToken(token),
 			invitedByUserId: actor.id,
 			grantAdmin: input.grantAdmin,
+			grantCanManageTemplates: input.grantTemplateAuthor,
 			expiresAt: new Date(Date.now() + INVITE_TTL_MS),
 		});
 
@@ -145,6 +147,9 @@ export const invitationRoutes = new Hono<AppEnv>()
 		await updateUser(c.var.db, userId, {
 			emailVerified: true,
 			...(invitation.grantAdmin ? { isAdmin: true } : {}),
+			...(invitation.grantCanManageTemplates
+				? { canManageTemplates: true }
+				: {}),
 		});
 		await markInvitationAccepted(c.var.db, invitation.id);
 		return c.body(null, 201);

@@ -5,6 +5,7 @@ import {
 	type Database,
 	getInstanceSettings,
 	getPendingInvitationByEmail,
+	getUserById,
 	markInvitationAccepted,
 	schema,
 	updateUser,
@@ -163,8 +164,29 @@ export function createAuth(
 						);
 						if (!invitation) return;
 						await markInvitationAccepted(db, invitation.id);
-						if (invitation.grantAdmin) {
-							await updateUser(db, user.id, { isAdmin: true });
+						const grants = {
+							...(invitation.grantAdmin ? { isAdmin: true } : {}),
+							...(invitation.grantCanManageTemplates
+								? { canManageTemplates: true }
+								: {}),
+						};
+						if (Object.keys(grants).length > 0) {
+							await updateUser(db, user.id, grants);
+						}
+					},
+				},
+			},
+			session: {
+				create: {
+					// Block sign-in for disabled accounts at the single chokepoint every
+					// sign-in method (password and social) passes through. Mirrors the
+					// approach Better Auth's own admin plugin uses for banned users.
+					before: async (session) => {
+						const account = await getUserById(db, session.userId);
+						if (account?.disabled) {
+							throw new APIError("FORBIDDEN", {
+								message: "This account is disabled; contact an instance admin",
+							});
 						}
 					},
 				},
