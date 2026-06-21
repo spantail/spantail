@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { WorkspaceAccentColor } from "@toxil/core";
+import type { Me } from "@toxil/sdk";
 import { CheckIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -77,15 +78,31 @@ function EditAppearanceCard() {
 			if (!current) throw new Error("no workspace");
 			return api.updateWorkspace(current.id, { accentColor });
 		},
-		// Recolor the app immediately for live feedback; the provider keeps the
-		// attribute in sync once the refetched workspace lands (or on revert).
-		onMutate: (accentColor) => {
-			document.documentElement.setAttribute("data-accent", accentColor);
+		// Optimistically patch the cached workspace so the provider re-applies the
+		// accent immediately (instant preview). Roll back on error and reconcile
+		// with the server on settle. The provider stays the single source of truth
+		// for the document theme, so a failed request never leaves a stale accent
+		// applied — even if the active workspace changed while it was in flight.
+		onMutate: async (accentColor) => {
+			if (!current) return;
+			await queryClient.cancelQueries({ queryKey: ["me"] });
+			const previous = queryClient.getQueryData<Me>(["me"]);
+			queryClient.setQueryData<Me>(["me"], (old) =>
+				old
+					? {
+							...old,
+							memberships: old.memberships.map((w) =>
+								w.id === current.id ? { ...w, accentColor } : w,
+							),
+						}
+					: old,
+			);
+			return { previous };
 		},
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
-		onError: () => {
-			document.documentElement.setAttribute("data-accent", selected);
+		onError: (_err, _accentColor, context) => {
+			if (context?.previous) queryClient.setQueryData(["me"], context.previous);
 		},
+		onSettled: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
 	});
 
 	return (
