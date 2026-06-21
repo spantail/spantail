@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { hashPat, isPatFormat } from "@toxil/core";
-import { createDb, findApiTokenByHash } from "@toxil/db";
+import { createDb, findApiTokenByHash, getUserById } from "@toxil/db";
 import { ToxilClient } from "@toxil/sdk";
 import { registerToxilTools } from "@toxil/sdk/mcp";
 import { createMcpHandler } from "agents/mcp";
@@ -27,6 +27,12 @@ export function registerMcpRoute(app: Hono<AppEnv>): void {
 		if (!row || (row.expiresAt && row.expiresAt.getTime() < Date.now())) {
 			return unauthorized(c);
 		}
+		// A disabled account is locked out immediately, including its tokens; the
+		// REST middleware enforces this for /api/v1, so mirror it here before the
+		// MCP transport is established (initialize/tools-list run before any tool
+		// call would reach the loopback REST client).
+		const owner = await getUserById(db, row.userId);
+		if (!owner || owner.disabled) return unauthorized(c);
 
 		const client = new ToxilClient({
 			baseUrl: new URL(c.req.url).origin,

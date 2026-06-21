@@ -85,6 +85,41 @@ it("rejects unauthenticated mcp requests with a 401 challenge", async () => {
 	expect(badToken.status).toBe(401);
 });
 
+it("rejects an mcp token whose owner has been disabled", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	// A second user with their own PAT, who is then disabled instance-wide.
+	const mallory = await signUpUser("Mallory", "mallory@example.com");
+	const token = (
+		(await (
+			await apiJson(
+				"POST",
+				"/api/v1/tokens",
+				{ name: "mcp", scopes: ["read", "write"] },
+				mallory,
+			)
+		).json()) as { token: string }
+	).token;
+
+	const initialize = {
+		jsonrpc: "2.0",
+		id: 1,
+		method: "initialize",
+		params: {},
+	};
+	// Works while the account is active.
+	expect((await rpc(token, initialize)).status).toBe(200);
+
+	const users = (await (await apiGet("/api/v1/users", admin)).json()) as {
+		id: string;
+		email: string;
+	}[];
+	const mid = users.find((u) => u.email === "mallory@example.com")?.id ?? "";
+	await apiJson("PATCH", `/api/v1/users/${mid}`, { disabled: true }, admin);
+
+	// The token can no longer even establish the MCP transport.
+	expect((await rpc(token, initialize)).status).toBe(401);
+});
+
 it("serves the full stateless json-rpc flow and writes through the api", async () => {
 	const { cookie, ws, project, token } = await setup();
 
