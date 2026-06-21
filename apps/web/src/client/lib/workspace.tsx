@@ -48,12 +48,13 @@ export function WorkspaceProvider({
 
 	// Apply the active workspace's accent color theme to the document. The
 	// [data-accent] attribute drives the OKLCH theme tokens in index.css, so the
-	// whole app recolors when the workspace (or its setting) changes.
+	// whole app recolors when the workspace (or its setting) changes. On unmount
+	// (e.g. sign-out drops back to the login screen, which renders outside this
+	// provider) clear it so the default neutral theme applies.
 	useEffect(() => {
-		document.documentElement.setAttribute(
-			"data-accent",
-			current?.accentColor ?? "neutral",
-		);
+		const el = document.documentElement;
+		el.setAttribute("data-accent", current?.accentColor ?? "neutral");
+		return () => el.removeAttribute("data-accent");
 	}, [current?.accentColor]);
 
 	return (
