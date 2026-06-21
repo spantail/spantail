@@ -2,7 +2,7 @@ import { type OauthProvider, oauthProviderSchema } from "@toxil/core";
 import { count, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "../index";
-import { account, user } from "../schema/auth";
+import { account, session, user } from "../schema/auth";
 
 export type UserRow = typeof user.$inferSelect;
 
@@ -102,6 +102,18 @@ export async function updateUser(
 		.where(eq(user.id, id))
 		.returning();
 	return rows[0];
+}
+
+/**
+ * Removes every active session of a user. Used when disabling an account so the
+ * lockout is immediate everywhere, including Better Auth's own session
+ * endpoints (`/api/auth/get-session`) that the SPA route guards call directly.
+ */
+export async function deleteUserSessions(
+	db: Database,
+	userId: string,
+): Promise<void> {
+	await db.delete(session).where(eq(session.userId, userId));
 }
 
 export async function deleteUser(db: Database, id: string): Promise<boolean> {

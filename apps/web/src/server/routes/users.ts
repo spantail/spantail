@@ -7,6 +7,7 @@ import {
 import {
 	countAdmins,
 	deleteUser,
+	deleteUserSessions,
 	findUserByEmail,
 	getInstanceSettings,
 	getOauthProvidersForUser,
@@ -142,6 +143,9 @@ export const userRoutes = new Hono<AppEnv>()
 		if (input.disabled !== undefined) patch.disabled = input.disabled;
 		const updated = await updateUser(c.var.db, id, patch);
 		if (!updated) throw new AppError("not_found", "User not found");
+		// Disabling must lock the account out immediately, including Better Auth's
+		// own session endpoints the SPA route guards call, so drop its sessions.
+		if (input.disabled === true) await deleteUserSessions(c.var.db, id);
 		const providers = await getOauthProvidersForUser(c.var.db, updated.id);
 		return c.json(toManagedUser(updated, providers));
 	})

@@ -128,15 +128,21 @@ it("disables and re-enables an account, locking out sign-in", async () => {
 	expect(disable.status).toBe(200);
 	expect(((await disable.json()) as ManagedUser).disabled).toBe(true);
 
-	// His still-valid session is now rejected (immediate lockout).
+	// His session is revoked, so both the API middleware and Better Auth's own
+	// session endpoint (which the SPA route guards call) report no session.
 	expect((await apiGet("/api/v1/me", frankCookie)).status).toBe(401);
+	const session = await apiGet("/api/auth/get-session", frankCookie);
+	const sessionBody = (await session.json()) as unknown;
+	expect(sessionBody).toBeNull();
 
 	// A fresh sign-in is blocked too, but the account still appears in the list.
 	expect((await signIn()).status).not.toBe(200);
 	const list = (await (
 		await apiGet("/api/v1/users", admin)
 	).json()) as ManagedUser[];
-	expect(list.find((u) => u.email === "frank@example.com")?.disabled).toBe(true);
+	expect(list.find((u) => u.email === "frank@example.com")?.disabled).toBe(
+		true,
+	);
 
 	// Re-enabling restores sign-in.
 	const enable = await apiJson(
