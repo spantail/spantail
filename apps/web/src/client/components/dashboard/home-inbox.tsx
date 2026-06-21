@@ -43,7 +43,7 @@ export function HomeInbox({ className }: { className?: string }) {
 						{t("messages.folder.inbox")}
 					</CardTitle>
 					{unreadCount > 0 && (
-						<span className="bg-foreground text-background flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums">
+						<span className="bg-brand text-brand-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums">
 							{unreadCount > 99 ? "99+" : unreadCount}
 						</span>
 					)}

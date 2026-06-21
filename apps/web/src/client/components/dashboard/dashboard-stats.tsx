@@ -39,6 +39,8 @@ interface DashboardStatsProps {
 	layout?: "split" | "stacked";
 	/** Extra widget shown beside the donut in `stacked` layout (e.g. inbox). */
 	aside?: ReactNode;
+	/** Tailwind bg utility for the daily bars; defaults to neutral foreground. */
+	barClassName?: string;
 }
 
 /**
@@ -52,6 +54,7 @@ export function DashboardStats({
 	period,
 	layout = "split",
 	aside,
+	barClassName,
 }: DashboardStatsProps) {
 	const { t } = useTranslation();
 	const { current } = useWorkspace();
@@ -158,6 +161,7 @@ export function DashboardStats({
 			daily={daily}
 			total={total}
 			periodLabel={periodLabel}
+			barClassName={barClassName}
 			className={chartCol}
 		/>,
 		<Donut

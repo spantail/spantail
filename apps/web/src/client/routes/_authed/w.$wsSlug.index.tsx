@@ -88,6 +88,7 @@ function Timeline({
 				period={period}
 				layout="stacked"
 				aside={<HomeInbox />}
+				barClassName="bg-brand"
 			/>
 			<section className="flex flex-col gap-3">
 				<h2 className="font-heading text-lg font-semibold">
