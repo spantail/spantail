@@ -158,7 +158,6 @@ export function DashboardStats({
 			daily={daily}
 			total={total}
 			periodLabel={periodLabel}
-			barClassName="bg-brand"
 			className={chartCol}
 		/>,
 		<Donut
