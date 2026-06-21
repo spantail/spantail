@@ -532,6 +532,7 @@
 			"description": "言語と外観を設定します。これらはこのブラウザに適用されます。",
 			"language": "言語",
 			"theme": "テーマ",
+			"themeSystem": "システム",
 			"themeLight": "ライト",
 			"themeDark": "ダーク"
 		},

@@ -532,6 +532,7 @@
 			"description": "Set your language and appearance. These apply to this browser.",
 			"language": "Language",
 			"theme": "Theme",
+			"themeSystem": "System",
 			"themeLight": "Light",
 			"themeDark": "Dark"
 		},
