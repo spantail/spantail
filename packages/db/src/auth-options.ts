@@ -26,6 +26,14 @@ export const authOptions = {
 				defaultValue: false,
 				input: false,
 			},
+			// Disabled accounts cannot sign in; exposed on the session user so the
+			// auth middleware can lock out an account mid-session. Never settable
+			// by clients (toggled by an instance admin via the user-management API).
+			disabled: {
+				type: "boolean",
+				defaultValue: false,
+				input: false,
+			},
 		},
 	},
 } satisfies BetterAuthOptions;

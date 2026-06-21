@@ -2,12 +2,14 @@ import { env } from "cloudflare:workers";
 import { createDb, findUserByEmail, schema } from "@toxil/db";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 type ManagedUser = {
 	id: string;
 	email: string;
 	isAdmin: boolean;
+	canManageTemplates: boolean;
+	disabled: boolean;
 	providers: string[];
 	generatedPassword?: string;
 };
@@ -66,6 +68,99 @@ it("lists, creates, and grants admin (instance admin only)", async () => {
 	// A non-admin cannot manage users.
 	const eveCookie = await signUpUser("Eve", "eve@example.com");
 	expect((await apiGet("/api/v1/users", eveCookie)).status).toBe(403);
+});
+
+it("grants the template-author capability at creation", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+
+	const created = await apiJson(
+		"POST",
+		"/api/v1/users",
+		{
+			email: "ted@example.com",
+			name: "Ted",
+			grantTemplateAuthor: true,
+		},
+		admin,
+	);
+	expect(created.status).toBe(201);
+	const ted = (await created.json()) as ManagedUser;
+	expect(ted.isAdmin).toBe(false);
+	expect(ted.canManageTemplates).toBe(true);
+});
+
+it("disables and re-enables an account, locking out sign-in", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+
+	// Create Frank via the admin API so we control his password for sign-in.
+	const frank = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/users",
+			{ email: "frank@example.com", name: "Frank" },
+			admin,
+		)
+	).json()) as ManagedUser & { generatedPassword: string };
+	const signInBody = {
+		email: "frank@example.com",
+		password: frank.generatedPassword,
+	};
+	const signIn = () =>
+		appFetch("/api/auth/sign-in/email", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(signInBody),
+		});
+
+	// While active, Frank can sign in and his session works.
+	const active = await signIn();
+	expect(active.status).toBe(200);
+	const frankCookie = active.headers.get("set-cookie")?.split(";")[0] ?? "";
+	expect((await apiGet("/api/v1/me", frankCookie)).status).toBe(200);
+
+	// An admin disables Frank.
+	const disable = await apiJson(
+		"PATCH",
+		`/api/v1/users/${frank.id}`,
+		{ disabled: true },
+		admin,
+	);
+	expect(disable.status).toBe(200);
+	expect(((await disable.json()) as ManagedUser).disabled).toBe(true);
+
+	// His still-valid session is now rejected (immediate lockout).
+	expect((await apiGet("/api/v1/me", frankCookie)).status).toBe(401);
+
+	// A fresh sign-in is blocked too, but the account still appears in the list.
+	expect((await signIn()).status).not.toBe(200);
+	const list = (await (
+		await apiGet("/api/v1/users", admin)
+	).json()) as ManagedUser[];
+	expect(list.find((u) => u.email === "frank@example.com")?.disabled).toBe(true);
+
+	// Re-enabling restores sign-in.
+	const enable = await apiJson(
+		"PATCH",
+		`/api/v1/users/${frank.id}`,
+		{ disabled: false },
+		admin,
+	);
+	expect(enable.status).toBe(200);
+	expect((await signIn()).status).toBe(200);
+});
+
+it("refuses to disable your own account", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const adminMe = (await (await apiGet("/api/v1/me", admin)).json()) as {
+		user: { id: string };
+	};
+	const res = await apiJson(
+		"PATCH",
+		`/api/v1/users/${adminMe.user.id}`,
+		{ disabled: true },
+		admin,
+	);
+	expect(res.status).toBe(403);
 });
 
 it("deletes a user who authored a report template", async () => {

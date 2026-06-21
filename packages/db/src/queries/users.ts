@@ -90,7 +90,10 @@ export async function updateUser(
 	db: Database,
 	id: string,
 	patch: Partial<
-		Pick<UserRow, "name" | "isAdmin" | "emailVerified" | "canManageTemplates">
+		Pick<
+			UserRow,
+			"name" | "isAdmin" | "emailVerified" | "canManageTemplates" | "disabled"
+		>
 	>,
 ): Promise<UserRow | undefined> {
 	const rows = await db

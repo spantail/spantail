@@ -22,6 +22,10 @@ export const user = sqliteTable("user", {
 	canManageTemplates: integer("can_manage_templates", {
 		mode: "boolean",
 	}).default(false),
+	// Disabled accounts cannot sign in and their existing sessions/API tokens
+	// stop working, but their data is preserved and stays visible to others.
+	// Toggled by an instance admin; never settable by clients.
+	disabled: integer("disabled", { mode: "boolean" }).default(false),
 });
 
 export const session = sqliteTable(
