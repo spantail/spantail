@@ -19,6 +19,7 @@ function membership(
 		slug,
 		name,
 		timezone: "Asia/Tokyo",
+		accentColor: "neutral",
 		settings: {},
 		createdAt: "2026-06-01T00:00:00Z",
 		archivedAt: null,

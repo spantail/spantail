@@ -418,6 +418,7 @@
 			"general": "General",
 			"projects": "Projects",
 			"members": "Members",
+			"appearance": "Appearance",
 			"templates": "Report templates",
 			"tokens": "API tokens",
 			"authentication": "Authentication",
@@ -598,6 +599,25 @@
 		"adminBannerLead": "Instance administration.",
 		"general": {
 			"description": "Workspace name and timezone used to resolve report periods."
+		},
+		"appearance": {
+			"title": "Appearance",
+			"description": "Choose the color scheme for {{name}}. This applies to everyone in the workspace.",
+			"accentLabel": "Accent color",
+			"accentDescription": "Recolors highlights, charts and surfaces across the app.",
+			"preview": "Preview",
+			"default": "Default",
+			"colors": {
+				"neutral": "None",
+				"red": "Red",
+				"orange": "Orange",
+				"amber": "Amber",
+				"green": "Green",
+				"teal": "Teal",
+				"blue": "Blue",
+				"violet": "Violet",
+				"pink": "Pink"
+			}
 		}
 	}
 }

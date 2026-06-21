@@ -41,6 +41,7 @@ import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/sett
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
 import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
 import { Route as AuthedSettingsAuthenticationRouteImport } from './routes/_authed/settings/authentication'
+import { Route as AuthedSettingsAppearanceRouteImport } from './routes/_authed/settings/appearance'
 import { Route as AuthedWWsSlugIndexRouteImport } from './routes/_authed/w.$wsSlug.index'
 import { Route as AuthedWWsSlugProjectsProjectSlugRouteImport } from './routes/_authed/w.$wsSlug.projects.$projectSlug'
 
@@ -205,6 +206,12 @@ const AuthedSettingsAuthenticationRoute =
     path: '/authentication',
     getParentRoute: () => AuthedSettingsRoute,
   } as any)
+const AuthedSettingsAppearanceRoute =
+  AuthedSettingsAppearanceRouteImport.update({
+    id: '/appearance',
+    path: '/appearance',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
 const AuthedWWsSlugIndexRoute = AuthedWWsSlugIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -233,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/reset-password/$token': typeof ResetPasswordTokenRoute
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/settings/appearance': typeof AuthedSettingsAppearanceRoute
   '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -263,6 +271,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthedIndexRoute
   '/messages': typeof MessagesIndexRoute
   '/reports': typeof ReportsIndexRoute
+  '/settings/appearance': typeof AuthedSettingsAppearanceRoute
   '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -299,6 +308,7 @@ export interface FileRoutesById {
   '/_authed/': typeof AuthedIndexRoute
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
+  '/_authed/settings/appearance': typeof AuthedSettingsAppearanceRoute
   '/_authed/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/_authed/settings/email': typeof AuthedSettingsEmailRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/reset-password/$token'
     | '/messages/'
     | '/reports/'
+    | '/settings/appearance'
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/general'
@@ -366,6 +377,7 @@ export interface FileRouteTypes {
     | '/'
     | '/messages'
     | '/reports'
+    | '/settings/appearance'
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/general'
@@ -401,6 +413,7 @@ export interface FileRouteTypes {
     | '/_authed/'
     | '/messages/'
     | '/reports/'
+    | '/_authed/settings/appearance'
     | '/_authed/settings/authentication'
     | '/_authed/settings/email'
     | '/_authed/settings/general'
@@ -657,6 +670,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsAuthenticationRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/appearance': {
+      id: '/_authed/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof AuthedSettingsAppearanceRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/w/$wsSlug/': {
       id: '/_authed/w/$wsSlug/'
       path: '/'
@@ -675,6 +695,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedSettingsRouteChildren {
+  AuthedSettingsAppearanceRoute: typeof AuthedSettingsAppearanceRoute
   AuthedSettingsAuthenticationRoute: typeof AuthedSettingsAuthenticationRoute
   AuthedSettingsEmailRoute: typeof AuthedSettingsEmailRoute
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
@@ -689,6 +710,7 @@ interface AuthedSettingsRouteChildren {
 }
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
+  AuthedSettingsAppearanceRoute: AuthedSettingsAppearanceRoute,
   AuthedSettingsAuthenticationRoute: AuthedSettingsAuthenticationRoute,
   AuthedSettingsEmailRoute: AuthedSettingsEmailRoute,
   AuthedSettingsGeneralRoute: AuthedSettingsGeneralRoute,

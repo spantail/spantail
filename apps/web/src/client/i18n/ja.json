@@ -418,6 +418,7 @@
 			"general": "一般",
 			"projects": "プロジェクト",
 			"members": "メンバー",
+			"appearance": "外観",
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
 			"authentication": "認証",
@@ -598,6 +599,25 @@
 		"adminBannerLead": "インスタンス管理。",
 		"general": {
 			"description": "レポート期間の解決に使うワークスペース名とタイムゾーン。"
+		},
+		"appearance": {
+			"title": "外観",
+			"description": "{{name}} のカラーテーマを選びます。ワークスペースの全員に適用されます。",
+			"accentLabel": "アクセントカラー",
+			"accentDescription": "アプリ全体のハイライト・チャート・サーフェスを再着色します。",
+			"preview": "プレビュー",
+			"default": "デフォルト",
+			"colors": {
+				"neutral": "なし",
+				"red": "レッド",
+				"orange": "オレンジ",
+				"amber": "アンバー",
+				"green": "グリーン",
+				"teal": "ティール",
+				"blue": "ブルー",
+				"violet": "バイオレット",
+				"pink": "ピンク"
+			}
 		}
 	}
 }

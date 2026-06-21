@@ -49,7 +49,7 @@ export function MessageListItem({
 					<span className="flex items-center gap-2 pr-6">
 						{unread && (
 							<span
-								className="bg-primary size-2 shrink-0 rounded-full"
+								className="bg-brand size-2 shrink-0 rounded-full"
 								aria-hidden
 							/>
 						)}

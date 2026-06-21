@@ -19,7 +19,7 @@ interface DailyBarsProps {
 	total: number;
 	/** Localized period label (e.g. "This month"). */
 	periodLabel: string;
-	/** Tailwind bg utility for the bars; defaults to neutral foreground. */
+	/** Tailwind bg utility for the bars; defaults to the workspace accent. */
 	barClassName?: string;
 	className?: string;
 }
@@ -34,7 +34,7 @@ export function DailyBars({
 	daily,
 	total,
 	periodLabel,
-	barClassName = "bg-foreground",
+	barClassName = "bg-brand",
 	className,
 }: DailyBarsProps) {
 	const { t, i18n } = useTranslation();

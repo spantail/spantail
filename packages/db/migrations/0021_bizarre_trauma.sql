@@ -1,0 +1,1 @@
+ALTER TABLE `workspaces` ADD `accent_color` text DEFAULT 'neutral' NOT NULL;
