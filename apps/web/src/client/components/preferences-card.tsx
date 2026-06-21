@@ -27,24 +27,43 @@ const LANGUAGES = [
 	{ value: "ja", label: "日本語" },
 ];
 
-// Swatch colours for the theme preview tiles. Inline so the dark tile renders
-// its own palette regardless of the active theme.
+// Swatch colours for the theme preview tiles. Inline so each tile renders its
+// own palette regardless of the active theme. The system tile splits into both.
+const LIGHT = { bg: "#ffffff", fg: "#18181b", line: "#e4e4e7" } as const;
+const DARK = { bg: "#18181b", fg: "#fafafa", line: "#3f3f46" } as const;
+
 const THEMES = [
-	{
-		id: "light",
-		labelKey: "settings.preferences.themeLight",
-		bg: "#ffffff",
-		fg: "#18181b",
-		line: "#e4e4e7",
-	},
-	{
-		id: "dark",
-		labelKey: "settings.preferences.themeDark",
-		bg: "#18181b",
-		fg: "#fafafa",
-		line: "#3f3f46",
-	},
+	{ id: "system", labelKey: "settings.preferences.themeSystem", split: true },
+	{ id: "light", labelKey: "settings.preferences.themeLight", ...LIGHT },
+	{ id: "dark", labelKey: "settings.preferences.themeDark", ...DARK },
 ] as const;
+
+// The bottom-anchored bars of a swatch tile (or one half of the system tile).
+function SwatchBars({
+	bg,
+	fg,
+	className,
+}: {
+	bg: string;
+	fg: string;
+	className?: string;
+}) {
+	return (
+		<div
+			className={cn("flex h-full items-end gap-1.5 p-2", className)}
+			style={{ background: bg }}
+		>
+			<div
+				className="h-2 flex-1 rounded-full"
+				style={{ background: fg, opacity: 0.85 }}
+			/>
+			<div
+				className="h-2 w-4 rounded-full"
+				style={{ background: fg, opacity: 0.35 }}
+			/>
+		</div>
+	);
+}
 
 export function PreferencesCard() {
 	const { t, i18n } = useTranslation();
@@ -87,9 +106,9 @@ export function PreferencesCard() {
 				</div>
 				<div className="flex flex-col gap-2">
 					<Label>{t("settings.preferences.theme")}</Label>
-					<div className="grid grid-cols-2 gap-3">
+					<div className="grid grid-cols-3 gap-3">
 						{THEMES.map((option) => {
-							const current = mounted && theme === "dark" ? "dark" : "light";
+							const current = mounted ? theme : undefined;
 							const selected = current === option.id;
 							return (
 								<button
@@ -103,22 +122,27 @@ export function PreferencesCard() {
 											: "border-border hover:border-foreground/40",
 									)}
 								>
-									<div
-										className="flex h-14 items-end gap-1.5 rounded-lg p-2"
-										style={{
-											background: option.bg,
-											border: `1px solid ${option.line}`,
-										}}
-									>
+									{"split" in option ? (
+										<div className="flex h-14 overflow-hidden rounded-lg border border-border">
+											<SwatchBars
+												className="flex-1"
+												bg={LIGHT.bg}
+												fg={LIGHT.fg}
+											/>
+											<SwatchBars
+												className="flex-1"
+												bg={DARK.bg}
+												fg={DARK.fg}
+											/>
+										</div>
+									) : (
 										<div
-											className="h-2 flex-1 rounded-full"
-											style={{ background: option.fg, opacity: 0.85 }}
-										/>
-										<div
-											className="h-2 w-4 rounded-full"
-											style={{ background: option.fg, opacity: 0.35 }}
-										/>
-									</div>
+											className="h-14 overflow-hidden rounded-lg"
+											style={{ border: `1px solid ${option.line}` }}
+										>
+											<SwatchBars bg={option.bg} fg={option.fg} />
+										</div>
+									)}
 									<div className="flex items-center justify-between">
 										<span className="text-sm font-medium">
 											{t(option.labelKey)}
