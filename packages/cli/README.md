@@ -1,6 +1,6 @@
 # toxil
 
-Command-line client for [Toxil](https://github.com/airs/toxil), the
+Command-line client for [Toxil](https://github.com/toxildev/toxil), the
 open-source work logging and reporting platform. It talks to the REST API of
 a running Toxil instance — self-hosted on Cloudflare Workers — so you need
 one (or its URL) before the CLI is useful.

@@ -43,7 +43,7 @@ Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and
 Prerequisites: Node.js 24+, pnpm 10+, a Cloudflare account, and `wrangler` v4.
 
 ```bash
-git clone https://github.com/airs/toxil.git
+git clone https://github.com/toxildev/toxil.git
 cd toxil
 pnpm install
 
