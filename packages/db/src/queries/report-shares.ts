@@ -4,10 +4,28 @@ import type { Database } from "../index";
 import { reportShares } from "../schema/shares";
 
 export type ReportShareRow = typeof reportShares.$inferSelect;
+/** A share row without its (potentially large) frozen body, for list payloads. */
+export type ReportShareMetaRow = Omit<ReportShareRow, "renderedMarkdown">;
 export type ReportShareInsert = Omit<
 	typeof reportShares.$inferInsert,
 	"id" | "createdAt" | "viewCount" | "lastViewedAt" | "revokedAt"
 >;
+
+/** Every column except the frozen body — used by owner-facing share listings. */
+const shareMetaColumns = {
+	id: reportShares.id,
+	reportId: reportShares.reportId,
+	token: reportShares.token,
+	reportName: reportShares.reportName,
+	dateFrom: reportShares.dateFrom,
+	dateTo: reportShares.dateTo,
+	passcodeHash: reportShares.passcodeHash,
+	expiresAt: reportShares.expiresAt,
+	revokedAt: reportShares.revokedAt,
+	viewCount: reportShares.viewCount,
+	lastViewedAt: reportShares.lastViewedAt,
+	createdAt: reportShares.createdAt,
+} as const;
 
 export async function createReportShare(
 	db: Database,
@@ -32,9 +50,11 @@ export async function getReportShareById(
 export async function listReportSharesByReport(
 	db: Database,
 	reportId: string,
-): Promise<ReportShareRow[]> {
+): Promise<ReportShareMetaRow[]> {
+	// Metadata only: the owner's share list never needs the frozen bodies, which
+	// can be large after a hand-edit.
 	return db
-		.select()
+		.select(shareMetaColumns)
 		.from(reportShares)
 		.where(eq(reportShares.reportId, reportId))
 		.orderBy(desc(reportShares.createdAt));
