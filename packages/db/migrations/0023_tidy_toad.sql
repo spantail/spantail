@@ -1,0 +1,1 @@
+ALTER TABLE `report_shares` ADD `rendered_markdown` text NOT NULL;

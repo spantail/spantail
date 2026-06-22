@@ -41,9 +41,9 @@ export async function listReportSharesByReport(
 }
 
 /**
- * The public share view needs only the share row: title/period are frozen on
- * it at mint and the body lives in R2 (keyed by r2Key), so a later report edit
- * never changes a published link.
+ * The public share view reads everything off the share row: title/period and
+ * the rendered body are all frozen on it at mint, so a later report edit never
+ * changes a published link.
  */
 export async function getReportShareByToken(
 	db: Database,

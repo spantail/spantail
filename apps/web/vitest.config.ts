@@ -20,9 +20,6 @@ export default defineConfig({
 		cloudflareTest(async () => ({
 			wrangler: { configPath: "./wrangler.jsonc" },
 			miniflare: {
-				// The R2 binding comes from wrangler.jsonc, but the Workers pool
-				// needs it declared here too or c.env.SHARE_BUCKET is undefined.
-				r2Buckets: ["SHARE_BUCKET"],
 				bindings: {
 					TEST_MIGRATIONS: await readD1Migrations(migrationsDir),
 					// Tests must not depend on .dev.vars (absent in CI).

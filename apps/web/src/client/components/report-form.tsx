@@ -36,7 +36,7 @@ const PRESETS: DateRangePreset[] = [
 	"last_month",
 ];
 
-/** Initial field values; the route seeds these for create/edit/duplicate. */
+/** Initial field values; the route seeds these for create/duplicate. */
 export interface ReportFormSeed {
 	name: string;
 	/** When false, the name auto-updates from period + user name until edited. */
@@ -60,21 +60,21 @@ function spanDays(from: string, to: string): number {
 }
 
 /**
- * Create/edit form for a report document. Submitting renders the report in one
- * call (no separate run step); a template/validation error surfaces inline and
- * keeps the dialog open so nothing half-saves.
+ * Create form for a report document (also backs Duplicate). Submitting renders
+ * the report in one call (no separate run step) — the only point a report is
+ * generated from source. A template/validation error surfaces inline and keeps
+ * the dialog open so nothing half-saves. Editing an existing report is a direct
+ * revision on the reading pane, not this form.
  */
 export function ReportForm({
 	templates,
 	templatesReady,
-	editingId,
 	seed,
 	onComplete,
 	onCancel,
 }: {
 	templates: ReportTemplate[];
 	templatesReady: boolean;
-	editingId: string | null;
 	seed: ReportFormSeed;
 	/** Called after save with the rendered report so the viewer can open. */
 	onComplete: (report: Report) => void;
@@ -178,15 +178,12 @@ export function ReportForm({
 				...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
 				dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
 			};
-			const input = {
+			return api.createReport({
 				name: effectiveName,
 				templateId: selectedTemplateId,
 				filters,
 				note,
-			};
-			return editingId
-				? api.updateReport(editingId, input)
-				: api.createReport(input);
+			});
 		},
 		onSuccess: async (report) => {
 			invalidateReports(queryClient);
@@ -390,7 +387,7 @@ export function ReportForm({
 						spanTooLong
 					}
 				>
-					{editingId ? t("reports.saveAction") : t("reports.createAction")}
+					{t("reports.createAction")}
 				</Button>
 			</DialogFooter>
 		</form>

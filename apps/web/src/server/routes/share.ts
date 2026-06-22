@@ -33,12 +33,8 @@ async function loadUsableShare(
 }
 
 async function respondWithContent(c: Context<AppEnv>, share: ReportShareRow) {
-	// The body is the copy frozen to R2 at mint time, so later report edits never
-	// change a published page. A missing object (revoked-and-swept, or never
-	// written) collapses to the 404 page rather than revealing the share existed.
-	const object = await c.env.SHARE_BUCKET.get(share.r2Key);
-	if (!object) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
-	const markdown = await object.text();
+	// The body is the copy frozen onto the share row at mint time, so later
+	// report edits never change a published page.
 	// hono re-dispatches HEAD requests to the GET handler; link unfurlers
 	// probing the URL must not inflate the view count. Counting is awaited
 	// inline (not waitUntil) so the count is durable when the response lands.
@@ -50,7 +46,7 @@ async function respondWithContent(c: Context<AppEnv>, share: ReportShareRow) {
 			locale: pickShareLocale(c),
 			reportName: share.reportName,
 			dateRange: { from: share.dateFrom, to: share.dateTo },
-			contentHtml: await renderMarkdownToHtml(markdown),
+			contentHtml: await renderMarkdownToHtml(share.renderedMarkdown),
 		}),
 	);
 }

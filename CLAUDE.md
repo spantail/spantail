@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Toxil is an open-source work logging and reporting platform on Cloudflare Workers + D1 + R2.
+Toxil is an open-source work logging and reporting platform on Cloudflare Workers + D1.
 pnpm monorepo: a single Worker (`apps/web`) serves the REST API, the MCP endpoint, and the React SPA.
 
 ## Language rules
@@ -14,7 +14,7 @@ pnpm monorepo: a single Worker (`apps/web`) serves the REST API, the MCP endpoin
 ## Commands
 
 ```bash
-pnpm dev                # SPA + Worker dev server (Cloudflare Vite plugin, local D1/R2)
+pnpm dev                # SPA + Worker dev server (Cloudflare Vite plugin, local D1)
 pnpm test               # all tests (vitest, Workers pool)
 pnpm test <pattern>     # single test file (pnpm forwards args; do not add --)
 pnpm lint               # biome check (use `pnpm lint:fix` to autofix)
@@ -22,8 +22,8 @@ pnpm typecheck          # tsc across all packages
 pnpm db:generate        # drizzle-kit generate (after editing packages/db/src/schema)
 pnpm db:migrate:local   # apply migrations to local D1
 pnpm db:migrate:remote  # apply migrations to remote D1
-pnpm db:seed            # seed local D1/R2 with demo data (see packages/db/seed)
-pnpm db:drop            # wipe local D1/R2 state
+pnpm db:seed            # seed local D1 with demo data (see packages/db/seed)
+pnpm db:drop            # wipe local D1 state
 pnpm db:reset           # db:drop → db:migrate:local → db:seed (local only)
 pnpm deploy             # wrangler deploy (apps/web)
 ```

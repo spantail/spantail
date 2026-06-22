@@ -37,7 +37,6 @@ const UNIT_PRESET: Record<PeriodUnit, ReportFormSeed["rangeChoice"]> = {
 
 interface ReportDialogsApi {
 	openCreate: (template: ReportTemplate) => void;
-	openEdit: (report: ReportMeta) => void;
 	openDuplicate: (report: ReportMeta) => void;
 }
 
@@ -54,15 +53,15 @@ export function useReportDialogs(): ReportDialogsApi {
 }
 
 interface FormState {
-	editingId: string | null;
 	titleKey: string;
 	seed: ReportFormSeed;
 }
 
 /**
- * Owns the report create/edit/duplicate dialog for the mailbox shell, so the
- * list header (New) and the detail toolbar (Edit/Duplicate) can all open it.
- * On save it routes to the report's detail pane — the old viewer dialog's role.
+ * Owns the report create/duplicate dialog for the mailbox shell, so the list
+ * header (New) and the detail toolbar (Duplicate) can open it. Editing a report
+ * is a direct, inline revision on the reading pane, not a form. On save it
+ * routes to the new report's detail pane.
  */
 export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	const { t } = useTranslation();
@@ -102,27 +101,8 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 
 	const openCreate = (template: ReportTemplate) =>
 		open({
-			editingId: null,
 			titleKey: "reports.newTitle",
 			seed: newSeed(template),
-		});
-
-	const openEdit = (report: ReportMeta) =>
-		open({
-			editingId: report.id,
-			titleKey: "reports.editTitle",
-			seed: {
-				name: report.name,
-				nameEdited: true,
-				templateId: report.templateId,
-				workspaceIds: report.filters.workspaceIds,
-				projectIds: report.filters.projectIds ?? [],
-				rangeChoice: "custom",
-				from: report.filters.dateRange.from,
-				to: report.filters.dateRange.to,
-				tags: (report.filters.tags ?? []).join(", "),
-				note: report.note ?? "",
-			},
 		});
 
 	const openDuplicate = (report: ReportMeta) => {
@@ -135,7 +115,6 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 			"UTC";
 		const next = deriveNextPeriod(unit, report.filters.dateRange, timezone);
 		open({
-			editingId: null,
 			titleKey: "reports.duplicateTitle",
 			seed: {
 				name: "",
@@ -199,7 +178,6 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 			const base = newSeed(template);
 			const custom = Boolean(s.from && s.to);
 			open({
-				editingId: null,
 				titleKey: "reports.newTitle",
 				seed: {
 					...base,
@@ -233,9 +211,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	}, [search, templatesReady, navigate]);
 
 	return (
-		<ReportDialogsContext.Provider
-			value={{ openCreate, openEdit, openDuplicate }}
-		>
+		<ReportDialogsContext.Provider value={{ openCreate, openDuplicate }}>
 			{children}
 			{form && (
 				<Dialog open onOpenChange={(isOpen) => !isOpen && closeForm()}>
@@ -247,10 +223,9 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 							</DialogDescription>
 						</DialogHeader>
 						<ReportForm
-							key={`${form.editingId ?? "new"}:${instanceId}`}
+							key={instanceId}
 							templates={templates}
 							templatesReady={templatesReady}
-							editingId={form.editingId}
 							seed={form.seed}
 							onComplete={(report) => {
 								closeForm();

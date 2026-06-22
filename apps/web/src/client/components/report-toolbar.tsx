@@ -35,13 +35,18 @@ import { useReportTemplates } from "@/lib/use-report-templates";
 export function ReportToolbar({
 	report,
 	tab,
+	editing,
+	onEdit,
 }: {
 	report: Report;
 	tab: string;
+	editing: boolean;
+	/** Enters inline edit mode on the reading pane (Save/Cancel live there). */
+	onEdit: () => void;
 }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const { openEdit, openDuplicate } = useReportDialogs();
+	const { openDuplicate } = useReportDialogs();
 	const { reportTemplateState } = useReportTemplates();
 	const [sharing, setSharing] = useState(false);
 	const [sending, setSending] = useState(false);
@@ -154,11 +159,8 @@ export function ReportToolbar({
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuSeparator className="md:hidden" />
-					{!readOnly && (
-						<DropdownMenuItem
-							className="gap-2.5 px-2 py-1.5"
-							onClick={() => openEdit(report)}
-						>
+					{!readOnly && !editing && (
+						<DropdownMenuItem className="gap-2.5 px-2 py-1.5" onClick={onEdit}>
 							<PencilIcon />
 							{t("reports.editAction")}
 						</DropdownMenuItem>

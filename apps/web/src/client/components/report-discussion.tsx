@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MarkdownEditor } from "@/components/markdown-editor";
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
 import {
@@ -155,8 +156,8 @@ function ReactionBar({
 }
 
 /**
- * A bordered markdown editor card with a Write/Preview toggle and a footer
- * slot, matching the mockup. Reused for the main composer and inline edits.
+ * The discussion composer card: the shared MarkdownEditor wired with the
+ * discussion's own labels and a footer slot (main composer and inline edits).
  */
 function CommentComposer({
 	value,
@@ -168,50 +169,18 @@ function CommentComposer({
 	footer: ReactNode;
 }) {
 	const { t } = useTranslation();
-	const [tab, setTab] = useState<"write" | "preview">("write");
-
 	return (
-		<div className="bg-card min-w-0 flex-1 overflow-hidden rounded-xl border">
-			<div className="border-border flex items-center gap-1 border-b px-2 pt-2">
-				{(["write", "preview"] as const).map((id) => (
-					<button
-						key={id}
-						type="button"
-						onClick={() => setTab(id)}
-						className={cn(
-							"rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-							tab === id
-								? "bg-secondary text-foreground"
-								: "text-muted-foreground hover:text-foreground",
-						)}
-					>
-						{t(`discussion.composer.${id}`)}
-					</button>
-				))}
-			</div>
-			{tab === "write" ? (
-				<textarea
-					value={value}
-					onChange={(e) => onChange(e.target.value)}
-					rows={3}
-					placeholder={t("discussion.composer.placeholder")}
-					className="placeholder:text-muted-foreground block w-full resize-none border-0 bg-transparent px-3.5 py-3 text-sm leading-relaxed outline-none"
-				/>
-			) : (
-				<div className="min-h-[88px] px-3.5 py-3 text-sm leading-relaxed">
-					{value.trim() === "" ? (
-						<p className="text-muted-foreground italic">
-							{t("discussion.composer.previewEmpty")}
-						</p>
-					) : (
-						<MarkdownView markdown={value} />
-					)}
-				</div>
-			)}
-			<div className="border-border flex items-center justify-between gap-2 border-t px-3 py-2">
-				{footer}
-			</div>
-		</div>
+		<MarkdownEditor
+			value={value}
+			onChange={onChange}
+			labels={{
+				write: t("discussion.composer.write"),
+				preview: t("discussion.composer.preview"),
+			}}
+			previewEmpty={t("discussion.composer.previewEmpty")}
+			placeholder={t("discussion.composer.placeholder")}
+			footer={footer}
+		/>
 	);
 }
 

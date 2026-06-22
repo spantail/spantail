@@ -108,22 +108,24 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 		).status,
 	).toBe(404);
 
-	// Editing re-renders; a blank note collapses to null.
+	// Editing is a direct revision of the title and frozen body — no re-render.
+	// Provenance (note, filters, totalMinutes) stays as minted.
 	const updated = await apiJson(
 		"PATCH",
 		`/api/v1/reports/${report.id}`,
-		{ name: "Renamed", note: "   " },
+		{ name: "Renamed", renderedMarkdown: "# Hand-edited body" },
 		admin,
 	);
 	expect(updated.status).toBe(200);
 	const patched = (await updated.json()) as {
 		name: string;
-		note: null;
+		note: string | null;
 		renderedMarkdown: string;
 	};
 	expect(patched.name).toBe("Renamed");
-	expect(patched.note).toBeNull();
-	expect(patched.renderedMarkdown).not.toContain("Reviewed by QA");
+	expect(patched.renderedMarkdown).toBe("# Hand-edited body");
+	// The note is provenance of the original snapshot; a direct edit leaves it.
+	expect(patched.note).toBe("Reviewed by QA");
 
 	expect(
 		(await apiJson("DELETE", `/api/v1/reports/${report.id}`, undefined, admin))
@@ -132,6 +134,42 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 	expect((await apiGet(`/api/v1/reports/${report.id}`, admin)).status).toBe(
 		404,
 	);
+});
+
+it("edits the body directly without re-rendering or touching provenance", async () => {
+	const { admin, ws, project } = await setup();
+	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
+	const report = (await (
+		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
+	).json()) as { id: string; totalMinutes: number };
+	expect(report.totalMinutes).toBe(30);
+
+	// Log more matching work after the snapshot was taken.
+	await createEntry(admin, ws.id, project.id, "More API work", ["api"]);
+
+	// Try to change provenance alongside the body; only title + body apply.
+	const res = await apiJson(
+		"PATCH",
+		`/api/v1/reports/${report.id}`,
+		{
+			renderedMarkdown: "# Manually rewritten",
+			templateId: "builtin:weekly",
+			filters: { workspaceIds: [ws.id], dateRange: "this_week" },
+		},
+		admin,
+	);
+	expect(res.status).toBe(200);
+	const patched = (await res.json()) as {
+		templateId: string;
+		totalMinutes: number;
+		renderedMarkdown: string;
+	};
+	// Body replaced verbatim; no re-render picked up the later entry.
+	expect(patched.renderedMarkdown).toBe("# Manually rewritten");
+	expect(patched.renderedMarkdown).not.toContain("More API work");
+	// Provenance is frozen: template and the minted total are unchanged.
+	expect(patched.templateId).toBe("builtin:daily");
+	expect(patched.totalMinutes).toBe(30);
 });
 
 it("renders entries inline, scoped by tags and date", async () => {
@@ -454,7 +492,7 @@ it("revokes report content access when workspace membership is lost", async () =
 	).toBe(204);
 });
 
-it("rejects report writes that use a disabled template", async () => {
+it("rejects creating a report with a disabled template", async () => {
 	const { admin, ws } = await setup();
 	const template = (await (
 		await apiJson(
@@ -473,7 +511,8 @@ it("rejects report writes that use a disabled template", async () => {
 		)
 	).json()) as { id: string };
 
-	// Disable the custom template; existing reports become read-only.
+	// Disable the custom template. Existing reports stay fully editable: an edit
+	// revises the frozen document directly and never touches the template.
 	expect(
 		(
 			await apiJson(
@@ -493,7 +532,8 @@ it("rejects report writes that use a disabled template", async () => {
 				admin,
 			)
 		).status,
-	).toBe(400);
+	).toBe(200);
+	// But a disabled template can no longer back a new report.
 	expect(
 		(
 			await apiJson(

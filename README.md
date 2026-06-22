@@ -23,7 +23,6 @@ Toxil runs entirely on Cloudflare:
 
 - **Workers** — a single Worker serves the REST API (`/api/v1`), the MCP endpoint (`/mcp`), shared report views, and the SPA static assets
 - **D1** — primary database
-- **R2** — report exports and artifacts
 
 Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and [Better Auth](https://better-auth.com). Frontend is a React SPA built with Vite, TanStack Router/Query, and shadcn/ui.
 
@@ -55,7 +54,7 @@ pnpm db:migrate:local
 pnpm dev
 ```
 
-`pnpm dev` runs the SPA and the Worker together on the Cloudflare Vite plugin, with local emulation of D1 and R2.
+`pnpm dev` runs the SPA and the Worker together on the Cloudflare Vite plugin, with local emulation of D1.
 
 ## Self-hosting
 
@@ -86,7 +85,7 @@ AI clients that support remote MCP can connect directly to `https://your-instanc
 ## Development
 
 ```bash
-pnpm dev          # dev server (SPA + Worker + local D1/R2)
+pnpm dev          # dev server (SPA + Worker + local D1)
 pnpm test         # vitest (Workers pool)
 pnpm lint         # biome
 pnpm typecheck    # tsc across all packages
