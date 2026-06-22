@@ -62,8 +62,7 @@ Toxil is designed to be deployed to your own Cloudflare account:
 
 ```bash
 wrangler d1 create toxil-db
-wrangler r2 bucket create toxil-exports
-# set the generated IDs in apps/web/wrangler.jsonc, then:
+# set the generated database ID in apps/web/wrangler.jsonc, then:
 pnpm db:migrate:remote
 pnpm deploy
 ```

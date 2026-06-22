@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Report } from "@toxil/core";
+import type { Report, UpdateReportInput } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,8 +30,15 @@ export function ReportEditor({
 	const [error, setError] = useState<string | null>(null);
 
 	const mutation = useMutation({
-		mutationFn: () =>
-			api.updateReport(report.id, { name, renderedMarkdown: markdown }),
+		mutationFn: () => {
+			// Send only what changed: a title-only edit must not resend the body,
+			// which could exceed the server's length cap on a large generated report.
+			const patch: UpdateReportInput = {};
+			if (name !== report.name) patch.name = name;
+			if (markdown !== report.renderedMarkdown)
+				patch.renderedMarkdown = markdown;
+			return api.updateReport(report.id, patch);
+		},
 		onSuccess: (updated) => {
 			// Seed the detail cache so the reading pane shows the edit immediately,
 			// and refresh the list (the name may have changed).
