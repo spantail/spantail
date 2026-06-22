@@ -7,11 +7,11 @@
 	"type": "module",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/airs/toxil.git",
+		"url": "git+https://github.com/toxildev/toxil.git",
 		"directory": "packages/cli"
 	},
-	"homepage": "https://github.com/airs/toxil#readme",
-	"bugs": "https://github.com/airs/toxil/issues",
+	"homepage": "https://github.com/toxildev/toxil#readme",
+	"bugs": "https://github.com/toxildev/toxil/issues",
 	"keywords": [
 		"time-tracking",
 		"work-log",
