@@ -257,10 +257,12 @@ export const reportRoutes = new Hono<AppEnv>()
 		// fields (template, filters, note, totalMinutes) stay as minted — to
 		// regenerate from source entries, delete and recreate the report.
 		const input = validate(updateReportInputSchema, await c.req.json());
-		const updated = await updateReport(c.var.db, report.id, {
-			name: input.name ?? report.name,
-			renderedMarkdown: input.renderedMarkdown ?? report.renderedMarkdown,
-		});
+		// Patch only the fields actually sent, so a title-only edit can't clobber a
+		// concurrent body edit (and vice versa) with a stale pre-read value.
+		if (input.name === undefined && input.renderedMarkdown === undefined) {
+			return c.json(report);
+		}
+		const updated = await updateReport(c.var.db, report.id, input);
 		return c.json(updated);
 	})
 	.delete("/:id", async (c) => {
