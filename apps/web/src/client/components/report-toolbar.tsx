@@ -66,8 +66,9 @@ export function ReportToolbar({
 	const next =
 		index >= 0 && index < items.length - 1 ? items[index + 1] : undefined;
 
-	// Archived (template disabled in the report's anchor workspace): no edit or
-	// duplicate, matching the server's per-report check.
+	// Archived (template disabled in the report's anchor workspace): no Duplicate,
+	// which would create a new report from the disabled template. Editing stays
+	// available — it revises the frozen document directly and never re-renders.
 	const readOnly = !(reportTemplateState(report)?.enabled ?? false);
 
 	const close = () => navigate({ to: "/reports/$tab", params: { tab } });
@@ -159,7 +160,7 @@ export function ReportToolbar({
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuSeparator className="md:hidden" />
-					{!readOnly && !editing && (
+					{!editing && (
 						<DropdownMenuItem className="gap-2.5 px-2 py-1.5" onClick={onEdit}>
 							<PencilIcon />
 							{t("reports.editAction")}
