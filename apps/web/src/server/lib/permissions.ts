@@ -9,7 +9,7 @@ import {
 import type { Context } from "hono";
 
 import { requireAuth, requireScope } from "../middleware/auth";
-import type { AppEnv, AuthContext } from "../types";
+import type { AppEnv, UserAuthContext } from "../types";
 import { AppError } from "./errors";
 
 const ROLE_RANK: Record<WorkspaceRole, number> = {
@@ -23,7 +23,7 @@ const ROLE_RANK: Record<WorkspaceRole, number> = {
  * PAT callers must also hold the "admin" scope. Used by the system-wide user
  * management, invitation, and instance-settings endpoints.
  */
-export function requireInstanceAdmin(c: Context<AppEnv>): AuthContext {
+export function requireInstanceAdmin(c: Context<AppEnv>): UserAuthContext {
 	const auth = requireScope(c, "admin");
 	if (!auth.user.isAdmin) {
 		throw new AppError("forbidden", "Requires instance admin");
@@ -37,7 +37,7 @@ export function requireInstanceAdmin(c: Context<AppEnv>): AuthContext {
  * must also hold the "write" scope. Templates are instance-scoped formats, so
  * authoring is not tied to any workspace role.
  */
-export function requireTemplateManager(c: Context<AppEnv>): AuthContext {
+export function requireTemplateManager(c: Context<AppEnv>): UserAuthContext {
 	const auth = requireScope(c, "write");
 	if (!auth.user.isAdmin && !auth.user.canManageTemplates) {
 		throw new AppError("forbidden", "Requires template management permission");

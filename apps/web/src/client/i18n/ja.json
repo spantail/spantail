@@ -51,6 +51,8 @@
 		"logWork": "記録する",
 		"projects": "プロジェクト",
 		"projectsEmpty": "稼働中のプロジェクトはありません",
+		"agents": "エージェント",
+		"agentsEmpty": "エージェントの記録はまだありません",
 		"reports": "レポート",
 		"settings": "設定",
 		"account": "アカウント",
@@ -61,6 +63,22 @@
 		"backHome": "ホームへ戻る",
 		"entriesTitle": "記録",
 		"unassigned": "プロジェクトなし"
+	},
+	"agents": {
+		"notFound": "このワークスペースにこのエージェントの記録がありません。",
+		"backHome": "ホームへ戻る",
+		"totalTokens": "トークン",
+		"totalMinutes": "分",
+		"entryCount": "セッション",
+		"entriesTitle": "セッション",
+		"empty": "記録されたセッションはまだありません。",
+		"table": {
+			"date": "日付",
+			"duration": "時間",
+			"tokens": "トークン",
+			"model": "モデル",
+			"description": "内容"
+		}
 	},
 	"workspace": {
 		"label": "ワークスペース",
@@ -426,6 +444,7 @@
 			"appearance": "外観",
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
+			"agents": "エージェント",
 			"authentication": "認証",
 			"preferences": "環境設定",
 			"systemUsers": "ユーザー管理",
@@ -502,6 +521,47 @@
 			"copyAction": "コピー",
 			"copied": "クリップボードにコピーしました。",
 			"doneAction": "完了"
+		},
+		"agents": {
+			"title": "エージェント",
+			"description": "利用する AI コーディングエージェントを登録し、作業を記録するためのアクセストークンを発行します。",
+			"name": "エージェント名",
+			"namePlaceholder": "私の Claude Code",
+			"type": "種別",
+			"created": "作成日",
+			"createAction": "エージェントを追加",
+			"deleteAction": "削除",
+			"actions": "エージェントの操作",
+			"empty": "エージェントはまだありません。",
+			"types": {
+				"claude_code": "Claude Code",
+				"codex": "Codex",
+				"cursor": "Cursor",
+				"other": "その他"
+			},
+			"tokens": {
+				"title": "アクセストークン — {{name}}",
+				"description": "エージェントアクセストークンを使うとこのエージェントが作業を記録できます。デフォルトのワークスペースとプロジェクトを束縛すると、エージェント側で指定する必要がなくなります。トークンは作成時に一度だけ表示されます。",
+				"manageAction": "トークン",
+				"name": "トークン名",
+				"namePlaceholder": "laptop",
+				"defaultWorkspace": "デフォルトのワークスペース",
+				"defaultProject": "デフォルトのプロジェクト",
+				"none": "なし",
+				"expiresInDays": "有効期限(日)",
+				"noExpiry": "無期限",
+				"lastUsed": "最終使用",
+				"expires": "有効期限",
+				"never": "なし",
+				"createAction": "トークンを作成",
+				"revokeAction": "失効",
+				"empty": "トークンはまだありません。",
+				"createdTitle": "トークンを作成しました",
+				"createdDescription": "今すぐコピーしてください。二度と表示されません。",
+				"copyAction": "コピー",
+				"copied": "クリップボードにコピーしました。",
+				"doneAction": "完了"
+			}
 		},
 		"password": {
 			"title": "パスワードを変更",

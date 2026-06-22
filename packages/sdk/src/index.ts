@@ -1,10 +1,17 @@
 import type {
 	AcceptInvitationInput,
 	AddWorkspaceMemberInputData,
+	Agent,
+	AgentEntry,
+	AgentEntryStats,
+	AgentEntryStatsQuery,
+	AgentToken,
 	ApiToken,
 	AuthProviders,
 	AuthUser,
 	Comment,
+	CreateAgentInput,
+	CreateAgentTokenInput,
 	CreatedUser,
 	CreateInvitationInputData,
 	CreateProjectInput,
@@ -17,8 +24,10 @@ import type {
 	CreateWorkspaceInput,
 	EmailEnabled,
 	EmailSettings,
+	IngestAgentEntryInputData,
 	Invitation,
 	InvitationPreview,
+	ListAgentEntriesQueryData,
 	ListInboxQueryData,
 	ListReportsQueryData,
 	ListWorkEntriesQueryData,
@@ -302,6 +311,58 @@ export class ToxilClient {
 
 	deleteWorkEntry(id: string): Promise<void> {
 		return this.request("DELETE", `/work-entries/${id}`);
+	}
+
+	// --- AI agents: registry, access tokens, and work entries ---
+
+	listAgents(): Promise<Agent[]> {
+		return this.request("GET", "/agents");
+	}
+
+	createAgent(input: CreateAgentInput): Promise<Agent> {
+		return this.request("POST", "/agents", { body: input });
+	}
+
+	/** Soft-deletes (archives) an agent; its entries are preserved. */
+	deleteAgent(id: string): Promise<void> {
+		return this.request("DELETE", `/agents/${id}`);
+	}
+
+	listAgentTokens(agentId: string): Promise<AgentToken[]> {
+		return this.request("GET", `/agents/${agentId}/tokens`);
+	}
+
+	createAgentToken(
+		agentId: string,
+		input: CreateAgentTokenInput,
+	): Promise<AgentToken & { token: string }> {
+		return this.request("POST", `/agents/${agentId}/tokens`, { body: input });
+	}
+
+	deleteAgentToken(agentId: string, tokenId: string): Promise<void> {
+		return this.request("DELETE", `/agents/${agentId}/tokens/${tokenId}`);
+	}
+
+	/** Ingests one agent session (agent access token auth). Idempotent. */
+	ingestAgentEntry(input: IngestAgentEntryInputData): Promise<AgentEntry> {
+		return this.request("POST", "/agent-entries", { body: input });
+	}
+
+	listAgentEntries(query: ListAgentEntriesQueryData): Promise<AgentEntry[]> {
+		return this.request("GET", "/agent-entries", { query });
+	}
+
+	getAgentEntryStats(query: AgentEntryStatsQuery): Promise<AgentEntryStats> {
+		return this.request("GET", "/agent-entries/stats", { query });
+	}
+
+	/** Agents with activity in a workspace (for the sidebar's Agents group). */
+	listWorkspaceAgents(
+		workspaceId: string,
+	): Promise<Pick<Agent, "id" | "type" | "name">[]> {
+		return this.request("GET", "/agent-entries/agents", {
+			query: { workspaceId },
+		});
 	}
 
 	listReportTemplates(): Promise<ReportTemplate[]> {

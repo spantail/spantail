@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+	BotIcon,
 	FileTextIcon,
 	FingerprintIcon,
 	FolderIcon,
@@ -27,6 +28,7 @@ interface SettingsNavItem {
 		| "/settings/appearance"
 		| "/settings/templates"
 		| "/settings/tokens"
+		| "/settings/agents"
 		| "/settings/authentication"
 		| "/settings/preferences"
 		| "/settings/users"
@@ -95,6 +97,11 @@ const GROUPS: SettingsNavGroup[] = [
 				to: "/settings/tokens",
 				labelKey: "settings.nav.tokens",
 				icon: KeyIcon,
+			},
+			{
+				to: "/settings/agents",
+				labelKey: "settings.nav.agents",
+				icon: BotIcon,
 			},
 			{
 				to: "/settings/preferences",
