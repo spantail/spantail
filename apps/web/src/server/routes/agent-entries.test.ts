@@ -5,6 +5,13 @@ import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const member = await signUpUser("Member", "member@example.com");
+	// The agents feature is off by default; the bootstrap admin enables it.
+	await apiJson(
+		"PATCH",
+		"/api/v1/instance/agents",
+		{ agentsEnabled: true },
+		admin,
+	);
 	const ws = (await (
 		await apiJson(
 			"POST",

@@ -42,6 +42,7 @@ import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/sett
 import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
 import { Route as AuthedSettingsAuthenticationRouteImport } from './routes/_authed/settings/authentication'
 import { Route as AuthedSettingsAppearanceRouteImport } from './routes/_authed/settings/appearance'
+import { Route as AuthedSettingsAgentsAdminRouteImport } from './routes/_authed/settings/agents-admin'
 import { Route as AuthedSettingsAgentsRouteImport } from './routes/_authed/settings/agents'
 import { Route as AuthedWWsSlugIndexRouteImport } from './routes/_authed/w.$wsSlug.index'
 import { Route as AuthedWWsSlugProjectsProjectSlugRouteImport } from './routes/_authed/w.$wsSlug.projects.$projectSlug'
@@ -214,6 +215,12 @@ const AuthedSettingsAppearanceRoute =
     path: '/appearance',
     getParentRoute: () => AuthedSettingsRoute,
   } as any)
+const AuthedSettingsAgentsAdminRoute =
+  AuthedSettingsAgentsAdminRouteImport.update({
+    id: '/agents-admin',
+    path: '/agents-admin',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
 const AuthedSettingsAgentsRoute = AuthedSettingsAgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
@@ -254,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/settings/agents': typeof AuthedSettingsAgentsRoute
+  '/settings/agents-admin': typeof AuthedSettingsAgentsAdminRoute
   '/settings/appearance': typeof AuthedSettingsAppearanceRoute
   '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
@@ -287,6 +295,7 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesIndexRoute
   '/reports': typeof ReportsIndexRoute
   '/settings/agents': typeof AuthedSettingsAgentsRoute
+  '/settings/agents-admin': typeof AuthedSettingsAgentsAdminRoute
   '/settings/appearance': typeof AuthedSettingsAppearanceRoute
   '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/settings/email': typeof AuthedSettingsEmailRoute
@@ -326,6 +335,7 @@ export interface FileRoutesById {
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
   '/_authed/settings/agents': typeof AuthedSettingsAgentsRoute
+  '/_authed/settings/agents-admin': typeof AuthedSettingsAgentsAdminRoute
   '/_authed/settings/appearance': typeof AuthedSettingsAppearanceRoute
   '/_authed/settings/authentication': typeof AuthedSettingsAuthenticationRoute
   '/_authed/settings/email': typeof AuthedSettingsEmailRoute
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/messages/'
     | '/reports/'
     | '/settings/agents'
+    | '/settings/agents-admin'
     | '/settings/appearance'
     | '/settings/authentication'
     | '/settings/email'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/reports'
     | '/settings/agents'
+    | '/settings/agents-admin'
     | '/settings/appearance'
     | '/settings/authentication'
     | '/settings/email'
@@ -437,6 +449,7 @@ export interface FileRouteTypes {
     | '/messages/'
     | '/reports/'
     | '/_authed/settings/agents'
+    | '/_authed/settings/agents-admin'
     | '/_authed/settings/appearance'
     | '/_authed/settings/authentication'
     | '/_authed/settings/email'
@@ -702,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsAppearanceRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/agents-admin': {
+      id: '/_authed/settings/agents-admin'
+      path: '/agents-admin'
+      fullPath: '/settings/agents-admin'
+      preLoaderRoute: typeof AuthedSettingsAgentsAdminRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/agents': {
       id: '/_authed/settings/agents'
       path: '/agents'
@@ -735,6 +755,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedSettingsRouteChildren {
   AuthedSettingsAgentsRoute: typeof AuthedSettingsAgentsRoute
+  AuthedSettingsAgentsAdminRoute: typeof AuthedSettingsAgentsAdminRoute
   AuthedSettingsAppearanceRoute: typeof AuthedSettingsAppearanceRoute
   AuthedSettingsAuthenticationRoute: typeof AuthedSettingsAuthenticationRoute
   AuthedSettingsEmailRoute: typeof AuthedSettingsEmailRoute
@@ -751,6 +772,7 @@ interface AuthedSettingsRouteChildren {
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsAgentsRoute: AuthedSettingsAgentsRoute,
+  AuthedSettingsAgentsAdminRoute: AuthedSettingsAgentsAdminRoute,
   AuthedSettingsAppearanceRoute: AuthedSettingsAppearanceRoute,
   AuthedSettingsAuthenticationRoute: AuthedSettingsAuthenticationRoute,
   AuthedSettingsEmailRoute: AuthedSettingsEmailRoute,

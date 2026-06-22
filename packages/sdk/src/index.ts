@@ -5,6 +5,7 @@ import type {
 	AgentEntry,
 	AgentEntryStats,
 	AgentEntryStatsQuery,
+	AgentsEnabled,
 	AgentToken,
 	ApiToken,
 	AuthProviders,
@@ -50,6 +51,7 @@ import type {
 	SendReportResult,
 	SetMailFlagsInput,
 	UnreadCount,
+	UpdateAgentsEnabledInput,
 	UpdateEmailSettingsInput,
 	UpdateOauthSettingsInput,
 	UpdateProjectInput,
@@ -363,6 +365,16 @@ export class ToxilClient {
 		return this.request("GET", "/agent-entries/agents", {
 			query: { workspaceId },
 		});
+	}
+
+	/** Whether the instance has the agents feature enabled (gates the UI). */
+	getAgentsEnabled(): Promise<AgentsEnabled> {
+		return this.request("GET", "/instance/agents-enabled");
+	}
+
+	/** Instance admin: turn the agents feature on or off. */
+	updateAgentsEnabled(input: UpdateAgentsEnabledInput): Promise<AgentsEnabled> {
+		return this.request("PATCH", "/instance/agents", { body: input });
 	}
 
 	listReportTemplates(): Promise<ReportTemplate[]> {

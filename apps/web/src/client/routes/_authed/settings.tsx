@@ -15,6 +15,10 @@ export const Route = createFileRoute("/_authed/settings")({
 function SettingsLayout() {
 	const { t } = useTranslation();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
+	const agentsEnabled = useQuery({
+		queryKey: ["agents-enabled"],
+		queryFn: () => api.getAgentsEnabled(),
+	});
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -30,6 +34,7 @@ function SettingsLayout() {
 				<SettingsNav
 					isAdmin={me.data?.user.isAdmin ?? false}
 					canManageTemplates={me.data?.user.canManageTemplates ?? false}
+					agentsEnabled={agentsEnabled.data?.enabled ?? false}
 				/>
 				<div className="min-w-0 flex-1">
 					<Outlet />

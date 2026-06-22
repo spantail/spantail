@@ -171,13 +171,21 @@ function AgentsGroup() {
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 	const dismissOnMobile = useDismissOnMobile();
 
+	// Gate on the instance feature flag so the group disappears immediately when
+	// an admin turns agents off, without waiting for activity to drain.
+	const agentsEnabled = useQuery({
+		queryKey: ["agents-enabled"],
+		queryFn: () => api.getAgentsEnabled(),
+	});
+	const featureOn = agentsEnabled.data?.enabled ?? false;
+
 	const agents = useQuery({
 		queryKey: ["workspace-agents", current?.id],
 		queryFn: () => api.listWorkspaceAgents(current?.id as string),
-		enabled: Boolean(current),
+		enabled: Boolean(current) && featureOn,
 	});
 
-	if (!current) return null;
+	if (!current || !featureOn) return null;
 	const list = agents.data ?? [];
 	if (list.length === 0) return null;
 

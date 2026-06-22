@@ -18,10 +18,12 @@ import { Hono } from "hono";
 import { AppError } from "../lib/errors";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
+import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth, requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 export const agentEntryRoutes = new Hono<AppEnv>()
+	.use(requireAgentsFeature)
 	// Ingest (agent access token only). Idempotent on (agent, sessionId).
 	.post("/", async (c) => {
 		const auth = requireAgentAuth(c);

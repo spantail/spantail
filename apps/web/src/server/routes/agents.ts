@@ -21,6 +21,7 @@ import { Hono } from "hono";
 import { AppError } from "../lib/errors";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
+import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireSession } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
@@ -40,6 +41,7 @@ async function requireOwnedAgent(
 }
 
 export const agentRoutes = new Hono<AppEnv>()
+	.use(requireAgentsFeature)
 	.get("/", async (c) => {
 		const { user } = requireSession(c);
 		const rows = await listAgentsForUser(c.var.db, user.id);

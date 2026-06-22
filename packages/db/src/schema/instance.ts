@@ -37,6 +37,13 @@ export const instanceSettings = sqliteTable("instance_settings", {
 		.$type<string[]>()
 		.notNull()
 		.default([]),
+	// AI agent activity logging is off by default: it can grow data volume
+	// substantially (per-agent sessions and, later, per-turn events), so an
+	// instance admin opts in. While off, the agents registry, access tokens,
+	// and ingest are all disabled.
+	agentsEnabled: integer("agents_enabled", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	// Instance-wide enabled/cadence overrides for builtin report templates,
 	// keyed by builtin id. Builtin bodies are code-defined; only their state is
 	// configurable, and it lives here rather than per workspace.

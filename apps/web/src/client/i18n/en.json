@@ -448,6 +448,7 @@
 			"authentication": "Authentication",
 			"preferences": "Preferences",
 			"systemUsers": "User management",
+			"systemAgents": "AI agents",
 			"email": "Email",
 			"oauth": "Social login"
 		},
@@ -640,6 +641,16 @@
 				"cancel": "Cancel"
 			},
 			"adminBanner": "These accounts span every workspace on this Toxil instance and are visible only to instance admins."
+		},
+		"agentsAdmin": {
+			"title": "AI agents",
+			"description": "Let members log the work time and token usage of their AI coding agents. Off by default.",
+			"enableLabel": "Enable agent activity logging",
+			"enableHint": "Heads up: turning this on can grow data volume substantially — each agent session, and later per-turn events, is stored. Leave it off unless you want this telemetry.",
+			"saveAction": "Save",
+			"statusEnabled": "Enabled",
+			"statusDisabled": "Disabled",
+			"adminBanner": "The AI agents feature applies to the whole instance and is visible only to instance admins."
 		},
 		"email": {
 			"title": "Email",

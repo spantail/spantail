@@ -2,8 +2,19 @@ import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
+/** The first user is the instance admin; turn the agents feature on. */
+async function enableAgents(adminCookie: string): Promise<void> {
+	await apiJson(
+		"PATCH",
+		"/api/v1/instance/agents",
+		{ agentsEnabled: true },
+		adminCookie,
+	);
+}
+
 it("registers agents and issues access tokens via sessions only", async () => {
 	const cookie = await signUpUser("Alice", "alice@example.com");
+	await enableAgents(cookie);
 
 	const agent = (await (
 		await apiJson(
@@ -61,6 +72,7 @@ it("registers agents and issues access tokens via sessions only", async () => {
 it("cannot manage another user's agent", async () => {
 	const alice = await signUpUser("Alice", "alice@example.com");
 	const bob = await signUpUser("Bob", "bob@example.com");
+	await enableAgents(alice);
 	const agent = (await (
 		await apiJson(
 			"POST",
