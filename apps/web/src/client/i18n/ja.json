@@ -154,7 +154,6 @@
 		"newFromTemplate": "テンプレートから作成",
 		"newFromTemplateAction": "テンプレートから新規レポート",
 		"newTitle": "レポートを作成",
-		"editTitle": "レポートを編集",
 		"duplicateTitle": "レポートを複製",
 		"formDescription": "フィルタとテンプレートを選びます。保存すると同時にレポートが生成されます。",
 		"name": "レポート名",
@@ -210,13 +209,19 @@
 		},
 		"delete": {
 			"title": "このレポートを削除しますか?",
-			"description": "レポートと共有リンクを完全に削除します。元に戻せません。",
-			"descriptionNamed": "「{{name}}」と共有リンクを完全に削除します。元に戻せません。",
+			"description": "レポート、その共有リンク、および送信済みのコピーをすべて完全に削除します。元に戻せません。",
+			"descriptionNamed": "「{{name}}」を、その共有リンクおよび送信済みのコピーとともに完全に削除します。元に戻せません。",
 			"confirm": "削除",
 			"cancel": "キャンセル"
 		},
 		"view": {
 			"downloadAction": ".md をダウンロード"
+		},
+		"edit": {
+			"write": "入力",
+			"preview": "プレビュー",
+			"previewEmpty": "プレビューする内容がありません。",
+			"bodyPlaceholder": "Markdown でレポート本文を記述します。"
 		},
 		"detail": {
 			"selectPrompt": "読むレポートを選択してください。",

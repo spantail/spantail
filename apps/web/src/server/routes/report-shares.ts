@@ -26,13 +26,12 @@ async function requireShareOwner(
 export const reportShareRoutes = new Hono<AppEnv>()
 	// Revocation only reduces exposure, so unlike share creation and listing it
 	// stays owner-only with no workspace membership re-check. Idempotent:
-	// re-revoking keeps the first timestamp. The frozen R2 copy is deleted so a
-	// revoked link can never serve stale content.
+	// re-revoking keeps the first timestamp. The revokedAt check in
+	// loadUsableShare is what stops a revoked link from serving its frozen body.
 	.post("/:id/revoke", async (c) => {
 		requireScope(c, "write");
 		const share = await requireShareOwner(c, c.req.param("id"));
 		const revoked = await revokeReportShare(c.var.db, share.id);
 		if (!revoked) throw new AppError("internal", "Share disappeared");
-		await c.env.SHARE_BUCKET.delete(share.r2Key).catch(() => {});
 		return c.json(toApiShare(revoked));
 	});

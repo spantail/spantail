@@ -1,11 +1,11 @@
 # Seed data & local reset
 
-Tooling to populate (and reset) the **local** D1/R2 used by `pnpm dev` with a
+Tooling to populate (and reset) the **local** D1 used by `pnpm dev` with a
 coherent demo world, for manual testing and demos.
 
 ```bash
-pnpm db:seed     # insert demo data into the local DB + R2
-pnpm db:drop     # wipe local D1 + R2 state (schema and data)
+pnpm db:seed     # insert demo data into the local DB
+pnpm db:drop     # wipe local D1 state (schema and data)
 pnpm db:reset    # db:drop → db:migrate:local → db:seed
 ```
 

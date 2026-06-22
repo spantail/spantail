@@ -247,39 +247,29 @@ export const reportRoutes = new Hono<AppEnv>()
 	.patch("/:id", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
+		// The response carries the rendered body (workspace data), and the edit
+		// mutates it, so losing membership in any filtered workspace revokes
+		// editing too — the same gate as GET /:id. No template check: editing never
+		// touches the template.
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		// The snapshot is generated only at creation; editing is a direct revision
+		// of the frozen document (title + body), never a re-render. Provenance
+		// fields (template, filters, note, totalMinutes) stay as minted — to
+		// regenerate from source entries, delete and recreate the report.
 		const input = validate(updateReportInputSchema, await c.req.json());
-		// Every edit re-renders against the merged definition, so a stale field
-		// is never persisted and membership is re-checked on every render.
-		const name = input.name ?? report.name;
-		const templateId = input.templateId ?? report.templateId;
-		const filters = input.filters ?? report.filters;
-		const note =
-			input.note === undefined ? report.note : normalizeNote(input.note);
-		const { renderedMarkdown, resolvedFilters, totalMinutes } =
-			await renderReportDocument(c, {
-				name,
-				templateId,
-				filters,
-				note,
-			});
-		const updated = await updateReport(c.var.db, report.id, {
-			name,
-			templateId,
-			filters: resolvedFilters,
-			note,
-			totalMinutes,
-			renderedMarkdown,
-		});
+		// Patch only the fields actually sent, so a title-only edit can't clobber a
+		// concurrent body edit (and vice versa) with a stale pre-read value.
+		if (input.name === undefined && input.renderedMarkdown === undefined) {
+			return c.json(report);
+		}
+		const updated = await updateReport(c.var.db, report.id, input);
 		return c.json(updated);
 	})
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		// Drop the frozen R2 copies before the rows cascade away with the report.
-		const shares = await listReportSharesByReport(c.var.db, report.id);
-		await Promise.all(
-			shares.map((share) => c.env.SHARE_BUCKET.delete(share.r2Key)),
-		);
+		// Shares and deliveries (each holding its own frozen copy) cascade away
+		// with the report row.
 		await deleteReport(c.var.db, report.id);
 		return c.body(null, 204);
 	})
@@ -294,38 +284,23 @@ export const reportRoutes = new Hono<AppEnv>()
 			await parseOptionalJsonBody(c),
 		);
 		const token = generateShareToken();
-		const r2Key = `shares/${token}`;
-		// Freeze the body to R2 before the row exists, so a failed insert leaves
-		// only an unreachable object (no row points at it) rather than a row with
-		// no content.
-		await c.env.SHARE_BUCKET.put(r2Key, report.renderedMarkdown, {
-			httpMetadata: {
-				contentType: "text/plain; charset=utf-8",
-				cacheControl: "public, immutable, max-age=31536000",
-			},
+		// The body and title/period are frozen onto the share row in a single
+		// atomic insert, so a later report edit never changes a published page.
+		const share = await createReportShare(c.var.db, {
+			reportId: report.id,
+			token,
+			renderedMarkdown: report.renderedMarkdown,
+			reportName: report.name,
+			dateFrom: report.filters.dateRange.from,
+			dateTo: report.filters.dateRange.to,
+			passcodeHash: input.passcode
+				? await hashSharePasscode(input.passcode)
+				: null,
+			expiresAt: input.expiresInDays
+				? new Date(Date.now() + input.expiresInDays * DAY_MS)
+				: null,
 		});
-		try {
-			const share = await createReportShare(c.var.db, {
-				reportId: report.id,
-				token,
-				r2Key,
-				// Title/period are frozen here too, so a later edit never changes a
-				// published page.
-				reportName: report.name,
-				dateFrom: report.filters.dateRange.from,
-				dateTo: report.filters.dateRange.to,
-				passcodeHash: input.passcode
-					? await hashSharePasscode(input.passcode)
-					: null,
-				expiresAt: input.expiresInDays
-					? new Date(Date.now() + input.expiresInDays * DAY_MS)
-					: null,
-			});
-			return c.json(toApiShare(share), 201);
-		} catch (error) {
-			await c.env.SHARE_BUCKET.delete(r2Key).catch(() => {});
-			throw error;
-		}
+		return c.json(toApiShare(share), 201);
 	})
 	// Listed shares include plaintext tokens (content capabilities), so the list
 	// needs the membership re-check too.

@@ -29,6 +29,9 @@ function dateRangeSpanDays(from: string, to: string): number {
 /** Reports render entries synchronously on write, so the period is bounded. */
 export const MAX_REPORT_SPAN_DAYS = 366;
 
+/** Upper bound on a rendered/hand-edited report body (generous vs templates). */
+export const MAX_REPORT_MARKDOWN_LENGTH = 500_000;
+
 export const absoluteDateRangeSchema = z
 	.object({
 		from: localDateSchema,
@@ -168,12 +171,18 @@ export const createReportInputSchema = z.object({
 });
 export type CreateReportInput = z.infer<typeof createReportInputSchema>;
 
+/**
+ * A report is a snapshot rendered once at creation. Editing is a direct,
+ * manual revision of the frozen document — only the title and body change.
+ * The template, filters, and note are provenance of that snapshot and stay
+ * immutable (the list filters and sidebar group by them, so they must keep
+ * matching what generated the report); to regenerate from source, delete and
+ * recreate.
+ */
 export const updateReportInputSchema = z
 	.object({
 		name: z.string().min(1).max(100),
-		templateId: z.string().min(1),
-		filters: reportFiltersInputSchema,
-		note: z.string().max(20000).nullable(),
+		renderedMarkdown: z.string().min(1).max(MAX_REPORT_MARKDOWN_LENGTH),
 	})
 	.partial();
 export type UpdateReportInput = z.infer<typeof updateReportInputSchema>;

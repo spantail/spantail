@@ -190,15 +190,21 @@ describe("generateDataset", () => {
 		}
 	});
 
-	it("publishes shares only for client monthly reports, each backed by R2", async () => {
-		const { dataset, rows } = await build();
+	it("publishes shares only for client monthly reports, each carrying its frozen body", async () => {
+		const { rows } = await build();
 		const shares = rows("reportShares");
-		const r2Keys = new Set(dataset.r2.map((o) => o.key));
-		// Every share is backed by exactly one R2 body.
-		expect(dataset.r2).toHaveLength(shares.length);
+		const renderedByReport = new Map(
+			rows("reports").map((r) => [
+				r.id as string,
+				r.renderedMarkdown as string,
+			]),
+		);
+		// Every share freezes the parent report's rendered body on its own row.
 		for (const s of shares) {
-			expect(s.r2Key as string).toBe(`shares/${s.token}`);
-			expect(r2Keys.has(s.r2Key as string)).toBe(true);
+			expect(typeof s.renderedMarkdown).toBe("string");
+			expect(s.renderedMarkdown).toBe(
+				renderedByReport.get(s.reportId as string),
+			);
 		}
 
 		// The internal workspace (Northwind) is the only non-client one.

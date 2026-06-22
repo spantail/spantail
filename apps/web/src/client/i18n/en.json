@@ -154,7 +154,6 @@
 		"newFromTemplate": "New from template",
 		"newFromTemplateAction": "New report from template",
 		"newTitle": "New report",
-		"editTitle": "Edit report",
 		"duplicateTitle": "Duplicate report",
 		"formDescription": "Pick filters and a template; saving renders the report immediately.",
 		"name": "Report name",
@@ -210,13 +209,19 @@
 		},
 		"delete": {
 			"title": "Delete this report?",
-			"description": "This permanently deletes the report and its share links. This cannot be undone.",
-			"descriptionNamed": "“{{name}}” will be permanently deleted, along with its share links. This cannot be undone.",
+			"description": "This permanently deletes the report, its share links, and the copies already sent to recipients. This cannot be undone.",
+			"descriptionNamed": "“{{name}}” will be permanently deleted, along with its share links and the copies already sent to recipients. This cannot be undone.",
 			"confirm": "Delete",
 			"cancel": "Cancel"
 		},
 		"view": {
 			"downloadAction": "Download .md"
+		},
+		"edit": {
+			"write": "Write",
+			"preview": "Preview",
+			"previewEmpty": "Nothing to preview.",
+			"bodyPlaceholder": "Report body in Markdown."
 		},
 		"detail": {
 			"selectPrompt": "Select a report to read.",

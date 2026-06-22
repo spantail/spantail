@@ -18,25 +18,6 @@ async function main(): Promise<void> {
 	}
 	wranglerLocal(["d1", "execute", "toxil-db", "--local", "--file", sqlPath]);
 
-	if (dataset.r2.length > 0) {
-		console.log(`Uploading ${dataset.r2.length} share bodies to local R2…`);
-		for (const { key, body } of dataset.r2) {
-			const bodyPath = join(dir, key.replace(/\//g, "_"));
-			writeFileSync(bodyPath, body, "utf8");
-			wranglerLocal([
-				"r2",
-				"object",
-				"put",
-				`toxil-shares/${key}`,
-				"--local",
-				"--file",
-				bodyPath,
-				"--content-type",
-				"text/plain;charset=utf-8",
-			]);
-		}
-	}
-
 	console.log("\nSeed complete. Sign in with any user below:");
 	for (const { name, email } of dataset.credentials) {
 		console.log(`  ${email}  (${name})`);

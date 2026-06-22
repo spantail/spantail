@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { generatePat, hashPat, isShareTokenFormat } from "@toxil/core";
-import { createApiToken, createDb } from "@toxil/db";
+import { createApiToken, createDb, getReportShareByToken } from "@toxil/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -77,7 +77,7 @@ async function mintToken(
 	return token;
 }
 
-it("creates and lists shares, freezing the body to R2", async () => {
+it("creates and lists shares, freezing the body on the share row", async () => {
 	const { admin, ws, project } = await setup();
 	const report = await createReport(admin, ws.id, project.id);
 
@@ -93,15 +93,14 @@ it("creates and lists shares, freezing the body to R2", async () => {
 	expect(isShareTokenFormat(token)).toBe(true);
 	expect(share.hasPasscode).toBe(true);
 	expect(share).not.toHaveProperty("passcodeHash");
-	expect(share).not.toHaveProperty("r2Key");
+	expect(share).not.toHaveProperty("renderedMarkdown");
 	const expiresAt = new Date(share.expiresAt as string).getTime();
 	expect(expiresAt).toBeGreaterThan(Date.now() + 6 * 24 * 60 * 60 * 1000);
 	expect(expiresAt).toBeLessThan(Date.now() + 8 * 24 * 60 * 60 * 1000);
 
-	// The rendered markdown was frozen to R2 at mint time.
-	const object = await env.SHARE_BUCKET.get(`shares/${token}`);
-	expect(object).not.toBeNull();
-	expect(await object?.text()).toBe(report.renderedMarkdown);
+	// The rendered markdown was frozen onto the share row at mint time.
+	const row = await getReportShareByToken(createDb(env.DB), token);
+	expect(row?.renderedMarkdown).toBe(report.renderedMarkdown);
 
 	// A body-less POST is fine: every field is optional.
 	const bare = await appFetch(`/api/v1/reports/${report.id}/shares`, {
@@ -119,7 +118,7 @@ it("creates and lists shares, freezing the body to R2", async () => {
 	expect(list).toHaveLength(2);
 	for (const row of list) {
 		expect(row).not.toHaveProperty("passcodeHash");
-		expect(row).not.toHaveProperty("r2Key");
+		expect(row).not.toHaveProperty("renderedMarkdown");
 		expect(row.viewCount).toBe(0);
 	}
 });
@@ -134,14 +133,14 @@ it("keeps a published share frozen when the report is edited", async () => {
 	const edited = await apiJson(
 		"PATCH",
 		`/api/v1/reports/${report.id}`,
-		{ name: "Renamed" },
+		{ renderedMarkdown: "# Edited body" },
 		admin,
 	);
 	expect(edited.status).toBe(200);
 
-	// The frozen R2 copy is unchanged by the edit.
-	const object = await env.SHARE_BUCKET.get(`shares/${share.token}`);
-	expect(await object?.text()).toBe(report.renderedMarkdown);
+	// The frozen copy on the share row is unchanged by the edit.
+	const row = await getReportShareByToken(createDb(env.DB), share.token);
+	expect(row?.renderedMarkdown).toBe(report.renderedMarkdown);
 });
 
 it("validates share inputs", async () => {
@@ -269,7 +268,8 @@ it("blocks create and list after membership loss but still allows revoke", async
 	expect(
 		(await apiGet(`/api/v1/reports/${report.id}/shares`, other)).status,
 	).toBe(403);
-	// Revoking only reduces exposure, so it still works and sweeps the R2 copy.
+	// Revoking only reduces exposure, so it still works; the revoked link then
+	// serves a 404 instead of its frozen body.
 	expect(
 		(
 			await apiJson(
@@ -280,7 +280,7 @@ it("blocks create and list after membership loss but still allows revoke", async
 			)
 		).status,
 	).toBe(200);
-	expect(await env.SHARE_BUCKET.get(`shares/${share.token}`)).toBeNull();
+	expect((await appFetch(`/share/${share.token}`)).status).toBe(404);
 });
 
 it("revokes idempotently, keeping the first timestamp", async () => {
@@ -312,13 +312,14 @@ it("revokes idempotently, keeping the first timestamp", async () => {
 	);
 });
 
-it("cascades share deletion with the report and sweeps R2", async () => {
+it("cascades share deletion with the report", async () => {
 	const { admin, ws, project } = await setup();
 	const report = await createReport(admin, ws.id, project.id);
 	const share = (await (
 		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, admin)
 	).json()) as { id: string; token: string };
-	expect(await env.SHARE_BUCKET.get(`shares/${share.token}`)).not.toBeNull();
+	const db = createDb(env.DB);
+	expect(await getReportShareByToken(db, share.token)).toBeDefined();
 
 	expect(
 		(await apiJson("DELETE", `/api/v1/reports/${report.id}`, undefined, admin))
@@ -334,5 +335,6 @@ it("cascades share deletion with the report and sweeps R2", async () => {
 			)
 		).status,
 	).toBe(404);
-	expect(await env.SHARE_BUCKET.get(`shares/${share.token}`)).toBeNull();
+	// The share row cascaded away with the report.
+	expect(await getReportShareByToken(db, share.token)).toBeUndefined();
 });

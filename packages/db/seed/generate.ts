@@ -35,7 +35,6 @@ export interface SeededTable {
 export interface Dataset {
 	/** In dependency order so a single SQL file inserts cleanly. */
 	tables: SeededTable[];
-	r2: Array<{ key: string; body: string }>;
 	credentials: Array<{ name: string; email: string }>;
 	summary: Record<string, number>;
 }
@@ -400,7 +399,6 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	const reportRows: Row[] = [];
 	const deliveryRows: Row[] = [];
 	const shareRows: Row[] = [];
-	const r2: Array<{ key: string; body: string }> = [];
 	const readBefore = shiftDays(todayInTimezone("UTC", now), -3);
 
 	const addDeliveries = (
@@ -717,13 +715,12 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 				);
 				if (ws.client) {
 					const token = generateShareToken();
-					const r2Key = `shares/${token}`;
 					const viewCount = (shareRows.length % 5) + 1;
 					shareRows.push({
 						id: randomUUID(),
 						reportId: id,
 						token,
-						r2Key,
+						renderedMarkdown: rendered,
 						reportName: name,
 						dateFrom: month.first,
 						dateTo: month.last,
@@ -734,7 +731,6 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 						lastViewedAt: new Date(createdAt.getTime() + 86_400_000),
 						createdAt,
 					});
-					r2.push({ key: r2Key, body: rendered });
 				}
 			}
 		}
@@ -774,7 +770,6 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 
 	return {
 		tables,
-		r2,
 		credentials: config.users.map((u) => ({ name: u.name, email: u.email })),
 		summary: Object.fromEntries(tables.map((t) => [t.table, t.rows.length])),
 	};

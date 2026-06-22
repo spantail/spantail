@@ -164,11 +164,11 @@ it("returns a uniform 404 for invalid, unknown, revoked, and expired links", asy
 	).toBe(200);
 
 	// An expired share cannot be minted via the API; insert it directly. The
-	// expiry check fires before any R2 read, so no object is needed.
+	// expiry check fires before the body is read, so its content is irrelevant.
 	const expired = await createReportShare(createDb(env.DB), {
 		reportId,
 		token: generateShareToken(),
-		r2Key: `shares/${generateShareToken()}`,
+		renderedMarkdown: "# Expired",
 		reportName: "Expired",
 		dateFrom: "2026-01-01",
 		dateTo: "2026-01-01",
