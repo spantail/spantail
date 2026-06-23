@@ -80,8 +80,10 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		return c.json(updated);
 	})
 	// Serves the logo through the Worker so the session cookie authorizes it
-	// (the SPA loads it via <img>). The URL carries a cache-busting "?v=", so a
-	// given URL's bytes are immutable.
+	// (the SPA loads it via <img>). "no-cache" forces the browser to revalidate
+	// on every use, which re-runs requireWorkspaceAccess — so a revoked member's
+	// cached copy stops being served. The ETag makes that revalidation a cheap
+	// 304 when the bytes are unchanged.
 	.get("/:id/logo", async (c) => {
 		requireScope(c, "read");
 		const workspaceId = c.req.param("id");
@@ -91,7 +93,10 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		const headers = new Headers();
 		object.writeHttpMetadata(headers);
 		headers.set("etag", object.httpEtag);
-		headers.set("cache-control", "private, max-age=31536000, immutable");
+		headers.set("cache-control", "private, no-cache");
+		if (c.req.header("if-none-match") === object.httpEtag) {
+			return new Response(null, { status: 304, headers });
+		}
 		return new Response(object.body, { headers });
 	})
 	.put("/:id/logo", async (c) => {

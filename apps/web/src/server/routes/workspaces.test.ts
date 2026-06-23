@@ -162,7 +162,16 @@ it("uploads, serves, and removes a workspace logo", async () => {
 	const served = await apiGet(`/api/v1/workspaces/${ws.id}/logo`, admin);
 	expect(served.status).toBe(200);
 	expect(served.headers.get("content-type")).toBe("image/png");
+	expect(served.headers.get("cache-control")).toBe("private, no-cache");
 	expect(new Uint8Array(await served.arrayBuffer())).toEqual(bytes);
+
+	// Revalidation re-runs auth and returns 304 when the ETag still matches.
+	const etag = served.headers.get("etag");
+	expect(etag).toBeTruthy();
+	const revalidated = await appFetch(`/api/v1/workspaces/${ws.id}/logo`, {
+		headers: { cookie: admin, "if-none-match": etag as string },
+	});
+	expect(revalidated.status).toBe(304);
 
 	const removed = await apiJson(
 		"DELETE",
