@@ -45,7 +45,7 @@ async function setup() {
 
 async function createAgentToken(
 	cookie: string,
-	binding: { defaultWorkspaceId: string; defaultProjectId?: string },
+	binding: { defaultWorkspaceId: string; projectIds?: string[] },
 ): Promise<{ agentId: string; token: string }> {
 	// Registering an agent issues its single token in one step; the plaintext
 	// secret is returned once.
@@ -75,12 +75,13 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	const { admin, ws, project } = await setup();
 	const { agentId, token } = await createAgentToken(admin, {
 		defaultWorkspaceId: ws.id,
-		defaultProjectId: project.id,
 	});
 
-	// workspaceId omitted: resolved from the token binding.
+	// workspaceId omitted: resolved from the token binding. The project is named
+	// explicitly (there is no token-level default project).
 	const first = await ingest(token, {
 		sessionId: "s1",
+		projectId: project.id,
 		durationMinutes: 10,
 		usage: { totalTokens: 1000, model: "opus" },
 		description: "did stuff",
@@ -90,6 +91,7 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	// Re-sending the same session updates the row rather than duplicating it.
 	const second = await ingest(token, {
 		sessionId: "s1",
+		projectId: project.id,
 		durationMinutes: 25,
 		usage: { totalTokens: 3000 },
 	});
@@ -127,27 +129,16 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	expect(active.map((a) => a.id)).toContain(agentId);
 });
 
-it("drops the token's default project when ingesting into another workspace", async () => {
+it("records no project when the ingest omits one", async () => {
 	const { admin, ws, project } = await setup();
+	// Associating projects with the agent is a presentation grouping only — it
+	// must not act as an ingest default, so an unprojected ingest stays null.
 	const { token } = await createAgentToken(admin, {
 		defaultWorkspaceId: ws.id,
-		defaultProjectId: project.id,
+		projectIds: [project.id],
 	});
 
-	// A second workspace the owner belongs to, with no project of its own.
-	const ws2 = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/workspaces",
-			{ slug: "beta", name: "Beta", timezone: "Asia/Tokyo" },
-			admin,
-		)
-	).json()) as { id: string };
-
-	// Overriding the workspace without a project must not carry the default
-	// project (which belongs to ws) into ws2; the entry lands unprojected.
 	const res = await ingest(token, {
-		workspaceId: ws2.id,
 		sessionId: "x1",
 		durationMinutes: 5,
 	});

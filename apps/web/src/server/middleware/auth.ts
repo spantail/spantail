@@ -146,7 +146,6 @@ async function resolveAat(
 		agentId: agent.id,
 		ownerUserId: owner.id,
 		defaultWorkspaceId: row.defaultWorkspaceId,
-		defaultProjectId: row.defaultProjectId,
 	};
 }
 

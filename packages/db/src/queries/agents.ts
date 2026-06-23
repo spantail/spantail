@@ -1,7 +1,23 @@
-import { and, asc, desc, eq, gte, isNull, lte, ne, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNull,
+	lte,
+	ne,
+	sql,
+} from "drizzle-orm";
 
 import type { Database } from "../index";
-import { agentEntries, agents, agentTokens } from "../schema/agents";
+import {
+	agentEntries,
+	agentProjects,
+	agents,
+	agentTokens,
+} from "../schema/agents";
 
 export type AgentRow = typeof agents.$inferSelect;
 export type AgentTokenRow = typeof agentTokens.$inferSelect;
@@ -27,35 +43,43 @@ export async function createAgentWithToken(
 		tokenName: string;
 		tokenHash: string;
 		defaultWorkspaceId: string;
-		defaultProjectId: string | null;
+		projectIds: string[];
 		expiresAt: Date | null;
 	},
 ): Promise<{ agent: AgentRow; token: AgentTokenRow }> {
 	const agentId = crypto.randomUUID();
-	// D1 has no interactive transactions; batch keeps both writes atomic.
-	const [agentRows, tokenRows] = await db.batch([
-		db
-			.insert(agents)
-			.values({
-				id: agentId,
-				userId: input.userId,
-				type: input.type,
-				name: input.name,
-			})
-			.returning(),
-		db
-			.insert(agentTokens)
-			.values({
-				id: crypto.randomUUID(),
-				agentId,
-				name: input.tokenName,
-				tokenHash: input.tokenHash,
-				defaultWorkspaceId: input.defaultWorkspaceId,
-				defaultProjectId: input.defaultProjectId,
-				expiresAt: input.expiresAt,
-			})
-			.returning(),
-	]);
+	const insertAgent = db
+		.insert(agents)
+		.values({
+			id: agentId,
+			userId: input.userId,
+			type: input.type,
+			name: input.name,
+		})
+		.returning();
+	const insertToken = db
+		.insert(agentTokens)
+		.values({
+			id: crypto.randomUUID(),
+			agentId,
+			name: input.tokenName,
+			tokenHash: input.tokenHash,
+			defaultWorkspaceId: input.defaultWorkspaceId,
+			expiresAt: input.expiresAt,
+		})
+		.returning();
+	// D1 has no interactive transactions; one batch keeps the agent, its token,
+	// and its project associations atomic. An empty projectIds means "all
+	// projects", so no association rows are written (and no empty insert is run).
+	const [agentRows, tokenRows] = await (input.projectIds.length > 0
+		? db.batch([
+				insertAgent,
+				insertToken,
+				db
+					.insert(agentProjects)
+					.values(input.projectIds.map((projectId) => ({ agentId, projectId }))),
+			])
+		: db.batch([insertAgent, insertToken]));
 	const agent = agentRows[0];
 	const token = tokenRows[0];
 	if (!agent || !token) throw new Error("agent create returned no row");
@@ -65,27 +89,28 @@ export async function createAgentWithToken(
 /** Public summary of an agent's single bound access token (no secret/hash). */
 export type AgentTokenSummaryRow = {
 	defaultWorkspaceId: string | null;
-	defaultProjectId: string | null;
 	lastUsedAt: Date | null;
 	expiresAt: Date | null;
 };
 
 /**
- * Active (non-archived) agents owned by the user with their single bound token,
- * newest first. Agent and token are 1:1, but a legacy agent may still carry
- * several token rows; the join is deduplicated to the oldest token per agent so
- * the 1:1 UI never receives a duplicated agent.
+ * Active (non-archived) agents owned by the user with their single bound token
+ * and associated project ids, newest first. Agent and token are 1:1, but a
+ * legacy agent may still carry several token rows; the join is deduplicated to
+ * the oldest token per agent so the 1:1 UI never receives a duplicated agent.
+ * An empty `projectIds` means the agent is associated with all projects.
  */
 export async function listAgentsWithTokenForUser(
 	db: Database,
 	userId: string,
-): Promise<Array<AgentRow & { token: AgentTokenSummaryRow | null }>> {
+): Promise<
+	Array<AgentRow & { token: AgentTokenSummaryRow | null; projectIds: string[] }>
+> {
 	const rows = await db
 		.select({
 			agent: agents,
 			tokenId: agentTokens.id,
 			defaultWorkspaceId: agentTokens.defaultWorkspaceId,
-			defaultProjectId: agentTokens.defaultProjectId,
 			lastUsedAt: agentTokens.lastUsedAt,
 			expiresAt: agentTokens.expiresAt,
 		})
@@ -94,11 +119,40 @@ export async function listAgentsWithTokenForUser(
 		.where(and(eq(agents.userId, userId), isNull(agents.archivedAt)))
 		.orderBy(desc(agents.createdAt), asc(agentTokens.createdAt));
 	const seen = new Set<string>();
-	const result: Array<AgentRow & { token: AgentTokenSummaryRow | null }> = [];
+	const result: Array<
+		AgentRow & { token: AgentTokenSummaryRow | null; projectIds: string[] }
+	> = [];
 	for (const { agent, tokenId, ...token } of rows) {
 		if (seen.has(agent.id)) continue;
 		seen.add(agent.id);
-		result.push({ ...agent, token: tokenId === null ? null : token });
+		result.push({
+			...agent,
+			token: tokenId === null ? null : token,
+			projectIds: [],
+		});
+	}
+	if (result.length > 0) {
+		const links = await db
+			.select({
+				agentId: agentProjects.agentId,
+				projectId: agentProjects.projectId,
+			})
+			.from(agentProjects)
+			.where(
+				inArray(
+					agentProjects.agentId,
+					result.map((a) => a.id),
+				),
+			);
+		const byAgent = new Map<string, string[]>();
+		for (const link of links) {
+			const ids = byAgent.get(link.agentId) ?? [];
+			ids.push(link.projectId);
+			byAgent.set(link.agentId, ids);
+		}
+		for (const agent of result) {
+			agent.projectIds = byAgent.get(agent.id) ?? [];
+		}
 	}
 	return result;
 }
@@ -151,17 +205,47 @@ export async function archiveAgent(
 	return rows.length > 0;
 }
 
-/** Agents with at least one entry in the workspace (for the sidebar group). */
-export async function listAgentsWithActivity(
+/**
+ * Agents shown under a workspace in the sidebar. Two arms, unioned and
+ * deduplicated:
+ *  - any agent with at least one entry in the workspace (cross-user — this is
+ *    the established workspace-wide activity view), and
+ *  - the requesting user's own non-archived agents registered to the workspace
+ *    (their token's default workspace), so a freshly registered agent appears
+ *    immediately, but only for its owner until it has logged work here.
+ */
+export async function listWorkspaceAgents(
 	db: Database,
 	workspaceId: string,
+	userId: string,
 ): Promise<Array<Pick<AgentRow, "id" | "type" | "name">>> {
-	return db
-		.selectDistinct({ id: agents.id, type: agents.type, name: agents.name })
-		.from(agents)
-		.innerJoin(agentEntries, eq(agentEntries.agentId, agents.id))
-		.where(eq(agentEntries.workspaceId, workspaceId))
-		.orderBy(asc(agents.name));
+	const select = { id: agents.id, type: agents.type, name: agents.name };
+	const [active, registered] = await Promise.all([
+		db
+			.selectDistinct(select)
+			.from(agents)
+			.innerJoin(agentEntries, eq(agentEntries.agentId, agents.id))
+			.where(
+				and(
+					eq(agentEntries.workspaceId, workspaceId),
+					isNull(agents.archivedAt),
+				),
+			),
+		db
+			.selectDistinct(select)
+			.from(agents)
+			.innerJoin(agentTokens, eq(agentTokens.agentId, agents.id))
+			.where(
+				and(
+					eq(agents.userId, userId),
+					eq(agentTokens.defaultWorkspaceId, workspaceId),
+					isNull(agents.archivedAt),
+				),
+			),
+	]);
+	const byId = new Map<string, Pick<AgentRow, "id" | "type" | "name">>();
+	for (const agent of [...active, ...registered]) byId.set(agent.id, agent);
+	return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // --- agent tokens (AAT) ---

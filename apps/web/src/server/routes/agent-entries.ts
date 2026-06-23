@@ -10,7 +10,7 @@ import {
 	getProjectById,
 	getWorkspaceById,
 	listAgentEntries,
-	listAgentsWithActivity,
+	listWorkspaceAgents,
 	upsertAgentEntry,
 } from "@toxil/db";
 import { Hono } from "hono";
@@ -49,13 +49,9 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			);
 		}
 
-		// The token's default project belongs to its default workspace, so it only
-		// applies when the resolved workspace is that one. An explicit workspace
-		// override drops the default project (the caller may still pass its own),
-		// keeping unprojected cross-workspace ingest possible.
-		const defaultProjectId =
-			workspaceId === auth.defaultWorkspaceId ? auth.defaultProjectId : null;
-		const projectId = input.projectId ?? defaultProjectId;
+		// A project is recorded only when the ingest names one; there is no
+		// token-level default. An omitted project records workspace-level work.
+		const projectId = input.projectId ?? null;
 		if (projectId) {
 			const project = await getProjectById(c.var.db, projectId);
 			if (!project || project.workspaceId !== workspaceId) {
@@ -95,13 +91,16 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		await requireWorkspaceAccess(c, query.workspaceId);
 		return c.json(await getAgentEntryStats(c.var.db, query));
 	})
-	// Agents with activity in a workspace; powers the sidebar's Agents group.
+	// Agents shown under a workspace in the sidebar: those with activity here
+	// (workspace-wide) plus the caller's own agents registered to this workspace.
 	.get("/agents", async (c) => {
-		requireScope(c, "read");
+		const auth = requireScope(c, "read");
 		const workspaceId = c.req.query("workspaceId");
 		if (!workspaceId) {
 			throw new AppError("bad_request", "workspaceId is required");
 		}
 		await requireWorkspaceAccess(c, workspaceId);
-		return c.json(await listAgentsWithActivity(c.var.db, workspaceId));
+		return c.json(
+			await listWorkspaceAgents(c.var.db, workspaceId, auth.user.id),
+		);
 	});

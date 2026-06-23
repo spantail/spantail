@@ -29,31 +29,35 @@ export type Agent = z.infer<typeof agentSchema>;
  */
 export const agentTokenSummarySchema = z.object({
 	defaultWorkspaceId: z.string().nullable(),
-	defaultProjectId: z.string().nullable(),
 	lastUsedAt: z.string().nullable(),
 	expiresAt: z.string().nullable(),
 });
 export type AgentTokenSummary = z.infer<typeof agentTokenSummarySchema>;
 
 /**
- * An agent with its single bound access token. Agent and token are 1:1: the
- * token is created with the agent and its binding (default workspace/project)
- * is fixed for the agent's life — changing it means re-creating the agent.
+ * An agent with its single bound access token and the projects it is associated
+ * with. Agent and token are 1:1: the token is created with the agent and its
+ * binding (default workspace) is fixed for the agent's life — changing it means
+ * re-creating the agent. `projectIds` is the association set chosen at
+ * registration; an empty array means "all projects" in the bound workspace.
  */
 export const agentWithTokenSchema = agentSchema.extend({
 	token: agentTokenSummarySchema.nullable(),
+	projectIds: z.array(z.string()),
 });
 export type AgentWithToken = z.infer<typeof agentWithTokenSchema>;
 
 /**
  * Creating an agent also issues its access token. A default workspace is
- * required (the token must know where to log); a default project is optional.
+ * required (the token must know where to log). `projectIds` associates the
+ * agent with a subset of that workspace's projects; omit or pass an empty array
+ * for "all projects".
  */
 export const createAgentInputSchema = z.object({
 	type: agentTypeSchema,
 	name: z.string().min(1).max(100),
 	defaultWorkspaceId: z.string(),
-	defaultProjectId: z.string().optional(),
+	projectIds: z.array(z.string()).optional(),
 	expiresInDays: z.number().int().min(1).max(3650).optional(),
 });
 export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;

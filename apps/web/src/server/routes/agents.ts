@@ -9,8 +9,8 @@ import {
 	archiveAgent,
 	createAgentWithToken,
 	getAgentById,
-	getProjectById,
 	listAgentsWithTokenForUser,
+	listProjectsByIds,
 	rotateAgentToken,
 	setAgentDisabled,
 } from "@toxil/db";
@@ -47,22 +47,29 @@ export const agentRoutes = new Hono<AppEnv>()
 		return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
 	})
 	// Registering an agent also issues its single access token (1:1). The default
-	// workspace is required so the token always knows where to log; an optional
-	// default project narrows it. The plaintext secret is returned exactly once.
+	// workspace is required so the token always knows where to log; the optional
+	// project set associates the agent with a subset of that workspace's projects
+	// (empty = all). The plaintext secret is returned exactly once.
 	.post("/", async (c) => {
 		const { user } = requireSession(c);
 		const input = validate(createAgentInputSchema, await c.req.json());
 
 		// A binding can never exceed its owner's live membership. (Re-checked at
-		// ingest.) The workspace must be one the issuer belongs to; a default
-		// project must live in that workspace.
+		// ingest.) The workspace must be one the issuer belongs to; every
+		// associated project must live in that workspace.
 		await requireWorkspaceAccess(c, input.defaultWorkspaceId);
-		if (input.defaultProjectId) {
-			const project = await getProjectById(c.var.db, input.defaultProjectId);
-			if (!project || project.workspaceId !== input.defaultWorkspaceId) {
+		const projectIds = [...new Set(input.projectIds ?? [])];
+		if (projectIds.length > 0) {
+			const projects = await listProjectsByIds(c.var.db, projectIds);
+			const inWorkspace = new Set(
+				projects
+					.filter((p) => p.workspaceId === input.defaultWorkspaceId)
+					.map((p) => p.id),
+			);
+			if (projectIds.some((id) => !inWorkspace.has(id))) {
 				throw new AppError(
 					"bad_request",
-					"Default project does not belong to the default workspace",
+					"A selected project does not belong to the default workspace",
 				);
 			}
 		}
@@ -75,7 +82,7 @@ export const agentRoutes = new Hono<AppEnv>()
 			tokenName: input.name,
 			tokenHash: await hashToken(secret),
 			defaultWorkspaceId: input.defaultWorkspaceId,
-			defaultProjectId: input.defaultProjectId ?? null,
+			projectIds,
 			expiresAt: input.expiresInDays
 				? new Date(Date.now() + input.expiresInDays * DAY_MS)
 				: null,
@@ -86,10 +93,10 @@ export const agentRoutes = new Hono<AppEnv>()
 				...agentView,
 				token: {
 					defaultWorkspaceId: token.defaultWorkspaceId,
-					defaultProjectId: token.defaultProjectId,
 					lastUsedAt: token.lastUsedAt,
 					expiresAt: token.expiresAt,
 				},
+				projectIds,
 				secret,
 			},
 			201,
