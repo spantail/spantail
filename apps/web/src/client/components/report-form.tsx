@@ -215,9 +215,12 @@ export function ReportForm({
 			.split(",")
 			.map((tag) => tag.trim())
 			.filter(Boolean);
+		// projectIds is only ever set for a single workspace (its checkboxes) or
+		// carried over from the edited report; include it whenever present so a
+		// cross-workspace report keeps its project scope on a name/note edit.
 		const filters: ReportFiltersInput = {
 			workspaceIds,
-			...(singleWorkspaceId && projectIds.length > 0 ? { projectIds } : {}),
+			...(projectIds.length > 0 ? { projectIds } : {}),
 			...(userIds.length > 0 ? { userIds } : {}),
 			...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
 			dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
@@ -234,7 +237,6 @@ export function ReportForm({
 		spanTooLong,
 		effectiveName,
 		tags,
-		singleWorkspaceId,
 		projectIds,
 		userIds,
 		rangeChoice,

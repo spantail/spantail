@@ -39,17 +39,32 @@ export function buildReportFrontMatter(meta: ReportFrontMatter): string {
 // later in the Markdown is never mistaken for the terminator.
 const FRONT_MATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*\r?\n?/;
 
+// Keys this module always emits. A leading block is only treated as our header
+// when it carries all of them, so a legacy report whose body happens to open
+// with a user/template `---` block (e.g. pre-migration content backfilled
+// without a marker) keeps that block visible instead of losing content.
+const SIGNATURE_KEYS = ["version", "templateId", "generatedAt"];
+
+function isSystemFrontMatter(block: string): boolean {
+	return SIGNATURE_KEYS.every((key) =>
+		new RegExp(`(^|\\n)${key}:`).test(block),
+	);
+}
+
 /**
- * Splits a leading YAML front-matter block from the Markdown body. Returns the
- * original string as `body` (and `frontMatter: null`) when there is none. Used
- * to hide the header at display time; the structured fields are never parsed
- * back (the report header is the source of truth).
+ * Splits the system-generated YAML front-matter header from the Markdown body.
+ * Returns the original string as `body` (and `frontMatter: null`) when there is
+ * none, or when a leading block isn't our header (see SIGNATURE_KEYS). Used to
+ * hide the header at display time; the structured fields are never parsed back
+ * (the report header is the source of truth).
  */
 export function splitFrontMatter(md: string): {
 	frontMatter: string | null;
 	body: string;
 } {
 	const match = md.match(FRONT_MATTER_RE);
-	if (!match) return { frontMatter: null, body: md };
+	if (!match || !isSystemFrontMatter(match[1] ?? "")) {
+		return { frontMatter: null, body: md };
+	}
 	return { frontMatter: match[1] ?? "", body: md.slice(match[0].length) };
 }

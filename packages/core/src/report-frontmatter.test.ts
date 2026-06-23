@@ -42,4 +42,13 @@ describe("report front-matter", () => {
 		expect(frontMatter).toBeNull();
 		expect(body).toBe("# Just a body\n\n---\n");
 	});
+
+	it("leaves a non-system leading YAML block intact (legacy/user content)", () => {
+		// A pre-migration body that opens with a user/template front-matter block
+		// lacking our signature keys must not be stripped.
+		const legacy = "---\ntitle: Quarterly\nauthor: Mei\n---\n\n# Quarterly\n";
+		const { frontMatter, body } = splitFrontMatter(legacy);
+		expect(frontMatter).toBeNull();
+		expect(body).toBe(legacy);
+	});
 });
