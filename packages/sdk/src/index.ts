@@ -424,10 +424,25 @@ export class ToxilClient {
 		return this.request("POST", "/reports", { body: input });
 	}
 
+	/**
+	 * Renders a report from the given fields without persisting it — drives the
+	 * compose dialog's live preview. `content` is the rendered Markdown including
+	 * the YAML front-matter header (strip it for display).
+	 */
+	previewReport(input: CreateReportInput): Promise<{
+		content: string;
+		totalMinutes: number;
+		entryCount: number;
+		projectCount: number;
+	}> {
+		return this.request("POST", "/reports/preview", { body: input });
+	}
+
 	getReport(id: string): Promise<Report> {
 		return this.request("GET", `/reports/${id}`);
 	}
 
+	/** Re-renders the report from updated fields, appending a new version. */
 	updateReport(id: string, input: UpdateReportInput): Promise<Report> {
 		return this.request("PATCH", `/reports/${id}`, { body: input });
 	}

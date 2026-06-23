@@ -186,7 +186,7 @@ it("enforces the scope matrix", async () => {
 			await bearerJson(
 				"PATCH",
 				`/api/v1/reports/${report.id}`,
-				{ name: "Renamed" },
+				{ ...reportInput, name: "Renamed" },
 				writeToken,
 			)
 		).status,

@@ -53,6 +53,9 @@ const dialogContentSizes = {
   lg: "sm:max-w-lg",
   "2xl": "sm:max-w-2xl",
   "3xl": "sm:max-w-3xl",
+  // Wide two-pane compose modal (report create/edit): the content lays out its
+  // own header/body/footer, so callers pass `p-0 gap-0 flex` via className.
+  compose: "sm:max-w-[1180px]",
 } as const
 
 function DialogContent({

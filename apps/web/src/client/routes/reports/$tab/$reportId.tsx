@@ -2,13 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { Report } from "@toxil/core";
 import { XIcon } from "lucide-react";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportDeleteAction } from "@/components/report-delete-action";
 import { ReportDiscussion } from "@/components/report-discussion";
-import { ReportEditor } from "@/components/report-editor";
 import { ReportToolbar } from "@/components/report-toolbar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,36 +70,19 @@ function ReportReadingPane() {
 		);
 	}
 
-	// Keyed by report id so prev/next (which reuses this route component) remounts
-	// the pane, resetting edit mode without an effect.
 	return <ReportPane key={report.id} report={report} tab={tab} />;
 }
 
 function ReportPane({ report, tab }: { report: Report; tab: string }) {
-	const [editing, setEditing] = useState(false);
-
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			<ReportToolbar
-				report={report}
-				tab={tab}
-				editing={editing}
-				onEdit={() => setEditing(true)}
-			/>
+			<ReportToolbar report={report} tab={tab} />
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="mx-auto flex w-full max-w-3xl flex-col gap-7 px-8 py-8">
-					{editing ? (
-						<ReportEditor report={report} onDone={() => setEditing(false)} />
-					) : (
-						<>
-							{/* The report name is the markdown's own H1 — no title header. */}
-							<MarkdownView
-								markdown={report.renderedMarkdown}
-								variant="report"
-							/>
-							<ReportDiscussion reportId={report.id} />
-						</>
-					)}
+					{/* The report name is the markdown's own H1 — no title header.
+					    The YAML front-matter header is stripped by MarkdownView. */}
+					<MarkdownView markdown={report.renderedMarkdown} variant="report" />
+					<ReportDiscussion reportId={report.id} />
 				</div>
 			</div>
 		</div>

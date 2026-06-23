@@ -397,6 +397,21 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 
 	// --- Reports / deliveries / shares -------------------------------------
 	const reportRows: Row[] = [];
+	// One immutable content version per seeded report (all at version 1). Seed
+	// bodies carry no front-matter; that renders fine (display only strips a
+	// header when present).
+	const contentRows: Row[] = [];
+	const addReport = (report: Row, rendered: string, createdAt: Date) => {
+		reportRows.push({ ...report, version: 1 });
+		contentRows.push({
+			id: `${report.id as string}-v1`,
+			reportId: report.id,
+			version: 1,
+			content: rendered,
+			note: report.note ?? null,
+			createdAt,
+		});
+	};
 	const deliveryRows: Row[] = [];
 	const shareRows: Row[] = [];
 	const readBefore = shiftDays(todayInTimezone("UTC", now), -3);
@@ -497,18 +512,21 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 				};
 				const rendered = await renderReport(tmpl.body, context);
 				const id = randomUUID();
-				reportRows.push({
-					id,
-					name,
-					ownerUserId: user.id,
-					templateId: tmpl.id,
-					filters,
-					note: null,
-					totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
-					renderedMarkdown: rendered,
+				addReport(
+					{
+						id,
+						name,
+						ownerUserId: user.id,
+						templateId: tmpl.id,
+						filters,
+						note: null,
+						totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+						createdAt,
+						updatedAt: createdAt,
+					},
+					rendered,
 					createdAt,
-					updatedAt: createdAt,
-				});
+				);
 				addDeliveries(
 					{ id, name, sender: user, rendered },
 					manager && manager.key !== user.key ? [manager] : [],
@@ -588,18 +606,21 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			};
 			const rendered = await renderReport(tmpl.body, context);
 			const id = randomUUID();
-			reportRows.push({
-				id,
-				name,
-				ownerUserId: sender.id,
-				templateId: tmpl.id,
-				filters,
-				note: null,
-				totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
-				renderedMarkdown: rendered,
+			addReport(
+				{
+					id,
+					name,
+					ownerUserId: sender.id,
+					templateId: tmpl.id,
+					filters,
+					note: null,
+					totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+					createdAt,
+					updatedAt: createdAt,
+				},
+				rendered,
 				createdAt,
-				updatedAt: createdAt,
-			});
+			);
 			addDeliveries(
 				{ id, name, sender, rendered },
 				recipients,
@@ -692,18 +713,21 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 				};
 				const rendered = await renderReport(tmpl.body, context);
 				const id = randomUUID();
-				reportRows.push({
-					id,
-					name,
-					ownerUserId: user.id,
-					templateId: tmpl.id,
-					filters,
-					note,
-					totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
-					renderedMarkdown: rendered,
+				addReport(
+					{
+						id,
+						name,
+						ownerUserId: user.id,
+						templateId: tmpl.id,
+						filters,
+						note,
+						totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+						createdAt,
+						updatedAt: createdAt,
+					},
+					rendered,
 					createdAt,
-					updatedAt: createdAt,
-				});
+				);
 				const manager = managerByWs.get(ws.key);
 				addDeliveries(
 					{ id, name, sender: user, rendered },
@@ -764,6 +788,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		{ table: "reportTemplates", rows: templateRows },
 		{ table: "instanceSettings", rows: instanceRows },
 		{ table: "reports", rows: reportRows },
+		{ table: "reportContent", rows: contentRows },
 		{ table: "reportShares", rows: shareRows },
 		{ table: "reportDeliveries", rows: deliveryRows },
 	];

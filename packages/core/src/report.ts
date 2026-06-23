@@ -123,10 +123,13 @@ export const reportSchema = z.object({
 	filters: reportFiltersSchema,
 	// Free-form markdown appended to the rendered output via {{ report.note }}.
 	note: z.string().max(20000).nullable(),
-	// Total logged minutes across the report's entries, computed at render time.
+	// Total logged minutes across the report's entries of the current version.
 	// Null for reports generated before this was tracked (shown until re-rendered).
 	totalMinutes: z.number().int().nonnegative().nullable(),
-	// The rendered document, produced on create and refreshed on edit.
+	// Current version number: 1 at creation, incremented on each edit.
+	version: z.number().int().positive(),
+	// The current version's rendered document (system YAML front-matter + body),
+	// composed from the report header and its latest content version.
 	renderedMarkdown: z.string(),
 	createdAt: z.string(),
 	updatedAt: z.string(),
@@ -172,19 +175,12 @@ export const createReportInputSchema = z.object({
 export type CreateReportInput = z.infer<typeof createReportInputSchema>;
 
 /**
- * A report is a snapshot rendered once at creation. Editing is a direct,
- * manual revision of the frozen document — only the title and body change.
- * The template, filters, and note are provenance of that snapshot and stay
- * immutable (the list filters and sidebar group by them, so they must keep
- * matching what generated the report); to regenerate from source, delete and
- * recreate.
+ * Editing a report changes its fields and re-renders, appending a new immutable
+ * content version (the header keeps `filters`/`templateId` matching the current
+ * render, so the list filters and sidebar stay consistent). The input mirrors
+ * creation; there is no hand-editing of the rendered body.
  */
-export const updateReportInputSchema = z
-	.object({
-		name: z.string().min(1).max(100),
-		renderedMarkdown: z.string().min(1).max(MAX_REPORT_MARKDOWN_LENGTH),
-	})
-	.partial();
+export const updateReportInputSchema = createReportInputSchema;
 export type UpdateReportInput = z.infer<typeof updateReportInputSchema>;
 
 export const BUILTIN_TEMPLATE_ID_PREFIX = "builtin:";

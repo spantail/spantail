@@ -10,6 +10,7 @@ export * from "./pat";
 export * from "./project";
 export * from "./report";
 export * from "./report-engine";
+export * from "./report-frontmatter";
 export * from "./report-period";
 export * from "./report-templates";
 export * from "./share";

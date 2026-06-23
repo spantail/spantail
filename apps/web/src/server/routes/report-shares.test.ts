@@ -130,15 +130,20 @@ it("keeps a published share frozen when the report is edited", async () => {
 		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, admin)
 	).json()) as { token: string };
 
+	// Editing re-renders and appends a new version; the share keeps its snapshot.
 	const edited = await apiJson(
 		"PATCH",
 		`/api/v1/reports/${report.id}`,
-		{ renderedMarkdown: "# Edited body" },
+		{
+			name: "Edited",
+			templateId: "builtin:daily",
+			filters: { workspaceIds: [ws.id], dateRange: "today" },
+		},
 		admin,
 	);
 	expect(edited.status).toBe(200);
 
-	// The frozen copy on the share row is unchanged by the edit.
+	// The frozen copy on the share row is unchanged by the edit (still version 1).
 	const row = await getReportShareByToken(createDb(env.DB), share.token);
 	expect(row?.renderedMarkdown).toBe(report.renderedMarkdown);
 });

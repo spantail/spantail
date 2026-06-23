@@ -131,15 +131,23 @@ describe("generateDataset", () => {
 	it("renders daily and monthly reports with a total and body", async () => {
 		const { rows } = await build();
 		const reports = rows("reports");
+		// Each report has a version-1 content row holding its rendered body.
+		const contentByReport = new Map(
+			rows("reportContent").map((c) => [
+				c.reportId as string,
+				c.content as string,
+			]),
+		);
 		expect(reports.length).toBeGreaterThan(0);
 		for (const r of reports) {
-			expect(r.renderedMarkdown as string).toContain(r.name as string);
+			expect(contentByReport.get(r.id as string)).toContain(r.name as string);
 			expect(r.totalMinutes as number).toBeGreaterThan(0);
+			expect(r.version).toBe(1);
 		}
 		// Japanese monthly reports (Sakura) use the translated template.
 		const ja = reports.find((r) => String(r.name).startsWith("月報"));
 		expect(ja).toBeDefined();
-		expect(ja?.renderedMarkdown as string).toContain("プロジェクト別");
+		expect(contentByReport.get(ja?.id as string)).toContain("プロジェクト別");
 	});
 
 	it("delivers reports to a workspace manager (never the sender)", async () => {
@@ -193,10 +201,11 @@ describe("generateDataset", () => {
 	it("publishes shares only for client monthly reports, each carrying its frozen body", async () => {
 		const { rows } = await build();
 		const shares = rows("reportShares");
+		// The share's frozen body is the report's current content version.
 		const renderedByReport = new Map(
-			rows("reports").map((r) => [
-				r.id as string,
-				r.renderedMarkdown as string,
+			rows("reportContent").map((c) => [
+				c.reportId as string,
+				c.content as string,
 			]),
 		);
 		// Every share freezes the parent report's rendered body on its own row.
