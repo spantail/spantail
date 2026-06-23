@@ -27,6 +27,43 @@ export function newAvatarToken(): string {
 }
 
 /**
+ * Reads a request body stream into memory, aborting once `max` bytes are
+ * exceeded so an oversized (or unbounded chunked) upload never fully
+ * materializes. Returns the bytes, or null when the cap is exceeded.
+ */
+export async function readBodyWithLimit(
+	stream: ReadableStream<Uint8Array> | null,
+	max: number,
+): Promise<Uint8Array | null> {
+	if (!stream) return new Uint8Array(0);
+	const reader = stream.getReader();
+	const chunks: Uint8Array[] = [];
+	let total = 0;
+	try {
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			if (!value) continue;
+			total += value.byteLength;
+			if (total > max) {
+				await reader.cancel();
+				return null;
+			}
+			chunks.push(value);
+		}
+	} finally {
+		reader.releaseLock();
+	}
+	const out = new Uint8Array(total);
+	let offset = 0;
+	for (const chunk of chunks) {
+		out.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return out;
+}
+
+/**
  * Resolves a user's stored `image` into a ready-to-use avatar URL, or null when
  * the user has no avatar. An absolute URL (OAuth provider picture) is returned
  * as-is; otherwise the value is our cache-busting token and the avatar is served
