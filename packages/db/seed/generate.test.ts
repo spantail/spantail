@@ -258,11 +258,58 @@ describe("generateDataset", () => {
 		expect(shares).toHaveLength(clientMonthlies);
 	});
 
+	it("seeds agents with coherent per-session telemetry", async () => {
+		const { rows } = await build();
+		const agents = rows("agents");
+		const entries = rows("agentEntries");
+		const events = rows("agentEvents");
+		expect(agents.length).toBeGreaterThan(0);
+		expect(rows("agentTokens")).toHaveLength(agents.length);
+		expect(entries.length).toBeGreaterThan(0);
+		expect(events.length).toBeGreaterThan(entries.length);
+		expect(agents.every((a) => a.type === "claude_code")).toBe(true);
+
+		// Each entry's rollup must match its session's events exactly: the
+		// materialized totals are derived from the same per-turn rows the ingest
+		// route would aggregate (no double counting, duration = max−min).
+		const eventsBySession = new Map<string, Row[]>();
+		for (const e of events) {
+			const key = `${e.agentId}:${e.sessionId}`;
+			(eventsBySession.get(key) ?? eventsBySession.set(key, []).get(key))?.push(
+				e,
+			);
+		}
+		for (const entry of entries) {
+			const group = eventsBySession.get(`${entry.agentId}:${entry.sessionId}`);
+			expect(group?.length).toBeGreaterThan(0);
+			const summed = (group ?? []).reduce((acc, e) => {
+				const u = e.usage as Record<string, number | undefined>;
+				return (
+					acc +
+					(u.input_tokens ?? 0) +
+					(u.output_tokens ?? 0) +
+					(u.cache_creation_input_tokens ?? 0) +
+					(u.cache_read_input_tokens ?? 0)
+				);
+			}, 0);
+			const usage = entry.usage as { totalTokens: number };
+			expect(usage.totalTokens).toBe(summed);
+
+			const times = (group ?? []).map((e) => (e.timestamp as Date).getTime());
+			const expectedDuration = Math.max(
+				0,
+				Math.round((Math.max(...times) - Math.min(...times)) / 60_000),
+			);
+			expect(entry.durationMinutes).toBe(expectedDuration);
+		}
+	});
+
 	it("serializes to non-empty SQL", async () => {
 		const { dataset } = await build();
 		const sql = datasetToSql(dataset.tables);
 		expect(sql).toContain('INSERT INTO "user"');
 		expect(sql).toContain('INSERT INTO "work_entries"');
 		expect(sql).toContain('INSERT INTO "report_deliveries"');
+		expect(sql).toContain('INSERT INTO "agent_events"');
 	});
 });

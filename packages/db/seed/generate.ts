@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
 	generateShareToken,
 	getBuiltinTemplate,
+	hashToken,
 	lastDayOfMonth,
 	type ReportContextInput,
 	type ReportFilters,
@@ -778,6 +779,132 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		},
 	];
 
+	// --- Agents + per-turn telemetry ---------------------------------------
+	// A couple of demo Claude Code agents, each with a few recent sessions. Each
+	// session is a set of immutable per-turn `agent_events` plus the materialized
+	// `agent_entries` rollup the ingest route would compute from them — derived
+	// here in JS so the two stay coherent (entry.totalTokens == Σ event tokens,
+	// duration == max−min). Tokens are placeholder hashes (no usable secret).
+	const agentRows: Row[] = [];
+	const agentTokenRows: Row[] = [];
+	const agentEntryRows: Row[] = [];
+	const agentEventRows: Row[] = [];
+
+	const projectsByWs = new Map<string, ResolvedProject[]>();
+	for (const p of projByKey.values()) pushTo(projectsByWs, p.workspace.key, p);
+
+	const AGENT_MODEL = "claude-opus-4-8";
+	const agentOwners = [...usersByKey.values()]
+		.map((u) => ({
+			user: u,
+			workspaces: (workspacesByUser.get(u.key) ?? []).filter((w) => !w.client),
+		}))
+		.filter((o) => o.workspaces.length > 0)
+		.slice(0, 2);
+
+	for (const { user, workspaces } of agentOwners) {
+		const ws = workspaces[0] as ResolvedWorkspace;
+		const projects = projectsByWs.get(ws.key) ?? [];
+		const agentId = randomUUID();
+		agentRows.push({
+			id: agentId,
+			userId: user.id,
+			type: "claude_code",
+			name: `${user.name}'s Claude Code`,
+			createdAt: baseCreatedAt,
+			disabledAt: null,
+			archivedAt: null,
+		});
+		agentTokenRows.push({
+			id: randomUUID(),
+			agentId,
+			name: "Default",
+			// Hash of a throwaway value: the token exists for display but no
+			// plaintext is known, so nothing usable is committed.
+			tokenHash: await hashToken(randomUUID()),
+			defaultWorkspaceId: ws.id,
+			lastUsedAt: null,
+			expiresAt: null,
+			createdAt: baseCreatedAt,
+		});
+
+		// Sessions on most of the recent weekdays (workspace-local dates).
+		for (const date of weekdaysFor(ws.timezone).slice(-6)) {
+			if (hashString(`agent:${user.key}:${date}`) % 3 === 0) continue;
+			const project = projects.length
+				? pick(projects, hashString(`agproj:${user.key}:${date}`))
+				: null;
+			const sessionId = `seed-sess-${user.key}-${date}`;
+			const startMs = new Date(
+				zonedDateTimeToUtc(date, "10:00", ws.timezone),
+			).getTime();
+			const turns = 3 + (hashString(`turns:${sessionId}`) % 5); // 3..7
+
+			let minTs = Number.POSITIVE_INFINITY;
+			let maxTs = Number.NEGATIVE_INFINITY;
+			let input = 0;
+			let output = 0;
+			let cacheCreation = 0;
+			let cacheRead = 0;
+			for (let t = 0; t < turns; t++) {
+				const tsMs =
+					startMs + t * 90_000 + (hashString(`gap:${sessionId}:${t}`) % 30_000);
+				const inTok = 80 + (hashString(`in:${sessionId}:${t}`) % 400);
+				const outTok = 120 + (hashString(`out:${sessionId}:${t}`) % 600);
+				const ccTok = hashString(`cc:${sessionId}:${t}`) % 1200;
+				const crTok = 1000 + (hashString(`cr:${sessionId}:${t}`) % 160_000);
+				input += inTok;
+				output += outTok;
+				cacheCreation += ccTok;
+				cacheRead += crTok;
+				minTs = Math.min(minTs, tsMs);
+				maxTs = Math.max(maxTs, tsMs);
+				agentEventRows.push({
+					id: randomUUID(),
+					agentId,
+					workspaceId: ws.id,
+					sessionId,
+					sourceId: `seed-msg-${sessionId}-${t}`,
+					timestamp: new Date(tsMs),
+					model: AGENT_MODEL,
+					usage: {
+						input_tokens: inTok,
+						output_tokens: outTok,
+						cache_creation_input_tokens: ccTok,
+						cache_read_input_tokens: crTok,
+						service_tier: "standard",
+					},
+					createdAt: new Date(maxTs),
+				});
+			}
+
+			const totalTokens = input + output + cacheCreation + cacheRead;
+			agentEntryRows.push({
+				id: randomUUID(),
+				workspaceId: ws.id,
+				ownerUserId: user.id,
+				projectId: project?.id ?? null,
+				agentId,
+				sessionId,
+				entryDate: todayInTimezone(ws.timezone, new Date(minTs)),
+				durationMinutes: Math.max(0, Math.round((maxTs - minTs) / 60_000)),
+				usage: {
+					inputTokens: input,
+					outputTokens: output,
+					cacheCreationTokens: cacheCreation,
+					cacheReadTokens: cacheRead,
+					totalTokens,
+					model: AGENT_MODEL,
+				},
+				description: null,
+				startedAt: new Date(minTs),
+				endedAt: new Date(maxTs),
+				createdAt: new Date(maxTs),
+				updatedAt: new Date(maxTs),
+			});
+		}
+	}
+
 	const tables: SeededTable[] = [
 		{ table: "user", rows: userRows },
 		{ table: "account", rows: accountRows },
@@ -791,6 +918,10 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		{ table: "reportContent", rows: contentRows },
 		{ table: "reportShares", rows: shareRows },
 		{ table: "reportDeliveries", rows: deliveryRows },
+		{ table: "agents", rows: agentRows },
+		{ table: "agentTokens", rows: agentTokenRows },
+		{ table: "agentEntries", rows: agentEntryRows },
+		{ table: "agentEvents", rows: agentEventRows },
 	];
 
 	return {

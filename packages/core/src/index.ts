@@ -1,4 +1,5 @@
 export * from "./agent";
+export * from "./agent-events";
 export * from "./common";
 export * from "./delivery";
 export * from "./discussion";
