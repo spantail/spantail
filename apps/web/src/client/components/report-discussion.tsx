@@ -221,7 +221,11 @@ function CommentItem({
 
 	return (
 		<div className="flex gap-3">
-			<PersonAvatar name={comment.authorName} size={32} />
+			<PersonAvatar
+				name={comment.authorName}
+				imageUrl={comment.authorImageUrl}
+				size={32}
+			/>
 			<div className="min-w-0 flex-1">
 				<div className="flex items-center gap-2">
 					<span className="text-sm font-semibold">{comment.authorName}</span>
@@ -345,6 +349,7 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 	const [draft, setDraft] = useState("");
 	const { data: session } = authClient.useSession();
 	const meName = session?.user?.name ?? "?";
+	const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 
 	const discussion = useQuery({
 		queryKey: ["report-discussion", reportId],
@@ -392,7 +397,11 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 			</div>
 
 			<div className="flex gap-3">
-				<PersonAvatar name={meName} size={32} />
+				<PersonAvatar
+					name={meName}
+					imageUrl={me?.user.imageUrl ?? null}
+					size={32}
+				/>
 				<CommentComposer
 					value={draft}
 					onChange={setDraft}

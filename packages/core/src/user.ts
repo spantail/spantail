@@ -11,6 +11,9 @@ export const authUserSchema = z.object({
 	// May manage instance-wide report templates without being a full instance
 	// admin (instance admins can manage templates regardless of this flag).
 	canManageTemplates: z.boolean(),
+	// Ready-to-use avatar URL (own upload served via /avatars/:id, or an external
+	// OAuth picture), or null when the user has no avatar — show initials then.
+	imageUrl: z.string().nullable(),
 });
 export type AuthUser = z.infer<typeof authUserSchema>;
 

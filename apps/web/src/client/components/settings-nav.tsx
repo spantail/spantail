@@ -11,6 +11,7 @@ import {
 	SettingsIcon,
 	ShieldIcon,
 	SlidersHorizontalIcon,
+	UserCircleIcon,
 	UsersIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -29,6 +30,7 @@ interface SettingsNavItem {
 		| "/settings/templates"
 		| "/settings/tokens"
 		| "/settings/agents"
+		| "/settings/profile"
 		| "/settings/authentication"
 		| "/settings/preferences"
 		| "/settings/users"
@@ -91,6 +93,11 @@ const GROUPS: SettingsNavGroup[] = [
 	{
 		labelKey: "settings.nav.account",
 		items: [
+			{
+				to: "/settings/profile",
+				labelKey: "settings.nav.profile",
+				icon: UserCircleIcon,
+			},
 			{
 				to: "/settings/authentication",
 				labelKey: "settings.nav.authentication",

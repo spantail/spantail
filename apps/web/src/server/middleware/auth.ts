@@ -19,6 +19,7 @@ import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 
 import { createAuth } from "../auth";
+import { resolveAvatarUrl } from "../lib/avatar";
 import { AppError } from "../lib/errors";
 import type {
 	AgentAuthContext,
@@ -53,7 +54,8 @@ export const loadAuth = createMiddleware<AppEnv>(async (c, next) => {
 	// A disabled account is locked out immediately: ignore its still-valid
 	// session so every authenticated route sees an anonymous caller (401).
 	if (session && !session.user.disabled) {
-		const { id, name, email, isAdmin, canManageTemplates } = session.user;
+		const { id, name, email, isAdmin, canManageTemplates, image } =
+			session.user;
 		c.set("auth", {
 			user: {
 				id,
@@ -61,6 +63,7 @@ export const loadAuth = createMiddleware<AppEnv>(async (c, next) => {
 				email,
 				isAdmin: isAdmin ?? false,
 				canManageTemplates: canManageTemplates ?? false,
+				imageUrl: resolveAvatarUrl(id, image),
 			},
 			via: "session",
 		});
@@ -98,6 +101,7 @@ async function resolvePat(
 			email: user.email,
 			isAdmin: user.isAdmin ?? false,
 			canManageTemplates: user.canManageTemplates ?? false,
+			imageUrl: resolveAvatarUrl(user.id, user.image),
 		},
 		via: "pat",
 		scopes: row.scopes,

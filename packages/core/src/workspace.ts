@@ -57,6 +57,8 @@ export const workspaceMemberSchema = z.object({
 	role: workspaceRoleSchema,
 	name: z.string(),
 	email: z.string(),
+	// Ready-to-use avatar URL, or null when the member has no avatar.
+	imageUrl: z.string().nullable(),
 	createdAt: z.string(),
 });
 export type WorkspaceMember = z.infer<typeof workspaceMemberSchema>;

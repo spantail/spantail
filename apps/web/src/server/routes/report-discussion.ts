@@ -11,6 +11,7 @@ import {
 	getReportDiscussionAccess,
 	listReportComments,
 	listReportReactions,
+	listUsersByIds,
 	type ReportReactionRow,
 	toggleReportReaction,
 	updateReportComment,
@@ -18,6 +19,7 @@ import {
 import type { Context } from "hono";
 import { Hono } from "hono";
 
+import { resolveAvatarUrl } from "../lib/avatar";
 import { toApiComment, toReactionSummaries } from "../lib/discussion-api";
 import { AppError } from "../lib/errors";
 import { validate } from "../lib/validate";
@@ -76,11 +78,32 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 			listReportReactions(c.var.db, reportId),
 		]);
 		const byComment = reactionsByComment(reactions);
+		// Resolve each author's live avatar in one batch (frozen author_user_id is
+		// null once their account is deleted — those keep initials).
+		const authorIds = [
+			...new Set(
+				comments
+					.map((comment) => comment.authorUserId)
+					.filter((id): id is string => id !== null),
+			),
+		];
+		const authors = await listUsersByIds(c.var.db, authorIds);
+		const imageById = new Map(authors.map((a) => [a.id, a.image]));
 		return c.json({
 			shared,
 			reactions: toReactionSummaries(bodyReactions(reactions), user.id),
 			comments: comments.map((comment) =>
-				toApiComment(comment, byComment.get(comment.id) ?? [], user.id),
+				toApiComment(
+					comment,
+					byComment.get(comment.id) ?? [],
+					user.id,
+					comment.authorUserId
+						? resolveAvatarUrl(
+								comment.authorUserId,
+								imageById.get(comment.authorUserId),
+							)
+						: null,
+				),
 			),
 		});
 	})
@@ -109,7 +132,7 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 			authorEmail: user.email,
 			body,
 		});
-		return c.json(toApiComment(comment, [], user.id), 201);
+		return c.json(toApiComment(comment, [], user.id, user.imageUrl), 201);
 	})
 	.patch("/:id/comments/:commentId", async (c) => {
 		const reportId = c.req.param("id");
@@ -128,7 +151,12 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 		const reactions = await listReportReactions(c.var.db, reportId);
 		const byComment = reactionsByComment(reactions);
 		return c.json(
-			toApiComment(updated, byComment.get(commentId) ?? [], user.id),
+			toApiComment(
+				updated,
+				byComment.get(commentId) ?? [],
+				user.id,
+				user.imageUrl,
+			),
 		);
 	})
 	.delete("/:id/comments/:commentId", async (c) => {

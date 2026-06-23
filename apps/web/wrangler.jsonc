@@ -17,6 +17,10 @@
 			"migrations_dir": "../../packages/db/migrations"
 		}
 	],
+	// User-uploaded media (avatars now; workspace logos later) keyed by prefix.
+	// Local dev uses Miniflare's emulated R2; create the remote bucket with
+	// `wrangler r2 bucket create toxil-uploads` before deploying.
+	"r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "toxil-uploads" }],
 	// Cloudflare Email Service (public beta). Inert until the account onboards a
 	// sending domain on a Workers Paid plan. Local dev never invokes it: the
 	// mailer routes to an in-memory dev outbox whenever APP_ENV !== "production".
@@ -41,6 +45,7 @@
 					"migrations_dir": "../../packages/db/migrations"
 				}
 			],
+			"r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "toxil-uploads" }],
 			"send_email": [{ "name": "EMAIL" }],
 			"vars": {
 				"APP_ENV": "production"

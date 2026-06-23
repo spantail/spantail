@@ -37,6 +37,8 @@ export const commentSchema = z.object({
 	// Null once the author's account is deleted; the frozen name stands alone.
 	authorUserId: z.string().nullable(),
 	authorName: z.string(),
+	// Live avatar URL of the author (resolved from their account), or null.
+	authorImageUrl: z.string().nullable(),
 	body: z.string(),
 	createdAt: z.string(),
 	updatedAt: z.string(),

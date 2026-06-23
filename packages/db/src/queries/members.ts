@@ -24,6 +24,7 @@ export async function listMembersInAllWorkspaces(
 			id: user.id,
 			name: user.name,
 			email: user.email,
+			image: user.image,
 		})
 		.from(workspaceMembers)
 		.innerJoin(user, eq(workspaceMembers.userId, user.id))
@@ -33,7 +34,7 @@ export async function listMembersInAllWorkspaces(
 				ne(user.id, excludeUserId),
 			),
 		)
-		.groupBy(user.id, user.name, user.email)
+		.groupBy(user.id, user.name, user.email, user.image)
 		.having(
 			eq(sql`count(distinct ${workspaceMembers.workspaceId})`, ids.length),
 		)
@@ -49,6 +50,7 @@ export async function listMembers(db: Database, workspaceId: string) {
 			createdAt: workspaceMembers.createdAt,
 			name: user.name,
 			email: user.email,
+			image: user.image,
 		})
 		.from(workspaceMembers)
 		.innerJoin(user, eq(workspaceMembers.userId, user.id))

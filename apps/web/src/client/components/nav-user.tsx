@@ -31,7 +31,7 @@ export function NavUser({ user }: { user: AuthUser }) {
 					aria-label={t("nav.userMenu")}
 					className="rounded-full data-[state=open]:bg-accent"
 				>
-					<PersonAvatar name={user.name} size={32} />
+					<PersonAvatar name={user.name} imageUrl={user.imageUrl} size={32} />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
@@ -41,7 +41,7 @@ export function NavUser({ user }: { user: AuthUser }) {
 			>
 				<DropdownMenuLabel className="p-0 font-normal">
 					<div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
-						<PersonAvatar name={user.name} size={32} />
+						<PersonAvatar name={user.name} imageUrl={user.imageUrl} size={32} />
 						<div className="grid flex-1 text-left text-sm leading-tight">
 							<span className="truncate font-medium">{user.name}</span>
 							<span className="truncate text-xs">{user.email}</span>
@@ -51,7 +51,7 @@ export function NavUser({ user }: { user: AuthUser }) {
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					<DropdownMenuItem asChild>
-						<Link to="/settings/authentication">
+						<Link to="/settings/profile">
 							<UserIcon />
 							{t("nav.account")}
 						</Link>

@@ -446,6 +446,7 @@
 			"templates": "Report templates",
 			"tokens": "API tokens",
 			"agents": "Agents",
+			"profile": "Profile",
 			"authentication": "Authentication",
 			"preferences": "Preferences",
 			"systemUsers": "User management",
@@ -570,6 +571,16 @@
 				"disabled": "Agent disabled.",
 				"deleted": "Agent deleted."
 			}
+		},
+		"profile": {
+			"title": "Profile photo",
+			"description": "Upload an avatar shown next to your name across the workspace.",
+			"uploadAction": "Upload photo",
+			"remove": "Remove",
+			"hint": "PNG, JPEG, WebP, or GIF. Square images look best.",
+			"updated": "Profile photo updated.",
+			"removed": "Profile photo removed.",
+			"error": "Please choose a PNG, JPEG, WebP, or GIF image."
 		},
 		"password": {
 			"title": "Change password",
