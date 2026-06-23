@@ -119,3 +119,45 @@ export const agentEntries = sqliteTable(
 		index("agent_entries_agent_idx").on(table.agentId),
 	],
 );
+
+/**
+ * Raw per-turn telemetry: one row per assistant message (one API response, which
+ * carries exactly one `usage`). Immutable and append-only; the materialized
+ * per-session rollup lives in `agent_entries`, recomputed from these rows on
+ * ingest. Keyed by the natural (agentId, sessionId) pair — NOT a FK to
+ * `agent_entries.id`, since events for a session can arrive before its entry is
+ * upserted (the recompute reads events, then writes the entry).
+ */
+export const agentEvents = sqliteTable(
+	"agent_events",
+	{
+		id: text("id").primaryKey(),
+		agentId: text("agent_id")
+			.notNull()
+			.references(() => agents.id, { onDelete: "cascade" }),
+		// Denormalized so per-workspace retention/cleanup stays cheap.
+		workspaceId: text("workspace_id")
+			.notNull()
+			.references(() => workspaces.id, { onDelete: "cascade" }),
+		sessionId: text("session_id").notNull(),
+		// The transcript assistant message.id; the idempotency key within an agent.
+		// Re-sending a seen message.id is a no-op under the unique index.
+		sourceId: text("source_id").notNull(),
+		// Wall-clock time of the assistant message (transcript `timestamp`, UTC).
+		timestamp: integer("timestamp", { mode: "timestamp_ms" }).notNull(),
+		// Latest model on the message; null when the source line omits it.
+		model: text("model"),
+		// The raw `message.usage` object, stored verbatim (schema-on-read). Its
+		// shape is the agent's native usage (snake_case for Claude Code), distinct
+		// from agent_entries.usage which is the normalized AgentUsage rollup.
+		usage: text("usage", { mode: "json" })
+			.$type<Record<string, unknown>>()
+			.notNull(),
+		createdAt: createdAtMs(),
+	},
+	(table) => [
+		uniqueIndex("agent_events_source_uq").on(table.agentId, table.sourceId),
+		index("agent_events_session_idx").on(table.agentId, table.sessionId),
+		index("agent_events_workspace_idx").on(table.workspaceId, table.createdAt),
+	],
+);

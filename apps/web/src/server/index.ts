@@ -8,6 +8,7 @@ import { registerMcpRoute } from "./mcp";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
 import { agentEntryRoutes } from "./routes/agent-entries";
+import { agentEventRoutes } from "./routes/agent-events";
 import { agentRoutes } from "./routes/agents";
 import { devMailRoutes } from "./routes/dev-mail";
 import { inboxRoutes } from "./routes/inbox";
@@ -79,6 +80,7 @@ v1.route("/reports", reportDiscussionRoutes);
 v1.route("/work-entries", workEntryRoutes);
 v1.route("/agents", agentRoutes);
 v1.route("/agent-entries", agentEntryRoutes);
+v1.route("/agent-events", agentEventRoutes);
 v1.route("/tokens", tokenRoutes);
 
 app.route("/api/v1", v1);

@@ -36,6 +36,7 @@ Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and
 | `packages/db` | Drizzle schema, migrations, queries |
 | `packages/sdk` | Typed API client |
 | `packages/cli` | `toxil` CLI (includes `toxil mcp` stdio server) |
+| `hooks/claude-code` | Reference Claude Code Stop hook that records agent token usage |
 
 ## Getting started
 
@@ -80,6 +81,11 @@ toxil mcp                                         # stdio MCP server for AI clie
 ```
 
 AI clients that support remote MCP can connect directly to `https://your-instance/mcp` with an API token.
+
+To record an AI coding agent's per-session time and token usage, register an agent
+in Toxil and wire its transcript to the API. A reference [Claude Code](https://code.claude.com)
+Stop hook lives in [`hooks/claude-code`](hooks/claude-code) — it extracts token usage
+per turn with `jq` and posts it (conversation bodies stay on your machine).
 
 ## Development
 

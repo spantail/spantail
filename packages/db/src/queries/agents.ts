@@ -1,3 +1,4 @@
+import type { AgentUsage } from "@toxil/core";
 import {
 	and,
 	asc,
@@ -5,6 +6,7 @@ import {
 	eq,
 	gte,
 	inArray,
+	isNotNull,
 	isNull,
 	lte,
 	ne,
@@ -14,6 +16,7 @@ import {
 import type { Database } from "../index";
 import {
 	agentEntries,
+	agentEvents,
 	agentProjects,
 	agents,
 	agentTokens,
@@ -25,6 +28,11 @@ export type AgentEntryRow = typeof agentEntries.$inferSelect;
 export type AgentEntryUpsert = Omit<
 	typeof agentEntries.$inferInsert,
 	"id" | "createdAt" | "updatedAt"
+>;
+export type AgentEventRow = typeof agentEvents.$inferSelect;
+export type AgentEventInsert = Omit<
+	typeof agentEvents.$inferInsert,
+	"id" | "createdAt"
 >;
 
 // --- agents (account-scoped registry) ---
@@ -431,5 +439,115 @@ export async function getAgentEntryStats(
 		entryCount: byDate.reduce((acc, row) => acc + row.count, 0),
 		byDate,
 		byAgent,
+	};
+}
+
+// --- agent events (raw per-turn telemetry) ---
+
+// Keep each INSERT's bound-parameter count well under SQLite's limit; the unique
+// index makes re-inserting already-seen rows a no-op, so chunking is safe.
+const EVENT_INSERT_CHUNK = 100;
+
+/**
+ * Idempotently inserts a session's events. `ON CONFLICT DO NOTHING` on the
+ * (agentId, sourceId) unique index makes re-sending seen message.ids a no-op,
+ * so the Stop hook can re-post the whole cumulative transcript every turn. The
+ * caller recomputes the rollup afterward regardless of how many rows were new.
+ */
+export async function insertAgentEventsIgnoreConflicts(
+	db: Database,
+	rows: AgentEventInsert[],
+): Promise<void> {
+	for (let i = 0; i < rows.length; i += EVENT_INSERT_CHUNK) {
+		const chunk = rows.slice(i, i + EVENT_INSERT_CHUNK);
+		await db
+			.insert(agentEvents)
+			.values(chunk.map((r) => ({ id: crypto.randomUUID(), ...r })))
+			.onConflictDoNothing({
+				target: [agentEvents.agentId, agentEvents.sourceId],
+			});
+	}
+}
+
+export interface SessionRollup {
+	/** Normalized rollup written to `agent_entries.usage` (camelCase AgentUsage). */
+	usage: AgentUsage;
+	startedAt: Date;
+	endedAt: Date;
+	durationMinutes: number;
+	eventCount: number;
+}
+
+/** Sums one raw usage bucket (snake_case JSON key) across a session's events. */
+function usageBucketSum(key: string) {
+	return sql<number>`coalesce(sum(coalesce(json_extract(${agentEvents.usage}, ${`$.${key}`}), 0)), 0)`.mapWith(
+		Number,
+	);
+}
+
+/**
+ * Aggregates ONE session's events into the rollup `agent_entries` materializes.
+ * Bounded to a single session's rows. Token buckets are summed from the raw
+ * snake_case `usage` JSON and normalized to the camelCase AgentUsage shape, so
+ * the existing `getAgentEntryStats` (which reads `usage.totalTokens`) keeps
+ * working unchanged. Returns null when the session has no events yet.
+ */
+export async function computeSessionRollup(
+	db: Database,
+	agentId: string,
+	sessionId: string,
+): Promise<SessionRollup | null> {
+	const where = and(
+		eq(agentEvents.agentId, agentId),
+		eq(agentEvents.sessionId, sessionId),
+	);
+	const [agg] = await db
+		.select({
+			inputTokens: usageBucketSum("input_tokens"),
+			outputTokens: usageBucketSum("output_tokens"),
+			cacheCreationTokens: usageBucketSum("cache_creation_input_tokens"),
+			cacheReadTokens: usageBucketSum("cache_read_input_tokens"),
+			minTs: sql<number | null>`min(${agentEvents.timestamp})`,
+			maxTs: sql<number | null>`max(${agentEvents.timestamp})`,
+			count: sql<number>`count(*)`.mapWith(Number),
+		})
+		.from(agentEvents)
+		.where(where);
+
+	if (!agg || agg.count === 0 || agg.minTs == null || agg.maxTs == null) {
+		return null;
+	}
+
+	// Model of the most recent event that carries one; undefined when none do.
+	const [latest] = await db
+		.select({ model: agentEvents.model })
+		.from(agentEvents)
+		.where(and(where, isNotNull(agentEvents.model)))
+		.orderBy(desc(agentEvents.timestamp))
+		.limit(1);
+
+	const totalTokens =
+		agg.inputTokens +
+		agg.outputTokens +
+		agg.cacheCreationTokens +
+		agg.cacheReadTokens;
+	const durationMinutes = Math.max(
+		0,
+		Math.round((agg.maxTs - agg.minTs) / 60000),
+	);
+
+	return {
+		usage: {
+			inputTokens: agg.inputTokens,
+			outputTokens: agg.outputTokens,
+			cacheCreationTokens: agg.cacheCreationTokens,
+			cacheReadTokens: agg.cacheReadTokens,
+			totalTokens,
+			...(latest?.model ? { model: latest.model } : {}),
+		},
+		startedAt: new Date(agg.minTs),
+		endedAt: new Date(agg.maxTs),
+		durationMinutes,
+		eventCount: agg.count,
 	};
 }
