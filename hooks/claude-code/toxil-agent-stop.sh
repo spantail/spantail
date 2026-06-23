@@ -40,9 +40,13 @@ events="$(jq -n -f "$here/transcript-to-events.jq" "$transcript")" ||
 count="$(jq 'length' <<<"$events")"
 [ "${count:-0}" -gt 0 ] || exit 0 # early Stop before any assistant turn
 
-# Build the request body, attaching workspace/project only when provided.
-jq_args=(-n --arg s "$session" --argjson e "$events")
-filter='{sessionId: $s, events: $e}'
+# Build the request body, attaching workspace/project only when provided. The
+# (potentially large) events array is fed to jq via stdin and the body to curl
+# via stdin — never as a command-line argument, which would hit the OS argv size
+# limit on long sessions and silently drop telemetry. Only small scalars go in
+# argv.
+jq_args=(--arg s "$session")
+filter='{sessionId: $s, events: .}'
 if [ -n "${TOXIL_WORKSPACE_ID:-}" ]; then
 	jq_args+=(--arg w "$TOXIL_WORKSPACE_ID")
 	filter+=' + {workspaceId: $w}'
@@ -51,15 +55,15 @@ if [ -n "${TOXIL_PROJECT_ID:-}" ]; then
 	jq_args+=(--arg p "$TOXIL_PROJECT_ID")
 	filter+=' + {projectId: $p}'
 fi
-body="$(jq "${jq_args[@]}" "$filter")"
 
 # Bounded timeouts so a slow or down network never blocks the user's turn:
 # this is best-effort telemetry and the hook exits 0 on any failure.
-curl -fsS --connect-timeout 2 --max-time 10 -X POST \
-	"$TOXIL_API_URL/api/v1/agent-events" \
-	-H "authorization: Bearer $TOXIL_AGENT_TOKEN" \
-	-H 'content-type: application/json' \
-	--data-binary "$body" >/dev/null 2>&1 ||
+jq "${jq_args[@]}" "$filter" <<<"$events" |
+	curl -fsS --connect-timeout 2 --max-time 10 -X POST \
+		"$TOXIL_API_URL/api/v1/agent-events" \
+		-H "authorization: Bearer $TOXIL_AGENT_TOKEN" \
+		-H 'content-type: application/json' \
+		--data-binary @- >/dev/null 2>&1 ||
 	skip "ingest request failed; skipping"
 
 printf 'toxil-agent-stop: ingested %s event(s) for session %s\n' "$count" "$session" >&2
