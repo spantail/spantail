@@ -15,6 +15,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
+import { queryClient } from "@/lib/query";
 
 // User-scoped menu in the header's top-right corner — deliberately outside
 // the workspace-scoped sidebar.
@@ -61,6 +62,10 @@ export function NavUser({ user }: { user: AuthUser }) {
 				<DropdownMenuItem
 					onClick={async () => {
 						await authClient.signOut();
+						// Drop all cached server state so the next user to sign in on this
+						// browser never sees the previous account's data (queries are keyed
+						// by workspace, not user).
+						queryClient.clear();
 						await navigate({ to: "/login" });
 					}}
 				>
