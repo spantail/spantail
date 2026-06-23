@@ -553,3 +553,54 @@ export async function computeSessionRollup(
 		eventCount: agg.count,
 	};
 }
+
+/**
+ * Materializes a session's rollup into `agent_entries`, monotonically. Every
+ * ingest re-sends the cumulative transcript, so a larger `endedAt` always means
+ * a more complete event set. The conflict update is therefore guarded to skip a
+ * write whose `endedAt` is older than the stored one: if two ingests for the
+ * same session overlap and a stale recompute (computed before the other's
+ * events were inserted) reaches the upsert last, it must not shrink the row.
+ * Either ordering converges to the most complete rollup. Returns the current
+ * row (ours, or the newer one a concurrent ingest already wrote).
+ */
+export async function materializeAgentSessionRollup(
+	db: Database,
+	values: AgentEntryUpsert,
+): Promise<AgentEntryRow> {
+	const rows = await db
+		.insert(agentEntries)
+		.values({ id: crypto.randomUUID(), ...values })
+		.onConflictDoUpdate({
+			target: [agentEntries.agentId, agentEntries.sessionId],
+			set: {
+				workspaceId: values.workspaceId,
+				ownerUserId: values.ownerUserId,
+				projectId: values.projectId,
+				entryDate: values.entryDate,
+				durationMinutes: values.durationMinutes,
+				usage: values.usage,
+				description: values.description,
+				startedAt: values.startedAt,
+				endedAt: values.endedAt,
+				updatedAt: new Date(),
+			},
+			setWhere: sql`${agentEntries.endedAt} is null or excluded.ended_at >= ${agentEntries.endedAt}`,
+		})
+		.returning();
+	const row = rows[0];
+	if (row) return row;
+	// The guard skipped the update (a newer rollup already exists): return it.
+	const current = await db
+		.select()
+		.from(agentEntries)
+		.where(
+			and(
+				eq(agentEntries.agentId, values.agentId),
+				eq(agentEntries.sessionId, values.sessionId),
+			),
+		)
+		.get();
+	if (!current) throw new Error("agent entry rollup returned no row");
+	return current;
+}

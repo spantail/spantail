@@ -31,7 +31,7 @@ prerequisite or error it logs to stderr and exits 0.
 {
   "env": {
     "TOXIL_API_URL": "https://toxil.example.com",
-    "TOXIL_AGENT_TOKEN": "tk_agt_…"
+    "TOXIL_AGENT_TOKEN": "toxil_aat_…"
     // "TOXIL_WORKSPACE_ID": "…", // optional; defaults to the token's binding
     // "TOXIL_PROJECT_ID": "…"    // optional
   },

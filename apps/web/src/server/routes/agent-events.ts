@@ -5,7 +5,7 @@ import {
 	getProjectById,
 	getWorkspaceById,
 	insertAgentEventsIgnoreConflicts,
-	upsertAgentEntry,
+	materializeAgentSessionRollup,
 } from "@toxil/db";
 import { Hono } from "hono";
 
@@ -83,8 +83,9 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			throw new AppError("bad_request", "No usable events in payload");
 		}
 
-		// 3. Materialize via the existing entry upsert path (read cost unchanged).
-		const entry = await upsertAgentEntry(c.var.db, {
+		// 3. Materialize the rollup (monotonic: a stale concurrent recompute can't
+		// shrink the row). Read cost on list/stats is unchanged.
+		const entry = await materializeAgentSessionRollup(c.var.db, {
 			workspaceId,
 			ownerUserId: auth.ownerUserId,
 			projectId,

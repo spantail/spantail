@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+import { createDb, materializeAgentSessionRollup } from "@toxil/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -258,6 +260,68 @@ it("ingests a session spanning multiple insert chunks", async () => {
 	expect(list).toHaveLength(1);
 	expect(list[0]?.usage.totalTokens).toBe(N * 2); // every event counted once
 	expect(list[0]?.durationMinutes).toBe(N - 1); // 1-minute spacing
+});
+
+it("keeps the materialized rollup monotonic against a stale write", async () => {
+	const { admin, ws } = await setup();
+	const { agentId } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const me = (await (await apiGet("/api/v1/me", admin)).json()) as {
+		user: { id: string };
+	};
+	const db = createDb(env.DB);
+	const base = {
+		workspaceId: ws.id,
+		ownerUserId: me.user.id,
+		projectId: null,
+		agentId,
+		sessionId: "race",
+		entryDate: "2026-06-20",
+		description: null,
+		startedAt: new Date("2026-06-20T01:00:00.000Z"),
+	};
+
+	// The full rollup lands first (endedAt 01:10).
+	await materializeAgentSessionRollup(db, {
+		...base,
+		durationMinutes: 10,
+		usage: { totalTokens: 300 },
+		endedAt: new Date("2026-06-20T01:10:00.000Z"),
+	});
+	// A stale concurrent recompute (older endedAt, smaller totals) arrives last
+	// and must be ignored rather than shrink the row.
+	await materializeAgentSessionRollup(db, {
+		...base,
+		durationMinutes: 0,
+		usage: { totalTokens: 100 },
+		endedAt: new Date("2026-06-20T01:00:00.000Z"),
+	});
+
+	const afterStale = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{
+		durationMinutes: number;
+		usage: { totalTokens: number };
+	}>;
+	expect(afterStale[0]?.usage.totalTokens).toBe(300);
+	expect(afterStale[0]?.durationMinutes).toBe(10);
+
+	// A genuinely newer rollup (later endedAt) still moves it forward.
+	await materializeAgentSessionRollup(db, {
+		...base,
+		durationMinutes: 20,
+		usage: { totalTokens: 500 },
+		endedAt: new Date("2026-06-20T01:20:00.000Z"),
+	});
+	const afterNewer = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{
+		durationMinutes: number;
+		usage: { totalTokens: number };
+	}>;
+	expect(afterNewer[0]?.usage.totalTokens).toBe(500);
+	expect(afterNewer[0]?.durationMinutes).toBe(20);
 });
 
 it("rejects an empty events array at validation", async () => {
