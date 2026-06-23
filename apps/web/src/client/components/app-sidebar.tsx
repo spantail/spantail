@@ -1,5 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronRightIcon, HomeIcon, SettingsIcon } from "lucide-react";
+import {
+	BotIcon,
+	ChevronRightIcon,
+	HomeIcon,
+	SettingsIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Dot } from "@/components/dot";
@@ -25,6 +31,7 @@ import {
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { useProjects } from "@/hooks/use-projects";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -155,6 +162,79 @@ function ProjectsGroup() {
 	);
 }
 
+// Agents that have logged work in the current workspace. Workspace-scoped like
+// the rest of the sidebar; the group is hidden entirely until an agent has
+// activity here, so it stays out of the way for workspaces that don't use them.
+function AgentsGroup() {
+	const { t } = useTranslation();
+	const { current } = useWorkspace();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const dismissOnMobile = useDismissOnMobile();
+
+	// Gate on the instance feature flag so the group disappears immediately when
+	// an admin turns agents off, without waiting for activity to drain.
+	const agentsEnabled = useQuery({
+		queryKey: ["agents-enabled"],
+		queryFn: () => api.getAgentsEnabled(),
+	});
+	const featureOn = agentsEnabled.data?.enabled ?? false;
+
+	const agents = useQuery({
+		queryKey: ["workspace-agents", current?.id],
+		queryFn: () => api.listWorkspaceAgents(current?.id as string),
+		enabled: Boolean(current) && featureOn,
+	});
+
+	if (!current || !featureOn) return null;
+	const list = agents.data ?? [];
+	if (list.length === 0) return null;
+
+	return (
+		<Collapsible defaultOpen className="group/collapsible">
+			<SidebarGroup>
+				<SidebarGroupLabel asChild>
+					<CollapsibleTrigger>
+						{t("nav.agents")}
+						<ChevronRightIcon className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+					</CollapsibleTrigger>
+				</SidebarGroupLabel>
+				<CollapsibleContent>
+					<SidebarGroupContent>
+						<SidebarMenu className="gap-0.5">
+							{list.map((agent) => {
+								const isActive =
+									pathname === `/w/${current.slug}/agents/${agent.id}`;
+								return (
+									<SidebarMenuItem key={agent.id}>
+										<SidebarMenuButton
+											asChild
+											isActive={isActive}
+											tooltip={agent.name}
+											onClick={dismissOnMobile}
+											className={cn(
+												"h-9",
+												!isActive && "text-sidebar-foreground/70",
+											)}
+										>
+											<Link
+												to="/w/$wsSlug/agents/$agentId"
+												params={{ wsSlug: current.slug, agentId: agent.id }}
+											>
+												<BotIcon />
+												<span>{agent.name}</span>
+											</Link>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								);
+							})}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</CollapsibleContent>
+			</SidebarGroup>
+		</Collapsible>
+	);
+}
+
 // Settings is the one management surface left in the sidebar: a single cog
 // that opens the Settings hub, where a sub-nav reaches every section.
 function SettingsMenu() {
@@ -194,6 +274,7 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 					<NavItems items={MAIN_ITEMS} />
 				</SidebarGroup>
 				<ProjectsGroup />
+				<AgentsGroup />
 			</SidebarContent>
 			<SidebarFooter>
 				<SettingsMenu />

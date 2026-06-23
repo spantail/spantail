@@ -51,6 +51,8 @@
 		"logWork": "Log work",
 		"projects": "Projects",
 		"projectsEmpty": "No active projects yet",
+		"agents": "Agents",
+		"agentsEmpty": "No agent activity yet",
 		"reports": "Reports",
 		"settings": "Settings",
 		"account": "Account",
@@ -61,6 +63,22 @@
 		"backHome": "Back to home",
 		"entriesTitle": "Entries",
 		"unassigned": "No project"
+	},
+	"agents": {
+		"notFound": "No activity for this agent in this workspace.",
+		"backHome": "Back to home",
+		"totalTokens": "Tokens",
+		"totalMinutes": "Minutes",
+		"entryCount": "Sessions",
+		"entriesTitle": "Sessions",
+		"empty": "No sessions logged yet.",
+		"table": {
+			"date": "Date",
+			"duration": "Duration",
+			"tokens": "Tokens",
+			"model": "Model",
+			"description": "Description"
+		}
 	},
 	"workspace": {
 		"label": "Workspaces",
@@ -426,9 +444,11 @@
 			"appearance": "Appearance",
 			"templates": "Report templates",
 			"tokens": "API tokens",
+			"agents": "Agents",
 			"authentication": "Authentication",
 			"preferences": "Preferences",
 			"systemUsers": "User management",
+			"systemAgents": "AI agents",
 			"email": "Email",
 			"oauth": "Social login"
 		},
@@ -502,6 +522,47 @@
 			"copyAction": "Copy",
 			"copied": "Copied to clipboard.",
 			"doneAction": "Done"
+		},
+		"agents": {
+			"title": "Agents",
+			"description": "Register the AI coding agents you use, then issue access tokens so they can log their work.",
+			"name": "Agent name",
+			"namePlaceholder": "My Claude Code",
+			"type": "Type",
+			"created": "Created",
+			"createAction": "Add agent",
+			"deleteAction": "Delete",
+			"actions": "Agent actions",
+			"empty": "No agents yet.",
+			"types": {
+				"claude_code": "Claude Code",
+				"codex": "Codex",
+				"cursor": "Cursor",
+				"other": "Other"
+			},
+			"tokens": {
+				"title": "Access tokens — {{name}}",
+				"description": "Agent access tokens let this agent log its work. Bind a default workspace and project so the agent need not resolve them. The token is shown only once.",
+				"manageAction": "Tokens",
+				"name": "Token name",
+				"namePlaceholder": "laptop",
+				"defaultWorkspace": "Default workspace",
+				"defaultProject": "Default project",
+				"none": "None",
+				"expiresInDays": "Expires in (days)",
+				"noExpiry": "No expiry",
+				"lastUsed": "Last used",
+				"expires": "Expires",
+				"never": "Never",
+				"createAction": "Create token",
+				"revokeAction": "Revoke",
+				"empty": "No tokens yet.",
+				"createdTitle": "Token created",
+				"createdDescription": "Copy this token now — it will not be shown again.",
+				"copyAction": "Copy",
+				"copied": "Copied to clipboard.",
+				"doneAction": "Done"
+			}
 		},
 		"password": {
 			"title": "Change password",
@@ -580,6 +641,16 @@
 				"cancel": "Cancel"
 			},
 			"adminBanner": "These accounts span every workspace on this Toxil instance and are visible only to instance admins."
+		},
+		"agentsAdmin": {
+			"title": "AI agents",
+			"description": "Let members log the work time and token usage of their AI coding agents. Off by default.",
+			"enableLabel": "Enable agent activity logging",
+			"enableHint": "Heads up: turning this on can grow data volume substantially — each agent session, and later per-turn events, is stored. Leave it off unless you want this telemetry.",
+			"saveAction": "Save",
+			"statusEnabled": "Enabled",
+			"statusDisabled": "Disabled",
+			"adminBanner": "The AI agents feature applies to the whole instance and is visible only to instance admins."
 		},
 		"email": {
 			"title": "Email",

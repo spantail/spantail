@@ -1,9 +1,11 @@
 import {
+	type AgentsEnabled,
 	type AuthProviders,
 	type EmailEnabled,
 	type EmailSettings,
 	normalizeAllowedDomains,
 	type OauthSettings,
+	updateAgentsEnabledInputSchema,
 	updateEmailSettingsInputSchema,
 	updateOauthSettingsInputSchema,
 } from "@toxil/core";
@@ -11,6 +13,7 @@ import {
 	countUsers,
 	getInstanceSettings,
 	type InstanceSettingsRow,
+	upsertInstanceAgentsEnabled,
 	upsertInstanceOauthSettings,
 	upsertInstanceSettings,
 } from "@toxil/db";
@@ -88,6 +91,23 @@ export const instanceRoutes = new Hono<AppEnv>()
 					: input.emailFromName,
 		});
 		return c.json(toEmailSettings(row));
+	})
+	// Whether the AI agent activity feature is on. Read by any caller to gate
+	// the agents UI; reports only the boolean.
+	.get("/agents-enabled", async (c) => {
+		const settings = await getInstanceSettings(c.var.db);
+		return c.json({
+			enabled: settings?.agentsEnabled ?? false,
+		} satisfies AgentsEnabled);
+	})
+	.patch("/agents", async (c) => {
+		requireInstanceAdmin(c);
+		const input = validate(updateAgentsEnabledInputSchema, await c.req.json());
+		const row = await upsertInstanceAgentsEnabled(
+			c.var.db,
+			input.agentsEnabled,
+		);
+		return c.json({ enabled: row.agentsEnabled } satisfies AgentsEnabled);
 	})
 	// Public: tells the login screen which social buttons to show. A provider is
 	// "on" only when an admin enabled it and its credentials are configured.

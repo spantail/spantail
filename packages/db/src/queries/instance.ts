@@ -59,6 +59,25 @@ export async function upsertInstanceReportTemplateOverrides(
 	return row;
 }
 
+export async function upsertInstanceAgentsEnabled(
+	db: Database,
+	agentsEnabled: boolean,
+): Promise<InstanceSettingsRow> {
+	// Touches only the agents toggle; other settings keep their values (on
+	// insert they fall back to their schema defaults).
+	const rows = await db
+		.insert(instanceSettings)
+		.values({ id: SINGLETON_ID, agentsEnabled })
+		.onConflictDoUpdate({
+			target: instanceSettings.id,
+			set: { agentsEnabled, updatedAt: new Date() },
+		})
+		.returning();
+	const row = rows[0];
+	if (!row) throw new Error("instance settings upsert returned no row");
+	return row;
+}
+
 export async function upsertInstanceOauthSettings(
 	db: Database,
 	settings: {

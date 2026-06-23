@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+	BotIcon,
 	FileTextIcon,
 	FingerprintIcon,
 	FolderIcon,
@@ -27,13 +28,17 @@ interface SettingsNavItem {
 		| "/settings/appearance"
 		| "/settings/templates"
 		| "/settings/tokens"
+		| "/settings/agents"
 		| "/settings/authentication"
 		| "/settings/preferences"
 		| "/settings/users"
+		| "/settings/agents-admin"
 		| "/settings/email"
 		| "/settings/oauth";
 	labelKey: string;
 	icon: React.ComponentType<{ className?: string }>;
+	/** Hidden unless the instance has the agents feature enabled. */
+	requiresAgents?: boolean;
 }
 
 interface SettingsNavGroup {
@@ -97,6 +102,12 @@ const GROUPS: SettingsNavGroup[] = [
 				icon: KeyIcon,
 			},
 			{
+				to: "/settings/agents",
+				labelKey: "settings.nav.agents",
+				icon: BotIcon,
+				requiresAgents: true,
+			},
+			{
 				to: "/settings/preferences",
 				labelKey: "settings.nav.preferences",
 				icon: SlidersHorizontalIcon,
@@ -111,6 +122,11 @@ const GROUPS: SettingsNavGroup[] = [
 				to: "/settings/users",
 				labelKey: "settings.nav.systemUsers",
 				icon: ShieldIcon,
+			},
+			{
+				to: "/settings/agents-admin",
+				labelKey: "settings.nav.systemAgents",
+				icon: BotIcon,
 			},
 			{
 				to: "/settings/email",
@@ -129,9 +145,11 @@ const GROUPS: SettingsNavGroup[] = [
 export function SettingsNav({
 	isAdmin,
 	canManageTemplates,
+	agentsEnabled,
 }: {
 	isAdmin: boolean;
 	canManageTemplates: boolean;
+	agentsEnabled: boolean;
 }) {
 	const { t } = useTranslation();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -143,33 +161,38 @@ export function SettingsNav({
 		return true;
 	};
 
+	const visibleItems = (group: SettingsNavGroup): SettingsNavItem[] =>
+		group.items.filter((item) => !item.requiresAgents || agentsEnabled);
+
 	return (
 		<nav className="flex shrink-0 flex-col gap-5 md:w-48">
-			{GROUPS.filter(isVisible).map((group) => (
-				<div key={group.labelKey} className="flex flex-col gap-1">
-					<p className="text-muted-foreground px-2 pb-1 text-xs font-medium uppercase tracking-wider">
-						{t(group.labelKey)}
-					</p>
-					{group.items.map((item) => {
-						const isActive = pathname === item.to;
-						return (
-							<Link
-								key={item.to}
-								to={item.to}
-								className={cn(
-									"flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
-									isActive
-										? "bg-secondary text-foreground font-medium"
-										: "text-muted-foreground hover:bg-accent hover:text-foreground",
-								)}
-							>
-								<item.icon className="size-4" />
-								{t(item.labelKey)}
-							</Link>
-						);
-					})}
-				</div>
-			))}
+			{GROUPS.filter(isVisible)
+				.filter((group) => visibleItems(group).length > 0)
+				.map((group) => (
+					<div key={group.labelKey} className="flex flex-col gap-1">
+						<p className="text-muted-foreground px-2 pb-1 text-xs font-medium uppercase tracking-wider">
+							{t(group.labelKey)}
+						</p>
+						{visibleItems(group).map((item) => {
+							const isActive = pathname === item.to;
+							return (
+								<Link
+									key={item.to}
+									to={item.to}
+									className={cn(
+										"flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
+										isActive
+											? "bg-secondary text-foreground font-medium"
+											: "text-muted-foreground hover:bg-accent hover:text-foreground",
+									)}
+								>
+									<item.icon className="size-4" />
+									{t(item.labelKey)}
+								</Link>
+							);
+						})}
+					</div>
+				))}
 		</nav>
 	);
 }

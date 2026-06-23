@@ -29,6 +29,23 @@ export type UpdateEmailSettingsInput = z.infer<
 	typeof updateEmailSettingsInputSchema
 >;
 
+/**
+ * Projection of whether the instance has the AI agent activity feature on.
+ * Read by any authenticated client to gate the agents UI; written by an
+ * instance admin. Off by default because it can grow data volume.
+ */
+export const agentsEnabledSchema = z.object({
+	enabled: z.boolean(),
+});
+export type AgentsEnabled = z.infer<typeof agentsEnabledSchema>;
+
+export const updateAgentsEnabledInputSchema = z.object({
+	agentsEnabled: z.boolean(),
+});
+export type UpdateAgentsEnabledInput = z.infer<
+	typeof updateAgentsEnabledInputSchema
+>;
+
 /** Social login providers an instance admin can enable. */
 export const oauthProviderSchema = z.enum(["google", "github"]);
 export type OauthProvider = z.infer<typeof oauthProviderSchema>;

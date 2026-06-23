@@ -7,6 +7,8 @@ import { resolveSocialConfig } from "./lib/oauth";
 import { registerMcpRoute } from "./mcp";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
+import { agentEntryRoutes } from "./routes/agent-entries";
+import { agentRoutes } from "./routes/agents";
 import { devMailRoutes } from "./routes/dev-mail";
 import { inboxRoutes } from "./routes/inbox";
 import { instanceRoutes } from "./routes/instance";
@@ -75,6 +77,8 @@ v1.route("/reports", reportRoutes);
 // owner + Send-to recipients; mounted after reportRoutes on the same prefix.
 v1.route("/reports", reportDiscussionRoutes);
 v1.route("/work-entries", workEntryRoutes);
+v1.route("/agents", agentRoutes);
+v1.route("/agent-entries", agentEntryRoutes);
 v1.route("/tokens", tokenRoutes);
 
 app.route("/api/v1", v1);
