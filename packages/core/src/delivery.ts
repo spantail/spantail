@@ -17,6 +17,8 @@ export const recipientSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	email: z.string(),
+	// Ready-to-use avatar URL, or null when the user has no avatar.
+	imageUrl: z.string().nullable(),
 });
 export type Recipient = z.infer<typeof recipientSchema>;
 

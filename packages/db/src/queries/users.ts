@@ -92,7 +92,12 @@ export async function updateUser(
 	patch: Partial<
 		Pick<
 			UserRow,
-			"name" | "isAdmin" | "emailVerified" | "canManageTemplates" | "disabled"
+			| "name"
+			| "isAdmin"
+			| "emailVerified"
+			| "canManageTemplates"
+			| "disabled"
+			| "image"
 		>
 	>,
 ): Promise<UserRow | undefined> {

@@ -41,6 +41,7 @@ import {
 import type { Context } from "hono";
 import { Hono } from "hono";
 
+import { resolveAvatarUrl } from "../lib/avatar";
 import { AppError } from "../lib/errors";
 import { parseOptionalJsonBody } from "../lib/json";
 import {
@@ -401,7 +402,12 @@ export const reportRoutes = new Hono<AppEnv>()
 			report.filters.workspaceIds,
 			user.id,
 		);
-		return c.json(members);
+		return c.json(
+			members.map(({ image, ...m }) => ({
+				...m,
+				imageUrl: resolveAvatarUrl(m.id, image),
+			})),
+		);
 	})
 	// Drops a frozen snapshot of the report into each recipient's inbox. Same
 	// owner + membership re-check as reading the report; recipients are validated

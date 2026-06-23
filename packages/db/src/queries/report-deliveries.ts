@@ -287,7 +287,12 @@ export type ReceivedDetailRow = MailItemRow & {
 export type SentDetailRow = MailItemRow & {
 	scope: "sent";
 	renderedMarkdown: string;
-	recipients: { id: string; name: string; email: string }[];
+	recipients: {
+		id: string;
+		name: string;
+		email: string;
+		image: string | null;
+	}[];
 };
 
 /**
@@ -334,7 +339,12 @@ export async function getMailItemDetail(
 		// The batch key the rest of the API flags and routes by.
 		const key = row.batchId ?? row.id;
 		const recipients = await db
-			.select({ id: user.id, name: user.name, email: user.email })
+			.select({
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				image: user.image,
+			})
 			.from(reportDeliveries)
 			.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
 			.where(and(eq(batchKey, key), eq(reportDeliveries.senderUserId, userId)))

@@ -13,6 +13,7 @@ import {
 } from "@toxil/db";
 import { Hono } from "hono";
 
+import { resolveAvatarUrl } from "../lib/avatar";
 import { AppError } from "../lib/errors";
 import { parseOptionalJsonBody } from "../lib/json";
 import { validate } from "../lib/validate";
@@ -83,6 +84,15 @@ export const inboxRoutes = new Hono<AppEnv>()
 			user.id,
 		);
 		if (!detail) throw new AppError("not_found", "Message not found");
+		if (detail.scope === "sent") {
+			return c.json({
+				...detail,
+				recipients: detail.recipients.map(({ image, ...r }) => ({
+					...r,
+					imageUrl: resolveAvatarUrl(r.id, image),
+				})),
+			});
+		}
 		return c.json(detail);
 	})
 	.post("/:id/read", async (c) => {

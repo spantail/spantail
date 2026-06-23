@@ -40,12 +40,14 @@ export function toApiComment(
 	row: ReportCommentRow,
 	reactionRows: ReportReactionRow[],
 	callerId: string,
+	authorImageUrl: string | null,
 ): Comment {
 	return {
 		id: row.id,
 		reportId: row.reportId,
 		authorUserId: row.authorUserId,
 		authorName: row.authorName,
+		authorImageUrl,
 		body: row.body,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),

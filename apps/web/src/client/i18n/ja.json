@@ -446,6 +446,7 @@
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
 			"agents": "エージェント",
+			"profile": "プロフィール",
 			"authentication": "認証",
 			"preferences": "環境設定",
 			"systemUsers": "ユーザー管理",
@@ -570,6 +571,16 @@
 				"disabled": "エージェントを無効化しました。",
 				"deleted": "エージェントを削除しました。"
 			}
+		},
+		"profile": {
+			"title": "プロフィール画像",
+			"description": "ワークスペース全体で名前の横に表示されるアバターをアップロードします。",
+			"uploadAction": "画像をアップロード",
+			"remove": "削除",
+			"hint": "PNG・JPEG・WebP・GIF に対応。正方形の画像が綺麗に表示されます。",
+			"updated": "プロフィール画像を更新しました。",
+			"removed": "プロフィール画像を削除しました。",
+			"error": "PNG・JPEG・WebP・GIF のいずれかの画像を選択してください。"
 		},
 		"password": {
 			"title": "パスワードを変更",

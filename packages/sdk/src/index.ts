@@ -120,7 +120,13 @@ export class ToxilClient {
 	private async request<T>(
 		method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
 		path: string,
-		options: { query?: Query; body?: unknown } = {},
+		options: {
+			query?: Query;
+			body?: unknown;
+			// Pre-serialized payload (e.g. an image upload) sent verbatim with its own
+			// content type, bypassing JSON encoding.
+			rawBody?: { data: Blob; contentType: string };
+		} = {},
 	): Promise<T> {
 		const url = new URL(`${this.baseUrl}/api/v1${path}`);
 		for (const [key, value] of Object.entries(options.query ?? {})) {
@@ -130,14 +136,18 @@ export class ToxilClient {
 		const headers: Record<string, string> = {};
 		if (this.token) headers.authorization = `Bearer ${this.token}`;
 		if (this.client) headers["x-toxil-client"] = this.client;
-		if (options.body !== undefined)
+		if (options.rawBody) headers["content-type"] = options.rawBody.contentType;
+		else if (options.body !== undefined)
 			headers["content-type"] = "application/json";
 
 		const res = await this.fetchImpl(url.toString(), {
 			method,
 			headers,
-			body:
-				options.body === undefined ? undefined : JSON.stringify(options.body),
+			body: options.rawBody
+				? options.rawBody.data
+				: options.body === undefined
+					? undefined
+					: JSON.stringify(options.body),
 		});
 
 		if (res.status === 204) return undefined as T;
@@ -156,6 +166,18 @@ export class ToxilClient {
 
 	me(): Promise<Me> {
 		return this.request("GET", "/me");
+	}
+
+	/** Replaces the caller's avatar with the given image blob; returns updated me. */
+	updateAvatar(image: Blob): Promise<Me> {
+		return this.request("POST", "/me/avatar", {
+			rawBody: { data: image, contentType: image.type },
+		});
+	}
+
+	/** Removes the caller's avatar; returns updated me. */
+	removeAvatar(): Promise<Me> {
+		return this.request("DELETE", "/me/avatar");
 	}
 
 	// --- Instance-wide user management (instance admin only) ---

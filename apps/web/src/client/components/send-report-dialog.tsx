@@ -135,7 +135,11 @@ export function SendReportDialog({
 													on ? "bg-primary/5" : "hover:bg-muted/50",
 												)}
 											>
-												<PersonAvatar name={candidate.name} size={32} />
+												<PersonAvatar
+													name={candidate.name}
+													imageUrl={candidate.imageUrl}
+													size={32}
+												/>
 												<span className="min-w-0 flex-1">
 													<span className="block truncate text-sm font-medium">
 														{candidate.name}
@@ -187,7 +191,7 @@ export function SendReportDialog({
 									key={c.id}
 									className="bg-secondary inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-1 text-xs font-medium"
 								>
-									<PersonAvatar name={c.name} size={18} />
+									<PersonAvatar name={c.name} imageUrl={c.imageUrl} size={18} />
 									{c.name}
 								</span>
 							))}

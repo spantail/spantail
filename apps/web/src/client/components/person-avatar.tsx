@@ -1,3 +1,5 @@
+import { Avatar as AvatarPrimitive } from "radix-ui";
+
 import { hueFromString } from "@/lib/hue";
 import { cn } from "@/lib/utils";
 
@@ -13,34 +15,47 @@ function initials(name: string): string {
 }
 
 /**
- * Round initials avatar with a stable per-name hue — used wherever a person is
- * listed without an uploaded image (recipient picker, inbox senders).
+ * Round avatar for a person. Shows their uploaded/linked image when `imageUrl`
+ * is given, falling back (on absence or load error) to initials over a stable
+ * per-name hue — the same fallback used wherever a person has no avatar.
  */
 export function PersonAvatar({
 	name,
+	imageUrl,
 	size = 36,
 	className,
 }: {
 	name: string;
+	imageUrl?: string | null;
 	size?: number;
 	className?: string;
 }) {
 	const hue = hueFromString(name);
 	return (
-		<span
+		<AvatarPrimitive.Root
 			aria-hidden
-			className={cn(
-				"flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
-				className,
-			)}
-			style={{
-				width: size,
-				height: size,
-				fontSize: size * 0.36,
-				background: `oklch(0.62 0.13 ${hue})`,
-			}}
+			className={cn("flex shrink-0 overflow-hidden rounded-full", className)}
+			style={{ width: size, height: size }}
 		>
-			{initials(name)}
-		</span>
+			{imageUrl ? (
+				<AvatarPrimitive.Image
+					src={imageUrl}
+					alt=""
+					className="aspect-square size-full object-cover"
+				/>
+			) : null}
+			<AvatarPrimitive.Fallback
+				// Initials show immediately without an image; a brief delay when there
+				// is one avoids a flash before it loads.
+				delayMs={imageUrl ? 300 : 0}
+				className="flex size-full items-center justify-center font-semibold text-white"
+				style={{
+					fontSize: size * 0.36,
+					background: `oklch(0.62 0.13 ${hue})`,
+				}}
+			>
+				{initials(name)}
+			</AvatarPrimitive.Fallback>
+		</AvatarPrimitive.Root>
 	);
 }
