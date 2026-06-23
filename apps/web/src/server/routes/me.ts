@@ -29,6 +29,13 @@ export const meRoutes = new Hono<AppEnv>()
 				"Avatar must be a PNG, JPEG, WebP, or GIF image",
 			);
 		}
+		// Reject an oversized upload by its declared length before buffering it
+		// into Worker memory; the post-read check below backstops a missing or
+		// understated Content-Length.
+		const declaredLength = Number(c.req.header("content-length"));
+		if (Number.isFinite(declaredLength) && declaredLength > MAX_AVATAR_BYTES) {
+			throw new AppError("bad_request", "Avatar image is too large");
+		}
 		const body = await c.req.arrayBuffer();
 		if (body.byteLength === 0) {
 			throw new AppError("bad_request", "Avatar image is empty");

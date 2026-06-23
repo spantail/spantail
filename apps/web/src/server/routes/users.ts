@@ -171,10 +171,12 @@ export const userRoutes = new Hono<AppEnv>()
 			);
 		}
 
-		await deleteUser(c.var.db, id);
-		// Remove the deleted user's avatar so the orphaned R2 object can't be
-		// streamed by anyone holding a stale reference to their id. A no-op when
-		// they had no uploaded avatar.
+		// Remove the avatar before the irreversible DB delete so cleanup stays
+		// retryable: if this fails, the user still exists and the whole operation
+		// can be retried; afterwards the orphaned R2 object can no longer be
+		// streamed by anyone holding a stale reference to the id. A no-op when the
+		// user had no uploaded avatar.
 		await c.env.UPLOADS.delete(avatarObjectKey(id));
+		await deleteUser(c.var.db, id);
 		return c.body(null, 204);
 	});

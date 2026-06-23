@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
-
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import { MAX_AVATAR_BYTES } from "../lib/avatar";
 
 // A 1x1 PNG is unnecessary — the server stores bytes verbatim and never decodes
 // them, so any non-empty payload with an allowed content type is a valid upload.
@@ -57,6 +57,16 @@ it("rejects an unsupported content type", async () => {
 it("rejects an empty upload", async () => {
 	const cookie = await signUpUser("Cara", "cara@example.com");
 	const res = await uploadAvatar(cookie, "image/png", new Uint8Array());
+	expect(res.status).toBe(400);
+});
+
+it("rejects an oversized upload", async () => {
+	const cookie = await signUpUser("Dan", "dan@example.com");
+	const res = await uploadAvatar(
+		cookie,
+		"image/png",
+		new Uint8Array(MAX_AVATAR_BYTES + 1),
+	);
 	expect(res.status).toBe(400);
 });
 
