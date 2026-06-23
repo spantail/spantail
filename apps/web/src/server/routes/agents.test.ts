@@ -183,6 +183,111 @@ it("rotates the token secret in place, killing the old one", async () => {
 	expect((await ingest(rotated.secret, "s3")).status).toBe(200);
 });
 
+it("associates an agent with projects, rejecting ones outside its workspace", async () => {
+	const cookie = await signUpUser("Alice", "alice@example.com");
+	await enableAgents(cookie);
+	const wsId = await createWorkspace(cookie, "acme");
+	const otherWsId = await createWorkspace(cookie, "beta");
+	const projectId = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${wsId}/projects`,
+			{ slug: "toxil", name: "Toxil" },
+			cookie,
+		)
+	).json()) as { id: string };
+	const foreign = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${otherWsId}/projects`,
+			{ slug: "other", name: "Other" },
+			cookie,
+		)
+	).json()) as { id: string };
+
+	// A project from another workspace can't be associated.
+	const denied = await apiJson(
+		"POST",
+		"/api/v1/agents",
+		{
+			type: "claude_code",
+			name: "CC",
+			defaultWorkspaceId: wsId,
+			projectIds: [foreign.id],
+		},
+		cookie,
+	);
+	expect(denied.status).toBe(400);
+
+	// In-workspace projects are accepted and echoed back on the registry.
+	const created = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/agents",
+			{
+				type: "claude_code",
+				name: "CC",
+				defaultWorkspaceId: wsId,
+				projectIds: [projectId.id],
+			},
+			cookie,
+		)
+	).json()) as { projectIds: string[] };
+	expect(created.projectIds).toEqual([projectId.id]);
+
+	const list = (await (
+		await apiGet("/api/v1/agents", cookie)
+	).json()) as Array<{ projectIds: string[] }>;
+	expect(list[0]?.projectIds).toEqual([projectId.id]);
+});
+
+it("shows a registered agent in its workspace only to its owner until it has activity", async () => {
+	const owner = await signUpUser("Owner", "owner@example.com");
+	await enableAgents(owner);
+	const member = await signUpUser("Member", "member@example.com");
+	const wsId = await createWorkspace(owner, "acme");
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${wsId}/members`,
+		{ email: "member@example.com" },
+		owner,
+	);
+	const agent = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/agents",
+			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
+			owner,
+		)
+	).json()) as { id: string; secret: string };
+
+	const sidebar = async (cookie: string): Promise<string[]> => {
+		const rows = (await (
+			await apiGet(`/api/v1/agent-entries/agents?workspaceId=${wsId}`, cookie)
+		).json()) as Array<{ id: string }>;
+		return rows.map((r) => r.id);
+	};
+
+	// Registered but inactive: the owner sees it, another member does not.
+	expect(await sidebar(owner)).toContain(agent.id);
+	expect(await sidebar(member)).not.toContain(agent.id);
+
+	// Once it logs work, it becomes part of the workspace-wide activity view.
+	expect(
+		(
+			await appFetch("/api/v1/agent-entries", {
+				method: "POST",
+				headers: {
+					authorization: `Bearer ${agent.secret}`,
+					"content-type": "application/json",
+				},
+				body: JSON.stringify({ sessionId: "s1", durationMinutes: 1 }),
+			})
+		).status,
+	).toBe(200);
+	expect(await sidebar(member)).toContain(agent.id);
+});
+
 it("cannot manage another user's agent", async () => {
 	const alice = await signUpUser("Alice", "alice@example.com");
 	const bob = await signUpUser("Bob", "bob@example.com");

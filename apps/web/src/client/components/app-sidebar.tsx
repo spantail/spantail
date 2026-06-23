@@ -273,8 +273,8 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
 				<SidebarGroup>
 					<NavItems items={MAIN_ITEMS} />
 				</SidebarGroup>
-				<ProjectsGroup />
 				<AgentsGroup />
+				<ProjectsGroup />
 			</SidebarContent>
 			<SidebarFooter>
 				<SettingsMenu />

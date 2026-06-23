@@ -12,7 +12,6 @@ export type AuthContext =
 			agentId: string;
 			ownerUserId: string;
 			defaultWorkspaceId: string | null;
-			defaultProjectId: string | null;
 	  };
 
 /** Interactive/PAT auth that carries a user; excludes agent tokens. */
