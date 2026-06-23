@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import {
-	type HomePeriod,
+	type DashboardPeriod,
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
 import { Dot } from "@/components/dot";
@@ -71,7 +71,7 @@ function ProjectPage() {
 	// popover and are off by default: empty dates and a null member/tag keep
 	// every entry. They flow into the server query so results stay correct
 	// across the entry list's pagination.
-	const [period, setPeriod] = useState<HomePeriod>("this_month");
+	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
 	const [from, setFrom] = useState("");
 	const [to, setTo] = useState("");
 	const [member, setMember] = useState<string | null>(null);

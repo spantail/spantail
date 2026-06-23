@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { DailyBars } from "@/components/dashboard/daily-bars";
 import { Donut, type DonutItem } from "@/components/dashboard/donut";
 import {
-	type HomePeriod,
+	type DashboardPeriod,
 	periodLabelKey,
 } from "@/components/dashboard/period-selector";
 import {
@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
+import { formatCompactRange } from "@/lib/format";
 import { hueFromString } from "@/lib/hue";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -31,7 +32,7 @@ interface DashboardStatsProps {
 	scope: DashboardScope;
 	breakdown: "project" | "user";
 	/** Period that scopes both widgets, controlled by the parent's selector. */
-	period: HomePeriod;
+	period: DashboardPeriod;
 	/**
 	 * `split` (default): daily chart + donut side by side.
 	 * `stacked`: full-width daily chart, then donut + `aside` in a 2-col row.
@@ -53,11 +54,14 @@ export function DashboardStats({
 	layout = "split",
 	aside,
 }: DashboardStatsProps) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
 	const timezone = current?.timezone ?? "UTC";
 	const range = resolveDateRange(period, timezone);
-	const periodLabel = t(periodLabelKey(period));
+	const periodLabel =
+		typeof period === "string"
+			? t(periodLabelKey(period))
+			: formatCompactRange(range.from, range.to, i18n.language);
 
 	const stats = useQuery({
 		queryKey: [

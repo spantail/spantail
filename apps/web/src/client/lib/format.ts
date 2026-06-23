@@ -17,6 +17,35 @@ export function formatEntryDate(
 }
 
 /**
+ * Compact label for an inclusive `YYYY-MM-DD` range, mirroring the dashboard
+ * mockup: `Jun 1 – 30`, `May 28 – Jun 13`, or a single `Jun 1`. Same-month
+ * ranges drop the repeated month on the end. Locale-aware (e.g. `ja` →
+ * `6月1日 – 30日`). Dates are built from parts to avoid the `new Date(iso)` UTC shift.
+ */
+export function formatCompactRange(
+	from: string,
+	to: string,
+	locale: string,
+): string {
+	const toDate = (s: string) => {
+		const [y = 0, m = 1, d = 1] = s.split("-").map(Number);
+		return new Date(y, m - 1, d);
+	};
+	const monthDay = new Intl.DateTimeFormat(locale, {
+		month: "short",
+		day: "numeric",
+	});
+	const a = toDate(from);
+	if (from === to) return monthDay.format(a);
+	const b = toDate(to);
+	const sameMonth = from.slice(0, 7) === to.slice(0, 7);
+	const end = sameMonth
+		? new Intl.DateTimeFormat(locale, { day: "numeric" }).format(b)
+		: monthDay.format(b);
+	return `${monthDay.format(a)} – ${end}`;
+}
+
+/**
  * Formats an ISO timestamp as a GitHub-inbox-style relative time
  * ("37 minutes ago", "yesterday", "2 days ago"), localized via
  * `Intl.RelativeTimeFormat` so en/ja need no extra catalog strings.

@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { DashboardStats } from "@/components/dashboard/dashboard-stats";
 import { HomeInbox } from "@/components/dashboard/home-inbox";
 import {
-	type HomePeriod,
+	type DashboardPeriod,
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
 import { useEntryDialog } from "@/components/entry-dialog";
@@ -46,7 +46,7 @@ function Timeline({
 	const { current } = useWorkspace();
 	const { openCreate } = useEntryDialog();
 	const navigate = useNavigate();
-	const [period, setPeriod] = useState<HomePeriod>("this_month");
+	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
 	const today = todayInTimezone(current?.timezone ?? "UTC");
 	const dateLabel = formatEntryDate(today, i18n.language, {
 		weekday: "long",
