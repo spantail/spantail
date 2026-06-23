@@ -69,7 +69,7 @@ export const agentRoutes = new Hono<AppEnv>()
 			if (projectIds.some((id) => !inWorkspace.has(id))) {
 				throw new AppError(
 					"bad_request",
-					"A selected project does not belong to the default workspace",
+					"A selected project does not exist or does not belong to the default workspace",
 				);
 			}
 		}

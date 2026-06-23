@@ -251,9 +251,12 @@ export async function listWorkspaceAgents(
 	for (const agent of [...active, ...registered]) byId.set(agent.id, agent);
 	// Code-point order (matching SQLite's default BINARY collation) keeps the
 	// sidebar stable across runtimes, unlike locale-dependent localeCompare.
-	return [...byId.values()].sort((a, b) =>
-		a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
-	);
+	// id breaks name ties so the order is fully deterministic, not sort-stability
+	// dependent.
+	return [...byId.values()].sort((a, b) => {
+		if (a.name !== b.name) return a.name < b.name ? -1 : 1;
+		return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+	});
 }
 
 // --- agent tokens (AAT) ---
