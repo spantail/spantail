@@ -77,7 +77,9 @@ export async function createAgentWithToken(
 				insertToken,
 				db
 					.insert(agentProjects)
-					.values(input.projectIds.map((projectId) => ({ agentId, projectId }))),
+					.values(
+						input.projectIds.map((projectId) => ({ agentId, projectId })),
+					),
 			])
 		: db.batch([insertAgent, insertToken]));
 	const agent = agentRows[0];
@@ -143,7 +145,9 @@ export async function listAgentsWithTokenForUser(
 					agentProjects.agentId,
 					result.map((a) => a.id),
 				),
-			);
+			)
+			// Stable, deterministic projectIds order regardless of query plan.
+			.orderBy(agentProjects.projectId);
 		const byAgent = new Map<string, string[]>();
 		for (const link of links) {
 			const ids = byAgent.get(link.agentId) ?? [];
@@ -245,7 +249,11 @@ export async function listWorkspaceAgents(
 	]);
 	const byId = new Map<string, Pick<AgentRow, "id" | "type" | "name">>();
 	for (const agent of [...active, ...registered]) byId.set(agent.id, agent);
-	return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+	// Code-point order (matching SQLite's default BINARY collation) keeps the
+	// sidebar stable across runtimes, unlike locale-dependent localeCompare.
+	return [...byId.values()].sort((a, b) =>
+		a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+	);
 }
 
 // --- agent tokens (AAT) ---
