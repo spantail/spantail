@@ -230,6 +230,36 @@ it("collapses duplicate sourceIds in one payload to a single event", async () =>
 	expect(list[0]?.usage.totalTokens).toBe(454); // 131+323, not doubled
 });
 
+it("ingests a session spanning multiple insert chunks", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+
+	// More events than one insert chunk (10), to exercise chunking under D1's
+	// 100-bound-parameter cap. Every turn must be counted exactly once.
+	const N = 25;
+	const events = Array.from({ length: N }, (_, i) =>
+		turn(
+			`m${i}`,
+			new Date(Date.UTC(2026, 5, 20, 1, i)).toISOString(),
+			{ input_tokens: 1, output_tokens: 1 },
+			"claude-opus-4-8",
+		),
+	);
+	expect((await ingest(token, { sessionId: "s1", events })).status).toBe(200);
+
+	const list = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{
+		durationMinutes: number;
+		usage: { totalTokens: number };
+	}>;
+	expect(list).toHaveLength(1);
+	expect(list[0]?.usage.totalTokens).toBe(N * 2); // every event counted once
+	expect(list[0]?.durationMinutes).toBe(N - 1); // 1-minute spacing
+});
+
 it("rejects an empty events array at validation", async () => {
 	const { admin, ws } = await setup();
 	const { token } = await createAgentToken(admin, {

@@ -444,9 +444,11 @@ export async function getAgentEntryStats(
 
 // --- agent events (raw per-turn telemetry) ---
 
-// Keep each INSERT's bound-parameter count well under SQLite's limit; the unique
-// index makes re-inserting already-seen rows a no-op, so chunking is safe.
-const EVENT_INSERT_CHUNK = 100;
+// D1 caps a query at 100 bound parameters. Each event row binds 8 columns
+// (id + 7 fields; createdAt uses its default), so a chunk of 10 stays well
+// under the cap (80). The unique index makes re-inserting seen rows a no-op,
+// so splitting a session across statements is safe.
+const EVENT_INSERT_CHUNK = 10;
 
 /**
  * Idempotently inserts a session's events. `ON CONFLICT DO NOTHING` on the
