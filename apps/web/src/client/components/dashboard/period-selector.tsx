@@ -1,4 +1,9 @@
-import { type AbsoluteDateRange, resolveDateRange } from "@toxil/core";
+import {
+	type AbsoluteDateRange,
+	MAX_REPORT_SPAN_DAYS,
+	resolveDateRange,
+	shiftDays,
+} from "@toxil/core";
 import { enUS, ja } from "date-fns/locale";
 import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useState } from "react";
@@ -118,9 +123,16 @@ export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
 		}
 		const lo = day < draft.from ? day : draft.from;
 		const hi = day < draft.from ? draft.from : day;
-		setDraft({ from: lo, to: hi });
-		const from = toIso(lo);
 		const to = toIso(hi);
+		// Bound the span like reports do: an unclamped multi-year custom range
+		// would issue a huge stats query and render thousands of day bars. Pull
+		// the start forward so the chart and query stay bounded.
+		const spanDays = Math.round((hi.getTime() - lo.getTime()) / 86_400_000) + 1;
+		const from =
+			spanDays > MAX_REPORT_SPAN_DAYS
+				? shiftDays(to, -(MAX_REPORT_SPAN_DAYS - 1))
+				: toIso(lo);
+		setDraft({ from: toDate(from), to: hi });
 		onChange(matchPreset(from, to) ?? { from, to });
 		setOpen(false);
 	}
