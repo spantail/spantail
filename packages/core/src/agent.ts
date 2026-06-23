@@ -114,7 +114,9 @@ export type AgentEntry = z.infer<typeof agentEntrySchema>;
  */
 export const ingestAgentEntryInputSchema = z.object({
 	workspaceId: z.string().optional(),
-	projectId: z.string().optional(),
+	// Reject an empty/whitespace projectId at the boundary: a falsy-but-present
+	// value would otherwise skip the FK check and 500 on insert instead of 400.
+	projectId: z.string().trim().min(1).optional(),
 	sessionId: z.string().min(1).max(200),
 	durationMinutes: z.number().int().min(0),
 	usage: agentUsageSchema.optional(),

@@ -147,6 +147,22 @@ it("records no project when the ingest omits one", async () => {
 	expect(entry.projectId).toBeNull();
 });
 
+it("rejects an empty projectId with a 400 rather than a 500", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+
+	// An empty string is falsy but present; it must be rejected at validation,
+	// not slip past the FK check and fail on insert.
+	const res = await ingest(token, {
+		sessionId: "e1",
+		projectId: "",
+		durationMinutes: 5,
+	});
+	expect(res.status).toBe(400);
+});
+
 it("rejects ingest once the agent's owner loses workspace membership", async () => {
 	const { admin, member, ws, memberId } = await setup();
 	const { token } = await createAgentToken(member, {
