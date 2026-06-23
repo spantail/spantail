@@ -53,7 +53,10 @@ if [ -n "${TOXIL_PROJECT_ID:-}" ]; then
 fi
 body="$(jq "${jq_args[@]}" "$filter")"
 
-curl -fsS -X POST "$TOXIL_API_URL/api/v1/agent-events" \
+# Bounded timeouts so a slow or down network never blocks the user's turn:
+# this is best-effort telemetry and the hook exits 0 on any failure.
+curl -fsS --connect-timeout 2 --max-time 10 -X POST \
+	"$TOXIL_API_URL/api/v1/agent-events" \
 	-H "authorization: Bearer $TOXIL_AGENT_TOKEN" \
 	-H 'content-type: application/json' \
 	--data-binary "$body" >/dev/null 2>&1 ||
