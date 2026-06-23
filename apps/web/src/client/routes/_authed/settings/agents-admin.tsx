@@ -102,6 +102,9 @@ function AgentsAdminCard() {
 								<Checkbox
 									id="agents-enabled"
 									checked={enabled}
+									// Block interaction until the current value has loaded, so a
+									// click on the still-default `false` can't disable the feature.
+									disabled={!settings.data}
 									onCheckedChange={(v) => setEnabled(v === true)}
 								/>
 								<Label htmlFor="agents-enabled">
@@ -114,7 +117,10 @@ function AgentsAdminCard() {
 						</div>
 						{error && <p className="text-destructive text-sm">{error}</p>}
 						<div>
-							<Button type="submit" disabled={saveMutation.isPending}>
+							<Button
+								type="submit"
+								disabled={saveMutation.isPending || !settings.data}
+							>
 								{t("settings.agentsAdmin.saveAction")}
 							</Button>
 						</div>
