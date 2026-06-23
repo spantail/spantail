@@ -307,6 +307,19 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 	expect(afterStale[0]?.usage.totalTokens).toBe(300);
 	expect(afterStale[0]?.durationMinutes).toBe(10);
 
+	// A stale recompute with the SAME endedAt but fewer tokens (the fuller payload
+	// added an earlier-timestamped subagent turn) must also be ignored.
+	await materializeAgentSessionRollup(db, {
+		...base,
+		durationMinutes: 10,
+		usage: { totalTokens: 250 },
+		endedAt: new Date("2026-06-20T01:10:00.000Z"),
+	});
+	const afterEqualEnded = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{ usage: { totalTokens: number } }>;
+	expect(afterEqualEnded[0]?.usage.totalTokens).toBe(300);
+
 	// A genuinely newer rollup (later endedAt) still moves it forward.
 	await materializeAgentSessionRollup(db, {
 		...base,

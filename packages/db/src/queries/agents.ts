@@ -556,13 +556,15 @@ export async function computeSessionRollup(
 
 /**
  * Materializes a session's rollup into `agent_entries`, monotonically. Every
- * ingest re-sends the cumulative transcript, so a larger `endedAt` always means
- * a more complete event set. The conflict update is therefore guarded to skip a
- * write whose `endedAt` is older than the stored one: if two ingests for the
- * same session overlap and a stale recompute (computed before the other's
- * events were inserted) reaches the upsert last, it must not shrink the row.
- * Either ordering converges to the most complete rollup. Returns the current
- * row (ours, or the newer one a concurrent ingest already wrote).
+ * ingest re-sends the cumulative transcript, so a later recompute is always a
+ * superset of an earlier one — its `endedAt` and `totalTokens` are both
+ * non-decreasing. The conflict update is guarded to apply only when both hold,
+ * so a stale recompute (computed before a concurrent ingest's events landed)
+ * can never overwrite a fuller one, even when the fuller payload added an event
+ * whose timestamp is at or before the current `endedAt` (e.g. a subagent turn)
+ * — there `endedAt` is unchanged but `totalTokens` still grows. Either ordering
+ * converges to the most complete rollup. Returns the current row (ours, or the
+ * newer one a concurrent ingest already wrote).
  */
 export async function materializeAgentSessionRollup(
 	db: Database,
@@ -585,7 +587,10 @@ export async function materializeAgentSessionRollup(
 				endedAt: values.endedAt,
 				updatedAt: new Date(),
 			},
-			setWhere: sql`${agentEntries.endedAt} is null or excluded.ended_at >= ${agentEntries.endedAt}`,
+			setWhere: sql`${agentEntries.usage} is null or (
+				excluded.ended_at >= coalesce(${agentEntries.endedAt}, 0)
+				and coalesce(json_extract(excluded.usage, '$.totalTokens'), 0) >= coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)
+			)`,
 		})
 		.returning();
 	const row = rows[0];
