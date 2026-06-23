@@ -1,11 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Agent, AgentType } from "@toxil/core";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import type { AgentType, AgentWithToken } from "@toxil/core";
+import {
+	BanIcon,
+	CheckIcon,
+	CirclePlayIcon,
+	CopyIcon,
+	KeyRoundIcon,
+	MoreHorizontalIcon,
+	Trash2Icon,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -17,9 +36,17 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -40,35 +67,108 @@ import {
 import { api } from "@/lib/api";
 
 const AGENT_TYPES: AgentType[] = ["claude_code", "codex", "cursor", "other"];
-const NONE = "none";
+const PROJECT_NONE = "none";
+
+/** A freshly issued secret to surface once, with the agent it belongs to. */
+type IssuedSecret = { agentName: string; secret: string };
 
 export function AgentsCard() {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [name, setName] = useState("");
 	const [type, setType] = useState<AgentType>("claude_code");
+	const [workspaceId, setWorkspaceId] = useState("");
+	const [projectId, setProjectId] = useState(PROJECT_NONE);
+	const [expiresInDays, setExpiresInDays] = useState("");
 	const [error, setError] = useState<string | null>(null);
-	const [tokenAgent, setTokenAgent] = useState<Agent | null>(null);
+	const [issued, setIssued] = useState<IssuedSecret | null>(null);
+	const [deleting, setDeleting] = useState<AgentWithToken | null>(null);
 
 	const agents = useQuery({
 		queryKey: ["agents"],
 		queryFn: () => api.listAgents(),
 	});
+	const workspaces = useQuery({
+		queryKey: ["workspaces"],
+		queryFn: () => api.listWorkspaces(),
+	});
+	const projects = useQuery({
+		queryKey: ["projects", workspaceId],
+		queryFn: () => api.listProjects(workspaceId),
+		enabled: workspaceId !== "",
+	});
+
+	const workspaceNames = new Map(
+		(workspaces.data ?? []).map((ws) => [ws.id, ws.name]),
+	);
+
+	const invalidateAgents = () =>
+		queryClient.invalidateQueries({ queryKey: ["agents"] });
 
 	const createMutation = useMutation({
-		mutationFn: () => api.createAgent({ type, name }),
-		onSuccess: async () => {
-			await queryClient.invalidateQueries({ queryKey: ["agents"] });
+		mutationFn: () =>
+			api.createAgent({
+				type,
+				name,
+				defaultWorkspaceId: workspaceId,
+				defaultProjectId: projectId === PROJECT_NONE ? undefined : projectId,
+				expiresInDays: expiresInDays === "" ? undefined : Number(expiresInDays),
+			}),
+		onSuccess: async (created) => {
+			await invalidateAgents();
+			setIssued({ agentName: created.name, secret: created.secret });
 			setName("");
+			setProjectId(PROJECT_NONE);
+			setExpiresInDays("");
 			setError(null);
 		},
 		onError: (err: Error) => setError(err.message),
 	});
 
+	const updateMutation = useMutation({
+		mutationFn: (vars: { id: string; disabled: boolean }) =>
+			api.updateAgent(vars.id, { disabled: vars.disabled }),
+		onSuccess: async (_data, vars) => {
+			await invalidateAgents();
+			toast.success(
+				vars.disabled
+					? t("settings.agents.toast.disabled")
+					: t("settings.agents.toast.enabled"),
+			);
+		},
+		onError: (err: Error) => toast.error(err.message),
+	});
+
+	const rotateMutation = useMutation({
+		mutationFn: (agent: AgentWithToken) =>
+			api
+				.rotateAgentToken(agent.id)
+				.then((res) => ({ agentName: agent.name, secret: res.secret })),
+		onSuccess: async (result) => {
+			await invalidateAgents();
+			setIssued(result);
+		},
+		onError: (err: Error) => toast.error(err.message),
+	});
+
 	const deleteMutation = useMutation({
 		mutationFn: (id: string) => api.deleteAgent(id),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agents"] }),
+		onSuccess: async () => {
+			await invalidateAgents();
+			setDeleting(null);
+			toast.success(t("settings.agents.toast.deleted"));
+		},
+		onError: (err: Error) => toast.error(err.message),
 	});
+
+	const onCreate = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (workspaceId === "") {
+			setError(t("settings.agents.workspaceRequired"));
+			return;
+		}
+		createMutation.mutate();
+	};
 
 	return (
 		<Card>
@@ -79,13 +179,7 @@ export function AgentsCard() {
 				<CardDescription>{t("settings.agents.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-4">
-				<form
-					className="grid gap-4 sm:grid-cols-3"
-					onSubmit={(e) => {
-						e.preventDefault();
-						createMutation.mutate();
-					}}
-				>
+				<form className="grid gap-4 sm:grid-cols-2" onSubmit={onCreate}>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="agent-name">{t("settings.agents.name")}</Label>
 						<Input
@@ -111,10 +205,69 @@ export function AgentsCard() {
 							</SelectContent>
 						</Select>
 					</div>
+					<div className="flex flex-col gap-2">
+						<Label>{t("settings.agents.workspace")}</Label>
+						<Select
+							value={workspaceId}
+							onValueChange={(v) => {
+								setWorkspaceId(v);
+								setProjectId(PROJECT_NONE);
+							}}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue
+									placeholder={t("settings.agents.workspacePlaceholder")}
+								/>
+							</SelectTrigger>
+							<SelectContent>
+								{(workspaces.data ?? []).map((ws) => (
+									<SelectItem key={ws.id} value={ws.id}>
+										{ws.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label>{t("settings.agents.project")}</Label>
+						<Select
+							value={projectId}
+							onValueChange={setProjectId}
+							disabled={workspaceId === ""}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value={PROJECT_NONE}>
+									{t("settings.agents.projectNone")}
+								</SelectItem>
+								{(projects.data ?? []).map((project) => (
+									<SelectItem key={project.id} value={project.id}>
+										{project.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="agent-expiry">
+							{t("settings.agents.expiresInDays")}
+						</Label>
+						<Input
+							id="agent-expiry"
+							type="number"
+							min={1}
+							max={3650}
+							value={expiresInDays}
+							onChange={(e) => setExpiresInDays(e.target.value)}
+							placeholder={t("settings.agents.noExpiry")}
+						/>
+					</div>
 					{error && (
-						<p className="text-destructive text-sm sm:col-span-3">{error}</p>
+						<p className="text-destructive text-sm sm:col-span-2">{error}</p>
 					)}
-					<div className="flex items-end sm:col-span-3">
+					<div className="flex items-end sm:col-span-2">
 						<Button type="submit" disabled={createMutation.isPending}>
 							{t("settings.agents.createAction")}
 						</Button>
@@ -131,280 +284,187 @@ export function AgentsCard() {
 							<TableRow>
 								<TableHead>{t("settings.agents.name")}</TableHead>
 								<TableHead>{t("settings.agents.type")}</TableHead>
-								<TableHead>{t("settings.agents.created")}</TableHead>
+								<TableHead>{t("settings.agents.workspace")}</TableHead>
+								<TableHead>{t("settings.agents.status")}</TableHead>
+								<TableHead>{t("settings.agents.lastUsed")}</TableHead>
+								<TableHead>{t("settings.agents.expires")}</TableHead>
 								<TableHead />
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{(agents.data ?? []).map((agent) => (
-								<TableRow key={agent.id}>
-									<TableCell>{agent.name}</TableCell>
-									<TableCell>
-										<Badge variant="secondary">
-											{t(`settings.agents.types.${agent.type}`)}
-										</Badge>
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{new Date(agent.createdAt).toLocaleDateString()}
-									</TableCell>
-									<TableCell className="flex justify-end gap-1">
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => setTokenAgent(agent)}
-										>
-											{t("settings.agents.tokens.manageAction")}
-										</Button>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => deleteMutation.mutate(agent.id)}
-										>
-											{t("settings.agents.deleteAction")}
-										</Button>
-									</TableCell>
-								</TableRow>
-							))}
+							{(agents.data ?? []).map((agent) => {
+								const disabled = agent.disabledAt !== null;
+								const wsId = agent.token?.defaultWorkspaceId;
+								return (
+									<TableRow key={agent.id}>
+										<TableCell>{agent.name}</TableCell>
+										<TableCell>
+											<Badge variant="secondary">
+												{t(`settings.agents.types.${agent.type}`)}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{(wsId && workspaceNames.get(wsId)) ?? "—"}
+										</TableCell>
+										<TableCell>
+											<Badge variant={disabled ? "outline" : "default"}>
+												{disabled
+													? t("settings.agents.statusDisabled")
+													: t("settings.agents.statusActive")}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{agent.token?.lastUsedAt
+												? new Date(agent.token.lastUsedAt).toLocaleString()
+												: t("settings.agents.never")}
+										</TableCell>
+										<TableCell className="text-muted-foreground">
+											{agent.token?.expiresAt
+												? new Date(agent.token.expiresAt).toLocaleDateString()
+												: t("settings.agents.noExpiry")}
+										</TableCell>
+										<TableCell className="text-right">
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button
+														variant="ghost"
+														size="icon"
+														aria-label={t("settings.agents.actions")}
+													>
+														<MoreHorizontalIcon />
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent align="end">
+													<DropdownMenuItem
+														onClick={() => rotateMutation.mutate(agent)}
+														disabled={agent.token === null}
+													>
+														<KeyRoundIcon />
+														{t("settings.agents.regenerateAction")}
+													</DropdownMenuItem>
+													<DropdownMenuItem
+														onClick={() =>
+															updateMutation.mutate({
+																id: agent.id,
+																disabled: !disabled,
+															})
+														}
+													>
+														{disabled ? <CirclePlayIcon /> : <BanIcon />}
+														{disabled
+															? t("settings.agents.enableAction")
+															: t("settings.agents.disableAction")}
+													</DropdownMenuItem>
+													<DropdownMenuSeparator />
+													<DropdownMenuItem
+														variant="destructive"
+														onClick={() => setDeleting(agent)}
+													>
+														<Trash2Icon />
+														{t("settings.agents.deleteAction")}
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</TableCell>
+									</TableRow>
+								);
+							})}
 						</TableBody>
 					</Table>
 				)}
 			</CardContent>
 
-			{tokenAgent && (
-				<AgentTokensDialog
-					agent={tokenAgent}
-					onClose={() => setTokenAgent(null)}
-				/>
-			)}
+			<SecretDialog issued={issued} onClose={() => setIssued(null)} />
+
+			<AlertDialog
+				open={deleting !== null}
+				onOpenChange={(open) => !open && setDeleting(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							{t("settings.agents.deleteConfirmTitle")}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("settings.agents.deleteConfirmDescription", {
+								name: deleting?.name ?? "",
+							})}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>{t("settings.cancelAction")}</AlertDialogCancel>
+						<AlertDialogAction
+							className={buttonVariants({ variant: "destructive" })}
+							disabled={deleteMutation.isPending}
+							onClick={() => deleting && deleteMutation.mutate(deleting.id)}
+						>
+							{t("settings.agents.deleteAction")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Card>
 	);
 }
 
-function AgentTokensDialog({
-	agent,
+/** Shows a freshly issued token secret once, with a copy affordance. */
+function SecretDialog({
+	issued,
 	onClose,
 }: {
-	agent: Agent;
+	issued: IssuedSecret | null;
 	onClose: () => void;
 }) {
 	const { t } = useTranslation();
-	const queryClient = useQueryClient();
-	const [name, setName] = useState("");
-	const [workspaceId, setWorkspaceId] = useState(NONE);
-	const [projectId, setProjectId] = useState(NONE);
-	const [expiresInDays, setExpiresInDays] = useState("");
-	const [createdToken, setCreatedToken] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	const workspaces = useQuery({
-		queryKey: ["workspaces"],
-		queryFn: () => api.listWorkspaces(),
-	});
-	const projects = useQuery({
-		queryKey: ["projects", workspaceId],
-		queryFn: () => api.listProjects(workspaceId),
-		enabled: workspaceId !== NONE,
-	});
-	const tokens = useQuery({
-		queryKey: ["agentTokens", agent.id],
-		queryFn: () => api.listAgentTokens(agent.id),
-	});
-
-	const createMutation = useMutation({
-		mutationFn: () =>
-			api.createAgentToken(agent.id, {
-				name,
-				defaultWorkspaceId: workspaceId === NONE ? undefined : workspaceId,
-				defaultProjectId: projectId === NONE ? undefined : projectId,
-				expiresInDays: expiresInDays === "" ? undefined : Number(expiresInDays),
-			}),
-		onSuccess: async (created) => {
-			await queryClient.invalidateQueries({
-				queryKey: ["agentTokens", agent.id],
-			});
-			setCreatedToken(created.token);
-			setCopied(false);
-			setName("");
-			setError(null);
-		},
-		onError: (err: Error) => setError(err.message),
-	});
-
-	const deleteMutation = useMutation({
-		mutationFn: (id: string) => api.deleteAgentToken(agent.id, id),
-		onSuccess: () =>
-			queryClient.invalidateQueries({ queryKey: ["agentTokens", agent.id] }),
-	});
 
 	return (
-		<Dialog open onOpenChange={(open) => !open && onClose()}>
+		<Dialog
+			open={issued !== null}
+			onOpenChange={(open) => {
+				if (!open) {
+					onClose();
+					setCopied(false);
+				}
+			}}
+		>
 			<DialogContent size="lg">
 				<DialogHeader>
-					<DialogTitle>
-						{t("settings.agents.tokens.title", { name: agent.name })}
-					</DialogTitle>
+					<DialogTitle>{t("settings.agents.secretTitle")}</DialogTitle>
 					<DialogDescription>
-						{t("settings.agents.tokens.description")}
+						{t("settings.agents.secretDescription", {
+							name: issued?.agentName ?? "",
+						})}
 					</DialogDescription>
 				</DialogHeader>
-
-				<form
-					className="grid gap-4 sm:grid-cols-2"
-					onSubmit={(e) => {
-						e.preventDefault();
-						createMutation.mutate();
-					}}
-				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="agent-token-name">
-							{t("settings.agents.tokens.name")}
-						</Label>
-						<Input
-							id="agent-token-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							placeholder={t("settings.agents.tokens.namePlaceholder")}
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="agent-token-expiry">
-							{t("settings.agents.tokens.expiresInDays")}
-						</Label>
-						<Input
-							id="agent-token-expiry"
-							type="number"
-							min={1}
-							max={3650}
-							value={expiresInDays}
-							onChange={(e) => setExpiresInDays(e.target.value)}
-							placeholder={t("settings.agents.tokens.noExpiry")}
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("settings.agents.tokens.defaultWorkspace")}</Label>
-						<Select
-							value={workspaceId}
-							onValueChange={(v) => {
-								setWorkspaceId(v);
-								setProjectId(NONE);
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value={NONE}>
-									{t("settings.agents.tokens.none")}
-								</SelectItem>
-								{(workspaces.data ?? []).map((ws) => (
-									<SelectItem key={ws.id} value={ws.id}>
-										{ws.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("settings.agents.tokens.defaultProject")}</Label>
-						<Select
-							value={projectId}
-							onValueChange={setProjectId}
-							disabled={workspaceId === NONE}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value={NONE}>
-									{t("settings.agents.tokens.none")}
-								</SelectItem>
-								{(projects.data ?? []).map((project) => (
-									<SelectItem key={project.id} value={project.id}>
-										{project.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					{error && (
-						<p className="text-destructive text-sm sm:col-span-2">{error}</p>
-					)}
-					<div className="sm:col-span-2">
-						<Button type="submit" disabled={createMutation.isPending}>
-							{t("settings.agents.tokens.createAction")}
-						</Button>
-					</div>
-				</form>
-
-				{createdToken && (
-					<div className="flex flex-col gap-2">
-						<p className="text-muted-foreground text-sm">
-							{t("settings.agents.tokens.createdDescription")}
-						</p>
-						<div className="flex items-center gap-2">
-							<code className="bg-muted flex-1 overflow-x-auto rounded-md p-2 text-xs">
-								{createdToken}
-							</code>
-							<Button
-								variant="outline"
-								size="icon"
-								aria-label={t("settings.agents.tokens.copyAction")}
-								onClick={async () => {
-									await navigator.clipboard.writeText(createdToken);
-									setCopied(true);
-								}}
-							>
-								{copied ? <CheckIcon /> : <CopyIcon />}
-							</Button>
-						</div>
-						{copied && (
-							<p className="text-muted-foreground text-sm">
-								{t("settings.agents.tokens.copied")}
-							</p>
-						)}
-					</div>
-				)}
-
-				{(tokens.data ?? []).length > 0 && (
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>{t("settings.agents.tokens.name")}</TableHead>
-								<TableHead>{t("settings.agents.tokens.lastUsed")}</TableHead>
-								<TableHead>{t("settings.agents.tokens.expires")}</TableHead>
-								<TableHead />
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{(tokens.data ?? []).map((token) => (
-								<TableRow key={token.id}>
-									<TableCell>{token.name}</TableCell>
-									<TableCell className="text-muted-foreground">
-										{token.lastUsedAt
-											? new Date(token.lastUsedAt).toLocaleString()
-											: t("settings.agents.tokens.never")}
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{token.expiresAt
-											? new Date(token.expiresAt).toLocaleDateString()
-											: t("settings.agents.tokens.noExpiry")}
-									</TableCell>
-									<TableCell className="text-right">
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={() => deleteMutation.mutate(token.id)}
-										>
-											{t("settings.agents.tokens.revokeAction")}
-										</Button>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				)}
+				<div className="flex items-center gap-2">
+					<code className="bg-muted flex-1 overflow-x-auto rounded-md p-2 text-xs">
+						{issued?.secret}
+					</code>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={t("settings.agents.copyAction")}
+						onClick={async () => {
+							if (issued) {
+								await navigator.clipboard.writeText(issued.secret);
+								setCopied(true);
+							}
+						}}
+					>
+						{copied ? <CheckIcon /> : <CopyIcon />}
+					</Button>
+				</div>
+				<DialogFooter>
+					<Button
+						onClick={() => {
+							onClose();
+							setCopied(false);
+						}}
+					>
+						{t("settings.agents.doneAction")}
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

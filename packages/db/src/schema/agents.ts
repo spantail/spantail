@@ -25,6 +25,9 @@ export const agents = sqliteTable(
 		type: text("type", { enum: agentTypes }).notNull(),
 		name: text("name").notNull(),
 		createdAt: createdAtMs(),
+		// Reversible deactivation: a disabled agent's token is rejected at ingest
+		// but the agent and its history remain (distinct from archivedAt's delete).
+		disabledAt: integer("disabled_at", { mode: "timestamp_ms" }),
 		archivedAt: integer("archived_at", { mode: "timestamp_ms" }),
 	},
 	(table) => [index("agents_user_idx").on(table.userId)],

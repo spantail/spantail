@@ -1,19 +1,18 @@
 import {
 	createAgentInputSchema,
-	createAgentTokenInputSchema,
 	generateAat,
 	hashToken,
+	updateAgentInputSchema,
 } from "@toxil/core";
 import {
 	type AgentRow,
 	archiveAgent,
-	createAgent,
-	createAgentToken,
-	deleteAgentToken,
+	createAgentWithToken,
 	getAgentById,
 	getProjectById,
-	listAgentsForUser,
-	listAgentTokensForAgent,
+	listAgentsWithTokenForUser,
+	rotateAgentToken,
+	setAgentDisabled,
 } from "@toxil/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -44,45 +43,20 @@ export const agentRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
 	.get("/", async (c) => {
 		const { user } = requireSession(c);
-		const rows = await listAgentsForUser(c.var.db, user.id);
+		const rows = await listAgentsWithTokenForUser(c.var.db, user.id);
 		return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
 	})
+	// Registering an agent also issues its single access token (1:1). The default
+	// workspace is required so the token always knows where to log; an optional
+	// default project narrows it. The plaintext secret is returned exactly once.
 	.post("/", async (c) => {
 		const { user } = requireSession(c);
 		const input = validate(createAgentInputSchema, await c.req.json());
-		const { userId: _userId, ...agent } = await createAgent(c.var.db, {
-			userId: user.id,
-			type: input.type,
-			name: input.name,
-		});
-		return c.json(agent, 201);
-	})
-	.delete("/:id", async (c) => {
-		const { user } = requireSession(c);
-		const archived = await archiveAgent(c.var.db, user.id, c.req.param("id"));
-		if (!archived) throw new AppError("not_found", "Agent not found");
-		return c.body(null, 204);
-	})
-	.get("/:id/tokens", async (c) => {
-		const agent = await requireOwnedAgent(c, c.req.param("id"));
-		const tokens = await listAgentTokensForAgent(c.var.db, agent.id);
-		return c.json(tokens.map(({ tokenHash: _hash, ...rest }) => rest));
-	})
-	.post("/:id/tokens", async (c) => {
-		const agent = await requireOwnedAgent(c, c.req.param("id"));
-		const input = validate(createAgentTokenInputSchema, await c.req.json());
 
-		// A default binding must point where the issuer is a member: the agent's
-		// capability can never exceed its owner's. (Re-checked live at ingest.)
-		if (input.defaultProjectId && !input.defaultWorkspaceId) {
-			throw new AppError(
-				"bad_request",
-				"A default project requires a default workspace",
-			);
-		}
-		if (input.defaultWorkspaceId) {
-			await requireWorkspaceAccess(c, input.defaultWorkspaceId);
-		}
+		// A binding can never exceed its owner's live membership. (Re-checked at
+		// ingest.) The workspace must be one the issuer belongs to; a default
+		// project must live in that workspace.
+		await requireWorkspaceAccess(c, input.defaultWorkspaceId);
 		if (input.defaultProjectId) {
 			const project = await getProjectById(c.var.db, input.defaultProjectId);
 			if (!project || project.workspaceId !== input.defaultWorkspaceId) {
@@ -93,29 +67,63 @@ export const agentRoutes = new Hono<AppEnv>()
 			}
 		}
 
-		const token = generateAat();
-		const row = await createAgentToken(c.var.db, {
-			agentId: agent.id,
+		const secret = generateAat();
+		const { agent, token } = await createAgentWithToken(c.var.db, {
+			userId: user.id,
+			type: input.type,
 			name: input.name,
-			tokenHash: await hashToken(token),
-			defaultWorkspaceId: input.defaultWorkspaceId ?? null,
+			tokenName: input.name,
+			tokenHash: await hashToken(secret),
+			defaultWorkspaceId: input.defaultWorkspaceId,
 			defaultProjectId: input.defaultProjectId ?? null,
 			expiresAt: input.expiresInDays
 				? new Date(Date.now() + input.expiresInDays * DAY_MS)
 				: null,
 		});
-		// The plaintext token is returned exactly once.
-		const { tokenHash: _hash, ...rest } = row;
-		return c.json({ ...rest, token }, 201);
+		const { userId: _userId, ...agentView } = agent;
+		return c.json(
+			{
+				...agentView,
+				token: {
+					defaultWorkspaceId: token.defaultWorkspaceId,
+					defaultProjectId: token.defaultProjectId,
+					lastUsedAt: token.lastUsedAt,
+					expiresAt: token.expiresAt,
+				},
+				secret,
+			},
+			201,
+		);
 	})
-	.delete("/:id/tokens/:tokenId", async (c) => {
+	.patch("/:id", async (c) => {
+		const { user } = requireSession(c);
+		const input = validate(updateAgentInputSchema, await c.req.json());
+		const agent = await setAgentDisabled(
+			c.var.db,
+			user.id,
+			c.req.param("id"),
+			input.disabled,
+		);
+		if (!agent) throw new AppError("not_found", "Agent not found");
+		const { userId: _userId, ...rest } = agent;
+		return c.json(rest);
+	})
+	.delete("/:id", async (c) => {
+		const { user } = requireSession(c);
+		const archived = await archiveAgent(c.var.db, user.id, c.req.param("id"));
+		if (!archived) throw new AppError("not_found", "Agent not found");
+		return c.body(null, 204);
+	})
+	// Regenerates the agent's token secret in place, keeping its binding and
+	// expiry; the old secret stops working immediately. Returned once.
+	.post("/:id/token/rotate", async (c) => {
 		const agent = await requireOwnedAgent(c, c.req.param("id"));
-		const deleted = await deleteAgentToken(
+		const secret = generateAat();
+		const token = await rotateAgentToken(
 			c.var.db,
 			agent.id,
-			c.req.param("tokenId"),
+			await hashToken(secret),
 		);
-		if (!deleted)
-			throw new AppError("not_found", "Agent access token not found");
-		return c.body(null, 204);
+		if (!token) throw new AppError("not_found", "Agent access token not found");
+		return c.json({ secret });
 	});

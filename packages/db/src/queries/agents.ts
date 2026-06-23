@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, ne, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { agentEntries, agents, agentTokens } from "../schema/agents";
@@ -13,29 +13,115 @@ export type AgentEntryUpsert = Omit<
 
 // --- agents (account-scoped registry) ---
 
-export async function createAgent(
+/**
+ * Registers an agent together with its single access token. The two inserts
+ * run in one batch so the 1:1 invariant holds atomically — a failure never
+ * leaves a tokenless agent that the 1:1 UI could not issue a credential for.
+ */
+export async function createAgentWithToken(
 	db: Database,
-	values: { userId: string; type: AgentRow["type"]; name: string },
-): Promise<AgentRow> {
-	const rows = await db
-		.insert(agents)
-		.values({ id: crypto.randomUUID(), ...values })
-		.returning();
-	const row = rows[0];
-	if (!row) throw new Error("agent insert returned no row");
-	return row;
+	input: {
+		userId: string;
+		type: AgentRow["type"];
+		name: string;
+		tokenName: string;
+		tokenHash: string;
+		defaultWorkspaceId: string;
+		defaultProjectId: string | null;
+		expiresAt: Date | null;
+	},
+): Promise<{ agent: AgentRow; token: AgentTokenRow }> {
+	const agentId = crypto.randomUUID();
+	// D1 has no interactive transactions; batch keeps both writes atomic.
+	const [agentRows, tokenRows] = await db.batch([
+		db
+			.insert(agents)
+			.values({
+				id: agentId,
+				userId: input.userId,
+				type: input.type,
+				name: input.name,
+			})
+			.returning(),
+		db
+			.insert(agentTokens)
+			.values({
+				id: crypto.randomUUID(),
+				agentId,
+				name: input.tokenName,
+				tokenHash: input.tokenHash,
+				defaultWorkspaceId: input.defaultWorkspaceId,
+				defaultProjectId: input.defaultProjectId,
+				expiresAt: input.expiresAt,
+			})
+			.returning(),
+	]);
+	const agent = agentRows[0];
+	const token = tokenRows[0];
+	if (!agent || !token) throw new Error("agent create returned no row");
+	return { agent, token };
 }
 
-/** Active (non-archived) agents owned by the user, newest first. */
-export async function listAgentsForUser(
+/** Public summary of an agent's single bound access token (no secret/hash). */
+export type AgentTokenSummaryRow = {
+	defaultWorkspaceId: string | null;
+	defaultProjectId: string | null;
+	lastUsedAt: Date | null;
+	expiresAt: Date | null;
+};
+
+/**
+ * Active (non-archived) agents owned by the user with their single bound token,
+ * newest first. Agent and token are 1:1, but a legacy agent may still carry
+ * several token rows; the join is deduplicated to the oldest token per agent so
+ * the 1:1 UI never receives a duplicated agent.
+ */
+export async function listAgentsWithTokenForUser(
 	db: Database,
 	userId: string,
-): Promise<AgentRow[]> {
-	return db
-		.select()
+): Promise<Array<AgentRow & { token: AgentTokenSummaryRow | null }>> {
+	const rows = await db
+		.select({
+			agent: agents,
+			tokenId: agentTokens.id,
+			defaultWorkspaceId: agentTokens.defaultWorkspaceId,
+			defaultProjectId: agentTokens.defaultProjectId,
+			lastUsedAt: agentTokens.lastUsedAt,
+			expiresAt: agentTokens.expiresAt,
+		})
 		.from(agents)
+		.leftJoin(agentTokens, eq(agentTokens.agentId, agents.id))
 		.where(and(eq(agents.userId, userId), isNull(agents.archivedAt)))
-		.orderBy(desc(agents.createdAt));
+		.orderBy(desc(agents.createdAt), asc(agentTokens.createdAt));
+	const seen = new Set<string>();
+	const result: Array<AgentRow & { token: AgentTokenSummaryRow | null }> = [];
+	for (const { agent, tokenId, ...token } of rows) {
+		if (seen.has(agent.id)) continue;
+		seen.add(agent.id);
+		result.push({ ...agent, token: tokenId === null ? null : token });
+	}
+	return result;
+}
+
+/** Toggles an agent's reversible disabled state (scoped to its owner). */
+export async function setAgentDisabled(
+	db: Database,
+	userId: string,
+	id: string,
+	disabled: boolean,
+): Promise<AgentRow | undefined> {
+	const rows = await db
+		.update(agents)
+		.set({ disabledAt: disabled ? new Date() : null })
+		.where(
+			and(
+				eq(agents.id, id),
+				eq(agents.userId, userId),
+				isNull(agents.archivedAt),
+			),
+		)
+		.returning();
+	return rows[0];
 }
 
 export async function getAgentById(
@@ -80,35 +166,38 @@ export async function listAgentsWithActivity(
 
 // --- agent tokens (AAT) ---
 
-export async function createAgentToken(
-	db: Database,
-	input: {
-		agentId: string;
-		name: string;
-		tokenHash: string;
-		defaultWorkspaceId: string | null;
-		defaultProjectId: string | null;
-		expiresAt: Date | null;
-	},
-): Promise<AgentTokenRow> {
-	const rows = await db
-		.insert(agentTokens)
-		.values({ id: crypto.randomUUID(), ...input })
-		.returning();
-	const row = rows[0];
-	if (!row) throw new Error("agent token insert returned no row");
-	return row;
-}
-
-export async function listAgentTokensForAgent(
+/**
+ * Rotates an agent's token to a new secret in place, keeping its binding and
+ * expiry. lastUsedAt resets so the summary reflects the fresh credential.
+ *
+ * Rotation also collapses the agent to a single token: any legacy extra rows
+ * (the removed multi-token API could create them) are deleted, so every prior
+ * secret is revoked — never left live yet hidden from the 1:1 UI — and the
+ * surviving row can't collide on the unique tokenHash.
+ */
+export async function rotateAgentToken(
 	db: Database,
 	agentId: string,
-): Promise<AgentTokenRow[]> {
-	return db
-		.select()
+	tokenHash: string,
+): Promise<AgentTokenRow | undefined> {
+	const survivor = await db
+		.select({ id: agentTokens.id })
 		.from(agentTokens)
 		.where(eq(agentTokens.agentId, agentId))
-		.orderBy(agentTokens.createdAt);
+		.orderBy(agentTokens.createdAt)
+		.get();
+	if (!survivor) return undefined;
+	await db
+		.delete(agentTokens)
+		.where(
+			and(eq(agentTokens.agentId, agentId), ne(agentTokens.id, survivor.id)),
+		);
+	const rows = await db
+		.update(agentTokens)
+		.set({ tokenHash, lastUsedAt: null })
+		.where(eq(agentTokens.id, survivor.id))
+		.returning();
+	return rows[0];
 }
 
 export async function findAgentTokenByHash(
@@ -120,18 +209,6 @@ export async function findAgentTokenByHash(
 		.from(agentTokens)
 		.where(eq(agentTokens.tokenHash, tokenHash))
 		.get();
-}
-
-export async function deleteAgentToken(
-	db: Database,
-	agentId: string,
-	id: string,
-): Promise<boolean> {
-	const rows = await db
-		.delete(agentTokens)
-		.where(and(eq(agentTokens.id, id), eq(agentTokens.agentId, agentId)))
-		.returning({ id: agentTokens.id });
-	return rows.length > 0;
 }
 
 export async function touchAgentToken(db: Database, id: string): Promise<void> {

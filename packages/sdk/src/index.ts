@@ -6,13 +6,12 @@ import type {
 	AgentEntryStats,
 	AgentEntryStatsQuery,
 	AgentsEnabled,
-	AgentToken,
+	AgentWithToken,
 	ApiToken,
 	AuthProviders,
 	AuthUser,
 	Comment,
 	CreateAgentInput,
-	CreateAgentTokenInput,
 	CreatedUser,
 	CreateInvitationInputData,
 	CreateProjectInput,
@@ -51,6 +50,7 @@ import type {
 	SendReportResult,
 	SetMailFlagsInput,
 	UnreadCount,
+	UpdateAgentInput,
 	UpdateAgentsEnabledInput,
 	UpdateEmailSettingsInput,
 	UpdateOauthSettingsInput,
@@ -317,12 +317,20 @@ export class ToxilClient {
 
 	// --- AI agents: registry, access tokens, and work entries ---
 
-	listAgents(): Promise<Agent[]> {
+	listAgents(): Promise<AgentWithToken[]> {
 		return this.request("GET", "/agents");
 	}
 
-	createAgent(input: CreateAgentInput): Promise<Agent> {
+	/** Registers an agent and issues its access token; `secret` is shown once. */
+	createAgent(
+		input: CreateAgentInput,
+	): Promise<AgentWithToken & { secret: string }> {
 		return this.request("POST", "/agents", { body: input });
+	}
+
+	/** Toggles an agent's disabled state (its token is rejected while disabled). */
+	updateAgent(id: string, input: UpdateAgentInput): Promise<Agent> {
+		return this.request("PATCH", `/agents/${id}`, { body: input });
 	}
 
 	/** Soft-deletes (archives) an agent; its entries are preserved. */
@@ -330,19 +338,9 @@ export class ToxilClient {
 		return this.request("DELETE", `/agents/${id}`);
 	}
 
-	listAgentTokens(agentId: string): Promise<AgentToken[]> {
-		return this.request("GET", `/agents/${agentId}/tokens`);
-	}
-
-	createAgentToken(
-		agentId: string,
-		input: CreateAgentTokenInput,
-	): Promise<AgentToken & { token: string }> {
-		return this.request("POST", `/agents/${agentId}/tokens`, { body: input });
-	}
-
-	deleteAgentToken(agentId: string, tokenId: string): Promise<void> {
-		return this.request("DELETE", `/agents/${agentId}/tokens/${tokenId}`);
+	/** Regenerates the agent's token secret in place; returns it once. */
+	rotateAgentToken(id: string): Promise<{ secret: string }> {
+		return this.request("POST", `/agents/${id}/token/rotate`);
 	}
 
 	/** Ingests one agent session (agent access token auth). Idempotent. */

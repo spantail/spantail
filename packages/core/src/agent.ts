@@ -17,40 +17,51 @@ export const agentSchema = z.object({
 	type: agentTypeSchema,
 	name: z.string(),
 	createdAt: z.string(),
+	// Reversible deactivation; while set, the agent's token is rejected at ingest.
+	disabledAt: z.string().nullable(),
 	archivedAt: z.string().nullable(),
 });
 export type Agent = z.infer<typeof agentSchema>;
 
-export const createAgentInputSchema = z.object({
-	type: agentTypeSchema,
-	name: z.string().min(1).max(100),
-});
-export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;
-
 /**
- * Agent access token (AAT): a write-only ingest credential bound to one agent,
- * optionally pre-bound to a default workspace/project so the ingest client need
- * not resolve them. Its capability is a subset of the owner's live membership.
+ * Public summary of an agent's single access token (AAT). The plaintext secret
+ * is shown only once at creation/rotation and never included here.
  */
-export const agentTokenSchema = z.object({
-	id: z.string(),
-	agentId: z.string(),
-	name: z.string(),
+export const agentTokenSummarySchema = z.object({
 	defaultWorkspaceId: z.string().nullable(),
 	defaultProjectId: z.string().nullable(),
 	lastUsedAt: z.string().nullable(),
 	expiresAt: z.string().nullable(),
-	createdAt: z.string(),
 });
-export type AgentToken = z.infer<typeof agentTokenSchema>;
+export type AgentTokenSummary = z.infer<typeof agentTokenSummarySchema>;
 
-export const createAgentTokenInputSchema = z.object({
+/**
+ * An agent with its single bound access token. Agent and token are 1:1: the
+ * token is created with the agent and its binding (default workspace/project)
+ * is fixed for the agent's life — changing it means re-creating the agent.
+ */
+export const agentWithTokenSchema = agentSchema.extend({
+	token: agentTokenSummarySchema.nullable(),
+});
+export type AgentWithToken = z.infer<typeof agentWithTokenSchema>;
+
+/**
+ * Creating an agent also issues its access token. A default workspace is
+ * required (the token must know where to log); a default project is optional.
+ */
+export const createAgentInputSchema = z.object({
+	type: agentTypeSchema,
 	name: z.string().min(1).max(100),
-	defaultWorkspaceId: z.string().optional(),
+	defaultWorkspaceId: z.string(),
 	defaultProjectId: z.string().optional(),
 	expiresInDays: z.number().int().min(1).max(3650).optional(),
 });
-export type CreateAgentTokenInput = z.infer<typeof createAgentTokenInputSchema>;
+export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;
+
+export const updateAgentInputSchema = z.object({
+	disabled: z.boolean(),
+});
+export type UpdateAgentInput = z.infer<typeof updateAgentInputSchema>;
 
 /**
  * Token usage for one agent session, computed client-side from the agent's

@@ -34,10 +34,18 @@ it("lets an instance admin toggle the feature on, ungating the endpoints", async
 	).json()) as { enabled: boolean };
 	expect(updated.enabled).toBe(true);
 
+	const ws = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
+			admin,
+		)
+	).json()) as { id: string };
 	const created = await apiJson(
 		"POST",
 		"/api/v1/agents",
-		{ type: "claude_code", name: "CC" },
+		{ type: "claude_code", name: "CC", defaultWorkspaceId: ws.id },
 		admin,
 	);
 	expect(created.status).toBe(201);

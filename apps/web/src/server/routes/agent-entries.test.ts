@@ -45,25 +45,19 @@ async function setup() {
 
 async function createAgentToken(
 	cookie: string,
-	binding: { defaultWorkspaceId?: string; defaultProjectId?: string } = {},
+	binding: { defaultWorkspaceId: string; defaultProjectId?: string },
 ): Promise<{ agentId: string; token: string }> {
-	const agent = (await (
+	// Registering an agent issues its single token in one step; the plaintext
+	// secret is returned once.
+	const created = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC" },
+			{ type: "claude_code", name: "CC", ...binding },
 			cookie,
 		)
-	).json()) as { id: string };
-	const tok = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/agents/${agent.id}/tokens`,
-			{ name: "laptop", ...binding },
-			cookie,
-		)
-	).json()) as { token: string };
-	return { agentId: agent.id, token: tok.token };
+	).json()) as { id: string; secret: string };
+	return { agentId: created.id, token: created.secret };
 }
 
 function ingest(token: string, body: unknown): Promise<Response> {
@@ -186,8 +180,10 @@ it("rejects ingest once the agent's owner loses workspace membership", async () 
 });
 
 it("treats agent tokens as write-only ingest credentials", async () => {
-	const { admin } = await setup();
-	const { token } = await createAgentToken(admin);
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
 	expect(token).toMatch(/^toxil_aat_/);
 
 	// Cannot act as a user on session/PAT routes.

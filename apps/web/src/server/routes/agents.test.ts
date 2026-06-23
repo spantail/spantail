@@ -12,83 +12,206 @@ async function enableAgents(adminCookie: string): Promise<void> {
 	);
 }
 
-it("registers agents and issues access tokens via sessions only", async () => {
+async function createWorkspace(cookie: string, slug: string): Promise<string> {
+	const ws = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug, name: slug, timezone: "Asia/Tokyo" },
+			cookie,
+		)
+	).json()) as { id: string };
+	return ws.id;
+}
+
+function ingest(token: string, sessionId: string): Promise<Response> {
+	return appFetch("/api/v1/agent-entries", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({ sessionId, durationMinutes: 1 }),
+	});
+}
+
+it("registers an agent with its access token in one step", async () => {
 	const cookie = await signUpUser("Alice", "alice@example.com");
 	await enableAgents(cookie);
+	const wsId = await createWorkspace(cookie, "acme");
 
-	const agent = (await (
+	const created = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "My CC" },
+			{ type: "claude_code", name: "My CC", defaultWorkspaceId: wsId },
 			cookie,
 		)
-	).json()) as { id: string; userId?: string };
-	expect(agent.userId).toBeUndefined();
+	).json()) as {
+		id: string;
+		userId?: string;
+		secret: string;
+		token: { defaultWorkspaceId: string; tokenHash?: string };
+	};
+	expect(created.userId).toBeUndefined();
+	expect(created.secret).toMatch(/^toxil_aat_/);
+	expect(created.token.defaultWorkspaceId).toBe(wsId);
+	expect(created.token.tokenHash).toBeUndefined();
 
-	const created = await apiJson(
-		"POST",
-		`/api/v1/agents/${agent.id}/tokens`,
-		{ name: "laptop", expiresInDays: 30 },
-		cookie,
-	);
-	expect(created.status).toBe(201);
-	const body = (await created.json()) as { token: string; tokenHash?: string };
-	expect(body.token).toMatch(/^toxil_aat_/);
-	expect(body.tokenHash).toBeUndefined();
+	// The list embeds the token summary and never leaks the hash/secret.
+	const list = (await (
+		await apiGet("/api/v1/agents", cookie)
+	).json()) as Array<{
+		id: string;
+		disabledAt: string | null;
+		token: { defaultWorkspaceId: string };
+		secret?: string;
+	}>;
+	expect(list).toHaveLength(1);
+	expect(list[0]?.disabledAt).toBeNull();
+	expect(list[0]?.token.defaultWorkspaceId).toBe(wsId);
+	expect(list[0]?.secret).toBeUndefined();
 
-	// Listing never reveals the hash.
-	const tokens = (await (
-		await apiGet(`/api/v1/agents/${agent.id}/tokens`, cookie)
-	).json()) as Array<{ tokenHash?: string }>;
-	expect(tokens).toHaveLength(1);
-	expect(tokens[0]?.tokenHash).toBeUndefined();
+	// The issued secret can ingest immediately (workspace from the binding).
+	expect((await ingest(created.secret, "s1")).status).toBe(200);
 
-	// Archiving the agent kills its tokens (the agent can't be un-archived).
+	// Archiving the agent kills its token and drops it from the registry.
 	const archived = await apiJson(
 		"DELETE",
-		`/api/v1/agents/${agent.id}`,
+		`/api/v1/agents/${created.id}`,
 		undefined,
 		cookie,
 	);
 	expect(archived.status).toBe(204);
-	const denied = await appFetch("/api/v1/agent-entries", {
-		method: "POST",
-		headers: {
-			authorization: `Bearer ${body.token}`,
-			"content-type": "application/json",
-		},
-		body: JSON.stringify({ sessionId: "s", durationMinutes: 1 }),
-	});
-	expect(denied.status).toBe(401);
+	expect((await ingest(created.secret, "s2")).status).toBe(401);
+	expect(
+		((await (await apiGet("/api/v1/agents", cookie)).json()) as unknown[])
+			.length,
+	).toBe(0);
+});
 
-	// Archived agents drop out of the registry listing.
-	const listed = (await (
-		await apiGet("/api/v1/agents", cookie)
-	).json()) as unknown[];
-	expect(listed).toHaveLength(0);
+it("requires a default workspace the issuer belongs to", async () => {
+	const alice = await signUpUser("Alice", "alice@example.com");
+	await enableAgents(alice);
+	const wsId = await createWorkspace(alice, "acme");
+
+	// No workspace at all → validation error.
+	const missing = await apiJson(
+		"POST",
+		"/api/v1/agents",
+		{ type: "codex", name: "CC" },
+		alice,
+	);
+	expect(missing.status).toBe(400);
+
+	// A non-member binding the workspace can't see it (404, not 403, so its
+	// existence does not leak).
+	const bob = await signUpUser("Bob", "bob@example.com");
+	const denied = await apiJson(
+		"POST",
+		"/api/v1/agents",
+		{ type: "codex", name: "CC", defaultWorkspaceId: wsId },
+		bob,
+	);
+	expect(denied.status).toBe(404);
+});
+
+it("disables and re-enables an agent, gating ingest", async () => {
+	const cookie = await signUpUser("Alice", "alice@example.com");
+	await enableAgents(cookie);
+	const wsId = await createWorkspace(cookie, "acme");
+	const agent = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/agents",
+			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
+			cookie,
+		)
+	).json()) as { id: string; secret: string };
+
+	const disabled = await apiJson(
+		"PATCH",
+		`/api/v1/agents/${agent.id}`,
+		{ disabled: true },
+		cookie,
+	);
+	expect(disabled.status).toBe(200);
+	expect(
+		((await disabled.json()) as { disabledAt: string }).disabledAt,
+	).not.toBeNull();
+	expect((await ingest(agent.secret, "s1")).status).toBe(401);
+
+	const enabled = await apiJson(
+		"PATCH",
+		`/api/v1/agents/${agent.id}`,
+		{ disabled: false },
+		cookie,
+	);
+	expect(
+		((await enabled.json()) as { disabledAt: null }).disabledAt,
+	).toBeNull();
+	expect((await ingest(agent.secret, "s2")).status).toBe(200);
+});
+
+it("rotates the token secret in place, killing the old one", async () => {
+	const cookie = await signUpUser("Alice", "alice@example.com");
+	await enableAgents(cookie);
+	const wsId = await createWorkspace(cookie, "acme");
+	const agent = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/agents",
+			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
+			cookie,
+		)
+	).json()) as { id: string; secret: string };
+	expect((await ingest(agent.secret, "s1")).status).toBe(200);
+
+	const rotated = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/agents/${agent.id}/token/rotate`,
+			undefined,
+			cookie,
+		)
+	).json()) as { secret: string };
+	expect(rotated.secret).toMatch(/^toxil_aat_/);
+	expect(rotated.secret).not.toBe(agent.secret);
+
+	// The old secret stops working; the new one keeps the same binding.
+	expect((await ingest(agent.secret, "s2")).status).toBe(401);
+	expect((await ingest(rotated.secret, "s3")).status).toBe(200);
 });
 
 it("cannot manage another user's agent", async () => {
 	const alice = await signUpUser("Alice", "alice@example.com");
 	const bob = await signUpUser("Bob", "bob@example.com");
 	await enableAgents(alice);
+	const wsId = await createWorkspace(alice, "acme");
 	const agent = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "codex", name: "Codex" },
+			{ type: "codex", name: "Codex", defaultWorkspaceId: wsId },
 			alice,
 		)
 	).json()) as { id: string };
 
-	const tokenDenied = await apiJson(
-		"POST",
-		`/api/v1/agents/${agent.id}/tokens`,
-		{ name: "x" },
+	const patchDenied = await apiJson(
+		"PATCH",
+		`/api/v1/agents/${agent.id}`,
+		{ disabled: true },
 		bob,
 	);
-	expect(tokenDenied.status).toBe(404);
+	expect(patchDenied.status).toBe(404);
+
+	const rotateDenied = await apiJson(
+		"POST",
+		`/api/v1/agents/${agent.id}/token/rotate`,
+		undefined,
+		bob,
+	);
+	expect(rotateDenied.status).toBe(404);
 
 	const deleteDenied = await apiJson(
 		"DELETE",
