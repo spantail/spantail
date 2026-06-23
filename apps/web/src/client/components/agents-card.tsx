@@ -337,6 +337,7 @@ export function AgentsCard() {
 												<DropdownMenuContent align="end">
 													<DropdownMenuItem
 														onClick={() => rotateMutation.mutate(agent)}
+														disabled={agent.token === null}
 													>
 														<KeyRoundIcon />
 														{t("settings.agents.regenerateAction")}
