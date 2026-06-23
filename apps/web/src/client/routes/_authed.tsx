@@ -46,13 +46,13 @@ function AuthedLayout() {
 								<SidebarTrigger className="-ml-1" />
 								{/* Top-right corner is the user-scoped zone: reports span
 								    workspaces, so they live here, not in the sidebar. */}
-								<div className="ml-auto flex items-center gap-1">
+								<div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
 									<LogWorkButton />
 									<Button
 										asChild
 										variant="ghost"
 										size="sm"
-										className="text-muted-foreground text-xs"
+										className="h-8 text-muted-foreground text-xs"
 									>
 										<Link
 											to="/reports"
@@ -93,7 +93,7 @@ function LogWorkButton() {
 	return (
 		<Button
 			size="sm"
-			className="text-xs"
+			className="h-8 text-xs"
 			aria-label={t("nav.logWork")}
 			onClick={() => openCreate()}
 		>

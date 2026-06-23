@@ -1,13 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-	BotIcon,
-	ChevronRightIcon,
-	HomeIcon,
-	SettingsIcon,
-} from "lucide-react";
+import { ChevronRightIcon, HomeIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { AgentTypeIcon } from "@/components/agent-icon";
 import { Dot } from "@/components/dot";
 import {
 	Collapsible,
@@ -220,7 +216,7 @@ function AgentsGroup() {
 												to="/w/$wsSlug/agents/$agentId"
 												params={{ wsSlug: current.slug, agentId: agent.id }}
 											>
-												<BotIcon />
+												<AgentTypeIcon type={agent.type} />
 												<span>{agent.name}</span>
 											</Link>
 										</SidebarMenuButton>
