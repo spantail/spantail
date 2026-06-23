@@ -173,7 +173,8 @@
 		"newFromTemplateAction": "テンプレートから新規レポート",
 		"newTitle": "レポートを作成",
 		"duplicateTitle": "レポートを複製",
-		"formDescription": "フィルタとテンプレートを選びます。保存すると同時にレポートが生成されます。",
+		"editTitle": "レポートを編集",
+		"composeDescription": "フィルタとテンプレートを設定すると、プレビューがリアルタイムで更新されます。確認して保存してください。",
 		"name": "レポート名",
 		"template": "テンプレート",
 		"workspaces": "ワークスペース",
@@ -235,11 +236,11 @@
 		"view": {
 			"downloadAction": ".md をダウンロード"
 		},
-		"edit": {
-			"write": "入力",
-			"preview": "プレビュー",
-			"previewEmpty": "プレビューする内容がありません。",
-			"bodyPlaceholder": "Markdown でレポート本文を記述します。"
+		"preview": {
+			"updating": "更新中…",
+			"invalid": "上のフィルタを設定するとプレビューが表示されます。",
+			"summary": "{{entries}} 件 · {{total}} · {{projects}} プロジェクト",
+			"resize": "プレビューの幅を調整"
 		},
 		"detail": {
 			"selectPrompt": "読むレポートを選択してください。",

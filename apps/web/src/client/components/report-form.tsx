@@ -1,6 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	keepPreviousData,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import {
+	type CreateReportInput,
 	type DateRangePreset,
+	formatDuration,
 	formatPeriodLabel,
 	MAX_REPORT_SPAN_DAYS,
 	type Report,
@@ -8,11 +15,18 @@ import {
 	type ReportTemplate,
 	resolveDateRange,
 } from "@toxil/core";
-import { useState } from "react";
+import { FileTextIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import { MarkdownView } from "@/components/markdown-view";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DialogFooter } from "@/components/ui/dialog";
+import {
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -25,6 +39,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { invalidateReports } from "@/lib/query";
+import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
 const PRESETS: DateRangePreset[] = [
@@ -36,7 +51,7 @@ const PRESETS: DateRangePreset[] = [
 	"last_month",
 ];
 
-/** Initial field values; the route seeds these for create/duplicate. */
+/** Initial field values; the route seeds these for create/duplicate/edit. */
 export interface ReportFormSeed {
 	name: string;
 	/** When false, the name auto-updates from period + user name until edited. */
@@ -44,12 +59,18 @@ export interface ReportFormSeed {
 	templateId: string;
 	workspaceIds: string[];
 	projectIds: string[];
+	// Preserved across an edit even though there is no UI field for it, so a
+	// user-scoped report (e.g. a personal daily) keeps its scope instead of
+	// silently broadening to every member of the workspace.
+	userIds: string[];
 	rangeChoice: DateRangePreset | "custom";
 	from: string;
 	to: string;
 	tags: string;
 	note: string;
 }
+
+export type ReportFormMode = "create" | "edit";
 
 function spanDays(from: string, to: string): number {
 	const utcMs = (date: string) => {
@@ -59,20 +80,36 @@ function spanDays(from: string, to: string): number {
 	return (utcMs(to) - utcMs(from)) / 86_400_000 + 1;
 }
 
+/** Debounces a value so the live preview doesn't refetch on every keystroke. */
+function useDebouncedValue<T>(value: T, ms: number): T {
+	const [debounced, setDebounced] = useState(value);
+	useEffect(() => {
+		const id = setTimeout(() => setDebounced(value), ms);
+		return () => clearTimeout(id);
+	}, [value, ms]);
+	return debounced;
+}
+
 /**
- * Create form for a report document (also backs Duplicate). Submitting renders
- * the report in one call (no separate run step) — the only point a report is
- * generated from source. A template/validation error surfaces inline and keeps
- * the dialog open so nothing half-saves. Editing an existing report is a direct
- * revision on the reading pane, not this form.
+ * Two-pane report compose dialog: filters/fields on the left, a live Markdown
+ * preview on the right. Submitting renders the report server-side — create mints
+ * version 1, edit re-renders and appends the next version. Both share one input
+ * shape, so the same form backs create, duplicate, and edit.
  */
 export function ReportForm({
+	mode,
+	reportId,
+	title,
 	templates,
 	templatesReady,
 	seed,
 	onComplete,
 	onCancel,
 }: {
+	mode: ReportFormMode;
+	/** Required for edit: the report whose new version this save appends. */
+	reportId?: string;
+	title: string;
 	templates: ReportTemplate[];
 	templatesReady: boolean;
 	seed: ReportFormSeed;
@@ -109,6 +146,11 @@ export function ReportForm({
 	const [projectIds, setProjectIds] = useState<string[]>(
 		filtersIntact ? seed.projectIds : [],
 	);
+	// No UI field: carried through edit as-is (dropped only if the workspace set
+	// changes, alongside projects).
+	const [userIds, setUserIds] = useState<string[]>(
+		filtersIntact ? seed.userIds : [],
+	);
 	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
 		seed.rangeChoice,
 	);
@@ -141,7 +183,6 @@ export function ReportForm({
 		current?.timezone ??
 		"UTC";
 
-	// Resolved period label for the smart default name and span check.
 	const customValid =
 		rangeChoice !== "custom" || (from !== "" && to !== "" && from <= to);
 	const resolvedLabel =
@@ -150,8 +191,6 @@ export function ReportForm({
 				? formatPeriodLabel({ from, to })
 				: null
 			: formatPeriodLabel(resolveDateRange(rangeChoice, anchorTimezone));
-	// Smart default name: "<workspace> <user> <period>" when scoped to a single
-	// workspace, otherwise "<user> <period>" (cross-workspace or none selected).
 	const singleWorkspaceName = singleWorkspaceId
 		? (workspaces.find((w) => w.id === singleWorkspaceId)?.name ?? "")
 		: "";
@@ -166,27 +205,69 @@ export function ReportForm({
 		from <= to &&
 		spanDays(from, to) > MAX_REPORT_SPAN_DAYS;
 
+	// The request body shared by the live preview and the submit. Null while the
+	// form can't render (no workspace, invalid/too-long range, or blank name) so
+	// the preview holds its last good output instead of erroring.
+	const input = useMemo<CreateReportInput | null>(() => {
+		if (workspaceIds.length === 0 || !customValid || spanTooLong) return null;
+		if (effectiveName.trim() === "") return null;
+		const parsedTags = tags
+			.split(",")
+			.map((tag) => tag.trim())
+			.filter(Boolean);
+		// projectIds is only ever set for a single workspace (its checkboxes) or
+		// carried over from the edited report; include it whenever present so a
+		// cross-workspace report keeps its project scope on a name/note edit.
+		const filters: ReportFiltersInput = {
+			workspaceIds,
+			...(projectIds.length > 0 ? { projectIds } : {}),
+			...(userIds.length > 0 ? { userIds } : {}),
+			...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
+			dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
+		};
+		return {
+			name: effectiveName,
+			templateId: selectedTemplateId,
+			filters,
+			...(note.trim() !== "" ? { note } : {}),
+		};
+	}, [
+		workspaceIds,
+		customValid,
+		spanTooLong,
+		effectiveName,
+		tags,
+		projectIds,
+		userIds,
+		rangeChoice,
+		from,
+		to,
+		note,
+		selectedTemplateId,
+	]);
+
+	const inputKey = input ? JSON.stringify(input) : null;
+	const debouncedKey = useDebouncedValue(inputKey, 350);
+	const preview = useQuery({
+		queryKey: ["report-preview", debouncedKey],
+		queryFn: () => api.previewReport(JSON.parse(debouncedKey as string)),
+		enabled: debouncedKey !== null,
+		placeholderData: keepPreviousData,
+	});
+	// "Updating" while the debounce is pending or a render is in flight.
+	const previewPending =
+		inputKey !== debouncedKey || (preview.isFetching && debouncedKey !== null);
+
 	const mutation = useMutation({
 		mutationFn: async (): Promise<Report> => {
-			const parsedTags = tags
-				.split(",")
-				.map((tag) => tag.trim())
-				.filter(Boolean);
-			const filters: ReportFiltersInput = {
-				workspaceIds,
-				...(singleWorkspaceId && projectIds.length > 0 ? { projectIds } : {}),
-				...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
-				dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
-			};
-			return api.createReport({
-				name: effectiveName,
-				templateId: selectedTemplateId,
-				filters,
-				note,
-			});
+			if (!input) throw new Error("Report is not ready to save");
+			return mode === "edit" && reportId
+				? api.updateReport(reportId, input)
+				: api.createReport(input);
 		},
 		onSuccess: async (report) => {
 			invalidateReports(queryClient);
+			queryClient.setQueryData(["report", report.id], report);
 			await queryClient.invalidateQueries({ queryKey: ["report", report.id] });
 			setError(null);
 			onComplete(report);
@@ -201,195 +282,289 @@ export function ReportForm({
 	) => {
 		setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 	};
-
 	const toggleWorkspace = (id: string) => {
 		toggle(workspaceIds, setWorkspaceIds, id);
+		// Project and user scopes belong to the old workspace set; clear both.
 		setProjectIds([]);
+		setUserIds([]);
 	};
 
+	// Draggable divider between the form and the preview (percent width).
+	const bodyRef = useRef<HTMLDivElement>(null);
+	const [formW, setFormW] = useState(48);
+	const startDrag = (ev: React.PointerEvent) => {
+		ev.preventDefault();
+		const rect = bodyRef.current?.getBoundingClientRect();
+		if (!rect) return;
+		const move = (e: PointerEvent) => {
+			const pct = ((e.clientX - rect.left) / rect.width) * 100;
+			setFormW(Math.min(64, Math.max(30, pct)));
+		};
+		const up = () => {
+			window.removeEventListener("pointermove", move);
+			window.removeEventListener("pointerup", up);
+			document.body.style.cursor = "";
+			document.body.style.userSelect = "";
+		};
+		window.addEventListener("pointermove", move);
+		window.addEventListener("pointerup", up);
+		document.body.style.cursor = "col-resize";
+		document.body.style.userSelect = "none";
+	};
+
+	const submitLabel =
+		mode === "edit" ? t("reports.saveAction") : t("reports.createAction");
+	const canSubmit = input !== null && templatesReady && !mutation.isPending;
+
 	return (
-		<form
-			className="flex flex-col gap-5"
-			onSubmit={(e) => {
-				e.preventDefault();
-				mutation.mutate();
-			}}
-		>
-			<div className="grid gap-5 sm:grid-cols-2">
-				<div className="flex flex-col gap-2">
-					<Label htmlFor="report-name">{t("reports.name")}</Label>
-					<Input
-						id="report-name"
-						value={effectiveName}
-						onChange={(e) => {
-							setName(e.target.value);
-							setNameEdited(true);
+		<>
+			<DialogHeader className="shrink-0 border-b px-7 py-5">
+				<DialogTitle>{title}</DialogTitle>
+				<DialogDescription>{t("reports.composeDescription")}</DialogDescription>
+			</DialogHeader>
+
+			<div ref={bodyRef} className="flex min-h-0 flex-1">
+				<div
+					className="min-h-0 overflow-y-auto px-7 py-6"
+					style={{ width: `${formW}%` }}
+				>
+					<form
+						id="report-compose-form"
+						className="flex flex-col gap-5"
+						onSubmit={(e) => {
+							e.preventDefault();
+							if (canSubmit) mutation.mutate();
 						}}
-						required
-					/>
-				</div>
-				<div className="flex flex-col gap-2">
-					<Label>{t("reports.template")}</Label>
-					<Select value={selectedTemplateId} onValueChange={setTemplateId}>
-						<SelectTrigger className="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{availableTemplates.map((template) => (
-								<SelectItem key={template.id} value={template.id}>
-									{template.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
-
-			{workspaces.length > 1 && (
-				<div className="flex flex-col gap-2">
-					<Label>{t("reports.workspaces")}</Label>
-					<div className="flex flex-wrap gap-4">
-						{workspaces.map((workspace) => (
-							<label
-								key={workspace.id}
-								htmlFor={`report-ws-${workspace.id}`}
-								className="flex items-center gap-2 text-sm"
-							>
-								<Checkbox
-									id={`report-ws-${workspace.id}`}
-									checked={workspaceIds.includes(workspace.id)}
-									onCheckedChange={() => toggleWorkspace(workspace.id)}
+					>
+						<div className="grid gap-5 sm:grid-cols-2">
+							<div className="flex flex-col gap-2">
+								<Label htmlFor="report-name">{t("reports.name")}</Label>
+								<Input
+									id="report-name"
+									value={effectiveName}
+									onChange={(e) => {
+										setName(e.target.value);
+										setNameEdited(true);
+									}}
+									required
 								/>
-								{workspace.name}
-							</label>
-						))}
-					</div>
-				</div>
-			)}
+							</div>
+							<div className="flex flex-col gap-2">
+								<Label>{t("reports.template")}</Label>
+								<Select
+									value={selectedTemplateId}
+									onValueChange={setTemplateId}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{availableTemplates.map((template) => (
+											<SelectItem key={template.id} value={template.id}>
+												{template.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
 
-			<div className="flex flex-col gap-2">
-				<Label>{t("reports.dateRange")}</Label>
-				<Select
-					value={rangeChoice}
-					onValueChange={(v) => setRangeChoice(v as DateRangePreset | "custom")}
-				>
-					<SelectTrigger className="w-full">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{PRESETS.map((preset) => (
-							<SelectItem key={preset} value={preset}>
-								{t(`reports.range.${preset}`)}
-							</SelectItem>
-						))}
-						<SelectItem value="custom">{t("reports.range.custom")}</SelectItem>
-					</SelectContent>
-				</Select>
-				{rangeChoice !== "custom" && (
-					<p className="text-muted-foreground text-xs">
-						{t(
-							"reports.form.presetPreview",
-							resolveDateRange(rangeChoice, anchorTimezone),
+						{workspaces.length > 1 && (
+							<div className="flex flex-col gap-2">
+								<Label>{t("reports.workspaces")}</Label>
+								<div className="flex flex-wrap gap-4">
+									{workspaces.map((workspace) => (
+										<label
+											key={workspace.id}
+											htmlFor={`report-ws-${workspace.id}`}
+											className="flex items-center gap-2 text-sm"
+										>
+											<Checkbox
+												id={`report-ws-${workspace.id}`}
+												checked={workspaceIds.includes(workspace.id)}
+												onCheckedChange={() => toggleWorkspace(workspace.id)}
+											/>
+											{workspace.name}
+										</label>
+									))}
+								</div>
+							</div>
 						)}
-					</p>
-				)}
-			</div>
-			{rangeChoice === "custom" && (
-				<div className="grid gap-5 sm:grid-cols-2">
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="report-from">{t("reports.from")}</Label>
-						<Input
-							id="report-from"
-							type="date"
-							className="[color-scheme:light] dark:[color-scheme:dark]"
-							value={from}
-							onChange={(e) => setFrom(e.target.value)}
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="report-to">{t("reports.to")}</Label>
-						<Input
-							id="report-to"
-							type="date"
-							className="[color-scheme:light] dark:[color-scheme:dark]"
-							value={to}
-							onChange={(e) => setTo(e.target.value)}
-							required
-						/>
-					</div>
-				</div>
-			)}
 
-			{singleWorkspaceId && (projects.data?.length ?? 0) > 0 && (
-				<div className="flex flex-col gap-2">
-					<Label>{t("reports.projects")}</Label>
-					<div className="flex flex-wrap gap-4">
-						{(projects.data ?? []).map((project) => (
-							<label
-								key={project.id}
-								htmlFor={`report-prj-${project.id}`}
-								className="flex items-center gap-2 text-sm"
+						<div className="flex flex-col gap-2">
+							<Label>{t("reports.dateRange")}</Label>
+							<Select
+								value={rangeChoice}
+								onValueChange={(v) =>
+									setRangeChoice(v as DateRangePreset | "custom")
+								}
 							>
-								<Checkbox
-									id={`report-prj-${project.id}`}
-									checked={projectIds.includes(project.id)}
-									onCheckedChange={() =>
-										toggle(projectIds, setProjectIds, project.id)
-									}
-								/>
-								{project.name}
-							</label>
-						))}
-					</div>
-					<p className="text-muted-foreground text-xs">
-						{t("reports.allProjects")}
-					</p>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{PRESETS.map((preset) => (
+										<SelectItem key={preset} value={preset}>
+											{t(`reports.range.${preset}`)}
+										</SelectItem>
+									))}
+									<SelectItem value="custom">
+										{t("reports.range.custom")}
+									</SelectItem>
+								</SelectContent>
+							</Select>
+							{rangeChoice !== "custom" && (
+								<p className="text-muted-foreground text-xs">
+									{t(
+										"reports.form.presetPreview",
+										resolveDateRange(rangeChoice, anchorTimezone),
+									)}
+								</p>
+							)}
+						</div>
+						{rangeChoice === "custom" && (
+							<div className="grid gap-5 sm:grid-cols-2">
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="report-from">{t("reports.from")}</Label>
+									<Input
+										id="report-from"
+										type="date"
+										className="[color-scheme:light] dark:[color-scheme:dark]"
+										value={from}
+										onChange={(e) => setFrom(e.target.value)}
+										required
+									/>
+								</div>
+								<div className="flex flex-col gap-2">
+									<Label htmlFor="report-to">{t("reports.to")}</Label>
+									<Input
+										id="report-to"
+										type="date"
+										className="[color-scheme:light] dark:[color-scheme:dark]"
+										value={to}
+										onChange={(e) => setTo(e.target.value)}
+										required
+									/>
+								</div>
+							</div>
+						)}
+
+						{singleWorkspaceId && (projects.data?.length ?? 0) > 0 && (
+							<div className="flex flex-col gap-2">
+								<Label>{t("reports.projects")}</Label>
+								<div className="flex flex-wrap gap-4">
+									{(projects.data ?? []).map((project) => (
+										<label
+											key={project.id}
+											htmlFor={`report-prj-${project.id}`}
+											className="flex items-center gap-2 text-sm"
+										>
+											<Checkbox
+												id={`report-prj-${project.id}`}
+												checked={projectIds.includes(project.id)}
+												onCheckedChange={() =>
+													toggle(projectIds, setProjectIds, project.id)
+												}
+											/>
+											{project.name}
+										</label>
+									))}
+								</div>
+								<p className="text-muted-foreground text-xs">
+									{t("reports.allProjects")}
+								</p>
+							</div>
+						)}
+
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="report-tags">{t("reports.tags")}</Label>
+							<Input
+								id="report-tags"
+								value={tags}
+								onChange={(e) => setTags(e.target.value)}
+								placeholder={t("reports.tagsPlaceholder")}
+							/>
+						</div>
+
+						<div className="flex flex-col gap-2">
+							<Label htmlFor="report-note">{t("reports.note")}</Label>
+							<Textarea
+								id="report-note"
+								className="field-sizing-fixed"
+								value={note}
+								onChange={(e) => setNote(e.target.value)}
+								rows={4}
+								placeholder={t("reports.notePlaceholder")}
+							/>
+						</div>
+
+						{spanTooLong && (
+							<p className="text-destructive text-sm">
+								{t("reports.spanTooLong")}
+							</p>
+						)}
+						{error && <p className="text-destructive text-sm">{error}</p>}
+					</form>
 				</div>
-			)}
 
-			<div className="flex flex-col gap-2">
-				<Label htmlFor="report-tags">{t("reports.tags")}</Label>
-				<Input
-					id="report-tags"
-					value={tags}
-					onChange={(e) => setTags(e.target.value)}
-					placeholder={t("reports.tagsPlaceholder")}
-				/>
-			</div>
-
-			<div className="flex flex-col gap-2">
-				<Label htmlFor="report-note">{t("reports.note")}</Label>
-				<Textarea
-					id="report-note"
-					className="field-sizing-fixed"
-					value={note}
-					onChange={(e) => setNote(e.target.value)}
-					rows={4}
-					placeholder={t("reports.notePlaceholder")}
-				/>
-			</div>
-
-			{spanTooLong && (
-				<p className="text-destructive text-sm">{t("reports.spanTooLong")}</p>
-			)}
-			{error && <p className="text-destructive text-sm">{error}</p>}
-			<DialogFooter>
-				<Button type="button" variant="outline" onClick={onCancel}>
-					{t("reports.cancelAction")}
-				</Button>
-				<Button
-					type="submit"
-					disabled={
-						mutation.isPending ||
-						workspaceIds.length === 0 ||
-						!templatesReady ||
-						spanTooLong
-					}
+				{/* Pointer-only resize handle; keyboard users keep the default split. */}
+				<button
+					type="button"
+					onPointerDown={startDrag}
+					aria-label={t("reports.preview.resize")}
+					className="bg-border group relative z-10 w-px shrink-0 cursor-col-resize border-0 p-0"
 				>
-					{t("reports.createAction")}
-				</Button>
-			</DialogFooter>
-		</form>
+					<span className="absolute inset-y-0 -left-2 -right-2" />
+					<span className="bg-muted-foreground/30 absolute top-1/2 left-1/2 h-9 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-opacity group-hover:opacity-100" />
+				</button>
+
+				<div className="bg-background relative flex min-h-0 flex-1 flex-col">
+					<div className="min-h-0 flex-1 overflow-y-auto">
+						<div className="mx-auto w-full max-w-2xl px-9 py-9">
+							{preview.data ? (
+								<MarkdownView
+									markdown={preview.data.content}
+									variant="report"
+								/>
+							) : (
+								<p className="text-muted-foreground text-sm">
+									{t("reports.preview.invalid")}
+								</p>
+							)}
+						</div>
+					</div>
+					{previewPending && (
+						<span className="bg-muted text-muted-foreground absolute right-4 top-4 z-10 rounded-md px-2 py-1 text-xs">
+							{t("reports.preview.updating")}
+						</span>
+					)}
+				</div>
+			</div>
+
+			<div className="bg-muted/40 flex shrink-0 items-center justify-between gap-3 border-t px-7 py-4">
+				<span className="text-muted-foreground truncate text-xs">
+					{preview.data
+						? t("reports.preview.summary", {
+								entries: preview.data.entryCount,
+								total: formatDuration(preview.data.totalMinutes),
+								projects: preview.data.projectCount,
+							})
+						: ""}
+				</span>
+				<div className="flex items-center gap-2">
+					<Button type="button" variant="outline" onClick={onCancel}>
+						{t("reports.cancelAction")}
+					</Button>
+					<Button
+						type="submit"
+						form="report-compose-form"
+						disabled={!canSubmit}
+					>
+						<FileTextIcon className={cn(mode === "edit" && "hidden")} />
+						{submitLabel}
+					</Button>
+				</div>
+			</div>
+		</>
 	);
 }

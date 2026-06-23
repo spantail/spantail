@@ -16,14 +16,12 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ReportForm, type ReportFormSeed } from "@/components/report-form";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	ReportForm,
+	type ReportFormMode,
+	type ReportFormSeed,
+} from "@/components/report-form";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { isTypingTarget } from "@/lib/keyboard";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { useWorkspace } from "@/lib/workspace";
@@ -38,6 +36,7 @@ const UNIT_PRESET: Record<PeriodUnit, ReportFormSeed["rangeChoice"]> = {
 interface ReportDialogsApi {
 	openCreate: (template: ReportTemplate) => void;
 	openDuplicate: (report: ReportMeta) => void;
+	openEdit: (report: ReportMeta) => void;
 }
 
 const ReportDialogsContext = createContext<ReportDialogsApi | null>(null);
@@ -54,14 +53,17 @@ export function useReportDialogs(): ReportDialogsApi {
 
 interface FormState {
 	titleKey: string;
+	mode: ReportFormMode;
+	/** Set for edit: the report whose fields the dialog seeds and re-renders. */
+	reportId?: string;
 	seed: ReportFormSeed;
 }
 
 /**
- * Owns the report create/duplicate dialog for the mailbox shell, so the list
- * header (New) and the detail toolbar (Duplicate) can open it. Editing a report
- * is a direct, inline revision on the reading pane, not a form. On save it
- * routes to the new report's detail pane.
+ * Owns the report compose dialog for the mailbox shell, so the list header
+ * (New), the detail toolbar (Duplicate/Edit), and the `c` shortcut can open it.
+ * The same two-pane form backs create, duplicate, and edit; on save it routes to
+ * the report's detail pane.
  */
 export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	const { t } = useTranslation();
@@ -92,6 +94,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		// Templates carry no workspace; a new report defaults to the current one.
 		workspaceIds: current ? [current.id] : [],
 		projectIds: [],
+		userIds: [],
 		rangeChoice: UNIT_PRESET[template.periodUnit],
 		from: "",
 		to: "",
@@ -102,6 +105,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	const openCreate = (template: ReportTemplate) =>
 		open({
 			titleKey: "reports.newTitle",
+			mode: "create",
 			seed: newSeed(template),
 		});
 
@@ -116,12 +120,14 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		const next = deriveNextPeriod(unit, report.filters.dateRange, timezone);
 		open({
 			titleKey: "reports.duplicateTitle",
+			mode: "create",
 			seed: {
 				name: "",
 				nameEdited: false,
 				templateId: report.templateId,
 				workspaceIds: report.filters.workspaceIds,
 				projectIds: report.filters.projectIds ?? [],
+				userIds: report.filters.userIds ?? [],
 				rangeChoice: "custom",
 				from: next.from,
 				to: next.to,
@@ -131,6 +137,28 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 			},
 		});
 	};
+
+	// Edit re-renders the report from its current fields, seeded as a fixed
+	// (custom) period so saving reproduces the same scope and date range.
+	const openEdit = (report: ReportMeta) =>
+		open({
+			titleKey: "reports.editTitle",
+			mode: "edit",
+			reportId: report.id,
+			seed: {
+				name: report.name,
+				nameEdited: true,
+				templateId: report.templateId,
+				workspaceIds: report.filters.workspaceIds,
+				projectIds: report.filters.projectIds ?? [],
+				userIds: report.filters.userIds ?? [],
+				rangeChoice: "custom",
+				from: report.filters.dateRange.from,
+				to: report.filters.dateRange.to,
+				tags: (report.filters.tags ?? []).join(", "),
+				note: report.note ?? "",
+			},
+		});
 
 	const closeForm = () => setForm(null);
 
@@ -179,6 +207,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 			const custom = Boolean(s.from && s.to);
 			open({
 				titleKey: "reports.newTitle",
+				mode: "create",
 				seed: {
 					...base,
 					workspaceIds: wsId ? [wsId] : base.workspaceIds,
@@ -211,19 +240,21 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	}, [search, templatesReady, navigate]);
 
 	return (
-		<ReportDialogsContext.Provider value={{ openCreate, openDuplicate }}>
+		<ReportDialogsContext.Provider
+			value={{ openCreate, openDuplicate, openEdit }}
+		>
 			{children}
 			{form && (
 				<Dialog open onOpenChange={(isOpen) => !isOpen && closeForm()}>
-					<DialogContent size="2xl">
-						<DialogHeader>
-							<DialogTitle>{t(form.titleKey)}</DialogTitle>
-							<DialogDescription>
-								{t("reports.formDescription")}
-							</DialogDescription>
-						</DialogHeader>
+					<DialogContent
+						size="compose"
+						className="flex h-[88vh] flex-col gap-0 overflow-hidden p-0"
+					>
 						<ReportForm
 							key={instanceId}
+							mode={form.mode}
+							reportId={form.reportId}
+							title={t(form.titleKey)}
 							templates={templates}
 							templatesReady={templatesReady}
 							seed={form.seed}

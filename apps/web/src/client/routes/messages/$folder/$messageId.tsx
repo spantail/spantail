@@ -138,7 +138,9 @@ function ReadingPane() {
 							</Button>
 						</div>
 						<div className="px-5 py-5">
-							<MarkdownView markdown={data.renderedMarkdown} />
+							{/* A received report: the report variant strips the system
+							    front-matter header and gives it the article look. */}
+							<MarkdownView markdown={data.renderedMarkdown} variant="report" />
 						</div>
 					</section>
 

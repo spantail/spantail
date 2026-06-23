@@ -173,7 +173,8 @@
 		"newFromTemplateAction": "New report from template",
 		"newTitle": "New report",
 		"duplicateTitle": "Duplicate report",
-		"formDescription": "Pick filters and a template; saving renders the report immediately.",
+		"editTitle": "Edit report",
+		"composeDescription": "Set the filters and template — the preview updates live, then save.",
 		"name": "Report name",
 		"template": "Template",
 		"workspaces": "Workspaces",
@@ -235,11 +236,11 @@
 		"view": {
 			"downloadAction": "Download .md"
 		},
-		"edit": {
-			"write": "Write",
-			"preview": "Preview",
-			"previewEmpty": "Nothing to preview.",
-			"bodyPlaceholder": "Report body in Markdown."
+		"preview": {
+			"updating": "Updating…",
+			"invalid": "Set the filters above to see a preview.",
+			"summary": "{{entries}} entries · {{total}} · {{projects}} projects",
+			"resize": "Resize preview"
 		},
 		"detail": {
 			"selectPrompt": "Select a report to read.",

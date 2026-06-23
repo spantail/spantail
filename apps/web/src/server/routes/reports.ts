@@ -1,5 +1,6 @@
 import {
 	type AbsoluteDateRange,
+	buildReportFrontMatter,
 	createReportInputSchema,
 	createReportShareInputSchema,
 	filterEntriesByTags,
@@ -8,6 +9,7 @@ import {
 	hashSharePasscode,
 	isBuiltinTemplateId,
 	listReportsQuerySchema,
+	MAX_REPORT_MARKDOWN_LENGTH,
 	type ReportFilters,
 	type ReportFiltersInput,
 	renderReport,
@@ -21,6 +23,7 @@ import {
 	createReportDeliveries,
 	createReportShare,
 	deleteReport,
+	getCurrentReportContent,
 	getInstanceSettings,
 	getReportById,
 	getReportTemplateById,
@@ -33,7 +36,7 @@ import {
 	listWorkEntriesForReport,
 	listWorkspacesForUser,
 	type ReportRow,
-	updateReport,
+	updateReportWithNewVersion,
 } from "@toxil/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -103,9 +106,20 @@ function normalizeNote(note: string | null): string | null {
 }
 
 /**
+ * Assembles the API report payload from a header row and a content version: the
+ * report's current rendered document is the latest content (front-matter + body).
+ * Date columns serialize to ISO strings via the JSON response (matching the
+ * `Report` wire shape), so the header row is spread as-is.
+ */
+function toApiReport(report: ReportRow, content: string) {
+	return { ...report, renderedMarkdown: content };
+}
+
+/**
  * Validates membership + template, resolves the period to absolute dates, and
- * renders the document synchronously. A template error surfaces as a 400 so a
- * create/edit never persists an un-renderable report.
+ * renders the document synchronously: a system-generated YAML front-matter
+ * header (provenance) followed by the Liquid-rendered body. A template error
+ * surfaces as a 400 so a create/edit never persists an un-renderable report.
  */
 async function renderReportDocument(
 	c: Context<AppEnv>,
@@ -114,11 +128,15 @@ async function renderReportDocument(
 		templateId: string;
 		filters: ReportFiltersInput;
 		note: string | null;
+		// The version this render will become; baked into the front-matter.
+		version: number;
 	},
 ): Promise<{
-	renderedMarkdown: string;
+	content: string;
 	resolvedFilters: ReportFilters;
 	totalMinutes: number;
+	entryCount: number;
+	projectCount: number;
 }> {
 	const { filters, templateId } = doc;
 	const { workspaces, templateBody, enabled } =
@@ -152,18 +170,17 @@ async function renderReportDocument(
 		listUsersByIds(c.var.db, [...new Set(entries.map((e) => e.userId))]),
 	]);
 
-	let renderedMarkdown: string;
+	const preset =
+		typeof filters.dateRange === "string" ? filters.dateRange : null;
+	// One timestamp shared by the rendered body and the front-matter header.
+	const generatedAt = new Date();
+	let body: string;
 	try {
-		renderedMarkdown = await renderReport(templateBody, {
+		body = await renderReport(templateBody, {
 			report: { name: doc.name, note: doc.note },
-			period: {
-				...range,
-				// The stored period is absolute; preset names are a wire convenience.
-				preset:
-					typeof filters.dateRange === "string" ? filters.dateRange : null,
-			},
+			period: { ...range, preset },
 			timezone: anchor.timezone,
-			generatedAt: new Date(),
+			generatedAt,
 			workspaces: scoped.map((w) => ({
 				id: w.id,
 				slug: w.slug,
@@ -181,10 +198,37 @@ async function renderReportDocument(
 
 	const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
 
+	// System-generated provenance header. Built here (not in the template) so it
+	// is consistent and never under user/template control. Note is excluded — it
+	// is long/free-form and lives in the body + as a column.
+	const frontMatter = buildReportFrontMatter({
+		name: doc.name,
+		version: doc.version,
+		templateId,
+		period: { from: range.from, to: range.to, preset },
+		filters: {
+			workspaceIds: filters.workspaceIds,
+			...(filters.projectIds?.length ? { projectIds: filters.projectIds } : {}),
+			...(filters.userIds?.length ? { userIds: filters.userIds } : {}),
+			...(filters.tags?.length ? { tags: filters.tags } : {}),
+		},
+		totalMinutes,
+		timezone: anchor.timezone,
+		generatedAt: generatedAt.toISOString(),
+	});
+	const content = frontMatter + body;
+	if (content.length > MAX_REPORT_MARKDOWN_LENGTH) {
+		throw new AppError("bad_request", "Rendered report is too large");
+	}
+
 	return {
-		renderedMarkdown,
+		content,
 		resolvedFilters: { ...filters, dateRange: range },
 		totalMinutes,
+		entryCount: entries.length,
+		// Distinct projects with at least one entry (entries with no project are
+		// excluded, mirroring how they group under "(no project)" in the body).
+		projectCount: projects.length,
 	};
 }
 
@@ -214,27 +258,46 @@ export const reportRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "read");
 		return c.json(await listReportTemplateIdsByOwner(c.var.db, user.id));
 	})
+	// Renders without persisting: the compose dialog's live preview. Read scope
+	// is enough (no write happens) but it runs the full membership/template
+	// validation and render so the preview matches what create/edit would store.
+	.post("/preview", async (c) => {
+		requireScope(c, "read");
+		const input = validate(createReportInputSchema, await c.req.json());
+		const { content, totalMinutes, entryCount, projectCount } =
+			await renderReportDocument(c, {
+				name: input.name,
+				templateId: input.templateId,
+				filters: input.filters,
+				note: normalizeNote(input.note ?? null),
+				// Cosmetic for a preview (the front-matter version line is stripped on
+				// display); the persisted version is assigned on create/edit.
+				version: 1,
+			});
+		return c.json({ content, totalMinutes, entryCount, projectCount });
+	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
 		const note = normalizeNote(input.note ?? null);
-		const { renderedMarkdown, resolvedFilters, totalMinutes } =
+		const { content, resolvedFilters, totalMinutes } =
 			await renderReportDocument(c, {
 				name: input.name,
 				templateId: input.templateId,
 				filters: input.filters,
 				note,
+				version: 1,
 			});
-		const report = await createReport(c.var.db, {
+		const { report, content: contentRow } = await createReport(c.var.db, {
 			name: input.name,
 			ownerUserId: user.id,
 			templateId: input.templateId,
 			filters: resolvedFilters,
 			note,
 			totalMinutes,
-			renderedMarkdown,
+			content,
 		});
-		return c.json(report, 201);
+		return c.json(toApiReport(report, contentRow.content), 201);
 	})
 	.get("/:id", async (c) => {
 		requireScope(c, "read");
@@ -242,28 +305,41 @@ export const reportRoutes = new Hono<AppEnv>()
 		// The rendered markdown is workspace data: losing membership in any
 		// filtered workspace also revokes access to the report's content.
 		await requireScopeWorkspaces(c, report.filters.workspaceIds);
-		return c.json(report);
+		const current = await getCurrentReportContent(c.var.db, report.id);
+		if (!current) throw new AppError("internal", "Report content missing");
+		return c.json(toApiReport(report, current.content));
 	})
 	.patch("/:id", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		// The response carries the rendered body (workspace data), and the edit
-		// mutates it, so losing membership in any filtered workspace revokes
-		// editing too — the same gate as GET /:id. No template check: editing never
-		// touches the template.
+		// re-renders it, so losing membership in any filtered workspace revokes
+		// editing too — the same gate as GET /:id.
 		await requireScopeWorkspaces(c, report.filters.workspaceIds);
-		// The snapshot is generated only at creation; editing is a direct revision
-		// of the frozen document (title + body), never a re-render. Provenance
-		// fields (template, filters, note, totalMinutes) stay as minted — to
-		// regenerate from source entries, delete and recreate the report.
+		// Editing changes the report's fields and re-renders, appending a new
+		// immutable content version. The header stays the current, queryable state.
 		const input = validate(updateReportInputSchema, await c.req.json());
-		// Patch only the fields actually sent, so a title-only edit can't clobber a
-		// concurrent body edit (and vice versa) with a stale pre-read value.
-		if (input.name === undefined && input.renderedMarkdown === undefined) {
-			return c.json(report);
-		}
-		const updated = await updateReport(c.var.db, report.id, input);
-		return c.json(updated);
+		const note = normalizeNote(input.note ?? null);
+		const version = report.version + 1;
+		const { content, resolvedFilters, totalMinutes } =
+			await renderReportDocument(c, {
+				name: input.name,
+				templateId: input.templateId,
+				filters: input.filters,
+				note,
+				version,
+			});
+		const updated = await updateReportWithNewVersion(c.var.db, report.id, {
+			name: input.name,
+			templateId: input.templateId,
+			filters: resolvedFilters,
+			note,
+			totalMinutes,
+			version,
+			content,
+		});
+		if (!updated) throw new AppError("not_found", "Report not found");
+		return c.json(toApiReport(updated.report, updated.content.content));
 	})
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");
@@ -284,12 +360,15 @@ export const reportRoutes = new Hono<AppEnv>()
 			await parseOptionalJsonBody(c),
 		);
 		const token = generateShareToken();
-		// The body and title/period are frozen onto the share row in a single
-		// atomic insert, so a later report edit never changes a published page.
+		// Share the current content version: its body is copied onto the share row
+		// in a single atomic insert, so a later edit (new version) never changes a
+		// published page.
+		const current = await getCurrentReportContent(c.var.db, report.id);
+		if (!current) throw new AppError("internal", "Report content missing");
 		const share = await createReportShare(c.var.db, {
 			reportId: report.id,
 			token,
-			renderedMarkdown: report.renderedMarkdown,
+			renderedMarkdown: current.content,
 			reportName: report.name,
 			dateFrom: report.filters.dateRange.from,
 			dateTo: report.filters.dateRange.to,
@@ -352,6 +431,10 @@ export const reportRoutes = new Hono<AppEnv>()
 		}
 		const message =
 			input.message && input.message.trim() !== "" ? input.message : null;
+		// Send the current content version: each delivery copies its body, so the
+		// recipient keeps what was sent even after a later edit or report deletion.
+		const current = await getCurrentReportContent(c.var.db, report.id);
+		if (!current) throw new AppError("internal", "Report content missing");
 		// One id shared by every row of this send so the sender's Sent folder can
 		// group the fan-out back into a single entry.
 		const batchId = crypto.randomUUID();
@@ -367,7 +450,7 @@ export const reportRoutes = new Hono<AppEnv>()
 				reportName: report.name,
 				dateFrom: report.filters.dateRange.from,
 				dateTo: report.filters.dateRange.to,
-				renderedMarkdown: report.renderedMarkdown,
+				renderedMarkdown: current.content,
 				message,
 			})),
 		);
