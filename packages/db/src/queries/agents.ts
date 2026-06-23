@@ -145,18 +145,27 @@ export async function createAgentToken(
 }
 
 /**
- * Rotates an agent's single token to a new secret in place, keeping its binding
- * and expiry. lastUsedAt resets so the summary reflects the fresh credential.
+ * Rotates an agent's token to a new secret in place, keeping its binding and
+ * expiry. lastUsedAt resets so the summary reflects the fresh credential. Only
+ * the oldest token row is targeted: a legacy agent left with several tokens
+ * would otherwise collide on the unique tokenHash if all rows were updated.
  */
 export async function rotateAgentToken(
 	db: Database,
 	agentId: string,
 	tokenHash: string,
 ): Promise<AgentTokenRow | undefined> {
+	const existing = await db
+		.select({ id: agentTokens.id })
+		.from(agentTokens)
+		.where(eq(agentTokens.agentId, agentId))
+		.orderBy(agentTokens.createdAt)
+		.get();
+	if (!existing) return undefined;
 	const rows = await db
 		.update(agentTokens)
 		.set({ tokenHash, lastUsedAt: null })
-		.where(eq(agentTokens.agentId, agentId))
+		.where(eq(agentTokens.id, existing.id))
 		.returning();
 	return rows[0];
 }
