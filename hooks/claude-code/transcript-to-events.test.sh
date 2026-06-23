@@ -27,9 +27,10 @@ check() {
 	fi
 }
 
-# Two real assistant turns (msg_A deduped from 2 lines; msg_B); sidechain dropped.
-check "exactly 2 events" 'length == 2'
-check "msg_SIDE (isSidechain) excluded" 'all(.[]; .sourceId != "msg_SIDE")'
+# Three assistant turns: msg_A (deduped from 2 lines), msg_B, and the subagent
+# turn msg_SIDE (isSidechain) — subagent calls are real, separately-billed spend.
+check "exactly 3 events" 'length == 3'
+check "subagent turn (msg_SIDE) included" 'any(.[]; .sourceId == "msg_SIDE")'
 check "msg_A present" 'any(.[]; .sourceId == "msg_A")'
 # Dedup: usage kept once, not summed (output_tokens 323, not 646).
 check "msg_A output_tokens == 323 (deduped)" \

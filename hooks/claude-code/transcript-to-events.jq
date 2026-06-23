@@ -6,16 +6,17 @@
 # and the SAME usage block. Summing the lines overcounts tokens ~2.7x, so we
 # collapse to one event per message.id and keep its usage once.
 #
-# Skipped: non-assistant lines (user/system/meta) and subagent turns
-# (isSidechain == true) — the parent session already accounts for delegated work
-# at the API-billing boundary, so counting sidechains double-counts.
+# Subagent (Task) turns are INCLUDED: they are separate API calls with their own
+# message.id and message.usage (the parent's usage does not cover them), so
+# dropping them would undercount real spend. Dedup by message.id already counts
+# each call once, so including sidechains never double-counts. Only non-assistant
+# lines (user/system/meta) are skipped.
 #
-# Pinned to the few fields we consume (type, isSidechain, message.id/usage/model,
-# timestamp); everything else is ignored, so unrelated format changes are inert.
+# Pinned to the few fields we consume (type, message.id/usage/model, timestamp);
+# everything else is ignored, so unrelated format changes are inert.
 [ inputs ]
 | map(select(
     .type == "assistant"
-    and (.isSidechain != true)
     and (.message.id != null)
     and (.message.usage != null)
   ))
