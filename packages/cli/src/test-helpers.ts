@@ -96,6 +96,7 @@ export function workspaceFixture(
 		name: slug.toUpperCase(),
 		timezone: "Asia/Tokyo",
 		accentColor: "neutral",
+		logoUrl: null,
 		settings: {},
 		createdAt: "2026-06-01T00:00:00Z",
 		archivedAt: null,

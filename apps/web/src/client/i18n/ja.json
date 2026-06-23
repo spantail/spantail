@@ -697,7 +697,14 @@
 		},
 		"adminBannerLead": "インスタンス管理。",
 		"general": {
-			"description": "レポート期間の解決に使うワークスペース名とタイムゾーン。"
+			"description": "レポート期間の解決に使うワークスペース名とタイムゾーン。",
+			"logo": "ワークスペースのロゴ",
+			"logoDescription": "サイドバーのワークスペース切り替えに表示されます。",
+			"logoUpload": "ロゴをアップロード",
+			"logoRemove": "削除",
+			"logoHint": "PNG・JPEG・WebP、最大 1 MB。",
+			"logoErrorType": "ロゴは PNG・JPEG・WebP 画像である必要があります。",
+			"logoErrorSize": "ロゴは最大サイズの 1 MB を超えています。"
 		},
 		"appearance": {
 			"title": "外観",

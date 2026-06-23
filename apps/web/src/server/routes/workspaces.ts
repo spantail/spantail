@@ -1,6 +1,9 @@
 import {
 	createWorkspaceInputSchema,
+	isWorkspaceLogoMimeType,
 	updateWorkspaceInputSchema,
+	WORKSPACE_LOGO_MAX_BYTES,
+	WORKSPACE_LOGO_MIME_TYPES,
 } from "@toxil/core";
 import {
 	createWorkspace,
@@ -17,6 +20,10 @@ import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 import { memberRoutes } from "./members";
 import { workspaceProjectRoutes } from "./projects";
+
+// Logos live in the shared uploads bucket under a per-workspace prefix.
+const workspaceLogoKey = (workspaceId: string) =>
+	`workspaces/${workspaceId}/logo`;
 
 export const workspaceRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
@@ -69,6 +76,61 @@ export const workspaceRoutes = new Hono<AppEnv>()
 			...(archived === undefined
 				? {}
 				: { archivedAt: archived ? new Date() : null }),
+		});
+		return c.json(updated);
+	})
+	// Serves the logo through the Worker so the session cookie authorizes it
+	// (the SPA loads it via <img>). The URL carries a cache-busting "?v=", so a
+	// given URL's bytes are immutable.
+	.get("/:id/logo", async (c) => {
+		requireScope(c, "read");
+		const workspaceId = c.req.param("id");
+		await requireWorkspaceAccess(c, workspaceId);
+		const object = await c.env.UPLOADS.get(workspaceLogoKey(workspaceId));
+		if (!object) throw new AppError("not_found", "Workspace has no logo");
+		const headers = new Headers();
+		object.writeHttpMetadata(headers);
+		headers.set("etag", object.httpEtag);
+		headers.set("cache-control", "private, max-age=31536000, immutable");
+		return new Response(object.body, { headers });
+	})
+	.put("/:id/logo", async (c) => {
+		requireScope(c, "admin");
+		const workspaceId = c.req.param("id");
+		await requireWorkspaceAccess(c, workspaceId, "admin");
+		const contentType = c.req.header("content-type")?.split(";")[0]?.trim();
+		if (!contentType || !isWorkspaceLogoMimeType(contentType)) {
+			throw new AppError(
+				"bad_request",
+				`Logo must be one of: ${WORKSPACE_LOGO_MIME_TYPES.join(", ")}`,
+			);
+		}
+		const body = await c.req.arrayBuffer();
+		if (body.byteLength === 0) {
+			throw new AppError("bad_request", "Logo file is empty");
+		}
+		if (body.byteLength > WORKSPACE_LOGO_MAX_BYTES) {
+			throw new AppError(
+				"bad_request",
+				"Logo exceeds the maximum size of 1 MB",
+			);
+		}
+		await c.env.UPLOADS.put(workspaceLogoKey(workspaceId), body, {
+			httpMetadata: { contentType },
+		});
+		const version = crypto.randomUUID().slice(0, 8);
+		const updated = await updateWorkspace(c.var.db, workspaceId, {
+			logoUrl: `/api/v1/workspaces/${workspaceId}/logo?v=${version}`,
+		});
+		return c.json(updated);
+	})
+	.delete("/:id/logo", async (c) => {
+		requireScope(c, "admin");
+		const workspaceId = c.req.param("id");
+		await requireWorkspaceAccess(c, workspaceId, "admin");
+		await c.env.UPLOADS.delete(workspaceLogoKey(workspaceId));
+		const updated = await updateWorkspace(c.var.db, workspaceId, {
+			logoUrl: null,
 		});
 		return c.json(updated);
 	})

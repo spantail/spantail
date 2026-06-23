@@ -4,7 +4,7 @@ import { hueFromString } from "@/lib/hue";
 import { cn } from "@/lib/utils";
 
 /** Up to two uppercase initials from a display name. */
-function initials(name: string): string {
+export function initials(name: string): string {
 	return name
 		.split(/\s+/)
 		.filter(Boolean)

@@ -264,6 +264,16 @@ export class ToxilClient {
 		return this.request("PATCH", `/workspaces/${id}`, { body: input });
 	}
 
+	uploadWorkspaceLogo(id: string, file: Blob): Promise<Workspace> {
+		return this.request("PUT", `/workspaces/${id}/logo`, {
+			rawBody: { data: file, contentType: file.type },
+		});
+	}
+
+	removeWorkspaceLogo(id: string): Promise<Workspace> {
+		return this.request("DELETE", `/workspaces/${id}/logo`);
+	}
+
 	listMembers(workspaceId: string): Promise<WorkspaceMember[]> {
 		return this.request("GET", `/workspaces/${workspaceId}/members`);
 	}
