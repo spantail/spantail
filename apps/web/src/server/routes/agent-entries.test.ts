@@ -133,6 +133,35 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	expect(active.map((a) => a.id)).toContain(agentId);
 });
 
+it("drops the token's default project when ingesting into another workspace", async () => {
+	const { admin, ws, project } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+		defaultProjectId: project.id,
+	});
+
+	// A second workspace the owner belongs to, with no project of its own.
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "beta", name: "Beta", timezone: "Asia/Tokyo" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	// Overriding the workspace without a project must not carry the default
+	// project (which belongs to ws) into ws2; the entry lands unprojected.
+	const res = await ingest(token, {
+		workspaceId: ws2.id,
+		sessionId: "x1",
+		durationMinutes: 5,
+	});
+	expect(res.status).toBe(200);
+	const entry = (await res.json()) as { projectId: string | null };
+	expect(entry.projectId).toBeNull();
+});
+
 it("rejects ingest once the agent's owner loses workspace membership", async () => {
 	const { admin, member, ws, memberId } = await setup();
 	const { token } = await createAgentToken(member, {

@@ -49,7 +49,13 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			);
 		}
 
-		const projectId = input.projectId ?? auth.defaultProjectId;
+		// The token's default project belongs to its default workspace, so it only
+		// applies when the resolved workspace is that one. An explicit workspace
+		// override drops the default project (the caller may still pass its own),
+		// keeping unprojected cross-workspace ingest possible.
+		const defaultProjectId =
+			workspaceId === auth.defaultWorkspaceId ? auth.defaultProjectId : null;
+		const projectId = input.projectId ?? defaultProjectId;
 		if (projectId) {
 			const project = await getProjectById(c.var.db, projectId);
 			if (!project || project.workspaceId !== workspaceId) {
