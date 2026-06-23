@@ -26,16 +26,60 @@ export async function createAgent(
 	return row;
 }
 
-/** Active (non-archived) agents owned by the user, newest first. */
-export async function listAgentsForUser(
+/** Public summary of an agent's single bound access token (no secret/hash). */
+export type AgentTokenSummaryRow = {
+	defaultWorkspaceId: string | null;
+	defaultProjectId: string | null;
+	lastUsedAt: Date | null;
+	expiresAt: Date | null;
+};
+
+/**
+ * Active (non-archived) agents owned by the user with their single bound token,
+ * newest first. Agent and token are 1:1, so the left join yields one row each.
+ */
+export async function listAgentsWithTokenForUser(
 	db: Database,
 	userId: string,
-): Promise<AgentRow[]> {
-	return db
-		.select()
+): Promise<Array<AgentRow & { token: AgentTokenSummaryRow | null }>> {
+	const rows = await db
+		.select({
+			agent: agents,
+			tokenId: agentTokens.id,
+			defaultWorkspaceId: agentTokens.defaultWorkspaceId,
+			defaultProjectId: agentTokens.defaultProjectId,
+			lastUsedAt: agentTokens.lastUsedAt,
+			expiresAt: agentTokens.expiresAt,
+		})
 		.from(agents)
+		.leftJoin(agentTokens, eq(agentTokens.agentId, agents.id))
 		.where(and(eq(agents.userId, userId), isNull(agents.archivedAt)))
 		.orderBy(desc(agents.createdAt));
+	return rows.map(({ agent, tokenId, ...token }) => ({
+		...agent,
+		token: tokenId === null ? null : token,
+	}));
+}
+
+/** Toggles an agent's reversible disabled state (scoped to its owner). */
+export async function setAgentDisabled(
+	db: Database,
+	userId: string,
+	id: string,
+	disabled: boolean,
+): Promise<AgentRow | undefined> {
+	const rows = await db
+		.update(agents)
+		.set({ disabledAt: disabled ? new Date() : null })
+		.where(
+			and(
+				eq(agents.id, id),
+				eq(agents.userId, userId),
+				isNull(agents.archivedAt),
+			),
+		)
+		.returning();
+	return rows[0];
 }
 
 export async function getAgentById(
@@ -100,15 +144,21 @@ export async function createAgentToken(
 	return row;
 }
 
-export async function listAgentTokensForAgent(
+/**
+ * Rotates an agent's single token to a new secret in place, keeping its binding
+ * and expiry. lastUsedAt resets so the summary reflects the fresh credential.
+ */
+export async function rotateAgentToken(
 	db: Database,
 	agentId: string,
-): Promise<AgentTokenRow[]> {
-	return db
-		.select()
-		.from(agentTokens)
+	tokenHash: string,
+): Promise<AgentTokenRow | undefined> {
+	const rows = await db
+		.update(agentTokens)
+		.set({ tokenHash, lastUsedAt: null })
 		.where(eq(agentTokens.agentId, agentId))
-		.orderBy(agentTokens.createdAt);
+		.returning();
+	return rows[0];
 }
 
 export async function findAgentTokenByHash(
@@ -120,18 +170,6 @@ export async function findAgentTokenByHash(
 		.from(agentTokens)
 		.where(eq(agentTokens.tokenHash, tokenHash))
 		.get();
-}
-
-export async function deleteAgentToken(
-	db: Database,
-	agentId: string,
-	id: string,
-): Promise<boolean> {
-	const rows = await db
-		.delete(agentTokens)
-		.where(and(eq(agentTokens.id, id), eq(agentTokens.agentId, agentId)))
-		.returning({ id: agentTokens.id });
-	return rows.length > 0;
 }
 
 export async function touchAgentToken(db: Database, id: string): Promise<void> {

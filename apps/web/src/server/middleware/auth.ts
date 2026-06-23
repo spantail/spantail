@@ -126,6 +126,10 @@ async function resolveAat(
 	if (!agent || agent.archivedAt) {
 		throw new AppError("unauthorized", "Invalid agent access token");
 	}
+	// A disabled agent is paused: its token is rejected until it is re-enabled.
+	if (agent.disabledAt) {
+		throw new AppError("unauthorized", "This agent is disabled");
+	}
 	const owner = await getUserById(c.var.db, agent.userId);
 	if (!owner) throw new AppError("unauthorized", "Invalid agent access token");
 	if (owner.disabled) {
