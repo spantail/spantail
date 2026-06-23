@@ -241,7 +241,7 @@ it("associates an agent with projects, rejecting ones outside its workspace", as
 	expect(list[0]?.projectIds).toEqual([projectId.id]);
 });
 
-it("shows a registered agent in its workspace only to its owner until it has activity", async () => {
+it("shows a member only their own agents in the sidebar", async () => {
 	const owner = await signUpUser("Owner", "owner@example.com");
 	await enableAgents(owner);
 	const member = await signUpUser("Member", "member@example.com");
@@ -272,7 +272,8 @@ it("shows a registered agent in its workspace only to its owner until it has act
 	expect(await sidebar(owner)).toContain(agent.id);
 	expect(await sidebar(member)).not.toContain(agent.id);
 
-	// Once it logs work, it becomes part of the workspace-wide activity view.
+	// Agents are private to their owner: logging work does NOT expose it to
+	// other members — the sidebar shows each member only their own agents.
 	expect(
 		(
 			await appFetch("/api/v1/agent-entries", {
@@ -285,7 +286,8 @@ it("shows a registered agent in its workspace only to its owner until it has act
 			})
 		).status,
 	).toBe(200);
-	expect(await sidebar(member)).toContain(agent.id);
+	expect(await sidebar(owner)).toContain(agent.id);
+	expect(await sidebar(member)).not.toContain(agent.id);
 });
 
 it("cannot manage another user's agent", async () => {

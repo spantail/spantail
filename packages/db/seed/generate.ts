@@ -810,7 +810,9 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			id: agentId,
 			userId: user.id,
 			type: "claude_code",
-			name: `${user.name}'s Claude Code`,
+			// Agents are only ever shown to their owner, so the owner's name in the
+			// label would be redundant.
+			name: "My Claude Code",
 			createdAt: baseCreatedAt,
 			disabledAt: null,
 			archivedAt: null,
@@ -828,80 +830,88 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			createdAt: baseCreatedAt,
 		});
 
-		// Sessions on most of the recent weekdays (workspace-local dates).
-		for (const date of weekdaysFor(ws.timezone).slice(-6)) {
-			if (hashString(`agent:${user.key}:${date}`) % 3 === 0) continue;
-			const project = projects.length
-				? pick(projects, hashString(`agproj:${user.key}:${date}`))
-				: null;
-			const sessionId = `seed-sess-${user.key}-${date}`;
-			const startMs = new Date(
-				zonedDateTimeToUtc(date, "10:00", ws.timezone),
-			).getTime();
-			const turns = 3 + (hashString(`turns:${sessionId}`) % 5); // 3..7
+		// Two sessions on every weekday in the window (workspace-local dates), so
+		// each agent accrues a long, pageable history (50+ entries).
+		const slots = ["10:00", "15:00"];
+		for (const date of weekdaysFor(ws.timezone)) {
+			for (const startHour of slots) {
+				const project = projects.length
+					? pick(
+							projects,
+							hashString(`agproj:${user.key}:${date}:${startHour}`),
+						)
+					: null;
+				const sessionId = `seed-sess-${user.key}-${date}-${startHour}`;
+				const startMs = new Date(
+					zonedDateTimeToUtc(date, startHour, ws.timezone),
+				).getTime();
+				const turns = 3 + (hashString(`turns:${sessionId}`) % 5); // 3..7
 
-			let minTs = Number.POSITIVE_INFINITY;
-			let maxTs = Number.NEGATIVE_INFINITY;
-			let input = 0;
-			let output = 0;
-			let cacheCreation = 0;
-			let cacheRead = 0;
-			for (let t = 0; t < turns; t++) {
-				const tsMs =
-					startMs + t * 90_000 + (hashString(`gap:${sessionId}:${t}`) % 30_000);
-				const inTok = 80 + (hashString(`in:${sessionId}:${t}`) % 400);
-				const outTok = 120 + (hashString(`out:${sessionId}:${t}`) % 600);
-				const ccTok = hashString(`cc:${sessionId}:${t}`) % 1200;
-				const crTok = 1000 + (hashString(`cr:${sessionId}:${t}`) % 160_000);
-				input += inTok;
-				output += outTok;
-				cacheCreation += ccTok;
-				cacheRead += crTok;
-				minTs = Math.min(minTs, tsMs);
-				maxTs = Math.max(maxTs, tsMs);
-				agentEventRows.push({
+				let minTs = Number.POSITIVE_INFINITY;
+				let maxTs = Number.NEGATIVE_INFINITY;
+				let input = 0;
+				let output = 0;
+				let cacheCreation = 0;
+				let cacheRead = 0;
+				for (let t = 0; t < turns; t++) {
+					const tsMs =
+						startMs +
+						t * 90_000 +
+						(hashString(`gap:${sessionId}:${t}`) % 30_000);
+					const inTok = 80 + (hashString(`in:${sessionId}:${t}`) % 400);
+					const outTok = 120 + (hashString(`out:${sessionId}:${t}`) % 600);
+					const ccTok = hashString(`cc:${sessionId}:${t}`) % 1200;
+					const crTok = 1000 + (hashString(`cr:${sessionId}:${t}`) % 160_000);
+					input += inTok;
+					output += outTok;
+					cacheCreation += ccTok;
+					cacheRead += crTok;
+					minTs = Math.min(minTs, tsMs);
+					maxTs = Math.max(maxTs, tsMs);
+					agentEventRows.push({
+						id: randomUUID(),
+						agentId,
+						workspaceId: ws.id,
+						sessionId,
+						sourceId: `seed-msg-${sessionId}-${t}`,
+						timestamp: new Date(tsMs),
+						model: AGENT_MODEL,
+						usage: {
+							input_tokens: inTok,
+							output_tokens: outTok,
+							cache_creation_input_tokens: ccTok,
+							cache_read_input_tokens: crTok,
+							service_tier: "standard",
+						},
+						createdAt: new Date(maxTs),
+					});
+				}
+
+				const totalTokens = input + output + cacheCreation + cacheRead;
+				agentEntryRows.push({
 					id: randomUUID(),
-					agentId,
 					workspaceId: ws.id,
+					ownerUserId: user.id,
+					projectId: project?.id ?? null,
+					agentId,
 					sessionId,
-					sourceId: `seed-msg-${sessionId}-${t}`,
-					timestamp: new Date(tsMs),
-					model: AGENT_MODEL,
+					entryDate: todayInTimezone(ws.timezone, new Date(minTs)),
+					durationMinutes: Math.max(0, Math.round((maxTs - minTs) / 60_000)),
 					usage: {
-						input_tokens: inTok,
-						output_tokens: outTok,
-						cache_creation_input_tokens: ccTok,
-						cache_read_input_tokens: crTok,
-						service_tier: "standard",
+						inputTokens: input,
+						outputTokens: output,
+						cacheCreationTokens: cacheCreation,
+						cacheReadTokens: cacheRead,
+						totalTokens,
+						model: AGENT_MODEL,
 					},
+					description: null,
+					startedAt: new Date(minTs),
+					endedAt: new Date(maxTs),
 					createdAt: new Date(maxTs),
+					updatedAt: new Date(maxTs),
 				});
 			}
-
-			const totalTokens = input + output + cacheCreation + cacheRead;
-			agentEntryRows.push({
-				id: randomUUID(),
-				workspaceId: ws.id,
-				ownerUserId: user.id,
-				projectId: project?.id ?? null,
-				agentId,
-				sessionId,
-				entryDate: todayInTimezone(ws.timezone, new Date(minTs)),
-				durationMinutes: Math.max(0, Math.round((maxTs - minTs) / 60_000)),
-				usage: {
-					inputTokens: input,
-					outputTokens: output,
-					cacheCreationTokens: cacheCreation,
-					cacheReadTokens: cacheRead,
-					totalTokens,
-					model: AGENT_MODEL,
-				},
-				description: null,
-				startedAt: new Date(minTs),
-				endedAt: new Date(maxTs),
-				createdAt: new Date(maxTs),
-				updatedAt: new Date(maxTs),
-			});
 		}
 	}
 

@@ -222,3 +222,60 @@ it("does not leak agent entries across workspaces", async () => {
 	);
 	expect(denied.status).toBe(404);
 });
+
+it("does not show a member another member's agents or activity", async () => {
+	const { admin, member, ws } = await setup();
+	// Both members work in the same workspace, each with their own agent.
+	const a = await createAgentToken(admin, { defaultWorkspaceId: ws.id });
+	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
+	await ingest(a.token, {
+		sessionId: "sa",
+		durationMinutes: 10,
+		usage: { totalTokens: 1000 },
+	});
+	await ingest(b.token, {
+		sessionId: "sb",
+		durationMinutes: 5,
+		usage: { totalTokens: 500 },
+	});
+
+	// The sidebar lists only the caller's own agents.
+	const adminAgents = (await (
+		await apiGet(`/api/v1/agent-entries/agents?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{ id: string }>;
+	const memberAgents = (await (
+		await apiGet(`/api/v1/agent-entries/agents?workspaceId=${ws.id}`, member)
+	).json()) as Array<{ id: string }>;
+	expect(adminAgents.map((x) => x.id)).toEqual([a.agentId]);
+	expect(memberAgents.map((x) => x.id)).toEqual([b.agentId]);
+
+	// The member's own activity is visible; the other member's is not — even when
+	// explicitly querying by the other agent's id.
+	const ownList = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, member)
+	).json()) as Array<{ agentId: string }>;
+	expect(ownList.map((e) => e.agentId)).toEqual([b.agentId]);
+
+	const otherList = (await (
+		await apiGet(
+			`/api/v1/agent-entries?workspaceId=${ws.id}&agentId=${a.agentId}`,
+			member,
+		)
+	).json()) as unknown[];
+	expect(otherList).toHaveLength(0);
+
+	const otherStats = (await (
+		await apiGet(
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&agentId=${a.agentId}`,
+			member,
+		)
+	).json()) as { entryCount: number; totalTokens: number };
+	expect(otherStats.entryCount).toBe(0);
+	expect(otherStats.totalTokens).toBe(0);
+
+	// And the admin still sees their own.
+	const adminStats = (await (
+		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
+	).json()) as { totalTokens: number };
+	expect(adminStats.totalTokens).toBe(1000);
+});

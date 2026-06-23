@@ -218,13 +218,14 @@ export async function archiveAgent(
 }
 
 /**
- * Agents shown under a workspace in the sidebar. Two arms, unioned and
- * deduplicated:
- *  - any agent with at least one entry in the workspace (cross-user — this is
- *    the established workspace-wide activity view), and
- *  - the requesting user's own non-archived agents registered to the workspace
- *    (their token's default workspace), so a freshly registered agent appears
- *    immediately, but only for its owner until it has logged work here.
+ * The caller's own agents shown under a workspace in the sidebar. Two arms,
+ * unioned and deduplicated:
+ *  - the caller's non-archived agents with at least one entry in the workspace
+ *    (their activity here), and
+ *  - the caller's non-archived agents registered to the workspace (their token's
+ *    default workspace), so a freshly registered agent appears immediately even
+ *    before it has logged work.
+ * Scoped to the caller so members never see each other's agents.
  */
 export async function listWorkspaceAgents(
 	db: Database,
@@ -239,6 +240,7 @@ export async function listWorkspaceAgents(
 			.innerJoin(agentEntries, eq(agentEntries.agentId, agents.id))
 			.where(
 				and(
+					eq(agents.userId, userId),
 					eq(agentEntries.workspaceId, workspaceId),
 					isNull(agents.archivedAt),
 				),
@@ -357,6 +359,9 @@ export async function upsertAgentEntry(
 
 interface AgentEntryFilter {
 	workspaceId: string;
+	// When set, restricts to entries logged for this owner. Callers scope it to
+	// the requesting user so members see only their own agents' activity.
+	ownerUserId?: string;
 	agentId?: string;
 	from?: string;
 	to?: string;
@@ -364,6 +369,9 @@ interface AgentEntryFilter {
 
 function agentEntryConditions(query: AgentEntryFilter) {
 	const conditions = [eq(agentEntries.workspaceId, query.workspaceId)];
+	if (query.ownerUserId) {
+		conditions.push(eq(agentEntries.ownerUserId, query.ownerUserId));
+	}
 	if (query.agentId) conditions.push(eq(agentEntries.agentId, query.agentId));
 	if (query.from) conditions.push(gte(agentEntries.entryDate, query.from));
 	if (query.to) conditions.push(lte(agentEntries.entryDate, query.to));
