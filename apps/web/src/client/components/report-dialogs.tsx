@@ -94,6 +94,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		// Templates carry no workspace; a new report defaults to the current one.
 		workspaceIds: current ? [current.id] : [],
 		projectIds: [],
+		userIds: [],
 		rangeChoice: UNIT_PRESET[template.periodUnit],
 		from: "",
 		to: "",
@@ -126,6 +127,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 				templateId: report.templateId,
 				workspaceIds: report.filters.workspaceIds,
 				projectIds: report.filters.projectIds ?? [],
+				userIds: report.filters.userIds ?? [],
 				rangeChoice: "custom",
 				from: next.from,
 				to: next.to,
@@ -149,6 +151,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 				templateId: report.templateId,
 				workspaceIds: report.filters.workspaceIds,
 				projectIds: report.filters.projectIds ?? [],
+				userIds: report.filters.userIds ?? [],
 				rangeChoice: "custom",
 				from: report.filters.dateRange.from,
 				to: report.filters.dateRange.to,

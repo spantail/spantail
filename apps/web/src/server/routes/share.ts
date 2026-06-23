@@ -1,4 +1,8 @@
-import { isShareTokenFormat, verifySharePasscode } from "@toxil/core";
+import {
+	isShareTokenFormat,
+	splitFrontMatter,
+	verifySharePasscode,
+} from "@toxil/core";
 import type { ReportShareRow } from "@toxil/db";
 import { getReportShareByToken, recordShareView } from "@toxil/db";
 import type { Context } from "hono";
@@ -46,7 +50,10 @@ async function respondWithContent(c: Context<AppEnv>, share: ReportShareRow) {
 			locale: pickShareLocale(c),
 			reportName: share.reportName,
 			dateRange: { from: share.dateFrom, to: share.dateTo },
-			contentHtml: await renderMarkdownToHtml(share.renderedMarkdown),
+			// Hide the system YAML front-matter header on the public page.
+			contentHtml: await renderMarkdownToHtml(
+				splitFrontMatter(share.renderedMarkdown).body,
+			),
 		}),
 	);
 }

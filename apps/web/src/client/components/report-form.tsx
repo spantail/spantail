@@ -59,6 +59,10 @@ export interface ReportFormSeed {
 	templateId: string;
 	workspaceIds: string[];
 	projectIds: string[];
+	// Preserved across an edit even though there is no UI field for it, so a
+	// user-scoped report (e.g. a personal daily) keeps its scope instead of
+	// silently broadening to every member of the workspace.
+	userIds: string[];
 	rangeChoice: DateRangePreset | "custom";
 	from: string;
 	to: string;
@@ -142,6 +146,11 @@ export function ReportForm({
 	const [projectIds, setProjectIds] = useState<string[]>(
 		filtersIntact ? seed.projectIds : [],
 	);
+	// No UI field: carried through edit as-is (dropped only if the workspace set
+	// changes, alongside projects).
+	const [userIds, setUserIds] = useState<string[]>(
+		filtersIntact ? seed.userIds : [],
+	);
 	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
 		seed.rangeChoice,
 	);
@@ -209,6 +218,7 @@ export function ReportForm({
 		const filters: ReportFiltersInput = {
 			workspaceIds,
 			...(singleWorkspaceId && projectIds.length > 0 ? { projectIds } : {}),
+			...(userIds.length > 0 ? { userIds } : {}),
 			...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
 			dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
 		};
@@ -226,6 +236,7 @@ export function ReportForm({
 		tags,
 		singleWorkspaceId,
 		projectIds,
+		userIds,
 		rangeChoice,
 		from,
 		to,
@@ -271,7 +282,9 @@ export function ReportForm({
 	};
 	const toggleWorkspace = (id: string) => {
 		toggle(workspaceIds, setWorkspaceIds, id);
+		// Project and user scopes belong to the old workspace set; clear both.
 		setProjectIds([]);
+		setUserIds([]);
 	};
 
 	// Draggable divider between the form and the preview (percent width).
