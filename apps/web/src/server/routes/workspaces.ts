@@ -13,6 +13,7 @@ import {
 } from "@toxil/db";
 import { Hono } from "hono";
 
+import { readBodyWithLimit } from "../lib/avatar";
 import { AppError } from "../lib/errors";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
@@ -94,6 +95,7 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		object.writeHttpMetadata(headers);
 		headers.set("etag", object.httpEtag);
 		headers.set("cache-control", "private, no-cache");
+		headers.set("x-content-type-options", "nosniff");
 		if (c.req.header("if-none-match") === object.httpEtag) {
 			return new Response(null, { status: 304, headers });
 		}
@@ -110,15 +112,20 @@ export const workspaceRoutes = new Hono<AppEnv>()
 				`Logo must be one of: ${WORKSPACE_LOGO_MIME_TYPES.join(", ")}`,
 			);
 		}
-		const body = await c.req.arrayBuffer();
-		if (body.byteLength === 0) {
-			throw new AppError("bad_request", "Logo file is empty");
-		}
-		if (body.byteLength > WORKSPACE_LOGO_MAX_BYTES) {
+		// Stream the body with a hard cap so an oversized upload — even a chunked
+		// one with no Content-Length — never fully buffers into Worker memory.
+		const body = await readBodyWithLimit(
+			c.req.raw.body,
+			WORKSPACE_LOGO_MAX_BYTES,
+		);
+		if (body === null) {
 			throw new AppError(
 				"bad_request",
 				"Logo exceeds the maximum size of 1 MB",
 			);
+		}
+		if (body.byteLength === 0) {
+			throw new AppError("bad_request", "Logo file is empty");
 		}
 		await c.env.UPLOADS.put(workspaceLogoKey(workspaceId), body, {
 			httpMetadata: { contentType },
