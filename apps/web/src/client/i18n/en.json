@@ -697,7 +697,14 @@
 		},
 		"adminBannerLead": "Instance administration.",
 		"general": {
-			"description": "Workspace name and timezone used to resolve report periods."
+			"description": "Workspace name and timezone used to resolve report periods.",
+			"logo": "Workspace logo",
+			"logoDescription": "Shown on the workspace switcher in the sidebar.",
+			"logoUpload": "Upload logo",
+			"logoRemove": "Remove",
+			"logoHint": "PNG, JPEG or WebP, up to 1 MB.",
+			"logoErrorType": "Logo must be a PNG, JPEG or WebP image.",
+			"logoErrorSize": "Logo exceeds the maximum size of 1 MB."
 		},
 		"appearance": {
 			"title": "Appearance",

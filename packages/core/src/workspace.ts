@@ -27,11 +27,30 @@ export const workspaceSchema = z.object({
 	name: z.string().min(1).max(100),
 	timezone: timezoneSchema,
 	accentColor: workspaceAccentColorSchema,
+	logoUrl: z.string().nullable(),
 	settings: z.record(z.string(), z.unknown()),
 	createdAt: z.string(),
 	archivedAt: z.string().nullable(),
 });
 export type Workspace = z.infer<typeof workspaceSchema>;
+
+// Workspace logo upload constraints, shared by the API boundary, the SDK, the
+// upload UI, and tests. The logo is stored in R2 and served through the Worker;
+// SVG is intentionally excluded to avoid same-origin stored-XSS via the served
+// image URL.
+export const WORKSPACE_LOGO_MAX_BYTES = 1024 * 1024; // 1 MB
+export const WORKSPACE_LOGO_MIME_TYPES = [
+	"image/png",
+	"image/jpeg",
+	"image/webp",
+] as const;
+export type WorkspaceLogoMimeType = (typeof WORKSPACE_LOGO_MIME_TYPES)[number];
+
+export function isWorkspaceLogoMimeType(
+	value: string,
+): value is WorkspaceLogoMimeType {
+	return (WORKSPACE_LOGO_MIME_TYPES as readonly string[]).includes(value);
+}
 
 export const createWorkspaceInputSchema = z.object({
 	slug: slugSchema,

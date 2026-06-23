@@ -225,6 +225,13 @@
       "when": 1782228035601,
       "tag": "0031_flashy_machine_man",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1782254779717,
+      "tag": "0032_right_vampiro",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import {
+	isWorkspaceLogoMimeType,
+	WORKSPACE_LOGO_MAX_BYTES,
+	WORKSPACE_LOGO_MIME_TYPES,
+} from "@toxil/core";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -13,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WorkspaceAvatar } from "@/components/workspace-avatar";
 import { api } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -44,7 +49,12 @@ function GeneralSection() {
 		);
 	}
 
-	return <EditWorkspaceCard key={current.id} />;
+	return (
+		<div className="grid gap-4" key={current.id}>
+			<EditWorkspaceCard />
+			<WorkspaceLogoCard />
+		</div>
+	);
 }
 
 function EditWorkspaceCard() {
@@ -122,6 +132,108 @@ function EditWorkspaceCard() {
 						</Button>
 					</div>
 				</form>
+			</CardContent>
+		</Card>
+	);
+}
+
+function WorkspaceLogoCard() {
+	const { t } = useTranslation();
+	const queryClient = useQueryClient();
+	const { current } = useWorkspace();
+	const inputRef = useRef<HTMLInputElement>(null);
+	const [error, setError] = useState<string | null>(null);
+
+	const uploadMutation = useMutation({
+		mutationFn: (file: File) => {
+			if (!current) throw new Error("no workspace");
+			return api.uploadWorkspaceLogo(current.id, file);
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["me"] });
+			setError(null);
+		},
+		onError: (err: Error) => setError(err.message),
+	});
+
+	const removeMutation = useMutation({
+		mutationFn: () => {
+			if (!current) throw new Error("no workspace");
+			return api.removeWorkspaceLogo(current.id);
+		},
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["me"] });
+			setError(null);
+		},
+		onError: (err: Error) => setError(err.message),
+	});
+
+	function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+		if (!isWorkspaceLogoMimeType(file.type)) {
+			setError(t("settings.general.logoErrorType"));
+			return;
+		}
+		if (file.size > WORKSPACE_LOGO_MAX_BYTES) {
+			setError(t("settings.general.logoErrorSize"));
+			return;
+		}
+		uploadMutation.mutate(file);
+	}
+
+	const busy = uploadMutation.isPending || removeMutation.isPending;
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="font-heading text-base">
+					{t("settings.general.logo")}
+				</CardTitle>
+				<CardDescription>
+					{t("settings.general.logoDescription")}
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="flex items-center gap-4">
+				<WorkspaceAvatar
+					name={current?.name ?? ""}
+					logoUrl={current?.logoUrl}
+					className="size-16 text-lg"
+				/>
+				<div className="flex flex-col gap-2">
+					<input
+						ref={inputRef}
+						type="file"
+						accept={WORKSPACE_LOGO_MIME_TYPES.join(",")}
+						className="hidden"
+						onChange={onFileChange}
+					/>
+					<div className="flex gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							disabled={busy}
+							onClick={() => inputRef.current?.click()}
+						>
+							{t("settings.general.logoUpload")}
+						</Button>
+						{current?.logoUrl && (
+							<Button
+								type="button"
+								variant="ghost"
+								disabled={busy}
+								onClick={() => removeMutation.mutate()}
+							>
+								{t("settings.general.logoRemove")}
+							</Button>
+						)}
+					</div>
+					<p className="text-muted-foreground text-xs">
+						{t("settings.general.logoHint")}
+					</p>
+					{error && <p className="text-destructive text-sm">{error}</p>}
+				</div>
 			</CardContent>
 		</Card>
 	);

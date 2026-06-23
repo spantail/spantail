@@ -22,6 +22,9 @@ export const workspaces = sqliteTable("workspaces", {
 	name: text("name").notNull(),
 	timezone: text("timezone").notNull(),
 	accentColor: text("accent_color").notNull().default("neutral"),
+	// App-relative URL of the workspace logo served from R2, with a cache-busting
+	// "?v=" version. Null when no logo is set.
+	logoUrl: text("logo_url"),
 	settings: text("settings", { mode: "json" })
 		.$type<Record<string, unknown>>()
 		.notNull()

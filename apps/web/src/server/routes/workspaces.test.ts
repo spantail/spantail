@@ -1,12 +1,25 @@
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 const WS = { slug: "acme", name: "Acme", timezone: "Asia/Tokyo" };
 
 async function createWs(cookie: string) {
 	const res = await apiJson("POST", "/api/v1/workspaces", WS, cookie);
 	return (await res.json()) as { id: string };
+}
+
+function putLogo(
+	id: string,
+	body: BodyInit,
+	contentType: string,
+	cookie: string,
+) {
+	return appFetch(`/api/v1/workspaces/${id}/logo`, {
+		method: "PUT",
+		headers: { "content-type": contentType, cookie },
+		body,
+	});
 }
 
 it("lets only instance admins create workspaces", async () => {
@@ -132,4 +145,65 @@ it("updates the slug and rejects collisions with another workspace", async () =>
 		admin,
 	);
 	expect(conflict.status).toBe(409);
+});
+
+it("uploads, serves, and removes a workspace logo", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const ws = await createWs(admin);
+	const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+
+	const uploaded = await putLogo(ws.id, bytes, "image/png", admin);
+	expect(uploaded.status).toBe(200);
+	const body = (await uploaded.json()) as { logoUrl: string | null };
+	expect(body.logoUrl).toMatch(
+		new RegExp(`^/api/v1/workspaces/${ws.id}/logo\\?v=`),
+	);
+
+	const served = await apiGet(`/api/v1/workspaces/${ws.id}/logo`, admin);
+	expect(served.status).toBe(200);
+	expect(served.headers.get("content-type")).toBe("image/png");
+	expect(served.headers.get("cache-control")).toBe("private, no-cache");
+	expect(new Uint8Array(await served.arrayBuffer())).toEqual(bytes);
+
+	// Revalidation re-runs auth and returns 304 when the ETag still matches.
+	const etag = served.headers.get("etag");
+	expect(etag).toBeTruthy();
+	const revalidated = await appFetch(`/api/v1/workspaces/${ws.id}/logo`, {
+		headers: { cookie: admin, "if-none-match": etag as string },
+	});
+	expect(revalidated.status).toBe(304);
+
+	const removed = await apiJson(
+		"DELETE",
+		`/api/v1/workspaces/${ws.id}/logo`,
+		undefined,
+		admin,
+	);
+	expect(removed.status).toBe(200);
+	expect(((await removed.json()) as { logoUrl: string | null }).logoUrl).toBe(
+		null,
+	);
+
+	const gone = await apiGet(`/api/v1/workspaces/${ws.id}/logo`, admin);
+	expect(gone.status).toBe(404);
+});
+
+it("rejects logo uploads from non-admins and invalid files", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const member = await signUpUser("Member", "member@example.com");
+	const ws = await createWs(admin);
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "member@example.com" },
+		admin,
+	);
+
+	const png = new Uint8Array([1, 2, 3]);
+	expect((await putLogo(ws.id, png, "image/png", member)).status).toBe(403);
+	expect((await putLogo(ws.id, png, "text/plain", admin)).status).toBe(400);
+	expect((await putLogo(ws.id, "x", "image/svg+xml", admin)).status).toBe(400);
+
+	const tooBig = new Uint8Array(1024 * 1024 + 1);
+	expect((await putLogo(ws.id, tooBig, "image/png", admin)).status).toBe(400);
 });

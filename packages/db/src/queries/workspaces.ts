@@ -69,7 +69,13 @@ export async function updateWorkspace(
 	patch: Partial<
 		Pick<
 			WorkspaceRow,
-			"slug" | "name" | "timezone" | "accentColor" | "archivedAt" | "settings"
+			| "slug"
+			| "name"
+			| "timezone"
+			| "accentColor"
+			| "archivedAt"
+			| "settings"
+			| "logoUrl"
 		>
 	>,
 ): Promise<WorkspaceRow | undefined> {

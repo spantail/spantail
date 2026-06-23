@@ -1,5 +1,5 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronsUpDownIcon, ClockIcon, PlusIcon } from "lucide-react";
+import { ChevronsUpDownIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,6 +18,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { WorkspaceAvatar } from "@/components/workspace-avatar";
 import { useWorkspace } from "@/lib/workspace";
 
 export function WorkspaceSwitcher({ isAdmin }: { isAdmin: boolean }) {
@@ -51,9 +52,11 @@ export function WorkspaceSwitcher({ isAdmin }: { isAdmin: boolean }) {
 							size="lg"
 							className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 						>
-							<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-								<ClockIcon className="size-4" />
-							</div>
+							<WorkspaceAvatar
+								name={current?.name ?? ""}
+								logoUrl={current?.logoUrl}
+								className="size-8 text-xs"
+							/>
 							<div className="grid flex-1 text-left text-sm leading-tight">
 								<span className="truncate font-medium">
 									{current?.name ?? t("workspace.none")}
@@ -78,6 +81,11 @@ export function WorkspaceSwitcher({ isAdmin }: { isAdmin: boolean }) {
 								onClick={() => selectWorkspace(workspace)}
 								className="gap-2 p-2"
 							>
+								<WorkspaceAvatar
+									name={workspace.name}
+									logoUrl={workspace.logoUrl}
+									className="size-6 text-[0.625rem]"
+								/>
 								{workspace.name}
 							</DropdownMenuItem>
 						))}
