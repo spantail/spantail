@@ -20,6 +20,7 @@ import {
 } from "@toxil/db";
 import { Hono } from "hono";
 
+import { avatarObjectKey } from "../lib/avatar";
 import { createAccount } from "../lib/create-account";
 import { AppError } from "../lib/errors";
 import { generateTempPassword } from "../lib/password";
@@ -171,5 +172,9 @@ export const userRoutes = new Hono<AppEnv>()
 		}
 
 		await deleteUser(c.var.db, id);
+		// Remove the deleted user's avatar so the orphaned R2 object can't be
+		// streamed by anyone holding a stale reference to their id. A no-op when
+		// they had no uploaded avatar.
+		await c.env.UPLOADS.delete(avatarObjectKey(id));
 		return c.body(null, 204);
 	});

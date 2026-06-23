@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { apiGet, appFetch, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 // A 1x1 PNG is unnecessary — the server stores bytes verbatim and never decodes
 // them, so any non-empty payload with an allowed content type is a valid upload.
@@ -58,6 +58,33 @@ it("rejects an empty upload", async () => {
 	const cookie = await signUpUser("Cara", "cara@example.com");
 	const res = await uploadAvatar(cookie, "image/png", new Uint8Array());
 	expect(res.status).toBe(400);
+});
+
+it("removes the avatar object when the user is deleted", async () => {
+	// The first user is the instance admin; they delete the second.
+	const adminCookie = await signUpUser("Admin", "admin@example.com");
+	const bobCookie = await signUpUser("Bob", "bob2@example.com");
+	const bob = (await (await apiGet("/api/v1/me", bobCookie)).json()) as {
+		user: { id: string };
+	};
+
+	await uploadAvatar(bobCookie, "image/png", PNG_BYTES);
+	expect(
+		(await apiGet(`/api/v1/avatars/${bob.user.id}`, adminCookie)).status,
+	).toBe(200);
+
+	const del = await apiJson(
+		"DELETE",
+		`/api/v1/users/${bob.user.id}`,
+		undefined,
+		adminCookie,
+	);
+	expect(del.status).toBe(204);
+
+	// The orphaned object is gone, not just hidden.
+	expect(
+		(await apiGet(`/api/v1/avatars/${bob.user.id}`, adminCookie)).status,
+	).toBe(404);
 });
 
 it("requires authentication to upload", async () => {
