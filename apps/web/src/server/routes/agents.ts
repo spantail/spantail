@@ -58,7 +58,9 @@ export const agentRoutes = new Hono<AppEnv>()
 		// ingest.) The workspace must be one the issuer belongs to; every
 		// associated project must live in that workspace.
 		await requireWorkspaceAccess(c, input.defaultWorkspaceId);
-		const projectIds = [...new Set(input.projectIds ?? [])];
+		// Sort (and de-dupe) so the create response matches the order GET /agents
+		// returns (agent_projects is read back ordered by project_id).
+		const projectIds = [...new Set(input.projectIds ?? [])].sort();
 		if (projectIds.length > 0) {
 			const projects = await listProjectsByIds(c.var.db, projectIds);
 			const inWorkspace = new Set(
