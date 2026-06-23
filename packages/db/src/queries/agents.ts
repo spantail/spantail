@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lte, ne, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { agentEntries, agents, agentTokens } from "../schema/agents";
@@ -146,26 +146,34 @@ export async function createAgentToken(
 
 /**
  * Rotates an agent's token to a new secret in place, keeping its binding and
- * expiry. lastUsedAt resets so the summary reflects the fresh credential. Only
- * the oldest token row is targeted: a legacy agent left with several tokens
- * would otherwise collide on the unique tokenHash if all rows were updated.
+ * expiry. lastUsedAt resets so the summary reflects the fresh credential.
+ *
+ * Rotation also collapses the agent to a single token: any legacy extra rows
+ * (the removed multi-token API could create them) are deleted, so every prior
+ * secret is revoked — never left live yet hidden from the 1:1 UI — and the
+ * surviving row can't collide on the unique tokenHash.
  */
 export async function rotateAgentToken(
 	db: Database,
 	agentId: string,
 	tokenHash: string,
 ): Promise<AgentTokenRow | undefined> {
-	const existing = await db
+	const survivor = await db
 		.select({ id: agentTokens.id })
 		.from(agentTokens)
 		.where(eq(agentTokens.agentId, agentId))
 		.orderBy(agentTokens.createdAt)
 		.get();
-	if (!existing) return undefined;
+	if (!survivor) return undefined;
+	await db
+		.delete(agentTokens)
+		.where(
+			and(eq(agentTokens.agentId, agentId), ne(agentTokens.id, survivor.id)),
+		);
 	const rows = await db
 		.update(agentTokens)
 		.set({ tokenHash, lastUsedAt: null })
-		.where(eq(agentTokens.id, existing.id))
+		.where(eq(agentTokens.id, survivor.id))
 		.returning();
 	return rows[0];
 }
