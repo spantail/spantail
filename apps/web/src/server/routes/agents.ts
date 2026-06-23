@@ -7,8 +7,7 @@ import {
 import {
 	type AgentRow,
 	archiveAgent,
-	createAgent,
-	createAgentToken,
+	createAgentWithToken,
 	getAgentById,
 	getProjectById,
 	listAgentsWithTokenForUser,
@@ -68,15 +67,12 @@ export const agentRoutes = new Hono<AppEnv>()
 			}
 		}
 
-		const { userId: _userId, ...agent } = await createAgent(c.var.db, {
+		const secret = generateAat();
+		const { agent, token } = await createAgentWithToken(c.var.db, {
 			userId: user.id,
 			type: input.type,
 			name: input.name,
-		});
-		const secret = generateAat();
-		const token = await createAgentToken(c.var.db, {
-			agentId: agent.id,
-			name: agent.name,
+			tokenName: input.name,
 			tokenHash: await hashToken(secret),
 			defaultWorkspaceId: input.defaultWorkspaceId,
 			defaultProjectId: input.defaultProjectId ?? null,
@@ -84,9 +80,10 @@ export const agentRoutes = new Hono<AppEnv>()
 				? new Date(Date.now() + input.expiresInDays * DAY_MS)
 				: null,
 		});
+		const { userId: _userId, ...agentView } = agent;
 		return c.json(
 			{
-				...agent,
+				...agentView,
 				token: {
 					defaultWorkspaceId: token.defaultWorkspaceId,
 					defaultProjectId: token.defaultProjectId,

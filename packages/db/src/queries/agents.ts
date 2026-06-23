@@ -13,17 +13,53 @@ export type AgentEntryUpsert = Omit<
 
 // --- agents (account-scoped registry) ---
 
-export async function createAgent(
+/**
+ * Registers an agent together with its single access token. The two inserts
+ * run in one batch so the 1:1 invariant holds atomically — a failure never
+ * leaves a tokenless agent that the 1:1 UI could not issue a credential for.
+ */
+export async function createAgentWithToken(
 	db: Database,
-	values: { userId: string; type: AgentRow["type"]; name: string },
-): Promise<AgentRow> {
-	const rows = await db
-		.insert(agents)
-		.values({ id: crypto.randomUUID(), ...values })
-		.returning();
-	const row = rows[0];
-	if (!row) throw new Error("agent insert returned no row");
-	return row;
+	input: {
+		userId: string;
+		type: AgentRow["type"];
+		name: string;
+		tokenName: string;
+		tokenHash: string;
+		defaultWorkspaceId: string;
+		defaultProjectId: string | null;
+		expiresAt: Date | null;
+	},
+): Promise<{ agent: AgentRow; token: AgentTokenRow }> {
+	const agentId = crypto.randomUUID();
+	// D1 has no interactive transactions; batch keeps both writes atomic.
+	const [agentRows, tokenRows] = await db.batch([
+		db
+			.insert(agents)
+			.values({
+				id: agentId,
+				userId: input.userId,
+				type: input.type,
+				name: input.name,
+			})
+			.returning(),
+		db
+			.insert(agentTokens)
+			.values({
+				id: crypto.randomUUID(),
+				agentId,
+				name: input.tokenName,
+				tokenHash: input.tokenHash,
+				defaultWorkspaceId: input.defaultWorkspaceId,
+				defaultProjectId: input.defaultProjectId,
+				expiresAt: input.expiresAt,
+			})
+			.returning(),
+	]);
+	const agent = agentRows[0];
+	const token = tokenRows[0];
+	if (!agent || !token) throw new Error("agent create returned no row");
+	return { agent, token };
 }
 
 /** Public summary of an agent's single bound access token (no secret/hash). */
@@ -36,7 +72,9 @@ export type AgentTokenSummaryRow = {
 
 /**
  * Active (non-archived) agents owned by the user with their single bound token,
- * newest first. Agent and token are 1:1, so the left join yields one row each.
+ * newest first. Agent and token are 1:1, but a legacy agent may still carry
+ * several token rows; the join is deduplicated to the oldest token per agent so
+ * the 1:1 UI never receives a duplicated agent.
  */
 export async function listAgentsWithTokenForUser(
 	db: Database,
@@ -54,11 +92,15 @@ export async function listAgentsWithTokenForUser(
 		.from(agents)
 		.leftJoin(agentTokens, eq(agentTokens.agentId, agents.id))
 		.where(and(eq(agents.userId, userId), isNull(agents.archivedAt)))
-		.orderBy(desc(agents.createdAt));
-	return rows.map(({ agent, tokenId, ...token }) => ({
-		...agent,
-		token: tokenId === null ? null : token,
-	}));
+		.orderBy(desc(agents.createdAt), asc(agentTokens.createdAt));
+	const seen = new Set<string>();
+	const result: Array<AgentRow & { token: AgentTokenSummaryRow | null }> = [];
+	for (const { agent, tokenId, ...token } of rows) {
+		if (seen.has(agent.id)) continue;
+		seen.add(agent.id);
+		result.push({ ...agent, token: tokenId === null ? null : token });
+	}
+	return result;
 }
 
 /** Toggles an agent's reversible disabled state (scoped to its owner). */
@@ -123,26 +165,6 @@ export async function listAgentsWithActivity(
 }
 
 // --- agent tokens (AAT) ---
-
-export async function createAgentToken(
-	db: Database,
-	input: {
-		agentId: string;
-		name: string;
-		tokenHash: string;
-		defaultWorkspaceId: string | null;
-		defaultProjectId: string | null;
-		expiresAt: Date | null;
-	},
-): Promise<AgentTokenRow> {
-	const rows = await db
-		.insert(agentTokens)
-		.values({ id: crypto.randomUUID(), ...input })
-		.returning();
-	const row = rows[0];
-	if (!row) throw new Error("agent token insert returned no row");
-	return row;
-}
 
 /**
  * Rotates an agent's token to a new secret in place, keeping its binding and
