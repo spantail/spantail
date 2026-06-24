@@ -234,3 +234,30 @@
 [data-slot="dropdown-menu-sub-trigger"].py-1 {
 	@apply py-1.5;
 }
+
+/* Print scope: the report Print action prints only the markdown preview. On a
+   page that has a `.print-area` (the report reading pane), hide everything and
+   reveal just that subtree; pages without one print normally (the `:has()`
+   guard avoids blanking every other screen's Ctrl+P). The area is pulled to the
+   origin and the sidebar inset — its positioned containing block, pinned to one
+   screen via `h-svh overflow-hidden` — is released so it isn't clipped to a
+   single page. */
+@media print {
+	body:has(.print-area) * {
+		visibility: hidden;
+	}
+	body:has(.print-area) [data-slot="sidebar-inset"] {
+		height: auto;
+		overflow: visible;
+	}
+	.print-area,
+	.print-area * {
+		visibility: visible;
+	}
+	.print-area {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+	}
+}

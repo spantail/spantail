@@ -172,7 +172,6 @@
 		"newFromTemplate": "テンプレートから作成",
 		"newFromTemplateAction": "テンプレートから新規レポート",
 		"newTitle": "レポートを作成",
-		"duplicateTitle": "レポートを複製",
 		"editTitle": "レポートを編集",
 		"composeDescription": "フィルタとテンプレートを設定すると、プレビューがリアルタイムで更新されます。確認して保存してください。",
 		"name": "レポート名",
@@ -201,7 +200,7 @@
 		"cancelAction": "キャンセル",
 		"editAction": "編集",
 		"deleteAction": "削除",
-		"duplicateAction": "前回から作成",
+		"printAction": "印刷",
 		"archived": "アーカイブ",
 		"noTemplates": "有効なレポートテンプレートがありません。ワークスペース管理者に有効化を依頼してください。",
 		"spanTooLong": "期間は 366 日以内にしてください。",
@@ -234,7 +233,9 @@
 			"cancel": "キャンセル"
 		},
 		"view": {
-			"downloadAction": ".md をダウンロード"
+			"downloadAction": ".md をダウンロード",
+			"copyAction": "Markdown をコピー",
+			"copiedLabel": "コピーしました"
 		},
 		"preview": {
 			"updating": "更新中…",

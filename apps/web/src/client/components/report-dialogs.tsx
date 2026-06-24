@@ -1,10 +1,5 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import {
-	deriveNextPeriod,
-	type PeriodUnit,
-	type ReportMeta,
-	type ReportTemplate,
-} from "@toxil/core";
+import type { PeriodUnit, ReportMeta, ReportTemplate } from "@toxil/core";
 import {
 	createContext,
 	type ReactNode,
@@ -35,7 +30,6 @@ const UNIT_PRESET: Record<PeriodUnit, ReportFormSeed["rangeChoice"]> = {
 
 interface ReportDialogsApi {
 	openCreate: (template: ReportTemplate) => void;
-	openDuplicate: (report: ReportMeta) => void;
 	openEdit: (report: ReportMeta) => void;
 }
 
@@ -61,8 +55,8 @@ interface FormState {
 
 /**
  * Owns the report compose dialog for the mailbox shell, so the list header
- * (New), the detail toolbar (Duplicate/Edit), and the `c` shortcut can open it.
- * The same two-pane form backs create, duplicate, and edit; on save it routes to
+ * (New), the detail toolbar (Edit), and the `c` shortcut can open it.
+ * The same two-pane form backs create and edit; on save it routes to
  * the report's detail pane.
  */
 export function ReportDialogsProvider({ children }: { children: ReactNode }) {
@@ -71,7 +65,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	// Deep-link seed (e.g. the home timeline's "create daily report" button).
 	const search = useSearch({ from: "/reports" });
 	const { workspaces, current } = useWorkspace();
-	const { templates, templatesReady, reportTemplateState, createTargetForTab } =
+	const { templates, templatesReady, createTargetForTab } =
 		useReportTemplates();
 	// The active template tab, when a reports route is mounted, picks which
 	// template `c` creates from (mirrors the list's New button).
@@ -108,35 +102,6 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 			mode: "create",
 			seed: newSeed(template),
 		});
-
-	const openDuplicate = (report: ReportMeta) => {
-		// Cadence comes from the report's anchor workspace (builtins vary by ws).
-		const unit = reportTemplateState(report)?.periodUnit ?? "custom";
-		const timezone =
-			workspaces.find((w) => w.id === report.filters.workspaceIds[0])
-				?.timezone ??
-			current?.timezone ??
-			"UTC";
-		const next = deriveNextPeriod(unit, report.filters.dateRange, timezone);
-		open({
-			titleKey: "reports.duplicateTitle",
-			mode: "create",
-			seed: {
-				name: "",
-				nameEdited: false,
-				templateId: report.templateId,
-				workspaceIds: report.filters.workspaceIds,
-				projectIds: report.filters.projectIds ?? [],
-				userIds: report.filters.userIds ?? [],
-				rangeChoice: "custom",
-				from: next.from,
-				to: next.to,
-				tags: (report.filters.tags ?? []).join(", "),
-				// Notes differ every period, so a duplicate starts with a blank one.
-				note: "",
-			},
-		});
-	};
 
 	// Edit re-renders the report from its current fields, seeded as a fixed
 	// (custom) period so saving reproduces the same scope and date range.
@@ -240,9 +205,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	}, [search, templatesReady, navigate]);
 
 	return (
-		<ReportDialogsContext.Provider
-			value={{ openCreate, openDuplicate, openEdit }}
-		>
+		<ReportDialogsContext.Provider value={{ openCreate, openEdit }}>
 			{children}
 			{form && (
 				<Dialog open onOpenChange={(isOpen) => !isOpen && closeForm()}>

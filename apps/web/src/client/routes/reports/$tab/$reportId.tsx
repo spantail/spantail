@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import type { Report } from "@toxil/core";
+import { type Report, splitFrontMatter } from "@toxil/core";
 import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { CopyMarkdownButton } from "@/components/copy-markdown-button";
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportDeleteAction } from "@/components/report-delete-action";
 import { ReportDiscussion } from "@/components/report-discussion";
@@ -80,8 +81,15 @@ function ReportPane({ report, tab }: { report: Report; tab: string }) {
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="mx-auto flex w-full max-w-3xl flex-col gap-7 px-8 py-8">
 					{/* The report name is the markdown's own H1 — no title header.
-					    The YAML front-matter header is stripped by MarkdownView. */}
-					<MarkdownView markdown={report.renderedMarkdown} variant="report" />
+					    The YAML front-matter header is stripped by MarkdownView.
+					    `print-area` scopes the Print action to the preview only. */}
+					<div className="print-area relative">
+						<CopyMarkdownButton
+							markdown={splitFrontMatter(report.renderedMarkdown).body}
+							className="absolute top-0 right-0 print:hidden"
+						/>
+						<MarkdownView markdown={report.renderedMarkdown} variant="report" />
+					</div>
 					<ReportDiscussion reportId={report.id} />
 				</div>
 			</div>

@@ -7,7 +7,7 @@ import {
 	DownloadIcon,
 	MoreVerticalIcon,
 	PencilIcon,
-	PlusIcon,
+	PrinterIcon,
 	SendIcon,
 	ShareIcon,
 	Trash2Icon,
@@ -41,7 +41,7 @@ export function ReportToolbar({
 }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const { openDuplicate, openEdit } = useReportDialogs();
+	const { openEdit } = useReportDialogs();
 	const { reportTemplateState } = useReportTemplates();
 	const [sharing, setSharing] = useState(false);
 	const [sending, setSending] = useState(false);
@@ -106,18 +106,16 @@ export function ReportToolbar({
 			>
 				<ShareIcon />
 			</Button>
-			{!readOnly && (
-				<Button
-					variant="ghost"
-					size="icon"
-					className="text-muted-foreground hidden size-9 md:inline-flex"
-					aria-label={t("reports.duplicateAction")}
-					title={t("reports.duplicateAction")}
-					onClick={() => openDuplicate(report)}
-				>
-					<PlusIcon />
-				</Button>
-			)}
+			<Button
+				variant="ghost"
+				size="icon"
+				className="text-muted-foreground hidden size-9 md:inline-flex"
+				aria-label={t("reports.printAction")}
+				title={t("reports.printAction")}
+				onClick={() => window.print()}
+			>
+				<PrinterIcon />
+			</Button>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -145,18 +143,16 @@ export function ReportToolbar({
 						<ShareIcon />
 						{t("reports.shares.shareAction")}
 					</DropdownMenuItem>
-					{!readOnly && (
-						<DropdownMenuItem
-							className="gap-2.5 px-2 py-1.5 md:hidden"
-							onClick={() => openDuplicate(report)}
-						>
-							<PlusIcon />
-							{t("reports.duplicateAction")}
-						</DropdownMenuItem>
-					)}
+					<DropdownMenuItem
+						className="gap-2.5 px-2 py-1.5 md:hidden"
+						onSelect={() => window.print()}
+					>
+						<PrinterIcon />
+						{t("reports.printAction")}
+					</DropdownMenuItem>
 					<DropdownMenuSeparator className="md:hidden" />
 					{/* Editing re-renders through the template, so a disabled (archived)
-					    template makes the report read-only — same gate as Duplicate. */}
+					    template makes the report read-only. */}
 					{!readOnly && (
 						<DropdownMenuItem
 							className="gap-2.5 px-2 py-1.5"

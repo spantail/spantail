@@ -51,7 +51,7 @@ const PRESETS: DateRangePreset[] = [
 	"last_month",
 ];
 
-/** Initial field values; the route seeds these for create/duplicate/edit. */
+/** Initial field values; the route seeds these for create/edit. */
 export interface ReportFormSeed {
 	name: string;
 	/** When false, the name auto-updates from period + user name until edited. */
@@ -94,7 +94,7 @@ function useDebouncedValue<T>(value: T, ms: number): T {
  * Two-pane report compose dialog: filters/fields on the left, a live Markdown
  * preview on the right. Submitting renders the report server-side — create mints
  * version 1, edit re-renders and appends the next version. Both share one input
- * shape, so the same form backs create, duplicate, and edit.
+ * shape, so the same form backs create and edit.
  */
 export function ReportForm({
 	mode,
