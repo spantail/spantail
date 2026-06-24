@@ -774,6 +774,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			googleOAuthEnabled: config.instance.googleOAuthEnabled,
 			githubOAuthEnabled: config.instance.githubOAuthEnabled,
 			googleAllowedDomains: [],
+			agentsEnabled: config.instance.agentsEnabled,
 			reportTemplateOverrides: overrides,
 			updatedAt: baseCreatedAt,
 		},

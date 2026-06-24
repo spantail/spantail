@@ -106,6 +106,7 @@ const instanceConfigSchema = z.object({
 	emailEnabled: z.boolean().default(false),
 	googleOAuthEnabled: z.boolean().default(false),
 	githubOAuthEnabled: z.boolean().default(false),
+	agentsEnabled: z.boolean().default(false),
 	disableBuiltinTemplates: z.array(z.string().min(1)).default([]),
 });
 

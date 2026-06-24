@@ -1,9 +1,11 @@
-# The singleton instance settings row. Email and social login stay disabled for
-# a local demo. The builtin templates are disabled so only the four custom
-# templates above are offered when composing a report.
+# The singleton instance settings row. Email stays disabled for a local demo;
+# social login and AI agents are enabled so the demo shows them on by default.
+# The builtin templates are disabled so only the four custom templates above are
+# offered when composing a report.
 emailEnabled: false
-googleOAuthEnabled: false
-githubOAuthEnabled: false
+googleOAuthEnabled: true
+githubOAuthEnabled: true
+agentsEnabled: true
 disableBuiltinTemplates:
   - builtin:daily
   - builtin:weekly
