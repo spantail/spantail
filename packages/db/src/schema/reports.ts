@@ -1,4 +1,4 @@
-import type { ReportFilters } from "@toxil/core";
+import type { ReportFilters } from "@spantail/core";
 import { sql } from "drizzle-orm";
 import {
 	index,
@@ -21,7 +21,7 @@ const updatedAtMs = () =>
 
 // Templates are instance-scoped presentation formats: a report picks one
 // freely, independent of which workspaces/projects/period it covers. Builtin
-// templates are code-defined in @toxil/core; these rows are the custom ones.
+// templates are code-defined in @spantail/core; these rows are the custom ones.
 export const reportTemplates = sqliteTable("report_templates", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),

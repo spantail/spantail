@@ -1,4 +1,4 @@
-import { schema } from "@toxil/db";
+import { schema } from "@spantail/db";
 import { getTableColumns, getTableName } from "drizzle-orm";
 import type { SQLiteTable } from "drizzle-orm/sqlite-core";
 

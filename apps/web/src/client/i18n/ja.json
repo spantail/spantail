@@ -1,7 +1,7 @@
 {
 	"app": {
-		"name": "Toxil",
-		"tagline": "時間の使いみちを知る。",
+		"name": "Spantail",
+		"tagline": "人とエージェント、作業の行方を可視化する。",
 		"loading": "読み込み中…",
 		"loadingMore": "さらに読み込み中…"
 	},
@@ -37,7 +37,7 @@
 	},
 	"invite": {
 		"title": "招待を受ける",
-		"description": "{{email}} の Toxil アカウントを設定します。",
+		"description": "{{email}} の Spantail アカウントを設定します。",
 		"invalid": "この招待は無効か、有効期限が切れています。",
 		"toLogin": "ログインへ",
 		"acceptAction": "アカウントを作成",
@@ -285,7 +285,7 @@
 		},
 		"send": {
 			"title": "「{{name}}」を送信",
-			"description": "このレポートをチームメイトの Toxil インボックスへ送信します（レビューや承認用）。",
+			"description": "このレポートをチームメイトの Spantail インボックスへ送信します（レビューや承認用）。",
 			"sendAction": "送信先",
 			"recipients": "宛先",
 			"selectedCount": "{{count}} 件選択中",
@@ -659,7 +659,7 @@
 				"confirm": "削除",
 				"cancel": "キャンセル"
 			},
-			"adminBanner": "これらのアカウントはこの Toxil インスタンスの全ワークスペースにまたがり、インスタンス管理者のみが閲覧できます。"
+			"adminBanner": "これらのアカウントはこの Spantail インスタンスの全ワークスペースにまたがり、インスタンス管理者のみが閲覧できます。"
 		},
 		"agentsAdmin": {
 			"title": "AI エージェント",

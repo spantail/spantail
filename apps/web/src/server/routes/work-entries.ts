@@ -6,7 +6,7 @@ import {
 	type WorkEntrySource,
 	workEntryStatsQuerySchema,
 	workEntryTagsQuerySchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	createWorkEntry,
 	deleteWorkEntry,
@@ -17,7 +17,7 @@ import {
 	listWorkEntryTags,
 	updateWorkEntry,
 	type WorkEntryRow,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 
@@ -53,13 +53,13 @@ async function requireEntryAccess(
 
 /**
  * Determines the client channel a create request came through. Session callers
- * are the web SPA; PAT callers tag themselves via X-Toxil-Client (cli/mcp) and
+ * are the web SPA; PAT callers tag themselves via X-Spantail-Client (cli/mcp) and
  * default to "api" (e.g. direct curl). This is informational metadata, so an
  * unrecognized header value is ignored rather than rejected.
  */
 function resolveSource(c: Context<AppEnv>): WorkEntrySource {
 	if (c.var.auth?.via === "session") return "web";
-	const hint = c.req.header("x-toxil-client");
+	const hint = c.req.header("x-spantail-client");
 	if (hint === "cli" || hint === "mcp") return hint;
 	return "api";
 }

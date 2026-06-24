@@ -5,6 +5,6 @@ export default defineConfig({
 	format: "esm",
 	platform: "node",
 	// Workspace packages are TypeScript source; bundle them into the binary.
-	noExternal: [/^@toxil\//],
+	noExternal: [/^@spantail\//],
 	dts: false,
 });

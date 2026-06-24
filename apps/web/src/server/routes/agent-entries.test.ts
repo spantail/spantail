@@ -30,7 +30,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };
@@ -191,7 +191,7 @@ it("treats agent tokens as write-only ingest credentials", async () => {
 	const { token } = await createAgentToken(admin, {
 		defaultWorkspaceId: ws.id,
 	});
-	expect(token).toMatch(/^toxil_aat_/);
+	expect(token).toMatch(/^spantail_aat_/);
 
 	// Cannot act as a user on session/PAT routes.
 	const me = await appFetch("/api/v1/me", {

@@ -1,4 +1,4 @@
-import { ToxilClient } from "@toxil/sdk";
+import { SpantailClient } from "@spantail/sdk";
 
 import { loadConfig } from "./config";
 import type { CliContext } from "./context";
@@ -19,8 +19,8 @@ export interface Connection {
  * config cannot affect fully env-driven setups.
  */
 export function resolveConnection(ctx: CliContext): Connection | null {
-	const envUrl = ctx.env.TOXIL_API_URL;
-	const envToken = ctx.env.TOXIL_API_TOKEN;
+	const envUrl = ctx.env.SPANTAIL_API_URL;
+	const envToken = ctx.env.SPANTAIL_API_TOKEN;
 	if (envUrl && envToken) {
 		return {
 			baseUrl: envUrl,
@@ -45,7 +45,7 @@ export function requireConnection(ctx: CliContext): Connection {
 	const connection = resolveConnection(ctx);
 	if (!connection) {
 		throw new CliError(
-			"not logged in; run `toxil auth login`, or set TOXIL_API_URL and TOXIL_API_TOKEN",
+			"not logged in; run `spantail auth login`, or set SPANTAIL_API_URL and SPANTAIL_API_TOKEN",
 		);
 	}
 	return connection;
@@ -54,7 +54,7 @@ export function requireConnection(ctx: CliContext): Connection {
 export function createClient(
 	ctx: CliContext,
 	options: { baseUrl: string; token: string },
-): ToxilClient {
+): SpantailClient {
 	const inner =
 		ctx.fetch ??
 		((...args: Parameters<typeof fetch>) => globalThis.fetch(...args));
@@ -73,7 +73,7 @@ export function createClient(
 			throw new CliError(`could not reach ${options.baseUrl} (${detail})`);
 		}
 	}) as typeof fetch;
-	return new ToxilClient({
+	return new SpantailClient({
 		baseUrl: options.baseUrl,
 		token: options.token,
 		fetch: wrapped,

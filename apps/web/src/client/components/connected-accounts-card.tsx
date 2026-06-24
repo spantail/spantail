@@ -1,5 +1,5 @@
+import type { OauthProvider } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { OauthProvider } from "@toxil/core";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 

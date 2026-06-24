@@ -1,4 +1,4 @@
-import { type AgentUsage, agentTypes } from "@toxil/core";
+import { type AgentUsage, agentTypes } from "@spantail/core";
 import { sql } from "drizzle-orm";
 import {
 	index,

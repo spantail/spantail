@@ -5,7 +5,7 @@ import { initReactI18next } from "react-i18next";
 import en from "./en.json";
 import ja from "./ja.json";
 
-export const LANGUAGE_STORAGE_KEY = "toxil.lang";
+export const LANGUAGE_STORAGE_KEY = "spantail.lang";
 
 i18n
 	.use(LanguageDetector)

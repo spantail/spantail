@@ -12,11 +12,11 @@ async function main(): Promise<void> {
 	const sqlPath = join(dir, "seed.sql");
 	writeFileSync(sqlPath, datasetToSql(dataset.tables), "utf8");
 
-	console.log("Seeding local D1 (toxil-db)…");
+	console.log("Seeding local D1 (spantail-db)…");
 	for (const [table, count] of Object.entries(dataset.summary)) {
 		console.log(`  ${table}: ${count}`);
 	}
-	wranglerLocal(["d1", "execute", "toxil-db", "--local", "--file", sqlPath]);
+	wranglerLocal(["d1", "execute", "spantail-db", "--local", "--file", sqlPath]);
 
 	console.log("\nSeed complete. Sign in with any user below:");
 	for (const { name, email } of dataset.credentials) {

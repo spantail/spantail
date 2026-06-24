@@ -16,7 +16,7 @@ const fixture: ReportContextInput = {
 		{ id: "ws2", slug: "labs", name: "Labs", timezone: "UTC" },
 	],
 	projects: [
-		{ id: "p1", slug: "toxil", name: "Toxil", workspaceId: "ws1" },
+		{ id: "p1", slug: "spantail", name: "Spantail", workspaceId: "ws1" },
 		{ id: "p2", slug: "website", name: "Website", workspaceId: "ws1" },
 		{ id: "p3", slug: "research", name: "Research", workspaceId: "ws2" },
 	],
@@ -123,10 +123,10 @@ it("computes totals and group ordering in the context", () => {
 	]);
 	expect(context.groups.by_project.map((g) => g.name)).toEqual([
 		"Research",
-		"Toxil",
+		"Spantail",
 		"Website",
 	]);
-	expect(context.entries[0]?.project_name).toBe("Toxil");
+	expect(context.entries[0]?.project_name).toBe("Spantail");
 	expect(context.entries[0]?.user_name).toBe("Alice");
 });
 

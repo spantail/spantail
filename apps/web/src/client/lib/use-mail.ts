@@ -1,5 +1,5 @@
+import type { MailItem, MailScope, SetMailFlagsInput } from "@spantail/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { MailItem, MailScope, SetMailFlagsInput } from "@toxil/core";
 
 import { api } from "@/lib/api";
 import { invalidateMail } from "@/lib/query";

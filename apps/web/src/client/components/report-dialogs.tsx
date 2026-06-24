@@ -1,5 +1,5 @@
+import type { PeriodUnit, ReportMeta, ReportTemplate } from "@spantail/core";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import type { PeriodUnit, ReportMeta, ReportTemplate } from "@toxil/core";
 import {
 	createContext,
 	type ReactNode,

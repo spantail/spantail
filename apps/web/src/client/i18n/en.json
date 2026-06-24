@@ -1,7 +1,7 @@
 {
 	"app": {
-		"name": "Toxil",
-		"tagline": "Know where your time goes.",
+		"name": "Spantail",
+		"tagline": "Know where the work goes — yours and your agents'.",
 		"loading": "Loading…",
 		"loadingMore": "Loading more…"
 	},
@@ -37,7 +37,7 @@
 	},
 	"invite": {
 		"title": "Accept your invitation",
-		"description": "Set up your Toxil account for {{email}}.",
+		"description": "Set up your Spantail account for {{email}}.",
 		"invalid": "This invitation is invalid or has expired.",
 		"toLogin": "Go to login",
 		"acceptAction": "Create account",
@@ -285,7 +285,7 @@
 		},
 		"send": {
 			"title": "Send “{{name}}”",
-			"description": "Deliver this report to a teammate's Toxil inbox — for review or sign-off.",
+			"description": "Deliver this report to a teammate's Spantail inbox — for review or sign-off.",
 			"sendAction": "Send to",
 			"recipients": "Recipients",
 			"selectedCount": "{{count}} selected",
@@ -659,7 +659,7 @@
 				"confirm": "Delete",
 				"cancel": "Cancel"
 			},
-			"adminBanner": "These accounts span every workspace on this Toxil instance and are visible only to instance admins."
+			"adminBanner": "These accounts span every workspace on this Spantail instance and are visible only to instance admins."
 		},
 		"agentsAdmin": {
 			"title": "AI agents",

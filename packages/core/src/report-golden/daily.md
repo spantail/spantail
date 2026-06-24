@@ -7,7 +7,7 @@
 - Benchmarked D1 queries (3h, Bob, tags: perf)
 - Wrote the benchmark report (2h 30m, Alice, tags: perf, docs)
 
-## Toxil — 4h 30m
+## Spantail — 4h 30m
 
 - Designed the scope schema (1h 30m, Alice, tags: api)
 - Reviewed the schema design (45m, Bob, tags: review)

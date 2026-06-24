@@ -39,22 +39,24 @@ const link = {
 	wordBreak: "break-all" as const,
 };
 
-// One Toxil deployment serves one company but its members may differ in
+// One Spantail deployment serves one company but its members may differ in
 // language, so the email is bilingual (en + ja) rather than wired to the
 // SPA-only i18n catalogs.
 export function PasswordResetEmail({ resetUrl }: PasswordResetEmailProps) {
 	return (
 		<Html>
 			<Head />
-			<Preview>Reset your Toxil password / Toxil のパスワードを再設定</Preview>
+			<Preview>
+				Reset your Spantail password / Spantail のパスワードを再設定
+			</Preview>
 			<Body style={main}>
 				<Container style={container}>
 					<Section>
 						<Heading style={heading}>Reset your password</Heading>
 						<Text style={paragraph}>
-							We received a request to reset your Toxil password. Use the button
-							below to choose a new one. This link expires soon. If you didn't
-							request this, you can ignore this email.
+							We received a request to reset your Spantail password. Use the
+							button below to choose a new one. This link expires soon. If you
+							didn't request this, you can ignore this email.
 						</Text>
 						<Button href={resetUrl} style={button}>
 							Reset password
@@ -65,7 +67,7 @@ export function PasswordResetEmail({ resetUrl }: PasswordResetEmailProps) {
 					<Section>
 						<Heading style={heading}>パスワードを再設定</Heading>
 						<Text style={paragraph}>
-							Toxil
+							Spantail
 							のパスワード再設定リクエストを受け付けました。下のボタンから新しいパスワードを設定してください。このリンクは間もなく失効します。心当たりがない場合はこのメールを無視してください。
 						</Text>
 						<Button href={resetUrl} style={button}>
@@ -88,7 +90,7 @@ export async function renderPasswordResetEmail(resetUrl: string): Promise<{
 	const html = await render(node);
 	const text = await render(node, { plainText: true });
 	return {
-		subject: "Reset your Toxil password / Toxil のパスワードを再設定",
+		subject: "Reset your Spantail password / Spantail のパスワードを再設定",
 		html,
 		text,
 	};

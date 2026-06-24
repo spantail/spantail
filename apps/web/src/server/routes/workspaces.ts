@@ -4,13 +4,13 @@ import {
 	updateWorkspaceInputSchema,
 	WORKSPACE_LOGO_MAX_BYTES,
 	WORKSPACE_LOGO_MIME_TYPES,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	createWorkspace,
 	getWorkspaceBySlug,
 	listWorkspacesForUser,
 	updateWorkspace,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { readBodyWithLimit } from "../lib/avatar";

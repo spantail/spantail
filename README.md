@@ -1,10 +1,15 @@
-# Toxil
+# Spantail
 
-> Know where your time goes.
+> Observability for engineering work — yours and your agents'.
 
-Toxil is an open-source work logging and reporting platform. Log your work, then turn it into any report you need — daily reports, weekly summaries, monthly rollups — from a single source of truth, using Markdown templates. Built AI-first: every operation is available to humans (web, CLI) and AI agents (MCP) through the same API.
+Spantail is an open-source platform for making engineering work legible. Log your work as
+**spans** — intervals with a duration — and capture AI coding-agent activity alongside it, then
+turn the unified timeline into any report you need: daily reports, weekly summaries, monthly
+rollups — from a single source of truth, using Markdown templates. Built AI-first: every
+operation is available to humans (web, CLI) and AI agents (MCP) through the same API.
 
-The name comes from the Japanese *toki* (時, time) + *shiru* (知る, to know).
+The name: a *span* is an interval of tracked work — like a logged entry, or an OpenTelemetry
+span. *tail*, as in `tail -f`, is following the latest activity as it happens.
 
 > **Status**: Early development. APIs and schemas are unstable. Not yet ready for production use.
 
@@ -19,7 +24,7 @@ The name comes from the Japanese *toki* (時, time) + *shiru* (知る, to know).
 
 ## Architecture
 
-Toxil runs entirely on Cloudflare:
+Spantail runs entirely on Cloudflare:
 
 - **Workers** — a single Worker serves the REST API (`/api/v1`), the MCP endpoint (`/mcp`), shared report views, and the SPA static assets
 - **D1** — primary database
@@ -35,7 +40,7 @@ Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and
 | `packages/core` | Domain logic, Zod schemas, report engine |
 | `packages/db` | Drizzle schema, migrations, queries |
 | `packages/sdk` | Typed API client |
-| `packages/cli` | `toxil` CLI (includes `toxil mcp` stdio server) |
+| `packages/cli` | `spantail` CLI (includes `spantail mcp` stdio server) |
 | `hooks/claude-code` | Reference Claude Code Stop hook that records agent token usage |
 
 ## Getting started
@@ -43,8 +48,8 @@ Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and
 Prerequisites: Node.js 24+, pnpm 10+, a Cloudflare account, and `wrangler` v4.
 
 ```bash
-git clone https://github.com/toxildev/toxil.git
-cd toxil
+git clone https://github.com/spantail/spantail.git
+cd spantail
 pnpm install
 
 # create local env vars
@@ -59,31 +64,31 @@ pnpm dev
 
 ## Self-hosting
 
-Toxil is designed to be deployed to your own Cloudflare account:
+Spantail is designed to be deployed to your own Cloudflare account:
 
 ```bash
-wrangler d1 create toxil-db
+wrangler d1 create spantail-db
 # set the generated database ID in apps/web/wrangler.jsonc, then:
 pnpm db:migrate:remote
 pnpm deploy
 ```
 
-See the documentation at [toxil.dev](https://toxil.dev) for the full self-hosting guide, including required secrets and cost notes.
+See the documentation at [spantail.com](https://spantail.com) for the full self-hosting guide, including required secrets and cost notes.
 
 ## CLI & MCP
 
 ```bash
-toxil auth login                                  # store an API token
-toxil log "Implemented report engine" --project core --duration 2h
-toxil entries list --from 2026-06-01
-toxil report run monthly --workspace acme --month 2026-06
-toxil mcp                                         # stdio MCP server for AI clients
+spantail auth login                                  # store an API token
+spantail log "Implemented report engine" --project core --duration 2h
+spantail entries list --from 2026-06-01
+spantail report run monthly --workspace acme --month 2026-06
+spantail mcp                                         # stdio MCP server for AI clients
 ```
 
 AI clients that support remote MCP can connect directly to `https://your-instance/mcp` with an API token.
 
 To record an AI coding agent's per-session time and token usage, register an agent
-in Toxil and wire its transcript to the API. A reference [Claude Code](https://code.claude.com)
+in Spantail and wire its transcript to the API. A reference [Claude Code](https://code.claude.com)
 Stop hook lives in [`hooks/claude-code`](hooks/claude-code) — it extracts token usage
 per turn with `jq` and posts it (conversation bodies stay on your machine).
 

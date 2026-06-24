@@ -1,6 +1,6 @@
+import type { Project } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Project } from "@toxil/core";
 import {
 	ArchiveIcon,
 	ArchiveRestoreIcon,

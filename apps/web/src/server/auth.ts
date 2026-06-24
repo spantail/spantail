@@ -1,4 +1,4 @@
-import { isSelfJoinDomain } from "@toxil/core";
+import { isSelfJoinDomain } from "@spantail/core";
 import {
 	authOptions,
 	countUsers,
@@ -9,7 +9,7 @@ import {
 	markInvitationAccepted,
 	schema,
 	updateUser,
-} from "@toxil/db";
+} from "@spantail/db";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
@@ -28,7 +28,7 @@ export interface SocialConfig {
 
 /**
  * Better Auth instance, created once per request with the request's D1-backed
- * Drizzle handle. Options shared with schema generation live in @toxil/db.
+ * Drizzle handle. Options shared with schema generation live in @spantail/db.
  *
  * `ctx` is the request's execution context; when present, reset-email delivery
  * is deferred via `waitUntil` so the response time of a recovery request does

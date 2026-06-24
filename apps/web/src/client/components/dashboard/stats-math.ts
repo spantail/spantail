@@ -1,4 +1,4 @@
-import { shiftDays } from "@toxil/core";
+import { shiftDays } from "@spantail/core";
 
 export interface DateBucket {
 	date: string;

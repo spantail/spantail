@@ -1,4 +1,4 @@
-import { listWorkspacesForUser, updateUser } from "@toxil/db";
+import { listWorkspacesForUser, updateUser } from "@spantail/db";
 import { Hono } from "hono";
 
 import {

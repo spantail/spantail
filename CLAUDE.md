@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-Toxil is an open-source work logging and reporting platform on Cloudflare Workers + D1.
+Spantail is an open-source work observability platform on Cloudflare Workers + D1: log human
+work and capture AI-agent activity as spans, then turn them into reports.
 pnpm monorepo: a single Worker (`apps/web`) serves the REST API, the MCP endpoint, and the React SPA.
 
 ## Language rules
@@ -38,7 +39,7 @@ pnpm deploy             # wrangler deploy (apps/web)
 | `packages/core` | Domain logic, Zod schemas, report engine. Runtime-agnostic — no Workers/DOM APIs. |
 | `packages/db` | Drizzle schema, migrations, query functions. |
 | `packages/sdk` | Typed API client (reuses core schemas). |
-| `packages/cli` | `toxil` CLI + stdio MCP server. A thin client of the REST API. |
+| `packages/cli` | `spantail` CLI + stdio MCP server. A thin client of the REST API. |
 
 ## Architecture invariants
 

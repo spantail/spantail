@@ -35,21 +35,21 @@ importers:
       '@react-email/render':
         specifier: ^2.0.8
         version: 2.0.8(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@spantail/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@spantail/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@spantail/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@tanstack/react-query':
         specifier: ^5.101.0
         version: 5.101.0(react@19.2.7)
       '@tanstack/react-router':
         specifier: ^1.170.15
         version: 1.170.15(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@toxil/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@toxil/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@toxil/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
       agents:
         specifier: ^0.15.0
         version: 0.15.0(@babel/core@7.29.7)(@babel/runtime@7.29.7)(@cloudflare/workers-types@4.20260611.1)(ai@6.0.201(zod@4.4.3))(react@19.2.7)(rolldown@1.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))(zod@4.4.3)
@@ -190,10 +190,10 @@ importers:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
-      '@toxil/core':
+      '@spantail/core':
         specifier: workspace:*
         version: link:../core
-      '@toxil/sdk':
+      '@spantail/sdk':
         specifier: workspace:*
         version: link:../sdk
       '@types/node':
@@ -224,7 +224,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@toxil/core':
+      '@spantail/core':
         specifier: workspace:*
         version: link:../core
       drizzle-orm:
@@ -258,7 +258,7 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
-      '@toxil/core':
+      '@spantail/core':
         specifier: workspace:*
         version: link:../core
       zod:

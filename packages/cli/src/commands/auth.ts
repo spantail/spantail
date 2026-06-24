@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 
-import { isPatFormat, type WorkspaceWithRole } from "@toxil/core";
-import { type Me, ToxilApiError } from "@toxil/sdk";
+import { isPatFormat, type WorkspaceWithRole } from "@spantail/core";
+import { type Me, SpantailApiError } from "@spantail/sdk";
 
 import {
 	type ConnectionSource,
@@ -18,33 +18,38 @@ import {
 import type { CliContext } from "../context";
 import { CliError, UsageError } from "../errors";
 
-const LOGIN_USAGE = `Usage: toxil auth login [options]
+const LOGIN_USAGE = `Usage: spantail auth login [options]
 
-Saves credentials for a Toxil instance. Create an API token in the web UI
+Saves credentials for a Spantail instance. Create an API token in the web UI
 under Account > API tokens — open the user menu in the top-right corner
 (read and write scopes recommended).
 
 Options:
-  --server <url>       Instance URL, e.g. https://toxil.example.com
+  --server <url>       Instance URL, e.g. https://spantail.example.com
   --token <token>      API token (prompted interactively when omitted)
   --workspace <slug>   Default workspace for commands that need one
   -h, --help           Show this help
 `;
 
-const STATUS_USAGE = `Usage: toxil auth status
+const STATUS_USAGE = `Usage: spantail auth status
 
 Shows the active connection and the signed-in user. Exits non-zero when no
 credentials are configured or the server rejects them.
 `;
 
-const LOGOUT_USAGE = `Usage: toxil auth logout
+const LOGOUT_USAGE = `Usage: spantail auth logout
 
 Removes the saved config file. The API token itself stays valid; revoke it
 in the web UI under Account > API tokens if needed.
 `;
 
 function maskToken(token: string): string {
-	return token.length > 14 ? `${token.slice(0, 10)}…${token.slice(-4)}` : "…";
+	// Reveal the type prefix (e.g. `spantail_pat_`, up to the second underscore) and the
+	// last 4 chars; hide the random middle. Prefix-length-agnostic by design.
+	const sep = token.indexOf("_", token.indexOf("_") + 1);
+	return sep !== -1 && token.length > sep + 5
+		? `${token.slice(0, sep + 1)}…${token.slice(-4)}`
+		: "…";
 }
 
 function normalizeServerUrl(input: string): string {
@@ -71,7 +76,7 @@ function loadPreviousConfig(ctx: CliContext): CliConfig | null {
 }
 
 /**
- * The SDK types /me responses but cannot guarantee them: a non-Toxil server
+ * The SDK types /me responses but cannot guarantee them: a non-Spantail server
  * answering 200 with HTML surfaces here as null or an arbitrary object.
  */
 function isMeShape(value: unknown): value is Me {
@@ -119,7 +124,7 @@ export async function authLogin(
 	if (!token) throw new CliError("no token provided");
 	if (!isPatFormat(token)) {
 		ctx.stderr.write(
-			"warning: the token does not look like a Toxil API token (toxil_pat_...)\n",
+			"warning: the token does not look like a Spantail API token (spantail_pat_...)\n",
 		);
 	}
 
@@ -128,7 +133,7 @@ export async function authLogin(
 	try {
 		me = await client.me();
 	} catch (error) {
-		if (error instanceof ToxilApiError) {
+		if (error instanceof SpantailApiError) {
 			throw new CliError(
 				`login failed: ${error.message} (status ${error.status})`,
 			);
@@ -137,7 +142,7 @@ export async function authLogin(
 	}
 	if (!isMeShape(me)) {
 		throw new CliError(
-			`${baseUrl} does not look like a Toxil server; use the instance root URL, e.g. https://toxil.example.com`,
+			`${baseUrl} does not look like a Spantail server; use the instance root URL, e.g. https://spantail.example.com`,
 		);
 	}
 
@@ -214,7 +219,7 @@ export async function authStatus(
 	const connection = resolveConnection(ctx);
 	if (!connection) {
 		throw new CliError(
-			"not logged in; run `toxil auth login`, or set TOXIL_API_URL and TOXIL_API_TOKEN",
+			"not logged in; run `spantail auth login`, or set SPANTAIL_API_URL and SPANTAIL_API_TOKEN",
 		);
 	}
 	const describe = (source: ConnectionSource) =>
@@ -230,7 +235,7 @@ export async function authStatus(
 	const me = await client.me();
 	if (!isMeShape(me)) {
 		throw new CliError(
-			`${connection.baseUrl} does not look like a Toxil server`,
+			`${connection.baseUrl} does not look like a Spantail server`,
 		);
 	}
 	ctx.stdout.write(

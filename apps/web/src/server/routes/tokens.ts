@@ -1,9 +1,9 @@
-import { createTokenInputSchema, generatePat, hashPat } from "@toxil/core";
+import { createTokenInputSchema, generatePat, hashPat } from "@spantail/core";
 import {
 	createApiToken,
 	deleteApiToken,
 	listApiTokensForUser,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";

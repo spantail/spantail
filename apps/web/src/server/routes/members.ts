@@ -1,11 +1,11 @@
-import { addWorkspaceMemberInputSchema } from "@toxil/core";
+import { addWorkspaceMemberInputSchema } from "@spantail/core";
 import {
 	addMember,
 	findUserByEmail,
 	getMembership,
 	listMembers,
 	removeMember,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { resolveAvatarUrl } from "../lib/avatar";

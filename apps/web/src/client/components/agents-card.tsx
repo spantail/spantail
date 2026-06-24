@@ -1,5 +1,5 @@
+import type { AgentType, AgentWithToken } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AgentType, AgentWithToken } from "@toxil/core";
 import {
 	BanIcon,
 	CheckIcon,

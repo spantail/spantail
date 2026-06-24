@@ -1,5 +1,5 @@
+import type { Me } from "@spantail/sdk";
 import { useQuery } from "@tanstack/react-query";
-import type { Me } from "@toxil/sdk";
 import { useTranslation } from "react-i18next";
 
 import { api } from "@/lib/api";

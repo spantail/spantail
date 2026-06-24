@@ -1,6 +1,6 @@
+import { formatPeriodLabel } from "@spantail/core";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { formatPeriodLabel } from "@toxil/core";
 import { SlidersHorizontalIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

@@ -6,7 +6,7 @@ import {
 	tagSchema,
 	timezoneSchema,
 	workspaceRoleSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import { parse } from "yaml";
 import { z } from "zod";
 

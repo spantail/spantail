@@ -1,5 +1,5 @@
+import type { Me } from "@spantail/sdk";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Me } from "@toxil/sdk";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";

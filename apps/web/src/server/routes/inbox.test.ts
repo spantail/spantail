@@ -28,7 +28,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			owner,
 		)
 	).json()) as { id: string };

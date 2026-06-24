@@ -1,4 +1,4 @@
-import { splitFrontMatter, todayInTimezone } from "@toxil/core";
+import { splitFrontMatter, todayInTimezone } from "@spantail/core";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
@@ -18,7 +18,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };

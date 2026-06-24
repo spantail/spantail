@@ -6,7 +6,7 @@ import {
 	isPatFormat,
 	PAT_PREFIX,
 	type TokenScope,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	findAgentTokenByHash,
 	findApiTokenByHash,
@@ -14,7 +14,7 @@ import {
 	getUserById,
 	touchAgentToken,
 	touchApiToken,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 

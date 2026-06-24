@@ -1,10 +1,10 @@
+import { type MailFolder, mailFolderSchema } from "@spantail/core";
 import {
 	createFileRoute,
 	Outlet,
 	redirect,
 	useParams,
 } from "@tanstack/react-router";
-import { type MailFolder, mailFolderSchema } from "@toxil/core";
 
 import { MessageList } from "@/components/message-list";
 import {

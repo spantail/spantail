@@ -1,6 +1,6 @@
+import { todayInTimezone } from "@spantail/core";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { todayInTimezone } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

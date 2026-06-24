@@ -54,7 +54,7 @@ it("registers an agent with its access token in one step", async () => {
 		token: { defaultWorkspaceId: string; tokenHash?: string };
 	};
 	expect(created.userId).toBeUndefined();
-	expect(created.secret).toMatch(/^toxil_aat_/);
+	expect(created.secret).toMatch(/^spantail_aat_/);
 	expect(created.token.defaultWorkspaceId).toBe(wsId);
 	expect(created.token.tokenHash).toBeUndefined();
 
@@ -175,7 +175,7 @@ it("rotates the token secret in place, killing the old one", async () => {
 			cookie,
 		)
 	).json()) as { secret: string };
-	expect(rotated.secret).toMatch(/^toxil_aat_/);
+	expect(rotated.secret).toMatch(/^spantail_aat_/);
 	expect(rotated.secret).not.toBe(agent.secret);
 
 	// The old secret stops working; the new one keeps the same binding.
@@ -192,7 +192,7 @@ it("associates an agent with projects, rejecting ones outside its workspace", as
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${wsId}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			cookie,
 		)
 	).json()) as { id: string };

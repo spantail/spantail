@@ -1,4 +1,4 @@
-import { splitFrontMatter } from "@toxil/core";
+import { splitFrontMatter } from "@spantail/core";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 

@@ -1,4 +1,4 @@
-import { ToxilApiError } from "@toxil/sdk";
+import { SpantailApiError } from "@spantail/sdk";
 
 import { authLogin, authLogout, authStatus } from "./commands/auth";
 import { entriesList } from "./commands/entries";
@@ -26,12 +26,12 @@ const commands: Record<
 	mcp: mcpCommand,
 };
 
-const USAGE = `toxil ${VERSION} — work logging for the command line
+const USAGE = `spantail ${VERSION} — work logging for the command line
 
-Usage: toxil <command> [options]
+Usage: spantail <command> [options]
 
 Commands:
-  auth login        Save credentials for a Toxil instance
+  auth login        Save credentials for a Spantail instance
   auth status       Show the active connection and signed-in user
   auth logout       Remove saved credentials
   workspaces list   List the workspaces you belong to
@@ -40,9 +40,9 @@ Commands:
   entries list      List recent work entries
   report list       List your reports
   report view       Print a report's rendered markdown
-  mcp               Run a stdio MCP server bridging AI clients to a Toxil instance
+  mcp               Run a stdio MCP server bridging AI clients to a Spantail instance
 
-Run \`toxil <command> --help\` for command options.
+Run \`spantail <command> --help\` for command options.
 `;
 
 export async function runCli(argv: string[], ctx: CliContext): Promise<number> {
@@ -67,7 +67,7 @@ async function dispatch(argv: string[], ctx: CliContext): Promise<number> {
 	const entry = commands[first];
 	if (entry === undefined) {
 		ctx.stderr.write(USAGE);
-		ctx.stderr.write(`\ntoxil: unknown command "${first}"\n`);
+		ctx.stderr.write(`\nspantail: unknown command "${first}"\n`);
 		return 2;
 	}
 	if (typeof entry === "function") return invoke(first, entry, rest, ctx);
@@ -75,11 +75,11 @@ async function dispatch(argv: string[], ctx: CliContext): Promise<number> {
 	const [second, ...subRest] = rest;
 	const handler = second === undefined ? undefined : entry[second];
 	if (handler === undefined) {
-		const expected = `toxil ${first} <${Object.keys(entry).join("|")}>`;
+		const expected = `spantail ${first} <${Object.keys(entry).join("|")}>`;
 		ctx.stderr.write(
 			second === undefined
-				? `toxil: usage: ${expected}\n`
-				: `toxil: unknown command "${first} ${second}"; usage: ${expected}\n`,
+				? `spantail: usage: ${expected}\n`
+				: `spantail: unknown command "${first} ${second}"; usage: ${expected}\n`,
 		);
 		return 2;
 	}
@@ -97,7 +97,7 @@ async function invoke(
 	} catch (error) {
 		if (isParseArgsError(error)) {
 			throw new UsageError(
-				`${error.message}\nRun \`toxil ${name} --help\` for usage.`,
+				`${error.message}\nRun \`spantail ${name} --help\` for usage.`,
 			);
 		}
 		throw error;
@@ -105,10 +105,12 @@ async function invoke(
 }
 
 function formatError(error: unknown): string {
-	if (error instanceof ToxilApiError) {
-		const lines = [`toxil: ${error.message}`];
+	if (error instanceof SpantailApiError) {
+		const lines = [`spantail: ${error.message}`];
 		if (error.status === 401) {
-			lines.push("hint: run `toxil auth login` (or check TOXIL_API_TOKEN)");
+			lines.push(
+				"hint: run `spantail auth login` (or check SPANTAIL_API_TOKEN)",
+			);
 		} else if (error.code === "insufficient_scope") {
 			lines.push(
 				"hint: the API token is missing a scope; create one with read and write scopes in the web UI",
@@ -117,5 +119,5 @@ function formatError(error: unknown): string {
 		return `${lines.join("\n")}\n`;
 	}
 	const message = error instanceof Error ? error.message : String(error);
-	return `toxil: ${message}\n`;
+	return `spantail: ${message}\n`;
 }

@@ -1,11 +1,11 @@
-import type { WorkspaceRole } from "@toxil/core";
+import type { WorkspaceRole } from "@spantail/core";
 import {
 	getMembership,
 	getWorkspaceById,
 	listWorkspacesForUser,
 	type MembershipRow,
 	type WorkspaceRow,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 
 import { requireAuth, requireScope } from "../middleware/auth";

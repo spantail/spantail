@@ -1,8 +1,8 @@
+import type { WorkspaceWithRole } from "@spantail/core";
 import { useRouterState } from "@tanstack/react-router";
-import type { WorkspaceWithRole } from "@toxil/core";
 import { createContext, useContext, useEffect, useState } from "react";
 
-const STORAGE_KEY = "toxil.ws";
+const STORAGE_KEY = "spantail.ws";
 
 interface WorkspaceContextValue {
 	workspaces: WorkspaceWithRole[];

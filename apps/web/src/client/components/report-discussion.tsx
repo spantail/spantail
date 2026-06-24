@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	type Comment,
 	REACTION_EMOJIS,
 	type ReactionEmoji,
 	type ReactionSummary,
-} from "@toxil/core";
+} from "@spantail/core";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	MessageSquareIcon,
 	MoreHorizontalIcon,

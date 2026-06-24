@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { generateShareToken } from "@toxil/core";
-import { createDb, createReportShare } from "@toxil/db";
+import { generateShareToken } from "@spantail/core";
+import { createDb, createReportShare } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -23,7 +23,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };

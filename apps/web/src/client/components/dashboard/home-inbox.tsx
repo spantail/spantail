@@ -1,6 +1,6 @@
+import type { MailItem } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { MailItem } from "@toxil/core";
 import { InboxIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

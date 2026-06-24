@@ -1,4 +1,4 @@
-import type { ReportTemplateOverrides } from "@toxil/core";
+import type { ReportTemplateOverrides } from "@spantail/core";
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -11,7 +11,7 @@ const updatedAtMs = () =>
 		.$onUpdate(() => new Date())
 		.notNull();
 
-// Instance-wide settings live in a single row (id = "singleton"). One Toxil
+// Instance-wide settings live in a single row (id = "singleton"). One Spantail
 // deployment serves one company, so there is exactly one instance to configure.
 export const instanceSettings = sqliteTable("instance_settings", {
 	id: text("id").primaryKey(),

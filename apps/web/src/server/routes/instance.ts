@@ -8,7 +8,7 @@ import {
 	updateAgentsEnabledInputSchema,
 	updateEmailSettingsInputSchema,
 	updateOauthSettingsInputSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	countUsers,
 	getInstanceSettings,
@@ -16,7 +16,7 @@ import {
 	upsertInstanceAgentsEnabled,
 	upsertInstanceOauthSettings,
 	upsertInstanceSettings,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";

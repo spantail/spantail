@@ -1,5 +1,5 @@
+import type { WorkEntry } from "@spantail/core";
 import { useRouteContext } from "@tanstack/react-router";
-import type { WorkEntry } from "@toxil/core";
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

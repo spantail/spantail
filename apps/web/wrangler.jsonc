@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "toxil",
+	"name": "spantail",
 	"main": "src/server/index.ts",
 	"compatibility_date": "2026-06-01",
 	"compatibility_flags": ["nodejs_compat"],
@@ -11,7 +11,7 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "toxil-db",
+			"database_name": "spantail-db",
 			// Local development uses Miniflare's local SQLite; this ID is a placeholder.
 			"database_id": "00000000-0000-0000-0000-000000000000",
 			"migrations_dir": "../../packages/db/migrations"
@@ -19,8 +19,8 @@
 	],
 	// User-uploaded media (avatars now; workspace logos later) keyed by prefix.
 	// Local dev uses Miniflare's emulated R2; create the remote bucket with
-	// `wrangler r2 bucket create toxil-uploads` before deploying.
-	"r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "toxil-uploads" }],
+	// `wrangler r2 bucket create spantail-uploads` before deploying.
+	"r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "spantail-uploads" }],
 	// Cloudflare Email Service (public beta). Inert until the account onboards a
 	// sending domain on a Workers Paid plan. Local dev never invokes it: the
 	// mailer routes to an in-memory dev outbox whenever APP_ENV !== "production".
@@ -40,12 +40,14 @@
 			"d1_databases": [
 				{
 					"binding": "DB",
-					"database_name": "toxil-db",
+					"database_name": "spantail-db",
 					"database_id": "00000000-0000-0000-0000-000000000000",
 					"migrations_dir": "../../packages/db/migrations"
 				}
 			],
-			"r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "toxil-uploads" }],
+			"r2_buckets": [
+				{ "binding": "UPLOADS", "bucket_name": "spantail-uploads" }
+			],
 			"send_email": [{ "name": "EMAIL" }],
 			"vars": {
 				"APP_ENV": "production"

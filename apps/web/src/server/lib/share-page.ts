@@ -27,7 +27,7 @@ const MESSAGES: Record<
 		passcodeLabel: "Passcode",
 		passcodeSubmit: "View report",
 		passcodeIncorrect: "Incorrect passcode.",
-		footer: "Shared via Toxil",
+		footer: "Shared via Spantail",
 	},
 	ja: {
 		notFoundTitle: "リンクが無効です",
@@ -36,7 +36,7 @@ const MESSAGES: Record<
 		passcodeLabel: "パスコード",
 		passcodeSubmit: "レポートを表示",
 		passcodeIncorrect: "パスコードが正しくありません。",
-		footer: "Toxil で共有",
+		footer: "Spantail で共有",
 	},
 };
 

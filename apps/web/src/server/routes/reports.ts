@@ -17,7 +17,7 @@ import {
 	resolveDateRange,
 	sendReportInputSchema,
 	updateReportInputSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	createReport,
 	createReportDeliveries,
@@ -37,7 +37,7 @@ import {
 	listWorkspacesForUser,
 	type ReportRow,
 	updateReportWithNewVersion,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 

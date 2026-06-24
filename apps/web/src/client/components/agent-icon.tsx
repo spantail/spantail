@@ -1,4 +1,4 @@
-import type { AgentType } from "@toxil/core";
+import type { AgentType } from "@spantail/core";
 import { BotIcon } from "lucide-react";
 
 // Brand mark for the Claude coding agent, sized via `className` (defaults to

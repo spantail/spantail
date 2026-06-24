@@ -17,7 +17,7 @@ runCli(process.argv.slice(2), {
 	},
 	(error: unknown) => {
 		process.stderr.write(
-			`toxil: ${error instanceof Error ? error.message : String(error)}\n`,
+			`spantail: ${error instanceof Error ? error.message : String(error)}\n`,
 		);
 		process.exitCode = 1;
 	},

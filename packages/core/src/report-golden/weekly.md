@@ -4,8 +4,8 @@
 
 ## 2026-05-25 — 2h 15m
 
-- **Toxil** Designed the scope schema (1h 30m, Alice)
-- **Toxil** Reviewed the schema design (45m, Bob)
+- **Spantail** Designed the scope schema (1h 30m, Alice)
+- **Spantail** Reviewed the schema design (45m, Bob)
 
 ## 2026-05-26 — 2h
 
@@ -13,7 +13,7 @@
 
 ## 2026-05-27 — 4h
 
-- **Toxil** Implemented date presets (1h, Alice)
+- **Spantail** Implemented date presets (1h, Alice)
 - **Research** Benchmarked D1 queries (3h, Bob)
 
 ## 2026-05-28 — 30m
@@ -22,7 +22,7 @@
 
 ## 2026-05-29 — 1h 15m
 
-- **Toxil** Wired the run endpoint (1h 15m, Bob)
+- **Spantail** Wired the run endpoint (1h 15m, Bob)
 
 ## 2026-05-31 — 2h 30m
 
@@ -31,7 +31,7 @@
 ## By project
 
 - Research — 5h 30m
-- Toxil — 4h 30m
+- Spantail — 4h 30m
 - Website — 2h 30m
 
 ## Notes

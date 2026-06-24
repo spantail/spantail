@@ -2,19 +2,19 @@ import { parseArgs } from "node:util";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { ToxilClient } from "@toxil/sdk";
-import { registerToxilTools } from "@toxil/sdk/mcp";
+import { SpantailClient } from "@spantail/sdk";
+import { registerSpantailTools } from "@spantail/sdk/mcp";
 
 import { resolveConnection } from "../client";
 import type { CliContext } from "../context";
 import { CliError } from "../errors";
 import { VERSION } from "../version";
 
-const USAGE = `Usage: toxil mcp
+const USAGE = `Usage: spantail mcp
 
-Runs a stdio MCP server bridging AI clients to a Toxil instance.
-Credentials come from the TOXIL_API_URL and TOXIL_API_TOKEN environment
-variables, or from the config file written by \`toxil auth login\`.
+Runs a stdio MCP server bridging AI clients to a Spantail instance.
+Credentials come from the SPANTAIL_API_URL and SPANTAIL_API_TOKEN environment
+variables, or from the config file written by \`spantail auth login\`.
 `;
 
 export async function mcpCommand(
@@ -33,14 +33,14 @@ export async function mcpCommand(
 	const connection = resolveConnection(ctx);
 	if (!connection) {
 		throw new CliError(
-			"no credentials; set TOXIL_API_URL and TOXIL_API_TOKEN, or run `toxil auth login`",
+			"no credentials; set SPANTAIL_API_URL and SPANTAIL_API_TOKEN, or run `spantail auth login`",
 		);
 	}
 
-	const server = new McpServer({ name: "toxil", version: VERSION });
-	registerToxilTools(
+	const server = new McpServer({ name: "spantail", version: VERSION });
+	registerSpantailTools(
 		server,
-		new ToxilClient({
+		new SpantailClient({
 			baseUrl: connection.baseUrl,
 			token: connection.token,
 			client: "mcp",

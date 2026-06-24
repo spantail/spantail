@@ -1,9 +1,9 @@
-import type { AuthUser } from "@toxil/core";
+import type { AuthUser } from "@spantail/core";
 import {
 	createCommentInputSchema,
 	toggleReactionInputSchema,
 	updateCommentInputSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	createReportComment,
 	deleteReportComment,
@@ -15,7 +15,7 @@ import {
 	type ReportReactionRow,
 	toggleReportReaction,
 	updateReportComment,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 

@@ -1,4 +1,4 @@
-import { formatPeriodLabel, type Report } from "@toxil/core";
+import { formatPeriodLabel, type Report } from "@spantail/core";
 
 /** Saves markdown text to a `.md` file via a transient object URL. */
 export function downloadMarkdown(filename: string, markdown: string) {

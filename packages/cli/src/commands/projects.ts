@@ -5,7 +5,7 @@ import type { CliContext } from "../context";
 import { formatTable } from "../output";
 import { requireWorkspaceSlug, resolveWorkspace } from "../resolve";
 
-const USAGE = `Usage: toxil projects list [options]
+const USAGE = `Usage: spantail projects list [options]
 
 Lists the projects in a workspace.
 

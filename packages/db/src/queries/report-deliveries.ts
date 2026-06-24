@@ -1,4 +1,4 @@
-import type { MailFolder, MailScope } from "@toxil/core";
+import type { MailFolder, MailScope } from "@spantail/core";
 import {
 	and,
 	desc,

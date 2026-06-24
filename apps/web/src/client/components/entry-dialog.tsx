@@ -1,6 +1,6 @@
+import { formatDuration, utcToZonedTime, type WorkEntry } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useRouteContext, useRouterState } from "@tanstack/react-router";
-import { formatDuration, utcToZonedTime, type WorkEntry } from "@toxil/core";
 import {
 	createContext,
 	useCallback,

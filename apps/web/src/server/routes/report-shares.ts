@@ -2,7 +2,7 @@ import {
 	getReportShareById,
 	type ReportShareRow,
 	revokeReportShare,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 

@@ -1,4 +1,4 @@
-import { type OauthProvider, oauthProviderSchema } from "@toxil/core";
+import { type OauthProvider, oauthProviderSchema } from "@spantail/core";
 import { count, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "../index";

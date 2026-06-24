@@ -18,14 +18,14 @@ const onPosix = process.platform !== "win32";
 
 function tempDir(): string {
 	return path.join(
-		mkdtempSync(path.join(os.tmpdir(), "toxil-config-test-")),
-		"toxil",
+		mkdtempSync(path.join(os.tmpdir(), "spantail-config-test-")),
+		"spantail",
 	);
 }
 
 const config: CliConfig = {
-	baseUrl: "https://toxil.example.com",
-	token: "toxil_pat_test",
+	baseUrl: "https://spantail.example.com",
+	token: "spantail_pat_test",
 	defaultWorkspace: "acme",
 };
 
@@ -83,14 +83,17 @@ it("deletes idempotently", () => {
 });
 
 it("resolves the config dir from the environment", () => {
-	expect(resolveConfigDir({ TOXIL_CONFIG_DIR: "/custom" })).toBe("/custom");
+	expect(resolveConfigDir({ SPANTAIL_CONFIG_DIR: "/custom" })).toBe("/custom");
 	expect(
-		resolveConfigDir({ TOXIL_CONFIG_DIR: "/custom", XDG_CONFIG_HOME: "/xdg" }),
+		resolveConfigDir({
+			SPANTAIL_CONFIG_DIR: "/custom",
+			XDG_CONFIG_HOME: "/xdg",
+		}),
 	).toBe("/custom");
 	expect(resolveConfigDir({ XDG_CONFIG_HOME: "/xdg" })).toBe(
-		path.join("/xdg", "toxil"),
+		path.join("/xdg", "spantail"),
 	);
 	expect(resolveConfigDir({})).toBe(
-		path.join(os.homedir(), ".config", "toxil"),
+		path.join(os.homedir(), ".config", "spantail"),
 	);
 });

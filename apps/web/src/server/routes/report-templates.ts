@@ -7,7 +7,7 @@ import {
 	resolveBuiltinTemplateSettings,
 	updateReportTemplateInputSchema,
 	updateReportTemplateStateInputSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	countReportsByTemplateId,
 	createReportTemplate,
@@ -18,7 +18,7 @@ import {
 	type ReportTemplateRow,
 	updateReportTemplate,
 	upsertInstanceReportTemplateOverrides,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";

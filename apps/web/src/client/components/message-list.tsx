@@ -1,3 +1,4 @@
+import type { MailFolder } from "@spantail/core";
 import {
 	useInfiniteQuery,
 	useMutation,
@@ -5,7 +6,6 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { MailFolder } from "@toxil/core";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
 import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";

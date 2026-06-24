@@ -7,7 +7,7 @@
 | Project | Entries | Total |
 | --- | --- | --- |
 | Research | 2 | 5h 30m |
-| Toxil | 4 | 4h 30m |
+| Spantail | 4 | 4h 30m |
 | Website | 2 | 2h 30m |
 
 ## By member

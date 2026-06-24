@@ -1,11 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	formatPeriodLabel,
 	type ReportMeta,
 	type ReportShare,
 	type ShareStatus,
 	shareStatus,
-} from "@toxil/core";
+} from "@spantail/core";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";

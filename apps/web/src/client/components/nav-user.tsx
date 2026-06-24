@@ -1,5 +1,5 @@
+import type { AuthUser } from "@spantail/core";
 import { Link, useNavigate } from "@tanstack/react-router";
-import type { AuthUser } from "@toxil/core";
 import { LogOutIcon, UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

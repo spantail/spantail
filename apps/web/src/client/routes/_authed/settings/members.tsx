@@ -1,6 +1,6 @@
+import type { WorkspaceRole } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { WorkspaceRole } from "@toxil/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

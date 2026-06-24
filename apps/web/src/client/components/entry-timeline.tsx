@@ -1,5 +1,5 @@
-import type { Project, WorkEntry } from "@toxil/core";
-import { formatDuration } from "@toxil/core";
+import type { Project, WorkEntry } from "@spantail/core";
+import { formatDuration } from "@spantail/core";
 import { SquarePenIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

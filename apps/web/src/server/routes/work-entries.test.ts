@@ -1,4 +1,4 @@
-import { todayInTimezone } from "@toxil/core";
+import { todayInTimezone } from "@spantail/core";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -24,7 +24,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };
@@ -52,7 +52,7 @@ it("creates an entry defaulting the date to today in the workspace timezone", as
 	expect(entry.tags).toEqual(["api"]);
 });
 
-it("records the source from the auth channel and X-Toxil-Client hint", async () => {
+it("records the source from the auth channel and X-Spantail-Client hint", async () => {
 	const { admin, ws, project } = await setup();
 
 	// A session caller is the web SPA.
@@ -87,7 +87,7 @@ it("records the source from the auth channel and X-Toxil-Client hint", async () 
 			headers: {
 				"content-type": "application/json",
 				authorization: `Bearer ${token}`,
-				...(client ? { "x-toxil-client": client } : {}),
+				...(client ? { "x-spantail-client": client } : {}),
 			},
 			body: JSON.stringify({
 				workspaceId: ws.id,

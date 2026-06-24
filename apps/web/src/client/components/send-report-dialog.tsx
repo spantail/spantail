@@ -1,5 +1,5 @@
+import type { ReportMeta } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ReportMeta } from "@toxil/core";
 import { CheckIcon, SearchIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

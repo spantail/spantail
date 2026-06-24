@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { generatePat, hashPat, type TokenScope } from "@toxil/core";
-import { createApiToken, createDb } from "@toxil/db";
+import { generatePat, hashPat, type TokenScope } from "@spantail/core";
+import { createApiToken, createDb } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -67,7 +67,7 @@ it("authenticates valid tokens and rejects invalid or expired ones", async () =>
 		(
 			await bearerGet(
 				"/api/v1/me",
-				"toxil_pat_invalidinvalidinvalidinvalidinvalidinv",
+				"spantail_pat_invalidinvalidinvalidinvalidinvalidinv",
 			)
 		).status,
 	).toBe(401);

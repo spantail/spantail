@@ -3,7 +3,7 @@ import {
 	ingestAgentEntryInputSchema,
 	listAgentEntriesQuerySchema,
 	todayInTimezone,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	getAgentEntryStats,
 	getMembership,
@@ -12,7 +12,7 @@ import {
 	listAgentEntries,
 	listWorkspaceAgents,
 	upsertAgentEntry,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
