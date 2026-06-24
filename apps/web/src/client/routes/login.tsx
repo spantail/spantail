@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import { queryClient } from "@/lib/query";
 
 export const Route = createFileRoute("/login")({
 	component: LoginPage,
@@ -60,6 +61,12 @@ function LoginPage() {
 			setError(result.error.message ?? t("errors.generic"));
 			return;
 		}
+		// Drop any cached server state from a previous session on this browser so
+		// the newly signed-in user never sees the prior account's data. This is the
+		// authoritative point: it covers every way a prior session ended (explicit
+		// sign-out, expiry redirect, cleared cookie). Social login redirects through
+		// a full page load, which recreates the cache, so it needs no clear here.
+		queryClient.clear();
 		await navigate({ to: "/" });
 	}
 

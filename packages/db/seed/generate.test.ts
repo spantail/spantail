@@ -268,6 +268,14 @@ describe("generateDataset", () => {
 		expect(entries.length).toBeGreaterThan(0);
 		expect(events.length).toBeGreaterThan(entries.length);
 		expect(agents.every((a) => a.type === "claude_code")).toBe(true);
+		expect(agents.every((a) => a.name === "My Claude Code")).toBe(true);
+
+		// Each agent has a long history (50+ entries) so the activity view is
+		// pageable in the demo.
+		for (const agent of agents) {
+			const owned = entries.filter((e) => e.agentId === agent.id);
+			expect(owned.length).toBeGreaterThanOrEqual(50);
+		}
 
 		// Each entry's rollup must match its session's events exactly: the
 		// materialized totals are derived from the same per-turn rows the ingest

@@ -79,20 +79,34 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		});
 		return c.json(entry);
 	})
+	// Reads are scoped to the caller's own agents: an agent acts for one user,
+	// and members only see their own agents' activity (ownerUserId is fixed to
+	// the caller server-side — not a client-supplied filter — so it can't be
+	// spoofed to read another member's data).
 	.get("/", async (c) => {
-		requireScope(c, "read");
+		const auth = requireScope(c, "read");
 		const query = validate(listAgentEntriesQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await listAgentEntries(c.var.db, query));
+		return c.json(
+			await listAgentEntries(c.var.db, {
+				...query,
+				ownerUserId: auth.user.id,
+			}),
+		);
 	})
 	.get("/stats", async (c) => {
-		requireScope(c, "read");
+		const auth = requireScope(c, "read");
 		const query = validate(agentEntryStatsQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await getAgentEntryStats(c.var.db, query));
+		return c.json(
+			await getAgentEntryStats(c.var.db, {
+				...query,
+				ownerUserId: auth.user.id,
+			}),
+		);
 	})
-	// Agents shown under a workspace in the sidebar: those with activity here
-	// (workspace-wide) plus the caller's own agents registered to this workspace.
+	// The caller's own agents, shown under a workspace in the sidebar: those with
+	// activity here plus the ones registered to this workspace.
 	.get("/agents", async (c) => {
 		const auth = requireScope(c, "read");
 		const workspaceId = c.req.query("workspaceId");
