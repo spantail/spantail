@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💡 Feature idea or direction (discuss first)
+    url: https://github.com/toxildev/toxil/discussions/categories/ideas
+    about: >-
+      Propose and shape new features or big-picture direction here. Open a feature
+      request issue once the approach is agreed.
+  - name: ❓ Question or help
+    url: https://github.com/toxildev/toxil/discussions/categories/q-a
+    about: Ask questions and get help from the community.
