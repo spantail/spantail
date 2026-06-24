@@ -233,7 +233,7 @@
 			"cancel": "Cancel"
 		},
 		"view": {
-			"downloadAction": "Download .md",
+			"downloadAction": "Download",
 			"copyAction": "Copy Markdown",
 			"copiedLabel": "Copied"
 		},

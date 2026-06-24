@@ -235,29 +235,30 @@
 	@apply py-1.5;
 }
 
-/* Print scope: the report Print action prints only the markdown preview. On a
-   page that has a `.print-area` (the report reading pane), hide everything and
-   reveal just that subtree; pages without one print normally (the `:has()`
-   guard avoids blanking every other screen's Ctrl+P). The area is pulled to the
-   origin and the sidebar inset — its positioned containing block, pinned to one
-   screen via `h-svh overflow-hidden` — is released so it isn't clipped to a
-   single page. */
+/* Print scope: the report Print action prints only the markdown preview. The
+   `:has(.print-area)` guard keeps every other screen's Ctrl+P normal. Drop every
+   region off the preview's ancestor path from layout (display:none — not merely
+   invisible — so hidden siblings like the discussion can't add blank pages), and
+   release the preview's own ancestors (the sidebar inset's h-svh/overflow-hidden,
+   the scroll containers) so it flows across pages instead of clipping to one. */
 @media print {
-	body:has(.print-area) * {
-		visibility: hidden;
+	body:has(.print-area)
+		*:not(:has(.print-area)):not(.print-area):not(.print-area *) {
+		display: none;
 	}
-	body:has(.print-area) [data-slot="sidebar-inset"] {
+	body:has(.print-area) *:has(.print-area) {
 		height: auto;
+		max-height: none;
 		overflow: visible;
 	}
-	.print-area,
-	.print-area * {
-		visibility: visible;
+	/* Print on a light surface: dark theme's prose-invert would otherwise leave
+	   near-white text on white paper once the browser drops backgrounds. */
+	body:has(.print-area) .print-area {
+		background: #fff;
+		color: #111;
 	}
-	.print-area {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
+	body:has(.print-area) .print-area * {
+		color: inherit;
+		background-color: transparent;
 	}
 }

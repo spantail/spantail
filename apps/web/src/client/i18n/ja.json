@@ -233,7 +233,7 @@
 			"cancel": "キャンセル"
 		},
 		"view": {
-			"downloadAction": ".md をダウンロード",
+			"downloadAction": "ダウンロード",
 			"copyAction": "Markdown をコピー",
 			"copiedLabel": "コピーしました"
 		},
