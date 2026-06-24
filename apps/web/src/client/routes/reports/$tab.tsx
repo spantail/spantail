@@ -35,7 +35,7 @@ function TabLayout() {
 			<ResizablePanel defaultSize={34} minSize={26} maxSize={48}>
 				<ReportList tab={tab} selectedId={selected} />
 			</ResizablePanel>
-			<ResizableHandle withHandle />
+			<ResizableHandle hoverHandle />
 			<ResizablePanel defaultSize={66} className="min-w-0">
 				<Outlet />
 			</ResizablePanel>

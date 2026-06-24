@@ -172,7 +172,6 @@
 		"newFromTemplate": "New from template",
 		"newFromTemplateAction": "New report from template",
 		"newTitle": "New report",
-		"duplicateTitle": "Duplicate report",
 		"editTitle": "Edit report",
 		"composeDescription": "Set the filters and template — the preview updates live, then save.",
 		"name": "Report name",
@@ -201,7 +200,7 @@
 		"cancelAction": "Cancel",
 		"editAction": "Edit",
 		"deleteAction": "Delete",
-		"duplicateAction": "New from last",
+		"printAction": "Print",
 		"archived": "Archived",
 		"noTemplates": "No report templates are enabled. Ask a workspace admin to enable one.",
 		"spanTooLong": "Date range must be 366 days or fewer.",
@@ -234,7 +233,9 @@
 			"cancel": "Cancel"
 		},
 		"view": {
-			"downloadAction": "Download .md"
+			"downloadAction": "Download",
+			"copyAction": "Copy Markdown",
+			"copiedLabel": "Copied"
 		},
 		"preview": {
 			"updating": "Updating…",

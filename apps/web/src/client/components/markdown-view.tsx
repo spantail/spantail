@@ -25,7 +25,7 @@ export function MarkdownView({
 			className={cn(
 				"prose prose-sm dark:prose-invert max-w-none",
 				variant === "report" &&
-					"prose-headings:font-heading prose-headings:tracking-tight prose-h1:text-2xl prose-h1:leading-tight",
+					"prose-headings:font-heading prose-headings:font-semibold prose-headings:tracking-tight prose-h1:text-2xl prose-h1:leading-tight prose-h2:text-xl prose-h3:text-base prose-h4:text-sm",
 			)}
 		>
 			<ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>

@@ -234,3 +234,31 @@
 [data-slot="dropdown-menu-sub-trigger"].py-1 {
 	@apply py-1.5;
 }
+
+/* Print scope: the report Print action prints only the markdown preview. The
+   `:has(.print-area)` guard keeps every other screen's Ctrl+P normal. Drop every
+   region off the preview's ancestor path from layout (display:none — not merely
+   invisible — so hidden siblings like the discussion can't add blank pages), and
+   release the preview's own ancestors (the sidebar inset's h-svh/overflow-hidden,
+   the scroll containers) so it flows across pages instead of clipping to one. */
+@media print {
+	body:has(.print-area)
+		*:not(:has(.print-area)):not(.print-area):not(.print-area *) {
+		display: none;
+	}
+	body:has(.print-area) *:has(.print-area) {
+		height: auto;
+		max-height: none;
+		overflow: visible;
+	}
+	/* Print on a light surface: dark theme's prose-invert would otherwise leave
+	   near-white text on white paper once the browser drops backgrounds. */
+	body:has(.print-area) .print-area {
+		background: #fff;
+		color: #111;
+	}
+	body:has(.print-area) .print-area * {
+		color: inherit;
+		background-color: transparent;
+	}
+}
