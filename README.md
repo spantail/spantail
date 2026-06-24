@@ -1,25 +1,26 @@
 # Spantail
 
-> Observability for engineering work — yours and your agents'.
+> Understand how you and your AI agents actually work.
 
-Spantail is an open-source platform for making engineering work legible. Log your work as
-**spans** — intervals with a duration — and capture AI coding-agent activity alongside it, then
-turn the unified timeline into any report you need: daily reports, weekly summaries, monthly
-rollups — from a single source of truth, using Markdown templates. Built AI-first: every
-operation is available to humans (web, CLI) and AI agents (MCP) through the same API.
-
-The name: a *span* is an interval of tracked work — like a logged entry, or an OpenTelemetry
-span. *tail*, as in `tail -f`, is following the latest activity as it happens.
+Spantail is an open-source platform for recording human and AI work with as little overhead as
+possible — ideally none — then sharing and reviewing it in seconds. Built for the era of
+human–AI collaboration: humans log work in a few keystrokes, AI coding agents stream their own
+sessions in automatically, and the unified timeline becomes any report you need — daily, weekly,
+monthly — from a single source of truth. Built AI-first: every operation is available to humans
+(web, CLI) and AI agents (MCP) through the same API.
 
 > **Status**: Early development. APIs and schemas are unstable. Not yet ready for production use.
 
 ## Features
 
+- **Low-overhead capture** — work entries are a date, duration, description, and tags, with optional start/end times — built for fast daily logging. AI coding-agent work is captured automatically, with no manual entry.
+- **AI agent sessions** — register an AI coding agent and its sessions stream in automatically: per-session duration and token usage land on the same timeline as human work. A reference [Claude Code](https://code.claude.com) Stop hook ([`hooks/claude-code`](hooks/claude-code)) posts per-turn token usage while conversation bodies stay on your machine.
 - **Workspaces** — organize work by department, team, or client organization. Projects live under workspaces. One deployment serves one company; this is not a multi-tenant SaaS.
-- **Work entries** — date, duration, description, and tags, with optional start/end times. Designed for fast daily logging.
 - **Unified reports** — no hardcoded report types. A report is a Markdown + Liquid template applied to filters you choose freely: any combination of workspaces, projects, users, and date range — including across workspaces. Built-in templates cover daily, weekly, and monthly reports.
 - **Safe report sharing** — share an immutable report snapshot via an expiring, revocable link with an optional passcode. Viewers don't need an account — share with clients, stakeholders, or anyone outside your instance.
-- **AI-first** — a built-in MCP server (remote Streamable HTTP, or local stdio via the CLI) and a CLI let AI agents and scripts log work and generate reports through the same API the web UI uses.
+- **Collaborate on reports** — discuss a shared report inline with Markdown comments and GitHub-style emoji reactions, keeping the conversation next to the report instead of in email.
+- **Keyboard-first** — operate fast without leaving the keyboard: `c` to quick-create an entry or report, `j`/`k` to move through lists, `o` to open the selected item.
+- **AI-first API** — a built-in MCP server (remote Streamable HTTP, or local stdio via the CLI) and a CLI let AI agents and scripts do everything the web UI does through the same API.
 - **English / Japanese** — fully localized UI and documentation.
 
 ## Architecture
@@ -87,10 +88,8 @@ spantail mcp                                         # stdio MCP server for AI c
 
 AI clients that support remote MCP can connect directly to `https://your-instance/mcp` with an API token.
 
-To record an AI coding agent's per-session time and token usage, register an agent
-in Spantail and wire its transcript to the API. A reference [Claude Code](https://code.claude.com)
-Stop hook lives in [`hooks/claude-code`](hooks/claude-code) — it extracts token usage
-per turn with `jq` and posts it (conversation bodies stay on your machine).
+To record an AI coding agent's sessions, register an agent in Spantail and wire its transcript to
+the API — see the reference Stop hook in [`hooks/claude-code`](hooks/claude-code).
 
 ## Development
 
