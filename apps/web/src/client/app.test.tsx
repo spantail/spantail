@@ -174,11 +174,11 @@ it("renders the authed shell with sidebar for a session", async () => {
 	expect(await screen.findByRole("button", { name: "Log work" })).toBeDefined();
 });
 
-it("redirects the removed spans route to home", async () => {
+it("redirects the legacy entries route to home", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	const router = await renderApp("/spans");
+	const router = await renderApp("/entries");
 
-	// `/spans` → `/` → the active workspace dashboard.
+	// `/entries` → `/` → the active workspace dashboard.
 	expect(await screen.findByText("Daily focus")).toBeDefined();
 	expect(router.state.location.pathname).toBe("/w/acme");
 });

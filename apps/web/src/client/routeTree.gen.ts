@@ -22,8 +22,8 @@ import { Route as ReportsTabRouteImport } from './routes/reports/$tab'
 import { Route as MessagesFolderRouteImport } from './routes/messages/$folder'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
-import { Route as AuthedSpansRouteImport } from './routes/_authed/spans'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
+import { Route as AuthedEntriesRouteImport } from './routes/_authed/entries'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as ReportsTabIndexRouteImport } from './routes/reports/$tab/index'
 import { Route as MessagesFolderIndexRouteImport } from './routes/messages/$folder/index'
@@ -113,14 +113,14 @@ const AuthedTemplatesRoute = AuthedTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSpansRoute = AuthedSpansRouteImport.update({
-  id: '/spans',
-  path: '/spans',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedEntriesRoute = AuthedEntriesRouteImport.update({
+  id: '/entries',
+  path: '/entries',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedAccountRoute = AuthedAccountRouteImport.update({
@@ -257,8 +257,8 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRouteWithChildren
   '/reports': typeof ReportsRouteWithChildren
   '/account': typeof AuthedAccountRoute
+  '/entries': typeof AuthedEntriesRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
-  '/spans': typeof AuthedSpansRoute
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/messages/$folder': typeof MessagesFolderRouteWithChildren
@@ -294,7 +294,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/account': typeof AuthedAccountRoute
-  '/spans': typeof AuthedSpansRoute
+  '/entries': typeof AuthedEntriesRoute
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
@@ -332,8 +332,8 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRouteWithChildren
   '/reports': typeof ReportsRouteWithChildren
   '/_authed/account': typeof AuthedAccountRoute
+  '/_authed/entries': typeof AuthedEntriesRoute
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
-  '/_authed/spans': typeof AuthedSpansRoute
   '/_authed/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/messages/$folder': typeof MessagesFolderRouteWithChildren
@@ -375,8 +375,8 @@ export interface FileRouteTypes {
     | '/messages'
     | '/reports'
     | '/account'
+    | '/entries'
     | '/settings'
-    | '/spans'
     | '/templates'
     | '/invite/$token'
     | '/messages/$folder'
@@ -412,7 +412,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/login'
     | '/account'
-    | '/spans'
+    | '/entries'
     | '/templates'
     | '/invite/$token'
     | '/reset-password/$token'
@@ -449,8 +449,8 @@ export interface FileRouteTypes {
     | '/messages'
     | '/reports'
     | '/_authed/account'
+    | '/_authed/entries'
     | '/_authed/settings'
-    | '/_authed/spans'
     | '/_authed/templates'
     | '/invite/$token'
     | '/messages/$folder'
@@ -587,18 +587,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTemplatesRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/spans': {
-      id: '/_authed/spans'
-      path: '/spans'
-      fullPath: '/spans'
-      preLoaderRoute: typeof AuthedSpansRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/settings': {
       id: '/_authed/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthedSettingsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/entries': {
+      id: '/_authed/entries'
+      path: '/entries'
+      fullPath: '/entries'
+      preLoaderRoute: typeof AuthedEntriesRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/account': {
@@ -830,8 +830,8 @@ const AuthedWWsSlugRouteWithChildren = AuthedWWsSlugRoute._addFileChildren(
 
 interface AuthedRouteChildren {
   AuthedAccountRoute: typeof AuthedAccountRoute
+  AuthedEntriesRoute: typeof AuthedEntriesRoute
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
-  AuthedSpansRoute: typeof AuthedSpansRoute
   AuthedTemplatesRoute: typeof AuthedTemplatesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedWWsSlugRoute: typeof AuthedWWsSlugRouteWithChildren
@@ -839,8 +839,8 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountRoute: AuthedAccountRoute,
+  AuthedEntriesRoute: AuthedEntriesRoute,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
-  AuthedSpansRoute: AuthedSpansRoute,
   AuthedTemplatesRoute: AuthedTemplatesRoute,
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedWWsSlugRoute: AuthedWWsSlugRouteWithChildren,
