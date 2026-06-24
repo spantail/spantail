@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose an implementation-ready feature to track
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        For big-picture or uncertain ideas, please start a
+        [Discussion](https://github.com/toxildev/toxil/discussions/categories/ideas)
+        first — open this issue once the approach is agreed. See
+        [CONTRIBUTING.md](https://github.com/toxildev/toxil/blob/main/CONTRIBUTING.md).
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is this, in one or two sentences?
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation / use cases
+      description: Why is it worth doing? Describe concrete scenarios.
+    validations:
+      required: true
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-goals
+      description: What does this explicitly not cover?
+    validations:
+      required: false
+  - type: textarea
+    id: proposed-design
+    attributes:
+      label: Proposed design (non-binding)
+      description: >-
+        Optional sketch to start discussion. This is not a commitment — reviewers
+        and implementers may change it.
+    validations:
+      required: false
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Observable, behavior-based conditions for "done".
+    validations:
+      required: false
+  - type: textarea
+    id: open-questions
+    attributes:
+      label: Open questions
+      description: Unresolved decisions.
+    validations:
+      required: false
