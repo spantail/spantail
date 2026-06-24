@@ -1,10 +1,4 @@
 import {
-	keepPreviousData,
-	useMutation,
-	useQuery,
-	useQueryClient,
-} from "@tanstack/react-query";
-import {
 	type CreateReportInput,
 	type DateRangePreset,
 	formatDuration,
@@ -14,7 +8,13 @@ import {
 	type ReportFiltersInput,
 	type ReportTemplate,
 	resolveDateRange,
-} from "@toxil/core";
+} from "@spantail/core";
+import {
+	keepPreviousData,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { FileTextIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

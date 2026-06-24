@@ -1,4 +1,4 @@
-import { formatDuration, formatHours } from "@toxil/core";
+import { formatDuration, formatHours } from "@spantail/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

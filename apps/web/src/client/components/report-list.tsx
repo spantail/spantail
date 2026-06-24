@@ -1,11 +1,11 @@
-import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	formatDuration,
 	formatPeriodLabel,
 	type ReportMeta,
 	type ReportTemplate,
-} from "@toxil/core";
+} from "@spantail/core";
+import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
 	ChevronDownIcon,
 	FileTextIcon,

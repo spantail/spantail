@@ -1,6 +1,6 @@
+import type { MailFolder } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import type { MailFolder } from "@toxil/core";
 import {
 	ArchiveIcon,
 	ArrowLeftIcon,

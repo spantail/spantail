@@ -1,4 +1,4 @@
-# Maps a Claude Code transcript (JSONL, read via `inputs`) to Toxil's compact
+# Maps a Claude Code transcript (JSONL, read via `inputs`) to Spantail's compact
 # agent-events array: one object per assistant message.id, telemetry only.
 #
 # Why dedup by message.id: a single assistant message is written across several

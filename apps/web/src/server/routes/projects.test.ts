@@ -28,7 +28,7 @@ it("creates, lists, and guards projects", async () => {
 	const created = await apiJson(
 		"POST",
 		`/api/v1/workspaces/${ws.id}/projects`,
-		{ slug: "toxil", name: "Toxil", description: "Work logging" },
+		{ slug: "spantail", name: "Spantail", description: "Work logging" },
 		admin,
 	);
 	expect(created.status).toBe(201);
@@ -38,7 +38,7 @@ it("creates, lists, and guards projects", async () => {
 	const dup = await apiJson(
 		"POST",
 		`/api/v1/workspaces/${ws.id}/projects`,
-		{ slug: "toxil", name: "Other" },
+		{ slug: "spantail", name: "Other" },
 		admin,
 	);
 	expect(dup.status).toBe(409);
@@ -66,7 +66,7 @@ it("archives a project via status and hides nothing from members", async () => {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };
@@ -96,7 +96,7 @@ it("updates a project's name, slug, color and description", async () => {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };
@@ -105,8 +105,8 @@ it("updates a project's name, slug, color and description", async () => {
 		"PATCH",
 		`/api/v1/projects/${project.id}`,
 		{
-			name: "Toxil Web",
-			slug: "toxil-web",
+			name: "Spantail Web",
+			slug: "spantail-web",
 			description: "The web client",
 			hue: 200,
 		},
@@ -119,8 +119,8 @@ it("updates a project's name, slug, color and description", async () => {
 		description: string | null;
 		hue: number | null;
 	};
-	expect(body.name).toBe("Toxil Web");
-	expect(body.slug).toBe("toxil-web");
+	expect(body.name).toBe("Spantail Web");
+	expect(body.slug).toBe("spantail-web");
 	expect(body.description).toBe("The web client");
 	expect(body.hue).toBe(200);
 });
@@ -130,7 +130,7 @@ it("creates a project with an explicit colour hue", async () => {
 	const created = await apiJson(
 		"POST",
 		`/api/v1/workspaces/${ws.id}/projects`,
-		{ slug: "toxil", name: "Toxil", hue: 160 },
+		{ slug: "spantail", name: "Spantail", hue: 160 },
 		admin,
 	);
 	expect(created.status).toBe(201);
@@ -170,7 +170,7 @@ it("deletes an archived project and orphans its entries instead of cascading", a
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };
@@ -237,7 +237,7 @@ it("forbids non-admins from deleting projects", async () => {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };

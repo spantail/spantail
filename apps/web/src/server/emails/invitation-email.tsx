@@ -39,21 +39,23 @@ const link = {
 	wordBreak: "break-all" as const,
 };
 
-// One Toxil deployment serves one company but its members may differ in
+// One Spantail deployment serves one company but its members may differ in
 // language, so the invitation is bilingual (en + ja) rather than wired to the
 // SPA-only i18n catalogs.
 export function InvitationEmail({ inviteUrl }: InvitationEmailProps) {
 	return (
 		<Html>
 			<Head />
-			<Preview>You have been invited to Toxil / Toxil に招待されました</Preview>
+			<Preview>
+				You have been invited to Spantail / Spantail に招待されました
+			</Preview>
 			<Body style={main}>
 				<Container style={container}>
 					<Section>
-						<Heading style={heading}>You're invited to Toxil</Heading>
+						<Heading style={heading}>You're invited to Spantail</Heading>
 						<Text style={paragraph}>
-							You have been invited to join Toxil. Set up your account using the
-							button below. This link expires soon.
+							You have been invited to join Spantail. Set up your account using
+							the button below. This link expires soon.
 						</Text>
 						<Button href={inviteUrl} style={button}>
 							Accept invitation
@@ -62,9 +64,9 @@ export function InvitationEmail({ inviteUrl }: InvitationEmailProps) {
 					</Section>
 					<Hr />
 					<Section>
-						<Heading style={heading}>Toxil に招待されました</Heading>
+						<Heading style={heading}>Spantail に招待されました</Heading>
 						<Text style={paragraph}>
-							Toxil
+							Spantail
 							に招待されました。下のボタンからアカウントを設定してください。このリンクは間もなく失効します。
 						</Text>
 						<Button href={inviteUrl} style={button}>
@@ -87,7 +89,7 @@ export async function renderInvitationEmail(inviteUrl: string): Promise<{
 	const html = await render(node);
 	const text = await render(node, { plainText: true });
 	return {
-		subject: "You're invited to Toxil / Toxil に招待されました",
+		subject: "You're invited to Spantail / Spantail に招待されました",
 		html,
 		text,
 	};

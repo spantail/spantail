@@ -1,4 +1,4 @@
-import type { ReportTemplateOverrides } from "@toxil/core";
+import type { ReportTemplateOverrides } from "@spantail/core";
 import { eq } from "drizzle-orm";
 
 import type { Database } from "../index";
@@ -6,7 +6,7 @@ import { instanceSettings } from "../schema/instance";
 
 export type InstanceSettingsRow = typeof instanceSettings.$inferSelect;
 
-// One Toxil deployment has exactly one settings row.
+// One Spantail deployment has exactly one settings row.
 const SINGLETON_ID = "singleton";
 
 export async function getInstanceSettings(

@@ -1,4 +1,4 @@
-import { getInstanceSettings } from "@toxil/db";
+import { getInstanceSettings } from "@spantail/db";
 import { createMiddleware } from "hono/factory";
 
 import { AppError } from "../lib/errors";

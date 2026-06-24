@@ -18,7 +18,7 @@ it("creates, lists, and revokes tokens via sessions only", async () => {
 		expiresAt: string | null;
 		tokenHash?: string;
 	};
-	expect(body.token).toMatch(/^toxil_pat_/);
+	expect(body.token).toMatch(/^spantail_pat_/);
 	expect(body.tokenHash).toBeUndefined();
 	expect(body.expiresAt).not.toBeNull();
 

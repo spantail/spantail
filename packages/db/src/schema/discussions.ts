@@ -60,7 +60,7 @@ export const reportReactions = sqliteTable(
 			.references(() => user.id, { onDelete: "cascade" }),
 		// Frozen for the hover tooltip listing who reacted.
 		userName: text("user_name").notNull(),
-		// A GitHub-style content key (see @toxil/core reactionEmojiSchema).
+		// A GitHub-style content key (see @spantail/core reactionEmojiSchema).
 		emoji: text("emoji").notNull(),
 		createdAt: createdAtMs(),
 	},

@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { localDateSchema, tagSchema } from "@toxil/core";
+import { localDateSchema, tagSchema } from "@spantail/core";
 import { z } from "zod";
 
-import { ToxilApiError, type ToxilClient } from "./index";
+import { SpantailApiError, type SpantailClient } from "./index";
 
 type ToolResult = {
 	content: Array<{ type: "text"; text: string }>;
@@ -15,7 +15,7 @@ function ok(data: unknown): ToolResult {
 
 function fail(error: unknown): ToolResult {
 	const message =
-		error instanceof ToxilApiError
+		error instanceof SpantailApiError
 			? `API error ${error.status} (${error.code}): ${error.message}`
 			: error instanceof Error
 				? error.message
@@ -32,13 +32,13 @@ async function run(fn: () => Promise<unknown>): Promise<ToolResult> {
 }
 
 /**
- * Registers the Toxil tool set on an MCP server. Tools are thin clients of
- * the REST API via the given ToxilClient; the same registration is used by
+ * Registers the Spantail tool set on an MCP server. Tools are thin clients of
+ * the REST API via the given SpantailClient; the same registration is used by
  * the remote /mcp endpoint (loopback fetch) and the stdio CLI server.
  */
-export function registerToxilTools(
+export function registerSpantailTools(
 	server: McpServer,
-	client: ToxilClient,
+	client: SpantailClient,
 ): void {
 	server.registerTool(
 		"list_workspaces",

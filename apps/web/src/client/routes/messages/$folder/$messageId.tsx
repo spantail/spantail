@@ -1,6 +1,6 @@
+import { formatPeriodLabel, type MailFolder } from "@spantail/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { formatPeriodLabel, type MailFolder } from "@toxil/core";
 import { DownloadIcon, FileTextIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";

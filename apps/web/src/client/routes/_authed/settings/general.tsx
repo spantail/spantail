@@ -1,10 +1,10 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
 import {
 	isWorkspaceLogoMimeType,
 	WORKSPACE_LOGO_MAX_BYTES,
 	WORKSPACE_LOGO_MIME_TYPES,
-} from "@toxil/core";
+} from "@spantail/core";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";

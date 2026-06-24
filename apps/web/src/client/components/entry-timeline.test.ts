@@ -1,4 +1,4 @@
-import type { WorkEntry } from "@toxil/core";
+import type { WorkEntry } from "@spantail/core";
 import { expect, it } from "vitest";
 
 import { groupEntriesByDate } from "./entry-timeline";

@@ -1,6 +1,6 @@
+import type { MailFolder, MailItem, MailItemDetail } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { MailFolder, MailItem, MailItemDetail } from "@toxil/core";
 import {
 	ArchiveIcon,
 	ArchiveRestoreIcon,

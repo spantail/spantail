@@ -1,4 +1,4 @@
-import { listInboxQuerySchema, setMailFlagsInputSchema } from "@toxil/core";
+import { listInboxQuerySchema, setMailFlagsInputSchema } from "@spantail/core";
 import {
 	countFolders,
 	countUnreadInbox,
@@ -10,7 +10,7 @@ import {
 	markInboxUnread,
 	setDeliveryFlags,
 	userOwnsMailTarget,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { resolveAvatarUrl } from "../lib/avatar";

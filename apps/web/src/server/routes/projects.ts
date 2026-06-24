@@ -1,7 +1,7 @@
 import {
 	createProjectInputSchema,
 	updateProjectInputSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	createProject,
 	deleteProject,
@@ -9,7 +9,7 @@ import {
 	getProjectBySlug,
 	listProjects,
 	updateProject,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";

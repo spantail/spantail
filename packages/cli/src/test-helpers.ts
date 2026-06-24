@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { Project, WorkEntry, WorkspaceWithRole } from "@toxil/core";
+import type { Project, WorkEntry, WorkspaceWithRole } from "@spantail/core";
 
 import type { CliContext } from "./context";
 import type { Prompter } from "./prompt";
@@ -152,7 +152,7 @@ export interface TestContextOptions {
 export function createTestContext(options: TestContextOptions = {}) {
 	const stdout = buffer();
 	const stderr = buffer();
-	const configDir = mkdtempSync(path.join(os.tmpdir(), "toxil-cli-test-"));
+	const configDir = mkdtempSync(path.join(os.tmpdir(), "spantail-cli-test-"));
 	const ctx: CliContext = {
 		env: options.env ?? {},
 		stdout,

@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import { formatDuration, localDateSchema } from "@toxil/core";
+import { formatDuration, localDateSchema } from "@spantail/core";
 
 import { createClient, requireConnection } from "../client";
 import type { CliContext } from "../context";
@@ -10,7 +10,7 @@ import { requireWorkspaceSlug, resolveWorkspace } from "../resolve";
 
 const DEFAULT_LIMIT = 20;
 
-const USAGE = `Usage: toxil entries list [options]
+const USAGE = `Usage: spantail entries list [options]
 
 Lists work entries, newest first.
 

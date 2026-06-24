@@ -1,4 +1,4 @@
-import { formatDuration, type WorkEntry } from "@toxil/core";
+import { formatDuration, type WorkEntry } from "@spantail/core";
 import {
 	CalendarIcon,
 	ClockIcon,

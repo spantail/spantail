@@ -1,5 +1,5 @@
-import type { Project, WorkEntry, WorkspaceMember } from "@toxil/core";
-import { formatDuration } from "@toxil/core";
+import type { Project, WorkEntry, WorkspaceMember } from "@spantail/core";
+import { formatDuration } from "@spantail/core";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 

@@ -1,13 +1,13 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import type { Project, WorkEntry } from "@toxil/core";
+import type { Project, WorkEntry } from "@spantail/core";
 import {
 	formatDuration,
 	shiftDays,
 	todayInTimezone,
 	utcToZonedTime,
 	zonedDateTimeToUtc,
-} from "@toxil/core";
+} from "@spantail/core";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

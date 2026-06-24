@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
 #
-# Claude Code "Stop" hook → Toxil agent-events ingest.
+# Claude Code "Stop" hook → Spantail agent-events ingest.
 #
 # Reads the hook payload (JSON on stdin), extracts per-assistant-message token
 # usage from the transcript with jq (conversation bodies never leave this
-# machine), and POSTs the compact events to Toxil. Idempotent on (agent,
+# machine), and POSTs the compact events to Spantail. Idempotent on (agent,
 # message.id), so it is safe to run on every Stop. Never fails the turn: any
 # problem logs to stderr and exits 0.
 #
 # Requirements: bash, jq, curl.
 # Environment (set these in your Claude Code settings.json "env" block):
-#   TOXIL_API_URL        Base URL, e.g. https://toxil.example.com
-#   TOXIL_AGENT_TOKEN    An agent access token (write-only ingest credential)
-#   TOXIL_WORKSPACE_ID   Optional; defaults to the token's bound workspace
-#   TOXIL_PROJECT_ID     Optional; records the work against a project
+#   SPANTAIL_API_URL        Base URL, e.g. https://spantail.example.com
+#   SPANTAIL_AGENT_TOKEN    An agent access token (write-only ingest credential)
+#   SPANTAIL_WORKSPACE_ID   Optional; defaults to the token's bound workspace
+#   SPANTAIL_PROJECT_ID     Optional; records the work against a project
 set -u
 
 skip() {
-	printf 'toxil-agent-stop: %s\n' "$1" >&2
+	printf 'spantail-agent-stop: %s\n' "$1" >&2
 	exit 0
 }
 
 command -v jq >/dev/null 2>&1 || skip "jq not found; skipping"
 command -v curl >/dev/null 2>&1 || skip "curl not found; skipping"
-[ -n "${TOXIL_API_URL:-}" ] || skip "TOXIL_API_URL not set; skipping"
-[ -n "${TOXIL_AGENT_TOKEN:-}" ] || skip "TOXIL_AGENT_TOKEN not set; skipping"
+[ -n "${SPANTAIL_API_URL:-}" ] || skip "SPANTAIL_API_URL not set; skipping"
+[ -n "${SPANTAIL_AGENT_TOKEN:-}" ] || skip "SPANTAIL_AGENT_TOKEN not set; skipping"
 
 hook_payload="$(cat)"
 transcript="$(jq -r '.transcript_path // empty' <<<"$hook_payload")"
@@ -47,12 +47,12 @@ count="$(jq 'length' <<<"$events")"
 # argv.
 jq_args=(--arg s "$session")
 filter='{sessionId: $s, events: .}'
-if [ -n "${TOXIL_WORKSPACE_ID:-}" ]; then
-	jq_args+=(--arg w "$TOXIL_WORKSPACE_ID")
+if [ -n "${SPANTAIL_WORKSPACE_ID:-}" ]; then
+	jq_args+=(--arg w "$SPANTAIL_WORKSPACE_ID")
 	filter+=' + {workspaceId: $w}'
 fi
-if [ -n "${TOXIL_PROJECT_ID:-}" ]; then
-	jq_args+=(--arg p "$TOXIL_PROJECT_ID")
+if [ -n "${SPANTAIL_PROJECT_ID:-}" ]; then
+	jq_args+=(--arg p "$SPANTAIL_PROJECT_ID")
 	filter+=' + {projectId: $p}'
 fi
 
@@ -60,10 +60,10 @@ fi
 # this is best-effort telemetry and the hook exits 0 on any failure.
 jq "${jq_args[@]}" "$filter" <<<"$events" |
 	curl -fsS --connect-timeout 2 --max-time 10 -X POST \
-		"$TOXIL_API_URL/api/v1/agent-events" \
-		-H "authorization: Bearer $TOXIL_AGENT_TOKEN" \
+		"$SPANTAIL_API_URL/api/v1/agent-events" \
+		-H "authorization: Bearer $SPANTAIL_AGENT_TOKEN" \
 		-H 'content-type: application/json' \
 		--data-binary @- >/dev/null 2>&1 ||
 	skip "ingest request failed; skipping"
 
-printf 'toxil-agent-stop: ingested %s event(s) for session %s\n' "$count" "$session" >&2
+printf 'spantail-agent-stop: ingested %s event(s) for session %s\n' "$count" "$session" >&2

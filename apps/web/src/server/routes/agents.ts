@@ -3,7 +3,7 @@ import {
 	generateAat,
 	hashToken,
 	updateAgentInputSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	type AgentRow,
 	archiveAgent,
@@ -13,7 +13,7 @@ import {
 	listProjectsByIds,
 	rotateAgentToken,
 	setAgentDisabled,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 

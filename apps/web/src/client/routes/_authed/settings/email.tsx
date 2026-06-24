@@ -143,7 +143,7 @@ function EmailSettingsCard() {
 							<Input
 								id="email-from-name"
 								value={fromName}
-								placeholder="Toxil"
+								placeholder="Spantail"
 								disabled={!enabled}
 								className={cn(!enabled && "opacity-50")}
 								onChange={(e) => setFromName(e.target.value)}

@@ -1,4 +1,4 @@
-import { hashPat } from "@toxil/core";
+import { hashPat } from "@spantail/core";
 
 /**
  * Generates an invitation token: 32 random bytes, base64url. The raw token

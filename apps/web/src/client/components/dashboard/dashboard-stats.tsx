@@ -1,5 +1,5 @@
+import { resolveDateRange } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
-import { resolveDateRange } from "@toxil/core";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 

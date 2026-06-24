@@ -23,8 +23,8 @@ function api(entries: unknown[]) {
 
 function loggedIn(configDir: string): void {
 	saveConfig(configDir, {
-		baseUrl: "https://toxil.example.com",
-		token: "toxil_pat_test",
+		baseUrl: "https://spantail.example.com",
+		token: "spantail_pat_test",
 		defaultWorkspace: "acme",
 	});
 }

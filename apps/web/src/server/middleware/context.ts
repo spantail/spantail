@@ -1,4 +1,4 @@
-import { createDb } from "@toxil/db";
+import { createDb } from "@spantail/db";
 import { createMiddleware } from "hono/factory";
 
 import type { AppEnv } from "../types";

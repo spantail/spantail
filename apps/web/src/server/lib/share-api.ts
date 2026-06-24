@@ -1,4 +1,4 @@
-import type { ReportShareMetaRow } from "@toxil/db";
+import type { ReportShareMetaRow } from "@spantail/db";
 
 /**
  * API shape of a share. Internal fields never leave the server: the passcode

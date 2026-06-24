@@ -8,7 +8,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 
-import { slugSchema } from "@toxil/core";
+import { slugSchema } from "@spantail/core";
 import { z } from "zod";
 
 import { CliError } from "./errors";
@@ -23,14 +23,14 @@ export type CliConfig = z.infer<typeof configSchema>;
 
 /**
  * Resolves the directory holding config.json:
- * $TOXIL_CONFIG_DIR > $XDG_CONFIG_HOME/toxil > ~/.config/toxil.
+ * $SPANTAIL_CONFIG_DIR > $XDG_CONFIG_HOME/spantail > ~/.config/spantail.
  */
 export function resolveConfigDir(
 	env: Record<string, string | undefined>,
 ): string {
-	if (env.TOXIL_CONFIG_DIR) return env.TOXIL_CONFIG_DIR;
+	if (env.SPANTAIL_CONFIG_DIR) return env.SPANTAIL_CONFIG_DIR;
 	const base = env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-	return path.join(base, "toxil");
+	return path.join(base, "spantail");
 }
 
 export function configPath(configDir: string): string {
@@ -56,7 +56,7 @@ export function loadConfig(configDir: string): CliConfig | null {
 	const result = configSchema.safeParse(parsed);
 	if (!result.success) {
 		throw new CliError(
-			`invalid config file at ${file}; run \`toxil auth login\` to recreate it`,
+			`invalid config file at ${file}; run \`spantail auth login\` to recreate it`,
 		);
 	}
 	return result.data;

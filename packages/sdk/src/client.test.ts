@@ -1,12 +1,12 @@
 import { expect, it } from "vitest";
 
-import { ToxilApiError, ToxilClient } from "./index";
+import { SpantailApiError, SpantailClient } from "./index";
 
 function stubClient(status: number, body: unknown) {
 	const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
-	const client = new ToxilClient({
-		baseUrl: "https://toxil.example.com/",
-		token: "toxil_pat_test",
+	const client = new SpantailClient({
+		baseUrl: "https://spantail.example.com/",
+		token: "spantail_pat_test",
 		fetch: ((url: string, init?: RequestInit) => {
 			calls.push({ url, init });
 			return Promise.resolve(
@@ -32,10 +32,10 @@ it("builds urls, query strings, and auth headers", async () => {
 	const call = calls[0];
 	if (!call) throw new Error("expected a fetch call");
 	expect(call.url).toBe(
-		"https://toxil.example.com/api/v1/work-entries?workspaceId=ws1&from=2026-06-01&limit=10",
+		"https://spantail.example.com/api/v1/work-entries?workspaceId=ws1&from=2026-06-01&limit=10",
 	);
 	expect((call.init?.headers as Record<string, string>).authorization).toBe(
-		"Bearer toxil_pat_test",
+		"Bearer spantail_pat_test",
 	);
 });
 
@@ -60,7 +60,7 @@ it("posts json bodies with content type", async () => {
 	});
 });
 
-it("maps structured errors to ToxilApiError", async () => {
+it("maps structured errors to SpantailApiError", async () => {
 	const { client } = stubClient(403, {
 		error: {
 			code: "forbidden",
@@ -72,7 +72,7 @@ it("maps structured errors to ToxilApiError", async () => {
 		.updateWorkEntry("e1", { durationMinutes: 1 })
 		.catch((e) => e);
 
-	expect(error).toBeInstanceOf(ToxilApiError);
+	expect(error).toBeInstanceOf(SpantailApiError);
 	expect(error.status).toBe(403);
 	expect(error.code).toBe("forbidden");
 	expect(error.message).toMatch(/author/);

@@ -1,19 +1,19 @@
 import { parseArgs } from "node:util";
 
-import type { AbsoluteDateRange } from "@toxil/core";
-import { ToxilApiError } from "@toxil/sdk";
+import type { AbsoluteDateRange } from "@spantail/core";
+import { SpantailApiError } from "@spantail/sdk";
 
 import { createClient, requireConnection } from "../client";
 import type { CliContext } from "../context";
 import { CliError, UsageError } from "../errors";
 import { formatTable } from "../output";
 
-const LIST_USAGE = `Usage: toxil report list
+const LIST_USAGE = `Usage: spantail report list
 
-Lists your reports. The ID column is the input to \`toxil report view\`.
+Lists your reports. The ID column is the input to \`spantail report view\`.
 `;
 
-const VIEW_USAGE = `Usage: toxil report view <id>
+const VIEW_USAGE = `Usage: spantail report view <id>
 
 Prints a report's rendered Markdown to stdout (pipe or redirect it). Reports
 are created and edited in the web UI.
@@ -79,9 +79,9 @@ export async function reportView(
 	try {
 		report = await client.getReport(id);
 	} catch (error) {
-		if (error instanceof ToxilApiError && error.status === 404) {
+		if (error instanceof SpantailApiError && error.status === 404) {
 			throw new CliError(
-				`report "${id}" not found; run \`toxil report list\` to see report ids`,
+				`report "${id}" not found; run \`spantail report list\` to see report ids`,
 			);
 		}
 		throw error;

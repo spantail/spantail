@@ -245,7 +245,7 @@ it("keeps the URL-selected workspace active after leaving the scoped route", asy
 	getSession.mockResolvedValue({ data: sessionPayload });
 	// Last-visited is Acme (the first membership), but the user deep-links into
 	// Beta — the URL must win even after navigating to a top-level surface.
-	localStorage.setItem("toxil.ws", "ws1");
+	localStorage.setItem("spantail.ws", "ws1");
 	const twoWorkspaceMe = {
 		...mePayload,
 		memberships: [

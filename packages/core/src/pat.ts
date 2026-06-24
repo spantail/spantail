@@ -1,6 +1,6 @@
-export const PAT_PREFIX = "toxil_pat_";
+export const PAT_PREFIX = "spantail_pat_";
 /** Agent access token: a write-only ingest credential bound to one agent. */
-export const AAT_PREFIX = "toxil_aat_";
+export const AAT_PREFIX = "spantail_aat_";
 
 const PAT_PATTERN = tokenPattern(PAT_PREFIX);
 const AAT_PATTERN = tokenPattern(AAT_PREFIX);

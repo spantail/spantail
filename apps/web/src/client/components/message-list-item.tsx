@@ -1,5 +1,9 @@
+import {
+	formatPeriodLabel,
+	type MailFolder,
+	type MailItem,
+} from "@spantail/core";
 import { Link } from "@tanstack/react-router";
-import { formatPeriodLabel, type MailFolder, type MailItem } from "@toxil/core";
 import { StarIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

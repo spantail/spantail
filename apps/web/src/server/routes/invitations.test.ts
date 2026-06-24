@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { createDb, findUserByEmail } from "@toxil/db";
+import { createDb, findUserByEmail } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, signUpUser } from "../../../test/helpers";

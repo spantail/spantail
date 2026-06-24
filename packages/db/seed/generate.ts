@@ -11,7 +11,7 @@ import {
 	todayInTimezone,
 	type WorkEntrySource,
 	zonedDateTimeToUtc,
-} from "@toxil/core";
+} from "@spantail/core";
 import { hashPassword } from "better-auth/crypto";
 
 import {

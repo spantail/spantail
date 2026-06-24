@@ -3,7 +3,7 @@ import {
 	createInvitationInputSchema,
 	type Invitation,
 	type InvitationPreview,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	createInvitation,
 	deleteInvitation,
@@ -15,7 +15,7 @@ import {
 	listPendingInvitations,
 	markInvitationAccepted,
 	updateUser,
-} from "@toxil/db";
+} from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { renderInvitationEmail } from "../emails/invitation-email";

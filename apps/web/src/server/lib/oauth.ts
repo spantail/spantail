@@ -1,5 +1,5 @@
-import type { OauthProvider } from "@toxil/core";
-import { type Database, getInstanceSettings } from "@toxil/db";
+import type { OauthProvider } from "@spantail/core";
+import { type Database, getInstanceSettings } from "@spantail/db";
 
 import type { SocialConfig } from "../auth";
 

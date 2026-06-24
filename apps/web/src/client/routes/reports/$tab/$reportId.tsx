@@ -1,6 +1,6 @@
+import { type Report, splitFrontMatter } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { type Report, splitFrontMatter } from "@toxil/core";
 import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

@@ -1,4 +1,4 @@
-import type { Report } from "@toxil/core";
+import type { Report } from "@spantail/core";
 import { expect, it } from "vitest";
 
 import { runCli } from "../cli";
@@ -27,8 +27,8 @@ function reportFixture(overrides: Partial<Report> = {}): Report {
 
 function loggedIn(configDir: string): void {
 	saveConfig(configDir, {
-		baseUrl: "https://toxil.example.com",
-		token: "toxil_pat_test",
+		baseUrl: "https://spantail.example.com",
+		token: "spantail_pat_test",
 	});
 }
 
@@ -93,7 +93,7 @@ it("hints at report list for unknown ids", async () => {
 
 	expect(await runCli(["report", "view", "nope"], ctx)).toBe(1);
 	expect(stderr.text()).toContain('report "nope" not found');
-	expect(stderr.text()).toContain("toxil report list");
+	expect(stderr.text()).toContain("spantail report list");
 });
 
 it("requires a single report id", async () => {

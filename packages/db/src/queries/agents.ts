@@ -1,4 +1,4 @@
-import type { AgentUsage } from "@toxil/core";
+import type { AgentUsage } from "@spantail/core";
 import {
 	and,
 	asc,

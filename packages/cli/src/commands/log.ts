@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import { formatDuration, localDateSchema, parseDuration } from "@toxil/core";
+import { formatDuration, localDateSchema, parseDuration } from "@spantail/core";
 
 import { createClient, requireConnection } from "../client";
 import type { CliContext } from "../context";
@@ -11,7 +11,7 @@ import {
 	resolveWorkspace,
 } from "../resolve";
 
-const USAGE = `Usage: toxil log <description> --project <slug> --duration <value> [options]
+const USAGE = `Usage: spantail log <description> --project <slug> --duration <value> [options]
 
 Logs a work entry. Duration accepts minutes or h/m forms: 90, 90m, 2h, 1h30m.
 

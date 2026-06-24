@@ -1,6 +1,6 @@
+import type { Report, ReportMeta } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import type { Report, ReportMeta } from "@toxil/core";
 import {
 	ArrowLeftIcon,
 	ChevronRightIcon,

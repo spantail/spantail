@@ -2,9 +2,9 @@ import {
 	isShareTokenFormat,
 	splitFrontMatter,
 	verifySharePasscode,
-} from "@toxil/core";
-import type { ReportShareRow } from "@toxil/db";
-import { getReportShareByToken, recordShareView } from "@toxil/db";
+} from "@spantail/core";
+import type { ReportShareRow } from "@spantail/db";
+import { getReportShareByToken, recordShareView } from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
 

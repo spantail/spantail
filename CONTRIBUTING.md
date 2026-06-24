@@ -1,4 +1,4 @@
-# Contributing to Toxil
+# Contributing to Spantail
 
 Thanks for your interest in contributing! This guide covers **how we work** — where to discuss
 ideas, how to file issues, and how to open pull requests. For project conventions and local
@@ -13,7 +13,7 @@ Contributions, issues, and pull requests are in **English**.
 
 We split the funnel by maturity. Pick the lighter-weight place that fits:
 
-- **Big-picture, direction, or uncertain ideas → [Discussions](https://github.com/toxildev/toxil/discussions).**
+- **Big-picture, direction, or uncertain ideas → [Discussions](https://github.com/spantail/spantail/discussions).**
   Use the **Ideas** category to propose and shape a feature before any code exists, and **Q&A**
   to ask for help. Direction is settled here so issues stay focused on agreed work.
 - **Implementation-ready, agreed work → an Issue.** Once the *what* and rough *how* are clear,

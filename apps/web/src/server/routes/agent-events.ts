@@ -1,4 +1,4 @@
-import { ingestAgentEventsInputSchema, todayInTimezone } from "@toxil/core";
+import { ingestAgentEventsInputSchema, todayInTimezone } from "@spantail/core";
 import {
 	computeSessionRollup,
 	getMembership,
@@ -6,7 +6,7 @@ import {
 	getWorkspaceById,
 	insertAgentEventsIgnoreConflicts,
 	materializeAgentSessionRollup,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";

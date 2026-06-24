@@ -1,17 +1,17 @@
 {
-	"name": "toxil",
+	"name": "spantail",
 	"version": "0.1.0",
 	"private": true,
-	"description": "Command-line client for Toxil, the open-source work logging and reporting platform: log work, list entries, run reports, and serve a stdio MCP server.",
+	"description": "Command-line client for Spantail, the open-source work logging and reporting platform: log work, list entries, run reports, and serve a stdio MCP server.",
 	"license": "MIT",
 	"type": "module",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/toxildev/toxil.git",
+		"url": "git+https://github.com/spantail/spantail.git",
 		"directory": "packages/cli"
 	},
-	"homepage": "https://github.com/toxildev/toxil#readme",
-	"bugs": "https://github.com/toxildev/toxil/issues",
+	"homepage": "https://github.com/spantail/spantail#readme",
+	"bugs": "https://github.com/spantail/spantail/issues",
 	"keywords": [
 		"time-tracking",
 		"work-log",
@@ -24,7 +24,7 @@
 		"node": ">=24"
 	},
 	"bin": {
-		"toxil": "./dist/index.mjs"
+		"spantail": "./dist/index.mjs"
 	},
 	"files": [
 		"dist"
@@ -39,8 +39,8 @@
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"@toxil/core": "workspace:*",
-		"@toxil/sdk": "workspace:*",
+		"@spantail/core": "workspace:*",
+		"@spantail/sdk": "workspace:*",
 		"@types/node": "^25.9.3",
 		"tsdown": "^0.22.2",
 		"vitest": "^4.1.8"

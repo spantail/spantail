@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { createDb, materializeAgentSessionRollup } from "@toxil/db";
+import { createDb, materializeAgentSessionRollup } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -31,7 +31,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			admin,
 		)
 	).json()) as { id: string };

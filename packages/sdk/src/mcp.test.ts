@@ -3,8 +3,8 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { expect, it } from "vitest";
 
-import { ToxilApiError, type ToxilClient } from "./index";
-import { registerToxilTools } from "./mcp";
+import { SpantailApiError, type SpantailClient } from "./index";
+import { registerSpantailTools } from "./mcp";
 
 function makeStub() {
 	const calls: Array<{ method: string; args: unknown[] }> = [];
@@ -28,13 +28,13 @@ function makeStub() {
 		]),
 		listReports: record("listReports", [{ id: "r1" }]),
 		getReport: record("getReport", { id: "r1", renderedMarkdown: "# Report" }),
-	} as unknown as ToxilClient;
+	} as unknown as SpantailClient;
 	return { stub, calls };
 }
 
-async function connect(client: ToxilClient) {
-	const server = new McpServer({ name: "toxil-test", version: "0.0.0" });
-	registerToxilTools(server, client);
+async function connect(client: SpantailClient) {
+	const server = new McpServer({ name: "spantail-test", version: "0.0.0" });
+	registerSpantailTools(server, client);
 	const mcpClient = new Client({ name: "test-client", version: "0.0.0" });
 	const [clientTransport, serverTransport] =
 		InMemoryTransport.createLinkedPair();
@@ -45,7 +45,7 @@ async function connect(client: ToxilClient) {
 	return mcpClient;
 }
 
-it("exposes the eight toxil tools", async () => {
+it("exposes the eight spantail tools", async () => {
 	const { stub } = makeStub();
 	const client = await connect(stub);
 
@@ -106,7 +106,9 @@ it("routes tool calls to the api client and returns json text", async () => {
 it("maps api errors to tool errors", async () => {
 	const { stub } = makeStub();
 	(stub as { listProjects: unknown }).listProjects = () =>
-		Promise.reject(new ToxilApiError(403, "insufficient_scope", "needs read"));
+		Promise.reject(
+			new SpantailApiError(403, "insufficient_scope", "needs read"),
+		);
 	const client = await connect(stub);
 
 	const result = await client.callTool({

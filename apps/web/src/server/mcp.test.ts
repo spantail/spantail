@@ -22,7 +22,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "toxil", name: "Toxil" },
+			{ slug: "spantail", name: "Spantail" },
 			cookie,
 		)
 	).json()) as { id: string };
@@ -73,7 +73,8 @@ it("rejects unauthenticated mcp requests with a 401 challenge", async () => {
 		method: "POST",
 		headers: {
 			...MCP_HEADERS,
-			authorization: "Bearer toxil_pat_invalidinvalidinvalidinvalidinvalidinv",
+			authorization:
+				"Bearer spantail_pat_invalidinvalidinvalidinvalidinvalidinv",
 		},
 		body: JSON.stringify({
 			jsonrpc: "2.0",
@@ -135,7 +136,7 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 		},
 	});
 	const initResult = await rpcResult<{ serverInfo: { name: string } }>(init);
-	expect(initResult.serverInfo.name).toBe("toxil");
+	expect(initResult.serverInfo.name).toBe("spantail");
 	// Stateless: no session id is issued.
 	expect(init.headers.get("mcp-session-id")).toBeNull();
 

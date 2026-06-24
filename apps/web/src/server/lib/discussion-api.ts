@@ -1,6 +1,6 @@
-import type { Comment, ReactionEmoji, ReactionSummary } from "@toxil/core";
-import { REACTION_EMOJIS } from "@toxil/core";
-import type { ReportCommentRow, ReportReactionRow } from "@toxil/db";
+import type { Comment, ReactionEmoji, ReactionSummary } from "@spantail/core";
+import { REACTION_EMOJIS } from "@spantail/core";
+import type { ReportCommentRow, ReportReactionRow } from "@spantail/db";
 
 /**
  * Aggregates raw reaction rows for one target into per-emoji summaries, ordered

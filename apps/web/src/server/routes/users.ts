@@ -3,7 +3,7 @@ import {
 	type ManagedUser,
 	type OauthProvider,
 	updateUserInputSchema,
-} from "@toxil/core";
+} from "@spantail/core";
 import {
 	countAdmins,
 	deleteUser,
@@ -17,7 +17,7 @@ import {
 	type UserRow,
 	updateUser,
 	userOwnsAnyWorkspace,
-} from "@toxil/db";
+} from "@spantail/db";
 import { Hono } from "hono";
 
 import { avatarObjectKey } from "../lib/avatar";

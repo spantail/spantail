@@ -9,21 +9,21 @@ import { createTestContext } from "./test-helpers";
 
 const stored = {
 	baseUrl: "https://config.example.com",
-	token: "toxil_pat_config",
+	token: "spantail_pat_config",
 };
 
 it("prefers environment variables over the config file", () => {
 	const { ctx, configDir } = createTestContext({
 		env: {
-			TOXIL_API_URL: "https://env.example.com",
-			TOXIL_API_TOKEN: "toxil_pat_env",
+			SPANTAIL_API_URL: "https://env.example.com",
+			SPANTAIL_API_TOKEN: "spantail_pat_env",
 		},
 	});
 	saveConfig(configDir, stored);
 
 	expect(resolveConnection(ctx)).toEqual({
 		baseUrl: "https://env.example.com",
-		token: "toxil_pat_env",
+		token: "spantail_pat_env",
 		baseUrlSource: "env",
 		tokenSource: "env",
 	});
@@ -35,7 +35,7 @@ it("falls back to the config file", () => {
 
 	expect(resolveConnection(ctx)).toEqual({
 		baseUrl: "https://config.example.com",
-		token: "toxil_pat_config",
+		token: "spantail_pat_config",
 		baseUrlSource: "config",
 		tokenSource: "config",
 	});
@@ -43,13 +43,13 @@ it("falls back to the config file", () => {
 
 it("merges per field", () => {
 	const { ctx, configDir } = createTestContext({
-		env: { TOXIL_API_URL: "https://env.example.com" },
+		env: { SPANTAIL_API_URL: "https://env.example.com" },
 	});
 	saveConfig(configDir, stored);
 
 	expect(resolveConnection(ctx)).toEqual({
 		baseUrl: "https://env.example.com",
-		token: "toxil_pat_config",
+		token: "spantail_pat_config",
 		baseUrlSource: "env",
 		tokenSource: "config",
 	});
@@ -58,8 +58,8 @@ it("merges per field", () => {
 it("never reads the config file when the env is complete", () => {
 	const { ctx, configDir } = createTestContext({
 		env: {
-			TOXIL_API_URL: "https://env.example.com",
-			TOXIL_API_TOKEN: "toxil_pat_env",
+			SPANTAIL_API_URL: "https://env.example.com",
+			SPANTAIL_API_TOKEN: "spantail_pat_env",
 		},
 	});
 	saveConfig(configDir, stored);

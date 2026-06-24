@@ -68,22 +68,22 @@ import type {
 	Workspace,
 	WorkspaceMember,
 	WorkspaceWithRole,
-} from "@toxil/core";
+} from "@spantail/core";
 
 export interface Me {
 	user: AuthUser;
 	memberships: WorkspaceWithRole[];
 }
 
-export interface ToxilClientOptions {
-	/** Absolute base URL of the Toxil instance, e.g. https://toxil.example.com */
+export interface SpantailClientOptions {
+	/** Absolute base URL of the Spantail instance, e.g. https://spantail.example.com */
 	baseUrl: string;
 	/** API token (PAT) sent as a Bearer Authorization header. */
 	token?: string;
 	/** Custom fetch implementation (e.g. an in-process loopback in a Worker). */
 	fetch?: typeof fetch;
 	/**
-	 * Programmatic client hint sent as the X-Toxil-Client header, which the
+	 * Programmatic client hint sent as the X-Spantail-Client header, which the
 	 * server records as a work entry's source. Only "cli" / "mcp" are honored:
 	 * "web" and "api" are derived server-side from the auth channel, so they are
 	 * not offered here.
@@ -91,26 +91,26 @@ export interface ToxilClientOptions {
 	client?: "cli" | "mcp";
 }
 
-export class ToxilApiError extends Error {
+export class SpantailApiError extends Error {
 	constructor(
 		readonly status: number,
 		readonly code: string,
 		message: string,
 	) {
 		super(message);
-		this.name = "ToxilApiError";
+		this.name = "SpantailApiError";
 	}
 }
 
 type Query = Record<string, string | number | undefined>;
 
-export class ToxilClient {
+export class SpantailClient {
 	private readonly baseUrl: string;
 	private readonly token?: string;
 	private readonly fetchImpl: typeof fetch;
 	private readonly client?: "cli" | "mcp";
 
-	constructor(options: ToxilClientOptions) {
+	constructor(options: SpantailClientOptions) {
 		this.baseUrl = options.baseUrl.replace(/\/$/, "");
 		this.token = options.token;
 		this.fetchImpl = options.fetch ?? ((...args) => globalThis.fetch(...args));
@@ -135,7 +135,7 @@ export class ToxilClient {
 
 		const headers: Record<string, string> = {};
 		if (this.token) headers.authorization = `Bearer ${this.token}`;
-		if (this.client) headers["x-toxil-client"] = this.client;
+		if (this.client) headers["x-spantail-client"] = this.client;
 		if (options.rawBody) headers["content-type"] = options.rawBody.contentType;
 		else if (options.body !== undefined)
 			headers["content-type"] = "application/json";
@@ -155,7 +155,7 @@ export class ToxilClient {
 			error?: { code?: string; message?: string };
 		} | null;
 		if (!res.ok) {
-			throw new ToxilApiError(
+			throw new SpantailApiError(
 				res.status,
 				payload?.error?.code ?? "unknown",
 				payload?.error?.message ?? `Request failed with status ${res.status}`,

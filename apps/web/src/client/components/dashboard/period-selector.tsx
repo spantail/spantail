@@ -3,7 +3,7 @@ import {
 	MAX_REPORT_SPAN_DAYS,
 	resolveDateRange,
 	shiftDays,
-} from "@toxil/core";
+} from "@spantail/core";
 import { enUS, ja } from "date-fns/locale";
 import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react";
 import { useState } from "react";

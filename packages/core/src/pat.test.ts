@@ -9,7 +9,7 @@ it("generates tokens in the documented format", () => {
 });
 
 it("rejects malformed tokens", () => {
-	expect(isPatFormat("toxil_pat_short")).toBe(false);
+	expect(isPatFormat("spantail_pat_short")).toBe(false);
 	expect(
 		isPatFormat("other_prefix_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
 	).toBe(false);

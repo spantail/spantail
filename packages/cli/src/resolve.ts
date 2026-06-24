@@ -1,5 +1,5 @@
-import type { Project, WorkspaceWithRole } from "@toxil/core";
-import type { ToxilClient } from "@toxil/sdk";
+import type { Project, WorkspaceWithRole } from "@spantail/core";
+import type { SpantailClient } from "@spantail/sdk";
 
 import { loadConfig } from "./config";
 import type { CliContext } from "./context";
@@ -14,7 +14,7 @@ export function requireWorkspaceSlug(
 	const slug = loadConfig(ctx.configDir)?.defaultWorkspace;
 	if (!slug) {
 		throw new UsageError(
-			"no workspace selected; pass --workspace <slug> or set a default with `toxil auth login`",
+			"no workspace selected; pass --workspace <slug> or set a default with `spantail auth login`",
 		);
 	}
 	return slug;
@@ -22,7 +22,7 @@ export function requireWorkspaceSlug(
 
 /** The API references workspaces by id; the CLI accepts slugs and looks up. */
 export async function resolveWorkspace(
-	client: ToxilClient,
+	client: SpantailClient,
 	slug: string,
 ): Promise<WorkspaceWithRole> {
 	const workspaces = await client.listWorkspaces();
@@ -35,7 +35,7 @@ export async function resolveWorkspace(
 }
 
 export async function resolveProject(
-	client: ToxilClient,
+	client: SpantailClient,
 	workspace: Pick<WorkspaceWithRole, "id" | "slug">,
 	slug: string,
 ): Promise<Project> {

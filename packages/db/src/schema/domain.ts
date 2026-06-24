@@ -1,4 +1,4 @@
-import { workEntrySources } from "@toxil/core";
+import { workEntrySources } from "@spantail/core";
 import { sql } from "drizzle-orm";
 import {
 	index,

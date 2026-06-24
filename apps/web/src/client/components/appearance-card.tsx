@@ -1,6 +1,6 @@
+import type { WorkspaceAccentColor } from "@spantail/core";
+import type { Me } from "@spantail/sdk";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { WorkspaceAccentColor } from "@toxil/core";
-import type { Me } from "@toxil/sdk";
 import { CheckIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 

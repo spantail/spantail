@@ -1,8 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { hashPat, isPatFormat } from "@toxil/core";
-import { createDb, findApiTokenByHash, getUserById } from "@toxil/db";
-import { ToxilClient } from "@toxil/sdk";
-import { registerToxilTools } from "@toxil/sdk/mcp";
+import { hashPat, isPatFormat } from "@spantail/core";
+import { createDb, findApiTokenByHash, getUserById } from "@spantail/db";
+import { SpantailClient } from "@spantail/sdk";
+import { registerSpantailTools } from "@spantail/sdk/mcp";
 import { createMcpHandler } from "agents/mcp";
 import type { Context, Hono } from "hono";
 
@@ -34,7 +34,7 @@ export function registerMcpRoute(app: Hono<AppEnv>): void {
 		const owner = await getUserById(db, row.userId);
 		if (!owner || owner.disabled) return unauthorized(c);
 
-		const client = new ToxilClient({
+		const client = new SpantailClient({
 			baseUrl: new URL(c.req.url).origin,
 			token,
 			client: "mcp",
@@ -42,8 +42,8 @@ export function registerMcpRoute(app: Hono<AppEnv>): void {
 			fetch: async (input, init) =>
 				app.fetch(new Request(input, init), c.env, c.executionCtx),
 		});
-		const server = new McpServer({ name: "toxil", version: "0.1.0" });
-		registerToxilTools(server, client);
+		const server = new McpServer({ name: "spantail", version: "0.1.0" });
+		registerSpantailTools(server, client);
 
 		// Stateless: no session ids, plain JSON responses.
 		const handler = createMcpHandler(server, {
@@ -67,6 +67,6 @@ function unauthorized(c: Context<AppEnv>): Response {
 			error: { code: "unauthorized", message: "A valid API token is required" },
 		},
 		401,
-		{ "WWW-Authenticate": 'Bearer realm="toxil"' },
+		{ "WWW-Authenticate": 'Bearer realm="spantail"' },
 	);
 }

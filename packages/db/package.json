@@ -1,5 +1,5 @@
 {
-	"name": "@toxil/db",
+	"name": "@spantail/db",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -11,7 +11,7 @@
 		"generate": "drizzle-kit generate"
 	},
 	"dependencies": {
-		"@toxil/core": "workspace:*",
+		"@spantail/core": "workspace:*",
 		"drizzle-orm": "^0.45.2",
 		"zod": "^4.4.3"
 	},

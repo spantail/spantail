@@ -1,13 +1,13 @@
 import { existsSync } from "node:fs";
 
-import type { WorkspaceWithRole } from "@toxil/core";
+import type { WorkspaceWithRole } from "@spantail/core";
 import { expect, it } from "vitest";
 
 import { runCli } from "../cli";
 import { configPath, loadConfig, saveConfig } from "../config";
 import { createTestContext, fakeApi } from "../test-helpers";
 
-const TOKEN = `toxil_pat_${"a".repeat(43)}`;
+const TOKEN = `spantail_pat_${"a".repeat(43)}`;
 
 function membership(
 	slug: string,
@@ -48,7 +48,7 @@ it("logs in non-interactively with flags and writes the config", async () => {
 			"auth",
 			"login",
 			"--server",
-			"https://toxil.example.com/",
+			"https://spantail.example.com/",
 			"--token",
 			TOKEN,
 			"--workspace",
@@ -59,12 +59,12 @@ it("logs in non-interactively with flags and writes the config", async () => {
 
 	expect(code).toBe(0);
 	expect(loadConfig(configDir)).toEqual({
-		baseUrl: "https://toxil.example.com",
+		baseUrl: "https://spantail.example.com",
 		token: TOKEN,
 		defaultWorkspace: "beta",
 	});
 	expect(stdout.text()).toContain(
-		"Logged in to https://toxil.example.com as kato@example.com",
+		"Logged in to https://spantail.example.com as kato@example.com",
 	);
 	expect(stdout.text()).toContain("Default workspace: beta");
 	expect(stderr.text()).toBe("");
@@ -84,13 +84,13 @@ it("warns about tokens that do not look like a PAT", async () => {
 	);
 
 	expect(code).toBe(0);
-	expect(stderr.text()).toContain("does not look like a Toxil API token");
+	expect(stderr.text()).toContain("does not look like a Spantail API token");
 });
 
 it("prompts for server, token, and workspace interactively", async () => {
 	const api = fakeApi([{ path: "/me", body: me }]);
 	const { ctx, configDir } = createTestContext({
-		answers: ["https://toxil.example.com", TOKEN, "2"],
+		answers: ["https://spantail.example.com", TOKEN, "2"],
 		fetch: api.fetch,
 	});
 
@@ -102,7 +102,7 @@ it("auto-picks the default workspace with a single membership", async () => {
 	const single = { ...me, memberships: [membership("acme", "Acme", "owner")] };
 	const api = fakeApi([{ path: "/me", body: single }]);
 	const { ctx, configDir } = createTestContext({
-		answers: ["https://toxil.example.com", TOKEN],
+		answers: ["https://spantail.example.com", TOKEN],
 		fetch: api.fetch,
 	});
 
@@ -128,7 +128,7 @@ it("rejects a workspace flag outside the memberships", async () => {
 			"auth",
 			"login",
 			"--server",
-			"https://toxil.example.com",
+			"https://spantail.example.com",
 			"--token",
 			TOKEN,
 			"--workspace",
@@ -161,7 +161,7 @@ it("fails login on a rejected token without writing the config", async () => {
 			"auth",
 			"login",
 			"--server",
-			"https://toxil.example.com",
+			"https://spantail.example.com",
 			"--token",
 			TOKEN,
 		],
@@ -173,7 +173,7 @@ it("fails login on a rejected token without writing the config", async () => {
 	expect(existsSync(configPath(configDir))).toBe(false);
 });
 
-it("recognizes servers that are not a Toxil API", async () => {
+it("recognizes servers that are not a Spantail API", async () => {
 	const htmlFetch = (async () =>
 		new Response("<!doctype html><html></html>", {
 			status: 200,
@@ -189,7 +189,7 @@ it("recognizes servers that are not a Toxil API", async () => {
 	);
 
 	expect(code).toBe(1);
-	expect(stderr.text()).toContain("does not look like a Toxil server");
+	expect(stderr.text()).toContain("does not look like a Spantail server");
 });
 
 it("rejects an invalid server URL", async () => {
@@ -206,7 +206,7 @@ it("shows the connection and user in auth status", async () => {
 	const api = fakeApi([{ path: "/me", body: me }]);
 	const { ctx, stdout, configDir } = createTestContext({ fetch: api.fetch });
 	saveConfig(configDir, {
-		baseUrl: "https://toxil.example.com",
+		baseUrl: "https://spantail.example.com",
 		token: TOKEN,
 		defaultWorkspace: "gone",
 	});
@@ -214,9 +214,9 @@ it("shows the connection and user in auth status", async () => {
 	expect(await runCli(["auth", "status"], ctx)).toBe(0);
 	const out = stdout.text();
 	expect(out).toContain(
-		`Server: https://toxil.example.com (${configPath(configDir)})`,
+		`Server: https://spantail.example.com (${configPath(configDir)})`,
 	);
-	expect(out).toContain(`Token: toxil_pat_…${TOKEN.slice(-4)}`);
+	expect(out).toContain(`Token: spantail_pat_…${TOKEN.slice(-4)}`);
 	expect(out).not.toContain(TOKEN);
 	expect(out).toContain("User: Kato <kato@example.com> (instance admin)");
 	expect(out).toContain("Workspaces: acme (owner), beta (member)");
@@ -229,8 +229,8 @@ it("reports the environment as the credential source", async () => {
 	const api = fakeApi([{ path: "/me", body: me }]);
 	const { ctx, stdout } = createTestContext({
 		env: {
-			TOXIL_API_URL: "https://env.example.com",
-			TOXIL_API_TOKEN: TOKEN,
+			SPANTAIL_API_URL: "https://env.example.com",
+			SPANTAIL_API_TOKEN: TOKEN,
 		},
 		fetch: api.fetch,
 	});
@@ -256,16 +256,22 @@ it("adds a login hint when the API rejects the stored token", async () => {
 		},
 	]);
 	const { ctx, stderr, configDir } = createTestContext({ fetch: api.fetch });
-	saveConfig(configDir, { baseUrl: "https://toxil.example.com", token: TOKEN });
+	saveConfig(configDir, {
+		baseUrl: "https://spantail.example.com",
+		token: TOKEN,
+	});
 
 	expect(await runCli(["auth", "status"], ctx)).toBe(1);
 	expect(stderr.text()).toContain("Token expired");
-	expect(stderr.text()).toContain("hint: run `toxil auth login`");
+	expect(stderr.text()).toContain("hint: run `spantail auth login`");
 });
 
 it("removes the config on logout and stays idempotent", async () => {
 	const { ctx, stdout, configDir } = createTestContext();
-	saveConfig(configDir, { baseUrl: "https://toxil.example.com", token: TOKEN });
+	saveConfig(configDir, {
+		baseUrl: "https://spantail.example.com",
+		token: TOKEN,
+	});
 
 	expect(await runCli(["auth", "logout"], ctx)).toBe(0);
 	expect(stdout.text()).toContain(`Removed ${configPath(configDir)}`);
@@ -278,5 +284,5 @@ it("removes the config on logout and stays idempotent", async () => {
 it("rejects auth without a subcommand", async () => {
 	const { ctx, stderr } = createTestContext();
 	expect(await runCli(["auth"], ctx)).toBe(2);
-	expect(stderr.text()).toContain("toxil auth <login|status|logout>");
+	expect(stderr.text()).toContain("spantail auth <login|status|logout>");
 });

@@ -1,4 +1,4 @@
-import { countUsers } from "@toxil/db";
+import { countUsers } from "@spantail/db";
 import { Hono } from "hono";
 
 import { createAuth } from "./auth";

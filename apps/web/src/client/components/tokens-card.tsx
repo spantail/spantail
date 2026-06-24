@@ -1,5 +1,5 @@
+import type { TokenScope } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { TokenScope } from "@toxil/core";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

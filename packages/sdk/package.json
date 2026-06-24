@@ -1,5 +1,5 @@
 {
-	"name": "@toxil/sdk",
+	"name": "@spantail/sdk",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -13,7 +13,7 @@
 	"dependencies": {
 		"@cfworker/json-schema": "^4.1.1",
 		"@modelcontextprotocol/sdk": "^1.29.0",
-		"@toxil/core": "workspace:*",
+		"@spantail/core": "workspace:*",
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {

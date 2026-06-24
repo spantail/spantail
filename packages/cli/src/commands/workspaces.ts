@@ -4,7 +4,7 @@ import { createClient, requireConnection } from "../client";
 import type { CliContext } from "../context";
 import { formatTable } from "../output";
 
-const USAGE = `Usage: toxil workspaces list
+const USAGE = `Usage: spantail workspaces list
 
 Lists the workspaces you belong to.
 `;

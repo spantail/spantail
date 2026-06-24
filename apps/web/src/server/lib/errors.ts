@@ -1,4 +1,4 @@
-import type { ErrorCode } from "@toxil/core";
+import type { ErrorCode } from "@spantail/core";
 import type { Context } from "hono";
 
 const STATUS_BY_CODE: Record<ErrorCode, 400 | 401 | 403 | 404 | 409 | 500> = {

@@ -1,5 +1,5 @@
+import type { WorkEntry } from "@spantail/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { WorkEntry } from "@toxil/core";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 

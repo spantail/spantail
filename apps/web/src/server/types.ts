@@ -1,5 +1,5 @@
-import type { AuthUser, TokenScope } from "@toxil/core";
-import type { Database } from "@toxil/db";
+import type { AuthUser, TokenScope } from "@spantail/core";
+import type { Database } from "@spantail/db";
 
 export type AuthContext =
 	| { user: AuthUser; via: "session" }
