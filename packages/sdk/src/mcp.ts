@@ -70,8 +70,8 @@ export function registerSpantailTools(
 		{
 			title: "Log work",
 			description:
-				"Create a work entry. Requires a workspace id and project id — resolve them " +
-				"with list_workspaces and list_projects first. When entryDate is omitted the " +
+				"Create a work span. Requires a workspace id and project id — resolve them " +
+				"with list_workspaces and list_projects first. When spanDate is omitted the " +
 				"server uses today in the workspace's timezone.",
 			inputSchema: {
 				workspaceId: z.string().describe("Workspace id"),
@@ -82,7 +82,7 @@ export function registerSpantailTools(
 					.positive()
 					.describe("Time spent in minutes"),
 				description: z.string().min(1).max(2000).describe("What was worked on"),
-				entryDate: localDateSchema
+				spanDate: localDateSchema
 					.optional()
 					.describe(
 						"Local date YYYY-MM-DD; defaults to today in the workspace timezone",
@@ -91,15 +91,15 @@ export function registerSpantailTools(
 				tags: z.array(tagSchema).max(20).optional().describe("Optional tags"),
 			},
 		},
-		(input) => run(() => client.createWorkEntry(input)),
+		(input) => run(() => client.createWorkSpan(input)),
 	);
 
 	server.registerTool(
-		"list_entries",
+		"list_spans",
 		{
-			title: "List work entries",
+			title: "List work spans",
 			description:
-				"List work entries of a workspace, newest first. Filter by project, user, and " +
+				"List work spans of a workspace, newest first. Filter by project, user, and " +
 				"local-date range (inclusive).",
 			inputSchema: {
 				workspaceId: z.string().describe("Workspace id"),
@@ -120,7 +120,7 @@ export function registerSpantailTools(
 					.describe("Max results, default 50"),
 			},
 		},
-		(input) => run(() => client.listWorkEntries(input)),
+		(input) => run(() => client.listWorkSpans(input)),
 	);
 
 	server.registerTool(
@@ -163,19 +163,19 @@ export function registerSpantailTools(
 	);
 
 	server.registerTool(
-		"update_entry",
+		"update_span",
 		{
-			title: "Update a work entry",
+			title: "Update a work span",
 			description:
-				"Update fields of an existing work entry by id. Only the entry's author can " +
-				"update it. Get ids from list_entries.",
+				"Update fields of an existing work span by id. Only the span's author can " +
+				"update it. Get ids from list_spans.",
 			inputSchema: {
-				id: z.string().describe("Work entry id"),
+				id: z.string().describe("Work span id"),
 				projectId: z
 					.string()
 					.optional()
 					.describe("Move to another project (same workspace)"),
-				entryDate: localDateSchema
+				spanDate: localDateSchema
 					.optional()
 					.describe("New local date YYYY-MM-DD"),
 				durationMinutes: z
@@ -203,6 +203,6 @@ export function registerSpantailTools(
 					.describe("Replacement tags"),
 			},
 		},
-		({ id, ...patch }) => run(() => client.updateWorkEntry(id, patch)),
+		({ id, ...patch }) => run(() => client.updateWorkSpan(id, patch)),
 	);
 }

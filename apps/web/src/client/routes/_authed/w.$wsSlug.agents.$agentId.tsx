@@ -35,16 +35,16 @@ function AgentPage() {
 	const agent = (agents.data ?? []).find((a) => a.id === agentId);
 
 	const stats = useQuery({
-		queryKey: ["agent-entry-stats", workspaceId, agentId],
+		queryKey: ["agent-span-stats", workspaceId, agentId],
 		queryFn: () =>
-			api.getAgentEntryStats({ workspaceId: workspaceId as string, agentId }),
+			api.getAgentSpanStats({ workspaceId: workspaceId as string, agentId }),
 		enabled: Boolean(workspaceId),
 	});
 
-	const entries = useQuery({
-		queryKey: ["agent-entries", workspaceId, agentId],
+	const spans = useQuery({
+		queryKey: ["agent-spans", workspaceId, agentId],
 		queryFn: () =>
-			api.listAgentEntries({
+			api.listAgentSpans({
 				workspaceId: workspaceId as string,
 				agentId,
 				limit: 100,
@@ -77,9 +77,9 @@ function AgentPage() {
 		);
 	}
 
-	const list = entries.data ?? [];
+	const list = spans.data ?? [];
 	const tiles = [
-		{ key: "entryCount", value: stats.data?.entryCount ?? 0 },
+		{ key: "spanCount", value: stats.data?.spanCount ?? 0 },
 		{ key: "totalMinutes", value: stats.data?.totalMinutes ?? 0 },
 		{ key: "totalTokens", value: stats.data?.totalTokens ?? 0 },
 	] as const;
@@ -112,7 +112,7 @@ function AgentPage() {
 				<h2 className="font-heading text-lg font-semibold">
 					{t("agents.entriesTitle")}
 				</h2>
-				{entries.isPending ? (
+				{spans.isPending ? (
 					<p className="text-muted-foreground p-4 text-center text-sm">
 						{t("app.loading")}
 					</p>
@@ -132,22 +132,22 @@ function AgentPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{list.map((entry) => (
-								<TableRow key={entry.id}>
+							{list.map((span) => (
+								<TableRow key={span.id}>
 									<TableCell className="whitespace-nowrap">
-										{entry.entryDate}
+										{span.spanDate}
 									</TableCell>
 									<TableCell className="tabular-nums">
-										{entry.durationMinutes}m
+										{span.durationMinutes}m
 									</TableCell>
 									<TableCell className="tabular-nums">
-										{entry.usage?.totalTokens?.toLocaleString() ?? "—"}
+										{span.usage?.totalTokens?.toLocaleString() ?? "—"}
 									</TableCell>
 									<TableCell className="text-muted-foreground">
-										{entry.usage?.model ?? "—"}
+										{span.usage?.model ?? "—"}
 									</TableCell>
 									<TableCell className="text-muted-foreground">
-										{entry.description ?? "—"}
+										{span.description ?? "—"}
 									</TableCell>
 								</TableRow>
 							))}

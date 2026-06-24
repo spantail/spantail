@@ -12,7 +12,7 @@ machine.
 
 | File | Purpose |
 |---|---|
-| `spantail-agent-stop.sh` | The Stop hook entry point (reads the hook payload, posts events). |
+| `spantail-agent-stop.sh` | The Stop hook span point (reads the hook payload, posts events). |
 | `transcript-to-events.jq` | Maps a transcript (JSONL) to the compact `agent-events` payload, deduped by `message.id`. |
 | `transcript-to-events.test.sh` | Runs the jq filter against a committed fixture. |
 
@@ -52,5 +52,5 @@ prerequisite or error it logs to stderr and exits 0.
 }
 ```
 
-The `SessionEnd` entry is an optional final reconcile. Re-posting is free: the
+The `SessionEnd` span is an optional final reconcile. Re-posting is free: the
 ingest is idempotent on `(agent, message.id)`.

@@ -9,7 +9,7 @@ export type AgentType = z.infer<typeof agentTypeSchema>;
 
 /**
  * A registered AI coding agent. Account-scoped: it is a delegated identity of
- * one user, not an independent principal. Its entries are attributed to the
+ * one user, not an independent principal. Its spans are attributed to the
  * owner and inherit the owner's workspace visibility.
  */
 export const agentSchema = z.object({
@@ -85,7 +85,7 @@ export const agentUsageSchema = z.object({
 export type AgentUsage = z.infer<typeof agentUsageSchema>;
 
 /** One agent work session, attributed to the owning user and a workspace. */
-export const agentEntrySchema = z.object({
+export const agentSpanSchema = z.object({
 	id: z.string(),
 	workspaceId: z.string(),
 	ownerUserId: z.string(),
@@ -94,7 +94,7 @@ export const agentEntrySchema = z.object({
 	agentId: z.string(),
 	// External session identifier (CC session_id / Codex thread / Cursor convo).
 	sessionId: z.string(),
-	entryDate: localDateSchema,
+	spanDate: localDateSchema,
 	durationMinutes: z.number().int().min(0),
 	// Null when the source can't expose token usage locally (e.g. Cursor).
 	usage: agentUsageSchema.nullable(),
@@ -104,7 +104,7 @@ export const agentEntrySchema = z.object({
 	createdAt: z.string(),
 	updatedAt: z.string(),
 });
-export type AgentEntry = z.infer<typeof agentEntrySchema>;
+export type AgentSpan = z.infer<typeof agentSpanSchema>;
 
 /**
  * Ingest payload for one session. Idempotent on (agent, sessionId): re-sending
@@ -112,7 +112,7 @@ export type AgentEntry = z.infer<typeof agentEntrySchema>;
  * and daily batch reconciliation never double-count. workspaceId/projectId
  * default to the token's binding when omitted.
  */
-export const ingestAgentEntryInputSchema = z.object({
+export const ingestAgentSpanInputSchema = z.object({
 	workspaceId: z.string().optional(),
 	// Reject an empty/whitespace projectId at the boundary: a falsy-but-present
 	// value would otherwise skip the FK check and 500 on insert instead of 400.
@@ -124,12 +124,12 @@ export const ingestAgentEntryInputSchema = z.object({
 	startedAt: z.iso.datetime().optional(),
 	endedAt: z.iso.datetime().optional(),
 });
-export type IngestAgentEntryInput = z.infer<typeof ingestAgentEntryInputSchema>;
-export type IngestAgentEntryInputData = z.input<
-	typeof ingestAgentEntryInputSchema
+export type IngestAgentSpanInput = z.infer<typeof ingestAgentSpanInputSchema>;
+export type IngestAgentSpanInputData = z.input<
+	typeof ingestAgentSpanInputSchema
 >;
 
-export const listAgentEntriesQuerySchema = z.object({
+export const listAgentSpansQuerySchema = z.object({
 	workspaceId: z.string(),
 	agentId: z.string().optional(),
 	from: localDateSchema.optional(),
@@ -137,9 +137,9 @@ export const listAgentEntriesQuerySchema = z.object({
 	limit: z.coerce.number().int().min(1).max(200).default(50),
 	offset: z.coerce.number().int().min(0).default(0),
 });
-export type ListAgentEntriesQuery = z.infer<typeof listAgentEntriesQuerySchema>;
-export type ListAgentEntriesQueryData = Omit<
-	z.input<typeof listAgentEntriesQuerySchema>,
+export type ListAgentSpansQuery = z.infer<typeof listAgentSpansQuerySchema>;
+export type ListAgentSpansQueryData = Omit<
+	z.input<typeof listAgentSpansQuerySchema>,
 	"limit" | "offset"
 > & { limit?: number; offset?: number };
 
@@ -149,18 +149,18 @@ const statBucketFields = {
 	count: z.number().int().min(0),
 };
 
-/** Aggregated agent-entry stats for the same filter as the list endpoint. */
-export const agentEntryStatsSchema = z.object({
+/** Aggregated agent-span stats for the same filter as the list endpoint. */
+export const agentSpanStatsSchema = z.object({
 	totalMinutes: z.number().int().min(0),
 	totalTokens: z.number().int().min(0),
-	entryCount: z.number().int().min(0),
+	spanCount: z.number().int().min(0),
 	byDate: z.array(z.object({ date: localDateSchema, ...statBucketFields })),
 	byAgent: z.array(z.object({ agentId: z.string(), ...statBucketFields })),
 });
-export type AgentEntryStats = z.infer<typeof agentEntryStatsSchema>;
+export type AgentSpanStats = z.infer<typeof agentSpanStatsSchema>;
 
-export const agentEntryStatsQuerySchema = listAgentEntriesQuerySchema.omit({
+export const agentSpanStatsQuerySchema = listAgentSpansQuerySchema.omit({
 	limit: true,
 	offset: true,
 });
-export type AgentEntryStatsQuery = z.infer<typeof agentEntryStatsQuerySchema>;
+export type AgentSpanStatsQuery = z.infer<typeof agentSpanStatsQuerySchema>;

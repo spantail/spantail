@@ -61,7 +61,7 @@
 	"projects": {
 		"notFound": "このワークスペースにプロジェクトが見つかりません。",
 		"backHome": "ホームへ戻る",
-		"entriesTitle": "記録",
+		"spansTitle": "スパン",
 		"unassigned": "プロジェクトなし"
 	},
 	"agents": {
@@ -69,7 +69,7 @@
 		"backHome": "ホームへ戻る",
 		"totalTokens": "トークン",
 		"totalMinutes": "分",
-		"entryCount": "セッション",
+		"spanCount": "セッション",
 		"entriesTitle": "セッション",
 		"empty": "記録されたセッションはまだありません。",
 		"table": {
@@ -105,16 +105,16 @@
 	},
 	"timeline": {
 		"title": "タイムライン",
-		"empty": "まだ記録がありません。",
-		"emptyCta": "最初の作業を記録する",
+		"empty": "まだスパンがありません。",
+		"emptyCta": "最初のスパンを記録する",
 		"shortcutHint": "ヒント: どの画面でも C キーで記録できます。",
 		"createReport": "{{date}}の日報を作成"
 	},
-	"entries": {
+	"spans": {
 		"newTitle": "作業を記録",
-		"editTitle": "記録を編集",
+		"editTitle": "スパンを編集",
 		"newDescription": "取り組んだ作業とその時間を記録します。",
-		"editDescription": "この作業記録の内容を更新します。",
+		"editDescription": "このスパンの内容を更新します。",
 		"project": "プロジェクト",
 		"selectProject": "プロジェクトを選択",
 		"date": "日付",
@@ -124,13 +124,13 @@
 		"sameAsStart": "開始時刻と同じ",
 		"duration": "分",
 		"durationColumn": "時間",
-		"actionsMenu": "記録の操作",
+		"actionsMenu": "スパンの操作",
 		"minutesFromRange": "開始・終了から算出 ({{duration}})。上書きするには直接編集してください。",
 		"minutesManual": "または分を直接入力します。",
 		"description": "内容",
 		"descriptionPlaceholder": "何に取り組みましたか?",
 		"note": "メモ",
-		"noNote": "この記録にメモはありません。",
+		"noNote": "このスパンにメモはありません。",
 		"tags": "タグ",
 		"tagsPlaceholder": "api, design",
 		"author": "メンバー",
@@ -147,7 +147,7 @@
 			"mcp": "MCP",
 			"api": "API"
 		},
-		"empty": "まだ記録がありません。",
+		"empty": "まだスパンがありません。",
 		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
 		"noProject": "プロジェクトなし",
 		"goToSettings": "設定を開く",
@@ -156,12 +156,12 @@
 			"allMembers": "すべてのメンバー",
 			"tag": "タグ",
 			"allTags": "すべてのタグ",
-			"empty": "条件に一致する記録はありません。"
+			"empty": "条件に一致するスパンはありません。"
 		},
 		"toast": {
-			"created": "作業を記録しました。",
-			"updated": "記録を更新しました。",
-			"deleted": "記録を削除しました。"
+			"created": "スパンを記録しました。",
+			"updated": "スパンを更新しました。",
+			"deleted": "スパンを削除しました。"
 		}
 	},
 	"reports": {
@@ -240,7 +240,7 @@
 		"preview": {
 			"updating": "更新中…",
 			"invalid": "上のフィルタを設定するとプレビューが表示されます。",
-			"summary": "{{entries}} 件 · {{total}} · {{projects}} プロジェクト",
+			"summary": "{{spans}} 件 · {{total}} · {{projects}} プロジェクト",
 			"resize": "プレビューの幅を調整"
 		},
 		"detail": {
@@ -405,7 +405,7 @@
 		"name": "テンプレート名",
 		"description": "説明",
 		"body": "テンプレート本文",
-		"bodyHint": "Markdown + Liquid タグで記述します。利用できるデータ: report, period, entries, groups, totals / フィルタ: format_date, format_duration, sum, group_by。",
+		"bodyHint": "Markdown + Liquid タグで記述します。利用できるデータ: report, period, spans, groups, totals / フィルタ: format_date, format_duration, sum, group_by。",
 		"builtin": "ビルトイン",
 		"periodUnit": "周期",
 		"cadence": {
@@ -490,7 +490,7 @@
 			"deleteTitle": "プロジェクトを削除",
 			"deleteDescription": "このプロジェクトをワークスペースから完全に削除します。",
 			"deleteWarningTitle": "この操作は取り消せません",
-			"deleteWarningBody": "「{{name}}」を削除すると、プロジェクトは完全に削除されます。記録された作業エントリーは保持されますが、どのプロジェクトにも紐付かなくなります。",
+			"deleteWarningBody": "「{{name}}」を削除すると、プロジェクトは完全に削除されます。記録されたスパンは保持されますが、どのプロジェクトにも紐付かなくなります。",
 			"deleteConfirm": "プロジェクトを削除",
 			"toast": {
 				"created": "プロジェクトを作成しました。",
@@ -655,7 +655,7 @@
 			"revokeInvite": "取り消し",
 			"delete": {
 				"title": "このユーザーを削除しますか?",
-				"description": "ユーザーと、そのすべての作業ログ・レポート・トークンが完全に削除されます。元に戻せません。",
+				"description": "ユーザーと、そのすべてのスパン・レポート・トークンが完全に削除されます。元に戻せません。",
 				"confirm": "削除",
 				"cancel": "キャンセル"
 			},

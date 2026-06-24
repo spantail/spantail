@@ -61,7 +61,7 @@
 	"projects": {
 		"notFound": "Project not found in this workspace.",
 		"backHome": "Back to home",
-		"entriesTitle": "Entries",
+		"spansTitle": "Spans",
 		"unassigned": "No project"
 	},
 	"agents": {
@@ -69,7 +69,7 @@
 		"backHome": "Back to home",
 		"totalTokens": "Tokens",
 		"totalMinutes": "Minutes",
-		"entryCount": "Sessions",
+		"spanCount": "Sessions",
 		"entriesTitle": "Sessions",
 		"empty": "No sessions logged yet.",
 		"table": {
@@ -105,16 +105,16 @@
 	},
 	"timeline": {
 		"title": "Timeline",
-		"empty": "No entries yet.",
-		"emptyCta": "Log your first entry",
+		"empty": "No spans yet.",
+		"emptyCta": "Log your first span",
 		"shortcutHint": "Tip: press C anywhere to log work.",
 		"createReport": "Create daily report for {{date}}"
 	},
-	"entries": {
+	"spans": {
 		"newTitle": "Log work",
-		"editTitle": "Edit entry",
+		"editTitle": "Edit span",
 		"newDescription": "Record what you worked on and for how long.",
-		"editDescription": "Update the details of this work entry.",
+		"editDescription": "Update the details of this work span.",
 		"project": "Project",
 		"selectProject": "Select a project",
 		"date": "Date",
@@ -124,13 +124,13 @@
 		"sameAsStart": "Same as start time",
 		"duration": "Minutes",
 		"durationColumn": "Duration",
-		"actionsMenu": "Entry actions",
+		"actionsMenu": "Span actions",
 		"minutesFromRange": "Calculated from start and end ({{duration}}) — edit to override.",
 		"minutesManual": "Or enter minutes directly.",
 		"description": "Description",
 		"descriptionPlaceholder": "What did you work on?",
 		"note": "Note",
-		"noNote": "No note for this entry.",
+		"noNote": "No note for this span.",
 		"tags": "Tags",
 		"tagsPlaceholder": "api, design",
 		"author": "Member",
@@ -147,7 +147,7 @@
 			"mcp": "MCP",
 			"api": "API"
 		},
-		"empty": "No entries yet.",
+		"empty": "No spans yet.",
 		"noProjects": "No active projects. Create one in workspace settings first.",
 		"noProject": "No project",
 		"goToSettings": "Open settings",
@@ -156,12 +156,12 @@
 			"allMembers": "All members",
 			"tag": "Tag",
 			"allTags": "All tags",
-			"empty": "No entries match these filters."
+			"empty": "No spans match these filters."
 		},
 		"toast": {
-			"created": "Work entry logged.",
-			"updated": "Entry updated.",
-			"deleted": "Entry deleted."
+			"created": "Work span logged.",
+			"updated": "Span updated.",
+			"deleted": "Span deleted."
 		}
 	},
 	"reports": {
@@ -240,7 +240,7 @@
 		"preview": {
 			"updating": "Updating…",
 			"invalid": "Set the filters above to see a preview.",
-			"summary": "{{entries}} entries · {{total}} · {{projects}} projects",
+			"summary": "{{spans}} spans · {{total}} · {{projects}} projects",
 			"resize": "Resize preview"
 		},
 		"detail": {
@@ -405,7 +405,7 @@
 		"name": "Template name",
 		"description": "Description",
 		"body": "Template body",
-		"bodyHint": "Markdown with Liquid tags. Available data: report, period, entries, groups, totals; filters: format_date, format_duration, sum, group_by.",
+		"bodyHint": "Markdown with Liquid tags. Available data: report, period, spans, groups, totals; filters: format_date, format_duration, sum, group_by.",
 		"builtin": "Built-in",
 		"periodUnit": "Cadence",
 		"cadence": {
@@ -490,7 +490,7 @@
 			"deleteTitle": "Delete project",
 			"deleteDescription": "This permanently removes the project from your workspace.",
 			"deleteWarningTitle": "This action cannot be undone",
-			"deleteWarningBody": "Deleting “{{name}}” permanently removes the project. Time entries logged against it are kept but no longer assigned to any project.",
+			"deleteWarningBody": "Deleting “{{name}}” permanently removes the project. Spans logged against it are kept but no longer assigned to any project.",
 			"deleteConfirm": "Delete project",
 			"toast": {
 				"created": "Project created.",
@@ -655,7 +655,7 @@
 			"revokeInvite": "Revoke",
 			"delete": {
 				"title": "Delete this user?",
-				"description": "This permanently deletes the user and all of their work entries, reports, and tokens. This cannot be undone.",
+				"description": "This permanently deletes the user and all of their work spans, reports, and tokens. This cannot be undone.",
 				"confirm": "Delete",
 				"cancel": "Cancel"
 			},

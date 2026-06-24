@@ -29,23 +29,23 @@ export const devMailRoutes = new Hono<AppEnv>().get("/", (c) => {
 		return c.json({ error: { code: "not_found", message: "Not found" } }, 404);
 	}
 
-	const entries = getOutbox();
+	const spans = getOutbox();
 	const sections =
-		entries.length === 0
+		spans.length === 0
 			? "<p>No emails captured yet.</p>"
-			: entries
-					.map((entry) => {
-						const links = extractLinks(entry.html)
+			: spans
+					.map((span) => {
+						const links = extractLinks(span.html)
 							.map(
 								(href) =>
 									`<li><a href="${escapeHtml(href)}">${escapeHtml(href)}</a></li>`,
 							)
 							.join("");
 						return `<article style="margin:16px 0;padding:16px;border:1px solid #ddd;border-radius:8px">
-		<div><strong>${escapeHtml(entry.subject)}</strong></div>
-		<div style="color:#666;font-size:13px">to: ${escapeHtml(entry.to)} · ${escapeHtml(entry.sentAt)}</div>
+		<div><strong>${escapeHtml(span.subject)}</strong></div>
+		<div style="color:#666;font-size:13px">to: ${escapeHtml(span.to)} · ${escapeHtml(span.sentAt)}</div>
 		${links ? `<ul>${links}</ul>` : ""}
-		<iframe title="email" srcdoc="${escapeHtml(entry.html)}" style="width:100%;height:360px;border:1px solid #eee;margin-top:8px"></iframe>
+		<iframe title="email" srcdoc="${escapeHtml(span.html)}" style="width:100%;height:360px;border:1px solid #eee;margin-top:8px"></iframe>
 	</article>`;
 					})
 					.join("");
@@ -54,7 +54,7 @@ export const devMailRoutes = new Hono<AppEnv>().get("/", (c) => {
 		`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Dev outbox</title></head>
 <body style="font-family:sans-serif;max-width:680px;margin:24px auto;padding:0 16px">
 <h1>Dev outbox</h1>
-<p style="color:#666">Captured ${entries.length} email(s). In-memory; cleared on worker restart.</p>
+<p style="color:#666">Captured ${spans.length} email(s). In-memory; cleared on worker restart.</p>
 ${sections}
 </body></html>`,
 	);

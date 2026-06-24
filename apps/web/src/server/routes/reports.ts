@@ -3,7 +3,7 @@ import {
 	buildReportFrontMatter,
 	createReportInputSchema,
 	createReportShareInputSchema,
-	filterEntriesByTags,
+	filterSpansByTags,
 	generateShareToken,
 	getBuiltinTemplate,
 	hashSharePasscode,
@@ -33,7 +33,7 @@ import {
 	listReportSharesByReport,
 	listReportTemplateIdsByOwner,
 	listUsersByIds,
-	listWorkEntriesForReport,
+	listWorkSpansForReport,
 	listWorkspacesForUser,
 	type ReportRow,
 	updateReportWithNewVersion,
@@ -136,7 +136,7 @@ async function renderReportDocument(
 	content: string;
 	resolvedFilters: ReportFilters;
 	totalMinutes: number;
-	entryCount: number;
+	spanCount: number;
 	projectCount: number;
 }> {
 	const { filters, templateId } = doc;
@@ -156,19 +156,19 @@ async function renderReportDocument(
 		anchor.timezone,
 	);
 
-	const rows = await listWorkEntriesForReport(c.var.db, {
+	const rows = await listWorkSpansForReport(c.var.db, {
 		workspaceIds: filters.workspaceIds,
 		projectIds: filters.projectIds,
 		userIds: filters.userIds,
 		from: range.from,
 		to: range.to,
 	});
-	const entries = filterEntriesByTags(rows, filters.tags);
+	const spans = filterSpansByTags(rows, filters.tags);
 	const [projects, users] = await Promise.all([
 		listProjectsByIds(c.var.db, [
-			...new Set(entries.flatMap((e) => (e.projectId ? [e.projectId] : []))),
+			...new Set(spans.flatMap((e) => (e.projectId ? [e.projectId] : []))),
 		]),
-		listUsersByIds(c.var.db, [...new Set(entries.map((e) => e.userId))]),
+		listUsersByIds(c.var.db, [...new Set(spans.map((e) => e.userId))]),
 	]);
 
 	const preset =
@@ -190,14 +190,14 @@ async function renderReportDocument(
 			})),
 			projects,
 			users: users.map((u) => ({ id: u.id, name: u.name })),
-			entries,
+			spans,
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		throw new AppError("bad_request", `Template rendering failed: ${message}`);
 	}
 
-	const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
+	const totalMinutes = spans.reduce((sum, e) => sum + e.durationMinutes, 0);
 
 	// System-generated provenance header. Built here (not in the template) so it
 	// is consistent and never under user/template control. Note is excluded — it
@@ -226,8 +226,8 @@ async function renderReportDocument(
 		content,
 		resolvedFilters: { ...filters, dateRange: range },
 		totalMinutes,
-		entryCount: entries.length,
-		// Distinct projects with at least one entry (entries with no project are
+		spanCount: spans.length,
+		// Distinct projects with at least one span (spans with no project are
 		// excluded, mirroring how they group under "(no project)" in the body).
 		projectCount: projects.length,
 	};
@@ -239,7 +239,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		const query = validate(listReportsQuerySchema, c.req.query());
 		// Metadata only: the rendered body is fetched on demand via GET /:id.
 		const metas = await listReportMetaByOwner(c.var.db, user.id, query);
-		// totalMinutes is an aggregate of workspace entries (report content), so it
+		// totalMinutes is an aggregate of workspace spans (report content), so it
 		// is redacted for reports whose scope the owner no longer fully covers —
 		// mirroring the membership re-check that gates the full report read.
 		const memberIds = new Set(
@@ -265,7 +265,7 @@ export const reportRoutes = new Hono<AppEnv>()
 	.post("/preview", async (c) => {
 		requireScope(c, "read");
 		const input = validate(createReportInputSchema, await c.req.json());
-		const { content, totalMinutes, entryCount, projectCount } =
+		const { content, totalMinutes, spanCount, projectCount } =
 			await renderReportDocument(c, {
 				name: input.name,
 				templateId: input.templateId,
@@ -275,7 +275,7 @@ export const reportRoutes = new Hono<AppEnv>()
 				// display); the persisted version is assigned on create/edit.
 				version: 1,
 			});
-		return c.json({ content, totalMinutes, entryCount, projectCount });
+		return c.json({ content, totalMinutes, spanCount, projectCount });
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
@@ -442,7 +442,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		const current = await getCurrentReportContent(c.var.db, report.id);
 		if (!current) throw new AppError("internal", "Report content missing");
 		// One id shared by every row of this send so the sender's Sent folder can
-		// group the fan-out back into a single entry.
+		// group the fan-out back into a single span.
 		const batchId = crypto.randomUUID();
 		await createReportDeliveries(
 			c.var.db,

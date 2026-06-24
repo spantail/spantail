@@ -1,4 +1,4 @@
-import { formatDuration, type WorkEntry } from "@spantail/core";
+import { formatDuration, type WorkSpan } from "@spantail/core";
 import {
 	CalendarIcon,
 	ClockIcon,
@@ -18,48 +18,48 @@ import { PersonAvatar } from "@/components/person-avatar";
 import { Badge } from "@/components/ui/badge";
 
 /** Provenance chip icon per logging route. */
-const SOURCE_ICONS: Record<WorkEntry["source"], LucideIcon> = {
+const SOURCE_ICONS: Record<WorkSpan["source"], LucideIcon> = {
 	web: GlobeIcon,
 	cli: TerminalIcon,
 	mcp: PlugIcon,
 	api: CodeIcon,
 };
 
-interface EntryDetailProps {
-	entry: WorkEntry;
+interface SpanDetailProps {
+	span: WorkSpan;
 	projectName: string;
 	/** Project's OKLCH hue for the color dot; null when unassigned. */
 	projectHue: number | null;
 	dateLabel: string;
 	/** Local start–end time range, when both ends are recorded. */
 	timeRange: string | null;
-	/** Author's display name; null when the viewer owns the entry. */
+	/** Author's display name; null when the viewer owns the span. */
 	authorName: string | null;
 }
 
 /**
- * Read-only body of a work entry, shown in the entry dialog: a metadata panel
+ * Read-only body of a work span, shown in the span dialog: a metadata panel
  * (project / date / duration), tags, the note, and an author byline for
- * entries the viewer doesn't own.
+ * spans the viewer doesn't own.
  */
-export function EntryDetail({
-	entry,
+export function SpanDetail({
+	span,
 	projectName,
 	projectHue,
 	dateLabel,
 	timeRange,
 	authorName,
-}: EntryDetailProps) {
+}: SpanDetailProps) {
 	const { t } = useTranslation();
-	const SourceIcon = SOURCE_ICONS[entry.source];
-	const sourceLabel = t(`entries.sources.${entry.source}`);
+	const SourceIcon = SOURCE_ICONS[span.source];
+	const sourceLabel = t(`spans.sources.${span.source}`);
 
 	return (
 		<div className="flex flex-col gap-5">
 			<div className="bg-muted/40 grid grid-cols-1 gap-4 rounded-xl border p-4 sm:grid-cols-3">
 				<MetaItem
 					icon={<FolderIcon className="size-3.5" />}
-					label={t("entries.project")}
+					label={t("spans.project")}
 					value={
 						projectHue != null ? (
 							<span className="flex items-center gap-1.5">
@@ -73,16 +73,16 @@ export function EntryDetail({
 				/>
 				<MetaItem
 					icon={<CalendarIcon className="size-3.5" />}
-					label={t("entries.date")}
+					label={t("spans.date")}
 					value={dateLabel}
 				/>
 				<MetaItem
 					icon={<ClockIcon className="size-3.5" />}
-					label={t("entries.durationColumn")}
+					label={t("spans.durationColumn")}
 					value={
 						<span className="flex flex-wrap items-baseline gap-x-1.5">
 							<span className="tabular-nums">
-								{formatDuration(entry.durationMinutes)}
+								{formatDuration(span.durationMinutes)}
 							</span>
 							{timeRange && (
 								<span className="text-muted-foreground text-xs font-normal tabular-nums">
@@ -94,11 +94,11 @@ export function EntryDetail({
 				/>
 			</div>
 
-			{entry.tags.length > 0 && (
+			{span.tags.length > 0 && (
 				<div className="flex flex-col gap-2">
-					<MetaLabel>{t("entries.tags")}</MetaLabel>
+					<MetaLabel>{t("spans.tags")}</MetaLabel>
 					<div className="flex flex-wrap gap-1.5">
-						{entry.tags.map((tag) => (
+						{span.tags.map((tag) => (
 							<Badge key={tag} variant="secondary">
 								{tag}
 							</Badge>
@@ -108,12 +108,12 @@ export function EntryDetail({
 			)}
 
 			<div className="flex flex-col gap-2">
-				<MetaLabel>{t("entries.note")}</MetaLabel>
-				{entry.note?.trim() ? (
-					<MarkdownView markdown={entry.note} />
+				<MetaLabel>{t("spans.note")}</MetaLabel>
+				{span.note?.trim() ? (
+					<MarkdownView markdown={span.note} />
 				) : (
 					<p className="text-muted-foreground text-sm italic">
-						{t("entries.noNote")}
+						{t("spans.noNote")}
 					</p>
 				)}
 			</div>
@@ -130,7 +130,7 @@ export function EntryDetail({
 					<span />
 				)}
 				<span
-					title={`${t("entries.source")} ${sourceLabel}`}
+					title={`${t("spans.source")} ${sourceLabel}`}
 					className="inline-flex shrink-0 items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs font-medium"
 				>
 					<SourceIcon className="text-muted-foreground size-3" />

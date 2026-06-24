@@ -5,7 +5,7 @@ export type AuthContext =
 	| { user: AuthUser; via: "session" }
 	| { user: AuthUser; via: "pat"; scopes: TokenScope[] }
 	// Agent access token: a delegated, write-only ingest credential. Carries no
-	// AuthUser — it can only ingest agent entries for the bound agent, on behalf
+	// AuthUser — it can only ingest agent spans for the bound agent, on behalf
 	// of its owner. Consumed solely by requireAgentAuth.
 	| {
 			via: "agent";

@@ -16,7 +16,7 @@ span. *tail*, as in `tail -f`, is following the latest activity as it happens.
 ## Features
 
 - **Workspaces** — organize work by department, team, or client organization. Projects live under workspaces. One deployment serves one company; this is not a multi-tenant SaaS.
-- **Work entries** — date, duration, description, and tags, with optional start/end times. Designed for fast daily logging.
+- **Work spans** — date, duration, description, and tags, with optional start/end times. Designed for fast daily logging.
 - **Unified reports** — no hardcoded report types. A report is a Markdown + Liquid template applied to filters you choose freely: any combination of workspaces, projects, users, and date range — including across workspaces. Built-in templates cover daily, weekly, and monthly reports.
 - **Safe report sharing** — share an immutable report snapshot via an expiring, revocable link with an optional passcode. Viewers don't need an account — share with clients, stakeholders, or anyone outside your instance.
 - **AI-first** — a built-in MCP server (remote Streamable HTTP, or local stdio via the CLI) and a CLI let AI agents and scripts log work and generate reports through the same API the web UI uses.
@@ -80,7 +80,7 @@ See the documentation at [spantail.com](https://spantail.com) for the full self-
 ```bash
 spantail auth login                                  # store an API token
 spantail log "Implemented report engine" --project core --duration 2h
-spantail entries list --from 2026-06-01
+spantail spans list --from 2026-06-01
 spantail report run monthly --workspace acme --month 2026-06
 spantail mcp                                         # stdio MCP server for AI clients
 ```

@@ -70,7 +70,7 @@ function json(body: unknown): Response {
 
 const zeroStats = {
 	totalMinutes: 0,
-	entryCount: 0,
+	spanCount: 0,
 	byDate: [],
 	byProject: [],
 	byUser: [],
@@ -93,7 +93,7 @@ beforeEach(() => {
 			switch (url.pathname) {
 				case "/api/v1/me":
 					return json(mePayload);
-				case "/api/v1/work-entries/stats":
+				case "/api/v1/work-spans/stats":
 					return json(zeroStats);
 				case "/api/v1/workspaces/ws1/projects":
 					return json([{ ...projectPayload, id: "p1", workspaceId: "ws1" }]);
@@ -174,11 +174,11 @@ it("renders the authed shell with sidebar for a session", async () => {
 	expect(await screen.findByRole("button", { name: "Log work" })).toBeDefined();
 });
 
-it("redirects the removed entries route to home", async () => {
+it("redirects the removed spans route to home", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
-	const router = await renderApp("/entries");
+	const router = await renderApp("/spans");
 
-	// `/entries` → `/` → the active workspace dashboard.
+	// `/spans` → `/` → the active workspace dashboard.
 	expect(await screen.findByText("Daily focus")).toBeDefined();
 	expect(router.state.location.pathname).toBe("/w/acme");
 });
@@ -237,7 +237,7 @@ it("renders the home dashboard and the empty timeline call to action", async () 
 	expect(await screen.findByText("Daily focus")).toBeDefined();
 	expect(await screen.findByText("By project")).toBeDefined();
 	expect(
-		await screen.findByRole("button", { name: "Log your first entry" }),
+		await screen.findByRole("button", { name: "Log your first span" }),
 	).toBeDefined();
 });
 
@@ -270,7 +270,7 @@ it("keeps the URL-selected workspace active after leaving the scoped route", asy
 			switch (url.pathname) {
 				case "/api/v1/me":
 					return json(twoWorkspaceMe);
-				case "/api/v1/work-entries/stats":
+				case "/api/v1/work-spans/stats":
 					return json(zeroStats);
 				default:
 					return json([]);

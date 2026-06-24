@@ -1,17 +1,17 @@
 import {
-	agentEntryStatsQuerySchema,
-	ingestAgentEntryInputSchema,
-	listAgentEntriesQuerySchema,
+	agentSpanStatsQuerySchema,
+	ingestAgentSpanInputSchema,
+	listAgentSpansQuerySchema,
 	todayInTimezone,
 } from "@spantail/core";
 import {
-	getAgentEntryStats,
+	getAgentSpanStats,
 	getMembership,
 	getProjectById,
 	getWorkspaceById,
-	listAgentEntries,
+	listAgentSpans,
 	listWorkspaceAgents,
-	upsertAgentEntry,
+	upsertAgentSpan,
 } from "@spantail/db";
 import { Hono } from "hono";
 
@@ -22,12 +22,12 @@ import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth, requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
-export const agentEntryRoutes = new Hono<AppEnv>()
+export const agentSpanRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
 	// Ingest (agent access token only). Idempotent on (agent, sessionId).
 	.post("/", async (c) => {
 		const auth = requireAgentAuth(c);
-		const input = validate(ingestAgentEntryInputSchema, await c.req.json());
+		const input = validate(ingestAgentSpanInputSchema, await c.req.json());
 
 		const workspaceId = input.workspaceId ?? auth.defaultWorkspaceId;
 		if (!workspaceId) {
@@ -63,21 +63,21 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		}
 
 		const startedAt = input.startedAt ? new Date(input.startedAt) : null;
-		const entry = await upsertAgentEntry(c.var.db, {
+		const span = await upsertAgentSpan(c.var.db, {
 			workspaceId,
 			ownerUserId: auth.ownerUserId,
 			projectId: projectId ?? null,
 			agentId: auth.agentId,
 			sessionId: input.sessionId,
 			// The session's local date in the workspace timezone (from its start).
-			entryDate: todayInTimezone(workspace.timezone, startedAt ?? undefined),
+			spanDate: todayInTimezone(workspace.timezone, startedAt ?? undefined),
 			durationMinutes: input.durationMinutes,
 			usage: input.usage ?? null,
 			description: input.description ?? null,
 			startedAt,
 			endedAt: input.endedAt ? new Date(input.endedAt) : null,
 		});
-		return c.json(entry);
+		return c.json(span);
 	})
 	// Reads are scoped to the caller's own agents: an agent acts for one user,
 	// and members only see their own agents' activity (ownerUserId is fixed to
@@ -85,10 +85,10 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 	// spoofed to read another member's data).
 	.get("/", async (c) => {
 		const auth = requireScope(c, "read");
-		const query = validate(listAgentEntriesQuerySchema, c.req.query());
+		const query = validate(listAgentSpansQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
 		return c.json(
-			await listAgentEntries(c.var.db, {
+			await listAgentSpans(c.var.db, {
 				...query,
 				ownerUserId: auth.user.id,
 			}),
@@ -96,10 +96,10 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 	})
 	.get("/stats", async (c) => {
 		const auth = requireScope(c, "read");
-		const query = validate(agentEntryStatsQuerySchema, c.req.query());
+		const query = validate(agentSpanStatsQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
 		return c.json(
-			await getAgentEntryStats(c.var.db, {
+			await getAgentSpanStats(c.var.db, {
 				...query,
 				ownerUserId: auth.user.id,
 			}),

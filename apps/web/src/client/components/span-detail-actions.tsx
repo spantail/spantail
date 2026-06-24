@@ -1,34 +1,34 @@
-import type { WorkEntry } from "@spantail/core";
+import type { WorkSpan } from "@spantail/core";
 import { useRouteContext } from "@tanstack/react-router";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
-import { useDeleteWorkEntry } from "@/hooks/use-delete-work-entry";
+import { useDeleteWorkSpan } from "@/hooks/use-delete-span";
 
 /**
- * Detail-dialog footer: Delete/Edit for the viewer's own entry, a plain Close
- * for entries owned by someone else.
+ * Detail-dialog footer: Delete/Edit for the viewer's own span, a plain Close
+ * for spans owned by someone else.
  */
-export function EntryDetailActions({
-	entry,
+export function SpanDetailActions({
+	span,
 	onEdit,
 	onClose,
 }: {
-	entry: WorkEntry;
+	span: WorkSpan;
 	onEdit: () => void;
 	onClose: () => void;
 }) {
 	const { t } = useTranslation();
 	const { session } = useRouteContext({ from: "/_authed" });
-	const deleteMutation = useDeleteWorkEntry(entry, onClose);
+	const deleteMutation = useDeleteWorkSpan(span, onClose);
 
-	if (entry.userId !== session.user.id) {
+	if (span.userId !== session.user.id) {
 		return (
 			<DialogFooter>
 				<Button variant="outline" onClick={onClose}>
-					{t("entries.closeAction")}
+					{t("spans.closeAction")}
 				</Button>
 			</DialogFooter>
 		);
@@ -43,11 +43,11 @@ export function EntryDetailActions({
 				className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
 			>
 				<Trash2Icon />
-				{t("entries.deleteAction")}
+				{t("spans.deleteAction")}
 			</Button>
 			<Button onClick={onEdit}>
 				<PencilIcon />
-				{t("entries.editAction")}
+				{t("spans.editAction")}
 			</Button>
 		</DialogFooter>
 	);

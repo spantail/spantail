@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 
 import {
-	createWorkEntryInputSchema,
-	listWorkEntriesQuerySchema,
-} from "./work-entry";
+	createWorkSpanInputSchema,
+	listWorkSpansQuerySchema,
+} from "./work-span";
 
 const base = {
 	workspaceId: "ws1",
@@ -12,35 +12,35 @@ const base = {
 	description: "Implemented the report engine",
 };
 
-it("accepts a minimal entry and defaults tags", () => {
-	const parsed = createWorkEntryInputSchema.parse(base);
+it("accepts a minimal span and defaults tags", () => {
+	const parsed = createWorkSpanInputSchema.parse(base);
 	expect(parsed.tags).toEqual([]);
-	expect(parsed.entryDate).toBeUndefined();
+	expect(parsed.spanDate).toBeUndefined();
 });
 
 it("rejects non-positive or fractional durations", () => {
 	expect(
-		createWorkEntryInputSchema.safeParse({ ...base, durationMinutes: 0 })
+		createWorkSpanInputSchema.safeParse({ ...base, durationMinutes: 0 })
 			.success,
 	).toBe(false);
 	expect(
-		createWorkEntryInputSchema.safeParse({ ...base, durationMinutes: -5 })
+		createWorkSpanInputSchema.safeParse({ ...base, durationMinutes: -5 })
 			.success,
 	).toBe(false);
 	expect(
-		createWorkEntryInputSchema.safeParse({ ...base, durationMinutes: 1.5 })
+		createWorkSpanInputSchema.safeParse({ ...base, durationMinutes: 1.5 })
 			.success,
 	).toBe(false);
 });
 
 it("rejects an empty description", () => {
 	expect(
-		createWorkEntryInputSchema.safeParse({ ...base, description: "" }).success,
+		createWorkSpanInputSchema.safeParse({ ...base, description: "" }).success,
 	).toBe(false);
 });
 
 it("coerces and defaults list query pagination", () => {
-	const parsed = listWorkEntriesQuerySchema.parse({
+	const parsed = listWorkSpansQuerySchema.parse({
 		workspaceId: "ws1",
 		limit: "10",
 	});
@@ -48,7 +48,7 @@ it("coerces and defaults list query pagination", () => {
 	expect(parsed.offset).toBe(0);
 
 	expect(
-		listWorkEntriesQuerySchema.safeParse({ workspaceId: "ws1", limit: "500" })
+		listWorkSpansQuerySchema.safeParse({ workspaceId: "ws1", limit: "500" })
 			.success,
 	).toBe(false);
 });

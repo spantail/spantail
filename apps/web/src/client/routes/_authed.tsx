@@ -9,9 +9,9 @@ import { useTranslation } from "react-i18next";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { AuthedRoot } from "@/components/authed-root";
-import { EntryDialogProvider, useEntryDialog } from "@/components/entry-dialog";
 import { NavInbox } from "@/components/nav-inbox";
 import { NavUser } from "@/components/nav-user";
+import { SpanDialogProvider, useSpanDialog } from "@/components/span-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	SidebarInset,
@@ -38,7 +38,7 @@ function AuthedLayout() {
 	return (
 		<AuthedRoot>
 			{(me) => (
-				<EntryDialogProvider>
+				<SpanDialogProvider>
 					<SidebarProvider>
 						<AppSidebar isAdmin={me.user.isAdmin} />
 						<SidebarInset>
@@ -78,7 +78,7 @@ function AuthedLayout() {
 							</main>
 						</SidebarInset>
 					</SidebarProvider>
-				</EntryDialogProvider>
+				</SpanDialogProvider>
 			)}
 		</AuthedRoot>
 	);
@@ -87,7 +87,7 @@ function AuthedLayout() {
 function LogWorkButton() {
 	const { t } = useTranslation();
 	const { current } = useWorkspace();
-	const { openCreate } = useEntryDialog();
+	const { openCreate } = useSpanDialog();
 
 	if (!current) return null;
 	return (

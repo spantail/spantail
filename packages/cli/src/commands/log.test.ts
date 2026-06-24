@@ -4,9 +4,9 @@ import { runCli } from "../cli";
 import { saveConfig } from "../config";
 import {
 	createTestContext,
-	entryFixture,
 	fakeApi,
 	projectFixture,
+	spanFixture,
 	workspaceFixture,
 } from "../test-helpers";
 
@@ -19,12 +19,12 @@ function api() {
 		{ path: `/workspaces/${acme.id}/projects`, body: [apiProject] },
 		{
 			method: "POST",
-			path: "/work-entries",
+			path: "/work-spans",
 			status: 201,
-			body: entryFixture({
+			body: spanFixture({
 				projectId: apiProject.id,
 				durationMinutes: 90,
-				entryDate: "2026-06-12",
+				spanDate: "2026-06-12",
 				description: "Fixed the build",
 			}),
 		},
@@ -39,7 +39,7 @@ function loggedIn(configDir: string): void {
 	});
 }
 
-it("logs a work entry with resolved ids and a parsed duration", async () => {
+it("logs a work span with resolved ids and a parsed duration", async () => {
 	const stub = api();
 	const { ctx, stdout, configDir } = createTestContext({ fetch: stub.fetch });
 	loggedIn(configDir);
@@ -73,7 +73,7 @@ it("logs a work entry with resolved ids and a parsed duration", async () => {
 		tags: ["ci", "infra"],
 	});
 	expect(stdout.text()).toBe(
-		"Logged 1h 30m to acme/api on 2026-06-12 (id: entry-1)\n",
+		"Logged 1h 30m to acme/api on 2026-06-12 (id: span-1)\n",
 	);
 });
 
@@ -95,7 +95,7 @@ it("passes an explicit date and omits it otherwise", async () => {
 		first.ctx,
 	);
 	const post = withDate.calls.find((call) => call.method === "POST");
-	expect(post?.body).toMatchObject({ entryDate: "2026-06-01" });
+	expect(post?.body).toMatchObject({ spanDate: "2026-06-01" });
 
 	const withoutDate = api();
 	const second = createTestContext({ fetch: withoutDate.fetch });
@@ -105,7 +105,7 @@ it("passes an explicit date and omits it otherwise", async () => {
 		second.ctx,
 	);
 	const omitted = withoutDate.calls.find((call) => call.method === "POST");
-	expect(omitted?.body).not.toHaveProperty("entryDate");
+	expect(omitted?.body).not.toHaveProperty("spanDate");
 });
 
 it("rejects missing required flags and positionals", async () => {

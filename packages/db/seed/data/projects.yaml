@@ -1,5 +1,5 @@
 # Three active projects per workspace. Names and `activities` follow the
-# workspace language. `activities` are concrete task phrases the work-entry
+# workspace language. `activities` are concrete task phrases the work-span
 # generator draws from (rotated deterministically per user/day), so the demo
 # reads like real work instead of "Implemented features for X" on repeat.
 - key: p-self-platform
@@ -10,7 +10,7 @@
   description: Core services and APIs.
   activities:
     - Implemented the workspace invitation flow
-    - Added cursor pagination to the entries API
+    - Added cursor pagination to the spans API
     - Hardened report-scope permission checks
     - Reviewed the D1 query-layer refactor
     - Fixed a timezone bug in daily rollups

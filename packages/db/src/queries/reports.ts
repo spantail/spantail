@@ -87,7 +87,7 @@ export interface ListReportsFilter {
  * List headers (no content), newest first. Filters are applied in SQL so a
  * paginated page is always populated. `projectIds`/`workspaceIds` live in the
  * `filters` JSON, matched via json_extract / json_each (mirroring the
- * work-entries tag filter). Date strings (YYYY-MM-DD) compare chronologically.
+ * work-spans tag filter). Date strings (YYYY-MM-DD) compare chronologically.
  */
 export async function listReportMetaByOwner(
 	db: Database,

@@ -61,7 +61,7 @@ async function createAgentToken(
 }
 
 function ingest(token: string, body: unknown): Promise<Response> {
-	return appFetch("/api/v1/agent-entries", {
+	return appFetch("/api/v1/agent-spans", {
 		method: "POST",
 		headers: {
 			authorization: `Bearer ${token}`,
@@ -98,7 +98,7 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	expect(second.status).toBe(200);
 
 	const list = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
 		durationMinutes: number;
 		usage: { totalTokens: number };
@@ -110,21 +110,21 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	expect(list[0]?.projectId).toBe(project.id);
 
 	const stats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans/stats?workspaceId=${ws.id}`, admin)
 	).json()) as {
-		entryCount: number;
+		spanCount: number;
 		totalMinutes: number;
 		totalTokens: number;
 		byAgent: Array<{ agentId: string; tokens: number }>;
 	};
-	expect(stats.entryCount).toBe(1);
+	expect(stats.spanCount).toBe(1);
 	expect(stats.totalMinutes).toBe(25);
 	expect(stats.totalTokens).toBe(3000);
 	expect(stats.byAgent[0]?.agentId).toBe(agentId);
 
 	// The agent now shows up as active in the workspace (powers the sidebar).
 	const active = (await (
-		await apiGet(`/api/v1/agent-entries/agents?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans/agents?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{ id: string }>;
 	expect(active.map((a) => a.id)).toContain(agentId);
 });
@@ -143,8 +143,8 @@ it("records no project when the ingest omits one", async () => {
 		durationMinutes: 5,
 	});
 	expect(res.status).toBe(200);
-	const entry = (await res.json()) as { projectId: string | null };
-	expect(entry.projectId).toBeNull();
+	const span = (await res.json()) as { projectId: string | null };
+	expect(span.projectId).toBeNull();
 });
 
 it("rejects an empty projectId with a 400 rather than a 500", async () => {
@@ -199,14 +199,14 @@ it("treats agent tokens as write-only ingest credentials", async () => {
 	});
 	expect(me.status).toBe(403);
 
-	// Cannot read agent entries either (no scopes; ingest only).
-	const read = await appFetch("/api/v1/agent-entries?workspaceId=anything", {
+	// Cannot read agent spans either (no scopes; ingest only).
+	const read = await appFetch("/api/v1/agent-spans?workspaceId=anything", {
 		headers: { authorization: `Bearer ${token}` },
 	});
 	expect(read.status).toBe(403);
 });
 
-it("does not leak agent entries across workspaces", async () => {
+it("does not leak agent spans across workspaces", async () => {
 	const { admin, ws } = await setup();
 	const { token } = await createAgentToken(admin, {
 		defaultWorkspaceId: ws.id,
@@ -217,7 +217,7 @@ it("does not leak agent entries across workspaces", async () => {
 	// second workspace owned by member and confirm ws stays invisible to outsiders.
 	const outsider = await signUpUser("Outsider", "outsider@example.com");
 	const denied = await apiGet(
-		`/api/v1/agent-entries?workspaceId=${ws.id}`,
+		`/api/v1/agent-spans?workspaceId=${ws.id}`,
 		outsider,
 	);
 	expect(denied.status).toBe(404);
@@ -241,10 +241,10 @@ it("does not show a member another member's agents or activity", async () => {
 
 	// The sidebar lists only the caller's own agents.
 	const adminAgents = (await (
-		await apiGet(`/api/v1/agent-entries/agents?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans/agents?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{ id: string }>;
 	const memberAgents = (await (
-		await apiGet(`/api/v1/agent-entries/agents?workspaceId=${ws.id}`, member)
+		await apiGet(`/api/v1/agent-spans/agents?workspaceId=${ws.id}`, member)
 	).json()) as Array<{ id: string }>;
 	expect(adminAgents.map((x) => x.id)).toEqual([a.agentId]);
 	expect(memberAgents.map((x) => x.id)).toEqual([b.agentId]);
@@ -252,13 +252,13 @@ it("does not show a member another member's agents or activity", async () => {
 	// The member's own activity is visible; the other member's is not — even when
 	// explicitly querying by the other agent's id.
 	const ownList = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, member)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, member)
 	).json()) as Array<{ agentId: string }>;
 	expect(ownList.map((e) => e.agentId)).toEqual([b.agentId]);
 
 	const otherList = (await (
 		await apiGet(
-			`/api/v1/agent-entries?workspaceId=${ws.id}&agentId=${a.agentId}`,
+			`/api/v1/agent-spans?workspaceId=${ws.id}&agentId=${a.agentId}`,
 			member,
 		)
 	).json()) as unknown[];
@@ -266,16 +266,16 @@ it("does not show a member another member's agents or activity", async () => {
 
 	const otherStats = (await (
 		await apiGet(
-			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&agentId=${a.agentId}`,
+			`/api/v1/agent-spans/stats?workspaceId=${ws.id}&agentId=${a.agentId}`,
 			member,
 		)
-	).json()) as { entryCount: number; totalTokens: number };
-	expect(otherStats.entryCount).toBe(0);
+	).json()) as { spanCount: number; totalTokens: number };
+	expect(otherStats.spanCount).toBe(0);
 	expect(otherStats.totalTokens).toBe(0);
 
 	// And the admin still sees their own.
 	const adminStats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans/stats?workspaceId=${ws.id}`, admin)
 	).json()) as { totalTokens: number };
 	expect(adminStats.totalTokens).toBe(1000);
 });

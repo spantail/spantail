@@ -22,17 +22,17 @@ _Generated {{ generated_date }}_
 
 const DAILY_BODY = `# {{ report.name }}
 
-**Period:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
+**Period:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.spans }} spans)
 
-{% if totals.entries == 0 -%}
-_No work entries in this period._
+{% if totals.spans == 0 -%}
+_No work spans in this period._
 
 {% else -%}
 {% for group in groups.by_project -%}
 ## {{ group.name }} — {{ group.total_minutes | format_duration }}
 
-{% for entry in group.entries -%}
-- {{ entry.description }} ({{ entry.duration_minutes | format_duration }}, {{ entry.user_name }}{% if entry.tags.size > 0 %}, tags: {{ entry.tags | join: ", " }}{% endif %})
+{% for span in group.spans -%}
+- {{ span.description }} ({{ span.duration_minutes | format_duration }}, {{ span.user_name }}{% if span.tags.size > 0 %}, tags: {{ span.tags | join: ", " }}{% endif %})
 {% endfor %}
 {% endfor -%}
 {% endif -%}
@@ -40,17 +40,17 @@ ${FOOTER}`;
 
 const WEEKLY_BODY = `# {{ report.name }}
 
-**Period:** {{ period.from }} – {{ period.to }} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
+**Period:** {{ period.from }} – {{ period.to }} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.spans }} spans)
 
-{% if totals.entries == 0 -%}
-_No work entries in this period._
+{% if totals.spans == 0 -%}
+_No work spans in this period._
 
 {% else -%}
 {% for day in groups.by_date -%}
 ## {{ day.key }} — {{ day.total_minutes | format_duration }}
 
-{% for entry in day.entries -%}
-- **{{ entry.project_name }}** {{ entry.description }} ({{ entry.duration_minutes | format_duration }}, {{ entry.user_name }})
+{% for span in day.spans -%}
+- **{{ span.project_name }}** {{ span.description }} ({{ span.duration_minutes | format_duration }}, {{ span.user_name }})
 {% endfor %}
 {% endfor -%}
 ## By project
@@ -63,25 +63,25 @@ ${FOOTER}`;
 
 const MONTHLY_BODY = `# {{ report.name }}
 
-**Period:** {{ period.from }} – {{ period.to }} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
+**Period:** {{ period.from }} – {{ period.to }} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.spans }} spans)
 
-{% if totals.entries == 0 -%}
-_No work entries in this period._
+{% if totals.spans == 0 -%}
+_No work spans in this period._
 
 {% else -%}
 ## By project
 
-| Project | Entries | Total |
+| Project | Spans | Total |
 | --- | --- | --- |
 {% for group in groups.by_project -%}
-| {{ group.name }} | {{ group.entries | size }} | {{ group.total_minutes | format_duration }} |
+| {{ group.name }} | {{ group.spans | size }} | {{ group.total_minutes | format_duration }} |
 {% endfor %}
 ## By member
 
-| Member | Entries | Total |
+| Member | Spans | Total |
 | --- | --- | --- |
 {% for group in groups.by_user -%}
-| {{ group.name }} | {{ group.entries | size }} | {{ group.total_minutes | format_duration }} |
+| {{ group.name }} | {{ group.spans | size }} | {{ group.total_minutes | format_duration }} |
 {% endfor %}
 {% endif -%}
 ${FOOTER}`;
@@ -112,14 +112,14 @@ export const builtinReportTemplates: ReportTemplate[] = [
 	builtin(
 		"daily",
 		"Daily report",
-		"Entries grouped by project for a single day.",
+		"Spans grouped by project for a single day.",
 		DAILY_BODY,
 		"day",
 	),
 	builtin(
 		"weekly",
 		"Weekly report",
-		"Entries grouped by day with a per-project summary.",
+		"Spans grouped by day with a per-project summary.",
 		WEEKLY_BODY,
 		"week",
 	),

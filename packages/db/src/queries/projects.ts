@@ -80,8 +80,8 @@ export async function updateProject(
 	return rows[0];
 }
 
-/** Deletes a project. Entries logged against it are kept; their project_id is
- * set to null by the `work_entries` foreign key (`ON DELETE SET NULL`). */
+/** Deletes a project. Spans logged against it are kept; their project_id is
+ * set to null by the `work_spans` foreign key (`ON DELETE SET NULL`). */
 export async function deleteProject(db: Database, id: string): Promise<void> {
 	await db.delete(projects).where(eq(projects.id, id));
 }

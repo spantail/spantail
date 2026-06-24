@@ -10,20 +10,20 @@ import { requireWorkspaceSlug, resolveWorkspace } from "../resolve";
 
 const DEFAULT_LIMIT = 20;
 
-const USAGE = `Usage: spantail entries list [options]
+const USAGE = `Usage: spantail spans list [options]
 
-Lists work entries, newest first.
+Lists work spans, newest first.
 
 Options:
   --workspace <slug>   Workspace (default: the configured default workspace)
-  --project <slug>     Only entries for this project
-  --from <YYYY-MM-DD>  Only entries on or after this date
-  --to <YYYY-MM-DD>    Only entries on or before this date
-  --limit <n>          Maximum entries to show (default: ${DEFAULT_LIMIT}, max: 200)
+  --project <slug>     Only spans for this project
+  --from <YYYY-MM-DD>  Only spans on or after this date
+  --to <YYYY-MM-DD>    Only spans on or before this date
+  --limit <n>          Maximum spans to show (default: ${DEFAULT_LIMIT}, max: 200)
   -h, --help           Show this help
 `;
 
-export async function entriesList(
+export async function spansList(
 	args: string[],
 	ctx: CliContext,
 ): Promise<number> {
@@ -64,7 +64,7 @@ export async function entriesList(
 		client,
 		requireWorkspaceSlug(ctx, values.workspace),
 	);
-	// Always fetched: entries reference projects by id, the table shows slugs.
+	// Always fetched: spans reference projects by id, the table shows slugs.
 	const projects = await client.listProjects(workspace.id);
 	let projectId: string | undefined;
 	if (values.project) {
@@ -78,15 +78,15 @@ export async function entriesList(
 		projectId = project.id;
 	}
 
-	const entries = await client.listWorkEntries({
+	const spans = await client.listWorkSpans({
 		workspaceId: workspace.id,
 		projectId,
 		from: values.from,
 		to: values.to,
 		limit,
 	});
-	if (entries.length === 0) {
-		ctx.stderr.write("No entries found.\n");
+	if (spans.length === 0) {
+		ctx.stderr.write("No spans found.\n");
 		return 0;
 	}
 
@@ -94,20 +94,18 @@ export async function entriesList(
 	ctx.stdout.write(
 		`${formatTable(
 			["DATE", "DURATION", "PROJECT", "DESCRIPTION", "TAGS"],
-			entries.map((entry) => [
-				entry.entryDate,
-				formatDuration(entry.durationMinutes),
-				entry.projectId
-					? (slugById.get(entry.projectId) ?? entry.projectId)
+			spans.map((span) => [
+				span.spanDate,
+				formatDuration(span.durationMinutes),
+				span.projectId
+					? (slugById.get(span.projectId) ?? span.projectId)
 					: "(no project)",
-				truncate(entry.description, 60),
-				entry.tags.join(","),
+				truncate(span.description, 60),
+				span.tags.join(","),
 			]),
 		)}\n`,
 	);
-	const total = entries.reduce((sum, entry) => sum + entry.durationMinutes, 0);
-	ctx.stderr.write(
-		`${entries.length} entries, total ${formatDuration(total)}\n`,
-	);
+	const total = spans.reduce((sum, span) => sum + span.durationMinutes, 0);
+	ctx.stderr.write(`${spans.length} spans, total ${formatDuration(total)}\n`);
 	return 0;
 }

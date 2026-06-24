@@ -106,12 +106,12 @@ it("enforces the scope matrix", async () => {
 
 	// read scope: GETs pass, mutations fail with insufficient_scope.
 	expect(
-		(await bearerGet(`/api/v1/work-entries?workspaceId=${ws.id}`, readToken))
+		(await bearerGet(`/api/v1/work-spans?workspaceId=${ws.id}`, readToken))
 			.status,
 	).toBe(200);
 	const denied = await bearerJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: ws.id,
 			projectId: project.id,
@@ -125,10 +125,10 @@ it("enforces the scope matrix", async () => {
 		((await denied.json()) as { error: { code: string } }).error.code,
 	).toBe("insufficient_scope");
 
-	// write scope: entry mutations pass, workspace admin operations fail.
+	// write scope: span mutations pass, workspace admin operations fail.
 	const created = await bearerJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: ws.id,
 			projectId: project.id,

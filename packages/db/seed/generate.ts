@@ -9,7 +9,7 @@ import {
 	renderReport,
 	shiftDays,
 	todayInTimezone,
-	type WorkEntrySource,
+	type WorkSpanSource,
 	zonedDateTimeToUtc,
 } from "@spantail/core";
 import { hashPassword } from "better-auth/crypto";
@@ -63,7 +63,7 @@ interface ResolvedProject {
 	activities: string[];
 	workspace: ResolvedWorkspace;
 }
-interface EntryRecord {
+interface SpanRecord {
 	id: string;
 	user: ResolvedUser;
 	workspace: ResolvedWorkspace;
@@ -98,9 +98,9 @@ function roundMinutes(n: number): number {
 // instead of sitting flat.
 const MINUTE_FACTORS = [0.75, 0.9, 1, 1, 1.1, 1.25];
 
-// Weighted client channels for demo entries: mostly the web SPA, with enough
+// Weighted client channels for demo spans: mostly the web SPA, with enough
 // cli/mcp/api mixed in that the source badge is meaningful in the demo.
-const SOURCE_POOL: WorkEntrySource[] = [
+const SOURCE_POOL: WorkSpanSource[] = [
 	"web",
 	"web",
 	"web",
@@ -139,13 +139,13 @@ function isWeekday(date: string): boolean {
 	return dow >= 1 && dow <= 5;
 }
 
-function toEngineEntry(e: EntryRecord): ReportContextInput["entries"][number] {
+function toEngineSpan(e: SpanRecord): ReportContextInput["spans"][number] {
 	return {
 		id: e.id,
 		workspaceId: e.workspace.id,
 		projectId: e.project.id,
 		userId: e.user.id,
-		entryDate: e.date,
+		spanDate: e.date,
 		durationMinutes: e.minutes,
 		description: e.description,
 		note: null,
@@ -315,8 +315,8 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		return t;
 	};
 
-	// --- Work entries (last 45 days, weekdays, 8h/day) ---------------------
-	// entry_date is the workspace-local date, so a member's work in a client
+	// --- Work spans (last 45 days, weekdays, 8h/day) ---------------------
+	// span_date is the workspace-local date, so a member's work in a client
 	// workspace is dated in that workspace's timezone (not the member's home).
 	const weekdaysByTz = new Map<string, string[]>();
 	const weekdaysFor = (timezone: string): string[] => {
@@ -332,14 +332,14 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		return dates;
 	};
 
-	const entryRows: Row[] = [];
-	// user.key -> ws.key -> entries (drives both daily and monthly reports)
-	const entriesByUserWs = new Map<string, Map<string, EntryRecord[]>>();
+	const spanRows: Row[] = [];
+	// user.key -> ws.key -> spans (drives both daily and monthly reports)
+	const spansByUserWs = new Map<string, Map<string, SpanRecord[]>>();
 
 	for (const user of usersByKey.values()) {
 		const allocation = config.workPatterns.allocations[user.key] ?? [];
-		const byWs = new Map<string, EntryRecord[]>();
-		entriesByUserWs.set(user.key, byWs);
+		const byWs = new Map<string, SpanRecord[]>();
+		spansByUserWs.set(user.key, byWs);
 
 		allocation.forEach((line) => {
 			const project = projByKey.get(line.project);
@@ -348,7 +348,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			const tagPool = config.workPatterns.tags[language];
 			weekdaysFor(timezone).forEach((date) => {
 				// A whole day off (~1 weekday in 18), taken consistently across the
-				// member's projects so the day simply has no entries.
+				// member's projects so the day simply has no spans.
 				if (hashString(`off:${user.key}:${date}`) % 18 === 0) return;
 				// Non-daily lines (internal / help work) only land on some days.
 				if (!cadenceActive(line.cadence, user.key, date, project.key)) return;
@@ -359,12 +359,12 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 				const description = pick(project.activities, hashString(`act:${seed}`));
 				const tagIndex = hashString(`tag:${seed}`);
 				const tags = [pick(tagPool, tagIndex)];
-				// ~1 entry in 3 carries a second, distinct tag.
+				// ~1 span in 3 carries a second, distinct tag.
 				if (hashString(`tag2:${seed}`) % 3 === 0) {
 					const second = pick(tagPool, tagIndex + 1);
 					if (second !== tags[0]) tags.push(second);
 				}
-				const record: EntryRecord = {
+				const record: SpanRecord = {
 					id: randomUUID(),
 					user,
 					workspace: project.workspace,
@@ -375,12 +375,12 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					tags,
 				};
 				const createdAt = new Date(zonedDateTimeToUtc(date, "18:00", timezone));
-				entryRows.push({
+				spanRows.push({
 					id: record.id,
 					workspaceId: project.workspace.id,
 					projectId: project.id,
 					userId: user.id,
-					entryDate: date,
+					spanDate: date,
 					durationMinutes: minutes,
 					startedAt: null,
 					endedAt: null,
@@ -465,22 +465,21 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	// sent to that workspace's manager. Scoping to a single workspace keeps the
 	// frozen body within what the recipient (a member) is allowed to see.
 	for (const user of usersByKey.values()) {
-		const byWs =
-			entriesByUserWs.get(user.key) ?? new Map<string, EntryRecord[]>();
+		const byWs = spansByUserWs.get(user.key) ?? new Map<string, SpanRecord[]>();
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
 			// Covered by a cross-workspace route → reported there, not here.
 			if (routeWsByUser.get(user.key)?.has(ws.key)) continue;
 			const tmpl = templateFor(ws.language, "day");
 			const manager = managerByWs.get(ws.key);
-			const byDate = new Map<string, EntryRecord[]>();
-			for (const entry of byWs.get(ws.key) ?? [])
-				pushTo(byDate, entry.date, entry);
+			const byDate = new Map<string, SpanRecord[]>();
+			for (const span of byWs.get(ws.key) ?? [])
+				pushTo(byDate, span.date, span);
 
-			for (const [date, entries] of [...byDate.entries()].sort(([a], [b]) =>
+			for (const [date, spans] of [...byDate.entries()].sort(([a], [b]) =>
 				a < b ? -1 : a > b ? 1 : 0,
 			)) {
 				const scopedProjects = [
-					...new Map(entries.map((e) => [e.project.key, e.project])).values(),
+					...new Map(spans.map((e) => [e.project.key, e.project])).values(),
 				];
 				const name =
 					ws.language === "ja"
@@ -509,7 +508,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 						workspaceId: ws.id,
 					})),
 					users: [{ id: user.id, name: user.name }],
-					entries: entries.map(toEngineEntry),
+					spans: spans.map(toEngineSpan),
 				};
 				const rendered = await renderReport(tmpl.body, context);
 				const id = randomUUID();
@@ -521,7 +520,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 						templateId: tmpl.id,
 						filters,
 						note: null,
-						totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+						totalMinutes: spans.reduce((a, e) => a + e.minutes, 0),
 						createdAt,
 						updatedAt: createdAt,
 					},
@@ -561,16 +560,16 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 				route.workspaces.every((k) => memberKeysByWs.get(k)?.has(u.key)),
 		);
 		const byWs =
-			entriesByUserWs.get(sender.key) ?? new Map<string, EntryRecord[]>();
-		const byDate = new Map<string, EntryRecord[]>();
+			spansByUserWs.get(sender.key) ?? new Map<string, SpanRecord[]>();
+		const byDate = new Map<string, SpanRecord[]>();
 		for (const k of route.workspaces)
 			for (const e of byWs.get(k) ?? []) pushTo(byDate, e.date, e);
 
-		for (const [date, entries] of [...byDate.entries()].sort(([a], [b]) =>
+		for (const [date, spans] of [...byDate.entries()].sort(([a], [b]) =>
 			a < b ? -1 : a > b ? 1 : 0,
 		)) {
 			const scopedProjects = [
-				...new Map(entries.map((e) => [e.project.key, e.project])).values(),
+				...new Map(spans.map((e) => [e.project.key, e.project])).values(),
 			];
 			const label = routeWs.map((w) => w.name).join(" + ");
 			const name =
@@ -603,7 +602,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					workspaceId: p.workspace.id,
 				})),
 				users: [{ id: sender.id, name: sender.name }],
-				entries: entries.map(toEngineEntry),
+				spans: spans.map(toEngineSpan),
 			};
 			const rendered = await renderReport(tmpl.body, context);
 			const id = randomUUID();
@@ -615,7 +614,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 					templateId: tmpl.id,
 					filters,
 					note: null,
-					totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+					totalMinutes: spans.reduce((a, e) => a + e.minutes, 0),
 					createdAt,
 					updatedAt: createdAt,
 				},
@@ -667,17 +666,16 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	};
 
 	for (const user of usersByKey.values()) {
-		const byWs =
-			entriesByUserWs.get(user.key) ?? new Map<string, EntryRecord[]>();
+		const byWs = spansByUserWs.get(user.key) ?? new Map<string, SpanRecord[]>();
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
 			const tmpl = templateFor(ws.language, "month");
 			for (const month of completedMonthsFor(ws.timezone)) {
-				const entries = (byWs.get(ws.key) ?? []).filter(
+				const spans = (byWs.get(ws.key) ?? []).filter(
 					(e) => e.date >= month.first && e.date <= month.last,
 				);
-				if (entries.length === 0) continue;
+				if (spans.length === 0) continue;
 				const scopedProjects = [
-					...new Map(entries.map((e) => [e.project.key, e.project])).values(),
+					...new Map(spans.map((e) => [e.project.key, e.project])).values(),
 				];
 				const name =
 					ws.language === "ja"
@@ -710,7 +708,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 						workspaceId: ws.id,
 					})),
 					users: [{ id: user.id, name: user.name }],
-					entries: entries.map(toEngineEntry),
+					spans: spans.map(toEngineSpan),
 				};
 				const rendered = await renderReport(tmpl.body, context);
 				const id = randomUUID();
@@ -722,7 +720,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 						templateId: tmpl.id,
 						filters,
 						note,
-						totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+						totalMinutes: spans.reduce((a, e) => a + e.minutes, 0),
 						createdAt,
 						updatedAt: createdAt,
 					},
@@ -783,12 +781,12 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	// --- Agents + per-turn telemetry ---------------------------------------
 	// A couple of demo Claude Code agents, each with a few recent sessions. Each
 	// session is a set of immutable per-turn `agent_events` plus the materialized
-	// `agent_entries` rollup the ingest route would compute from them — derived
-	// here in JS so the two stay coherent (entry.totalTokens == Σ event tokens,
+	// `agent_spans` rollup the ingest route would compute from them — derived
+	// here in JS so the two stay coherent (span.totalTokens == Σ event tokens,
 	// duration == max−min). Tokens are placeholder hashes (no usable secret).
 	const agentRows: Row[] = [];
 	const agentTokenRows: Row[] = [];
-	const agentEntryRows: Row[] = [];
+	const agentSpanRows: Row[] = [];
 	const agentEventRows: Row[] = [];
 
 	const projectsByWs = new Map<string, ResolvedProject[]>();
@@ -832,7 +830,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		});
 
 		// Two sessions on every weekday in the window (workspace-local dates), so
-		// each agent accrues a long, pageable history (50+ entries).
+		// each agent accrues a long, pageable history (50+ spans).
 		const slots = ["10:00", "15:00"];
 		for (const date of weekdaysFor(ws.timezone)) {
 			for (const startHour of slots) {
@@ -889,14 +887,14 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 				}
 
 				const totalTokens = input + output + cacheCreation + cacheRead;
-				agentEntryRows.push({
+				agentSpanRows.push({
 					id: randomUUID(),
 					workspaceId: ws.id,
 					ownerUserId: user.id,
 					projectId: project?.id ?? null,
 					agentId,
 					sessionId,
-					entryDate: todayInTimezone(ws.timezone, new Date(minTs)),
+					spanDate: todayInTimezone(ws.timezone, new Date(minTs)),
 					durationMinutes: Math.max(0, Math.round((maxTs - minTs) / 60_000)),
 					usage: {
 						inputTokens: input,
@@ -922,7 +920,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		{ table: "workspaces", rows: workspaceRows },
 		{ table: "workspaceMembers", rows: memberRows },
 		{ table: "projects", rows: projectRows },
-		{ table: "workEntries", rows: entryRows },
+		{ table: "workSpans", rows: spanRows },
 		{ table: "reportTemplates", rows: templateRows },
 		{ table: "instanceSettings", rows: instanceRows },
 		{ table: "reports", rows: reportRows },
@@ -931,7 +929,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		{ table: "reportDeliveries", rows: deliveryRows },
 		{ table: "agents", rows: agentRows },
 		{ table: "agentTokens", rows: agentTokenRows },
-		{ table: "agentEntries", rows: agentEntryRows },
+		{ table: "agentSpans", rows: agentSpanRows },
 		{ table: "agentEvents", rows: agentEventRows },
 	];
 

@@ -1,4 +1,4 @@
-import { formatDuration, utcToZonedTime, type WorkEntry } from "@spantail/core";
+import { formatDuration, utcToZonedTime, type WorkSpan } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useRouteContext, useRouterState } from "@tanstack/react-router";
 import {
@@ -12,9 +12,9 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { EntryDetail } from "@/components/entry-detail";
-import { EntryDetailActions } from "@/components/entry-detail-actions";
-import { EntryForm } from "@/components/entry-form";
+import { SpanDetail } from "@/components/span-detail";
+import { SpanDetailActions } from "@/components/span-detail-actions";
+import { SpanForm } from "@/components/span-form";
 import {
 	Dialog,
 	DialogContent,
@@ -24,31 +24,31 @@ import {
 } from "@/components/ui/dialog";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
-import { formatEntryDate } from "@/lib/format";
+import { formatSpanDate } from "@/lib/format";
 import { isTypingTarget } from "@/lib/keyboard";
 import { useWorkspace } from "@/lib/workspace";
 
-type EntryDialogState =
+type SpanDialogState =
 	| { mode: "create"; defaultProjectId?: string }
-	| { mode: "edit"; entry: WorkEntry }
-	| { mode: "view"; entry: WorkEntry };
+	| { mode: "edit"; span: WorkSpan }
+	| { mode: "view"; span: WorkSpan };
 
-interface EntryDialogContextValue {
+interface SpanDialogContextValue {
 	openCreate: () => void;
-	openEdit: (entry: WorkEntry) => void;
-	openView: (entry: WorkEntry) => void;
+	openEdit: (span: WorkSpan) => void;
+	openView: (span: WorkSpan) => void;
 }
 
-const EntryDialogContext = createContext<EntryDialogContextValue | null>(null);
+const SpanDialogContext = createContext<SpanDialogContextValue | null>(null);
 
-export function useEntryDialog(): EntryDialogContextValue {
-	const value = useContext(EntryDialogContext);
+export function useSpanDialog(): SpanDialogContextValue {
+	const value = useContext(SpanDialogContext);
 	if (!value)
-		throw new Error("useEntryDialog must be used inside EntryDialogProvider");
+		throw new Error("useSpanDialog must be used inside SpanDialogProvider");
 	return value;
 }
 
-export function EntryDialogProvider({
+export function SpanDialogProvider({
 	children,
 }: {
 	children: React.ReactNode;
@@ -57,7 +57,7 @@ export function EntryDialogProvider({
 	const { current } = useWorkspace();
 	const { session } = useRouteContext({ from: "/_authed" });
 	const projects = useProjects();
-	const [state, setState] = useState<EntryDialogState | null>(null);
+	const [state, setState] = useState<SpanDialogState | null>(null);
 	// Remount key so the form re-derives its initial state on every open.
 	const [instanceId, setInstanceId] = useState(0);
 	const hasWorkspace = Boolean(current);
@@ -80,13 +80,13 @@ export function EntryDialogProvider({
 		setInstanceId((id) => id + 1);
 		setState({ mode: "create", defaultProjectId: contextProjectId });
 	}, [hasWorkspace, contextProjectId]);
-	const openEdit = useCallback((entry: WorkEntry) => {
+	const openEdit = useCallback((span: WorkSpan) => {
 		setInstanceId((id) => id + 1);
-		setState({ mode: "edit", entry });
+		setState({ mode: "edit", span });
 	}, []);
-	const openView = useCallback((entry: WorkEntry) => {
+	const openView = useCallback((span: WorkSpan) => {
 		setInstanceId((id) => id + 1);
-		setState({ mode: "view", entry });
+		setState({ mode: "view", span });
 	}, []);
 	const close = useCallback(() => setState(null), []);
 
@@ -110,28 +110,27 @@ export function EntryDialogProvider({
 		[openCreate, openEdit, openView],
 	);
 
-	// In view mode the entry's description is the dialog title; project, date,
+	// In view mode the span's description is the dialog title; project, date,
 	// duration, tags and note make up the body. The author byline (and the
-	// member lookup it needs) only applies to entries the viewer doesn't own.
-	const viewEntry = state?.mode === "view" ? state.entry : null;
-	const isOthersEntry =
-		viewEntry != null && viewEntry.userId !== session.user.id;
+	// member lookup it needs) only applies to spans the viewer doesn't own.
+	const viewSpan = state?.mode === "view" ? state.span : null;
+	const isOthersSpan = viewSpan != null && viewSpan.userId !== session.user.id;
 	const members = useQuery({
 		queryKey: ["members", current?.id],
 		queryFn: () => api.listMembers(current?.id as string),
-		enabled: Boolean(current) && isOthersEntry,
+		enabled: Boolean(current) && isOthersSpan,
 	});
-	const viewProject = viewEntry?.projectId
-		? (projects.data ?? []).find((p) => p.id === viewEntry.projectId)
+	const viewProject = viewSpan?.projectId
+		? (projects.data ?? []).find((p) => p.id === viewSpan.projectId)
 		: undefined;
-	const viewProjectName = viewEntry
-		? viewEntry.projectId
-			? (viewProject?.name ?? viewEntry.projectId)
+	const viewProjectName = viewSpan
+		? viewSpan.projectId
+			? (viewProject?.name ?? viewSpan.projectId)
 			: t("projects.unassigned")
 		: "";
 	const viewProjectHue = viewProject?.hue ?? null;
-	const viewDateLabel = viewEntry
-		? formatEntryDate(viewEntry.entryDate, i18n.language, {
+	const viewDateLabel = viewSpan
+		? formatSpanDate(viewSpan.spanDate, i18n.language, {
 				year: "numeric",
 				month: "short",
 				day: "numeric",
@@ -139,26 +138,26 @@ export function EntryDialogProvider({
 			})
 		: "";
 	const viewTimeRange =
-		viewEntry?.startedAt && viewEntry.endedAt && current
-			? `${utcToZonedTime(viewEntry.startedAt, current.timezone)}–${utcToZonedTime(viewEntry.endedAt, current.timezone)}`
+		viewSpan?.startedAt && viewSpan.endedAt && current
+			? `${utcToZonedTime(viewSpan.startedAt, current.timezone)}–${utcToZonedTime(viewSpan.endedAt, current.timezone)}`
 			: null;
 	// Resolve to the member's name only; while members load (or for a user no
 	// longer in the workspace) the byline stays hidden rather than show a raw id.
-	const viewAuthorName = isOthersEntry
-		? ((members.data ?? []).find((m) => m.userId === viewEntry?.userId)?.name ??
+	const viewAuthorName = isOthersSpan
+		? ((members.data ?? []).find((m) => m.userId === viewSpan?.userId)?.name ??
 			null)
 		: null;
 	// Concise summary kept for the (visually hidden) dialog description.
-	const viewSubtitle = viewEntry
+	const viewSubtitle = viewSpan
 		? [
 				viewProjectName,
 				viewDateLabel,
-				formatDuration(viewEntry.durationMinutes),
+				formatDuration(viewSpan.durationMinutes),
 			].join(" · ")
 		: null;
 
 	return (
-		<EntryDialogContext.Provider value={value}>
+		<SpanDialogContext.Provider value={value}>
 			{children}
 			{current && (
 				<Dialog open={state !== null} onOpenChange={(open) => !open && close()}>
@@ -178,51 +177,51 @@ export function EntryDialogProvider({
 					>
 						<DialogHeader>
 							<DialogTitle>
-								{viewEntry
-									? viewEntry.description
+								{viewSpan
+									? viewSpan.description
 									: state?.mode === "edit"
-										? t("entries.editTitle")
-										: t("entries.newTitle")}
+										? t("spans.editTitle")
+										: t("spans.newTitle")}
 							</DialogTitle>
-							<DialogDescription className={viewEntry ? "sr-only" : undefined}>
+							<DialogDescription className={viewSpan ? "sr-only" : undefined}>
 								{viewSubtitle ??
 									(state?.mode === "edit"
-										? t("entries.editDescription")
-										: t("entries.newDescription"))}
+										? t("spans.editDescription")
+										: t("spans.newDescription"))}
 							</DialogDescription>
 						</DialogHeader>
 						{state?.mode === "view" && (
 							<>
-								<EntryDetail
-									entry={state.entry}
+								<SpanDetail
+									span={state.span}
 									projectName={viewProjectName}
 									projectHue={viewProjectHue}
 									dateLabel={viewDateLabel}
 									timeRange={viewTimeRange}
 									authorName={viewAuthorName}
 								/>
-								<EntryDetailActions
-									entry={state.entry}
-									onEdit={() => openEdit(state.entry)}
+								<SpanDetailActions
+									span={state.span}
+									onEdit={() => openEdit(state.span)}
 									onClose={close}
 								/>
 							</>
 						)}
 						{state && state.mode !== "view" && (
-							<EntryForm
+							<SpanForm
 								key={instanceId}
 								workspaceId={current.id}
 								timezone={current.timezone}
 								projects={projects.data ?? []}
-								initial={state.mode === "edit" ? state.entry : null}
+								initial={state.mode === "edit" ? state.span : null}
 								defaultProjectId={
 									state.mode === "create" ? state.defaultProjectId : undefined
 								}
 								onSuccess={() => {
 									toast.success(
 										state.mode === "edit"
-											? t("entries.toast.updated")
-											: t("entries.toast.created"),
+											? t("spans.toast.updated")
+											: t("spans.toast.created"),
 									);
 									close();
 								}}
@@ -232,6 +231,6 @@ export function EntryDialogProvider({
 					</DialogContent>
 				</Dialog>
 			)}
-		</EntryDialogContext.Provider>
+		</SpanDialogContext.Provider>
 	);
 }

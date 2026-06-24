@@ -25,24 +25,24 @@ async function setup() {
 	return { admin, other, ws, project };
 }
 
-async function createEntry(
+async function createSpan(
 	cookie: string,
 	ws: string,
 	project: string,
 	description: string,
 	tags: string[],
-	entryDate?: string,
+	spanDate?: string,
 ) {
 	const res = await apiJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: ws,
 			projectId: project,
 			durationMinutes: 30,
 			description,
 			tags,
-			...(entryDate ? { entryDate } : {}),
+			...(spanDate ? { spanDate } : {}),
 		},
 		cookie,
 	);
@@ -142,7 +142,7 @@ it("creates, lists, updates, and deletes own reports only", async () => {
 
 it("re-renders on edit, bumping the version and picking up field changes", async () => {
 	const { admin, ws, project } = await setup();
-	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
+	await createSpan(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
 	const report = (await (
 		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
 	).json()) as { id: string; totalMinutes: number; version: number };
@@ -151,7 +151,7 @@ it("re-renders on edit, bumping the version and picking up field changes", async
 
 	// Log more matching work, then edit: the new version re-renders from source,
 	// and provenance (template, totals) follows the new fields.
-	await createEntry(admin, ws.id, project.id, "More API work", ["api"]);
+	await createSpan(admin, ws.id, project.id, "More API work", ["api"]);
 	const res = await apiJson(
 		"PATCH",
 		`/api/v1/reports/${report.id}`,
@@ -167,14 +167,14 @@ it("re-renders on edit, bumping the version and picking up field changes", async
 	};
 	expect(patched.version).toBe(2);
 	expect(patched.templateId).toBe("builtin:weekly");
-	// The re-render reflects current entries and the new template.
+	// The re-render reflects current spans and the new template.
 	expect(patched.totalMinutes).toBe(60);
 	expect(patched.renderedMarkdown).toContain("More API work");
 });
 
 it("previews a report without persisting it", async () => {
 	const { admin, ws, project } = await setup();
-	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
+	await createSpan(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
 
 	const res = await apiJson(
 		"POST",
@@ -186,13 +186,13 @@ it("previews a report without persisting it", async () => {
 	const preview = (await res.json()) as {
 		content: string;
 		totalMinutes: number;
-		entryCount: number;
+		spanCount: number;
 		projectCount: number;
 	};
 	expect(preview.totalMinutes).toBe(30);
-	expect(preview.entryCount).toBe(1);
+	expect(preview.spanCount).toBe(1);
 	expect(preview.projectCount).toBe(1);
-	// The content carries the system front-matter header; the body renders entries.
+	// The content carries the system front-matter header; the body renders spans.
 	expect(splitFrontMatter(preview.content).frontMatter).not.toBeNull();
 	expect(preview.content).toContain("Wired the endpoint");
 
@@ -200,17 +200,17 @@ it("previews a report without persisting it", async () => {
 	expect(await (await apiGet("/api/v1/reports", admin)).json()).toEqual([]);
 });
 
-it("renders entries inline, scoped by tags and date", async () => {
+it("renders spans inline, scoped by tags and date", async () => {
 	const { admin, ws, project } = await setup();
-	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
-	await createEntry(admin, ws.id, project.id, "Tidied the desk", ["chore"]);
+	await createSpan(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
+	await createSpan(admin, ws.id, project.id, "Tidied the desk", ["chore"]);
 
 	const report = (await (
 		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)
 	).json()) as { renderedMarkdown: string; totalMinutes: number };
 	expect(report.renderedMarkdown).toContain("Wired the endpoint");
 	expect(report.renderedMarkdown).not.toContain("Tidied the desk");
-	// Only the tag-matching entry counts toward the persisted total.
+	// Only the tag-matching span counts toward the persisted total.
 	expect(report.totalMinutes).toBe(30);
 
 	// The total is metadata, so it rides along on the list payload too.
@@ -224,7 +224,7 @@ it("renders entries inline, scoped by tags and date", async () => {
 
 it("redacts totalMinutes once the report owner loses workspace membership", async () => {
 	const { admin, ws, project } = await setup();
-	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
+	await createSpan(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
 
 	// Bob joins, owns a report scoped to the workspace, then is removed.
 	const bob = await signUpUser("Bob", "bob@example.com");
@@ -271,7 +271,7 @@ it("redacts totalMinutes once the report owner loses workspace membership", asyn
 
 it("stores a custom absolute period and renders that window", async () => {
 	const { admin, ws, project } = await setup();
-	await createEntry(
+	await createSpan(
 		admin,
 		ws.id,
 		project.id,

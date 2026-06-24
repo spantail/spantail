@@ -13,12 +13,12 @@ import {
 
 const USAGE = `Usage: spantail log <description> --project <slug> --duration <value> [options]
 
-Logs a work entry. Duration accepts minutes or h/m forms: 90, 90m, 2h, 1h30m.
+Logs a work span. Duration accepts minutes or h/m forms: 90, 90m, 2h, 1h30m.
 
 Options:
   --project <slug>     Project to log against (required)
   --duration <value>   Time spent (required)
-  --date <YYYY-MM-DD>  Entry date (default: today in the workspace timezone)
+  --date <YYYY-MM-DD>  Span date (default: today in the workspace timezone)
   --note <text>        Longer free-form note
   --tag <tag>          Tag; repeat the flag for multiple tags
   --workspace <slug>   Workspace (default: the configured default workspace)
@@ -73,20 +73,20 @@ export async function logCommand(
 	);
 	const project = await resolveProject(client, workspace, values.project);
 
-	const entry = await client.createWorkEntry({
+	const span = await client.createWorkSpan({
 		workspaceId: workspace.id,
 		projectId: project.id,
 		durationMinutes,
 		description,
-		// Omitted entryDate lets the server default to today in the
+		// Omitted spanDate lets the server default to today in the
 		// workspace timezone.
-		...(values.date ? { entryDate: values.date } : {}),
+		...(values.date ? { spanDate: values.date } : {}),
 		...(values.note ? { note: values.note } : {}),
 		...(values.tag?.length ? { tags: values.tag } : {}),
 	});
 
 	ctx.stdout.write(
-		`Logged ${formatDuration(entry.durationMinutes)} to ${workspace.slug}/${project.slug} on ${entry.entryDate} (id: ${entry.id})\n`,
+		`Logged ${formatDuration(span.durationMinutes)} to ${workspace.slug}/${project.slug} on ${span.spanDate} (id: ${span.id})\n`,
 	);
 	return 0;
 }

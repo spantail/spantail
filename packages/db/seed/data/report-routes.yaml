@@ -1,7 +1,7 @@
 # Cross-workspace daily reports. A member who works across several workspaces
 # files one combined daily report spanning them, instead of separate
 # per-workspace reports for those workspaces. Because the rendered document
-# mixes those workspaces' entries, it may be delivered only to people who are
+# mixes those workspaces' spans, it may be delivered only to people who are
 # members of *every* listed workspace — recipients are derived from membership
 # (mirroring the app's "Send to" picker) and never widened, so a recipient never
 # sees a workspace they don't belong to.

@@ -59,7 +59,7 @@ export const mailScopeSchema = z.enum(["received", "sent"]);
 export type MailScope = z.infer<typeof mailScopeSchema>;
 
 /**
- * A mailbox entry as listed (no body). Serves both received messages and sent
+ * A mailbox span as listed (no body). Serves both received messages and sent
  * batches; per-scope fields are simply empty for the other scope (received:
  * recipientNames []/recipientCount 0; sent: readAt null). The client routes and
  * flags by `scope` — received uses `id`, sent uses `batchId`.

@@ -30,7 +30,7 @@ spantail auth login
 
 ```bash
 spantail log "Fixed the build" --project website --duration 1h30m --tag ci
-spantail entries list
+spantail spans list
 spantail report run <report-id> > weekly.md
 ```
 
@@ -43,8 +43,8 @@ spantail report run <report-id> > weekly.md
 | `spantail auth logout` | Remove saved credentials (the token itself stays valid) |
 | `spantail workspaces list` | List the workspaces you belong to |
 | `spantail projects list` | List the projects in a workspace |
-| `spantail log <description>` | Log a work entry (`--project`, `--duration`, `--date`, `--note`, `--tag`) |
-| `spantail entries list` | List recent work entries (`--project`, `--from`, `--to`, `--limit`) |
+| `spantail log <description>` | Log a work span (`--project`, `--duration`, `--date`, `--note`, `--tag`) |
+| `spantail spans list` | List recent work spans (`--project`, `--from`, `--to`, `--limit`) |
 | `spantail report list` | List your saved reports with their ids |
 | `spantail report run <id>` | Run a report; the markdown goes to stdout, status info to stderr |
 | `spantail mcp` | Run a stdio MCP server bridging AI clients to your instance |
@@ -74,7 +74,7 @@ default chosen at login.
 
 ## MCP
 
-`spantail mcp` serves the Spantail tools (log work, list entries, run reports, …)
+`spantail mcp` serves the Spantail tools (log work, list spans, run reports, …)
 over stdio for AI clients that do not support remote MCP servers. It uses the
 same credentials as the other commands, so after `spantail auth login`:
 

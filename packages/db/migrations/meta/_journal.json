@@ -232,6 +232,13 @@
       "when": 1782254779717,
       "tag": "0032_right_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1782301323478,
+      "tag": "0033_square_juggernaut",
+      "breakpoints": true
     }
   ]
 }

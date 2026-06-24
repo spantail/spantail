@@ -17,12 +17,12 @@ function makeStub() {
 	const stub = {
 		listWorkspaces: record("listWorkspaces", [{ id: "ws1", name: "Acme" }]),
 		listProjects: record("listProjects", [{ id: "p1" }]),
-		createWorkEntry: record("createWorkEntry", {
+		createWorkSpan: record("createWorkSpan", {
 			id: "e1",
-			entryDate: "2026-06-11",
+			spanDate: "2026-06-11",
 		}),
-		listWorkEntries: record("listWorkEntries", []),
-		updateWorkEntry: record("updateWorkEntry", { id: "e1" }),
+		listWorkSpans: record("listWorkSpans", []),
+		updateWorkSpan: record("updateWorkSpan", { id: "e1" }),
 		listReportTemplates: record("listReportTemplates", [
 			{ id: "builtin:daily" },
 		]),
@@ -52,13 +52,13 @@ it("exposes the eight spantail tools", async () => {
 	const { tools } = await client.listTools();
 	expect(tools.map((tool) => tool.name).sort()).toEqual([
 		"get_report",
-		"list_entries",
 		"list_projects",
 		"list_report_templates",
 		"list_reports",
+		"list_spans",
 		"list_workspaces",
 		"log_work",
-		"update_entry",
+		"update_span",
 	]);
 });
 
@@ -93,7 +93,7 @@ it("routes tool calls to the api client and returns json text", async () => {
 		},
 	});
 
-	expect(calls.at(-1)?.method).toBe("createWorkEntry");
+	expect(calls.at(-1)?.method).toBe("createWorkSpan");
 	expect(calls.at(-1)?.args[0]).toMatchObject({
 		workspaceId: "ws1",
 		durationMinutes: 30,
@@ -136,5 +136,5 @@ it("rejects invalid tool input", async () => {
 	});
 
 	expect(result.isError).toBe(true);
-	expect(calls.some((call) => call.method === "createWorkEntry")).toBe(false);
+	expect(calls.some((call) => call.method === "createWorkSpan")).toBe(false);
 });

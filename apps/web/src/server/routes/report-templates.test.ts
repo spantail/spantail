@@ -25,7 +25,7 @@ async function userIdByEmail(adminCookie: string, email: string) {
 const templateInput = {
 	name: "Standup",
 	description: "Per-day bullets",
-	body: "# {{ report.name }}\n{% for e in entries %}- {{ e.description }}\n{% endfor %}",
+	body: "# {{ report.name }}\n{% for e in spans %}- {{ e.description }}\n{% endfor %}",
 	periodUnit: "day" as const,
 };
 

@@ -114,7 +114,7 @@ it("materializes a session rollup from per-turn events", async () => {
 
 	// (100+200+50+1000) + (10+20+0+500) = 1880.
 	const list = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
 		durationMinutes: number;
 		usage: {
@@ -135,7 +135,7 @@ it("materializes a session rollup from per-turn events", async () => {
 	expect(list[0]?.projectId).toBe(project.id);
 
 	const stats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans/stats?workspaceId=${ws.id}`, admin)
 	).json()) as { totalTokens: number; byAgent: Array<{ agentId: string }> };
 	expect(stats.totalTokens).toBe(1880);
 	expect(stats.byAgent[0]?.agentId).toBe(agentId);
@@ -167,7 +167,7 @@ it("is idempotent on (agent, sourceId): re-sends never double-count", async () =
 	expect((await ingest(token, batch)).status).toBe(200);
 
 	const afterResend = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
 		durationMinutes: number;
 		usage: { totalTokens: number };
@@ -193,7 +193,7 @@ it("is idempotent on (agent, sourceId): re-sends never double-count", async () =
 	).toBe(200);
 
 	const afterGrow = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
 		durationMinutes: number;
 		usage: { totalTokens: number };
@@ -227,7 +227,7 @@ it("collapses duplicate sourceIds in one payload to a single event", async () =>
 	expect(res.status).toBe(200);
 
 	const list = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{ usage: { totalTokens: number } }>;
 	expect(list[0]?.usage.totalTokens).toBe(454); // 131+323, not doubled
 });
@@ -252,7 +252,7 @@ it("ingests a session spanning multiple insert chunks", async () => {
 	expect((await ingest(token, { sessionId: "s1", events })).status).toBe(200);
 
 	const list = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
 		durationMinutes: number;
 		usage: { totalTokens: number };
@@ -277,7 +277,7 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 		projectId: null,
 		agentId,
 		sessionId: "race",
-		entryDate: "2026-06-20",
+		spanDate: "2026-06-20",
 		description: null,
 		startedAt: new Date("2026-06-20T01:00:00.000Z"),
 	};
@@ -299,7 +299,7 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 	});
 
 	const afterStale = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
 		durationMinutes: number;
 		usage: { totalTokens: number };
@@ -316,7 +316,7 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 		endedAt: new Date("2026-06-20T01:10:00.000Z"),
 	});
 	const afterEqualEnded = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{ usage: { totalTokens: number } }>;
 	expect(afterEqualEnded[0]?.usage.totalTokens).toBe(300);
 
@@ -328,7 +328,7 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 		endedAt: new Date("2026-06-20T01:20:00.000Z"),
 	});
 	const afterNewer = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		await apiGet(`/api/v1/agent-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
 		durationMinutes: number;
 		usage: { totalTokens: number };
@@ -391,8 +391,8 @@ it("treats agent tokens as write-only ingest credentials", async () => {
 	const { token } = await createAgentToken(admin, {
 		defaultWorkspaceId: ws.id,
 	});
-	// Cannot read entries with an AAT (ingest only).
-	const read = await appFetch("/api/v1/agent-entries?workspaceId=anything", {
+	// Cannot read spans with an AAT (ingest only).
+	const read = await appFetch("/api/v1/agent-spans?workspaceId=anything", {
 		headers: { authorization: `Bearer ${token}` },
 	});
 	expect(read.status).toBe(403);

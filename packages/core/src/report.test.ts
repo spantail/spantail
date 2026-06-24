@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import {
 	absoluteDateRangeSchema,
-	filterEntriesByTags,
+	filterSpansByTags,
 	isBuiltinTemplateId,
 	MAX_REPORT_SPAN_DAYS,
 	reportFiltersInputSchema,
@@ -119,17 +119,17 @@ it("caps an absolute range at the maximum span", () => {
 	).toBe(false);
 });
 
-it("filters entries by any matching tag", () => {
-	const entries = [
+it("filters spans by any matching tag", () => {
+	const spans = [
 		{ id: "a", tags: ["api", "review"] },
 		{ id: "b", tags: ["chore"] },
 		{ id: "c", tags: [] },
 	];
-	expect(filterEntriesByTags(entries)).toHaveLength(3);
-	expect(filterEntriesByTags(entries, [])).toHaveLength(3);
-	expect(
-		filterEntriesByTags(entries, ["api", "docs"]).map((e) => e.id),
-	).toEqual(["a"]);
+	expect(filterSpansByTags(spans)).toHaveLength(3);
+	expect(filterSpansByTags(spans, [])).toHaveLength(3);
+	expect(filterSpansByTags(spans, ["api", "docs"]).map((e) => e.id)).toEqual([
+		"a",
+	]);
 });
 
 it("recognizes builtin template ids", () => {

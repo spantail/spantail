@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { localDateSchema, shiftDays, todayInTimezone } from "./common";
-import { tagSchema } from "./work-entry";
+import { tagSchema } from "./work-span";
 
 export const dateRangePresetSchema = z.enum([
 	"today",
@@ -26,7 +26,7 @@ function dateRangeSpanDays(from: string, to: string): number {
 	return (utcMs(to) - utcMs(from)) / 86_400_000 + 1;
 }
 
-/** Reports render entries synchronously on write, so the period is bounded. */
+/** Reports render spans synchronously on write, so the period is bounded. */
 export const MAX_REPORT_SPAN_DAYS = 366;
 
 /** Upper bound on a rendered/hand-edited report body (generous vs templates). */
@@ -123,7 +123,7 @@ export const reportSchema = z.object({
 	filters: reportFiltersSchema,
 	// Free-form markdown appended to the rendered output via {{ report.note }}.
 	note: z.string().max(20000).nullable(),
-	// Total logged minutes across the report's entries of the current version.
+	// Total logged minutes across the report's spans of the current version.
 	// Null for reports generated before this was tracked (shown until re-rendered).
 	totalMinutes: z.number().int().nonnegative().nullable(),
 	// Current version number: 1 at creation, incremented on each edit.
@@ -234,12 +234,12 @@ export function resolveDateRange(
 	}
 }
 
-/** Keeps entries that carry at least one of the filter tags (no tags = all). */
-export function filterEntriesByTags<T extends { tags: string[] }>(
-	entries: T[],
+/** Keeps spans that carry at least one of the filter tags (no tags = all). */
+export function filterSpansByTags<T extends { tags: string[] }>(
+	spans: T[],
 	tags?: string[],
 ): T[] {
-	if (!tags || tags.length === 0) return entries;
+	if (!tags || tags.length === 0) return spans;
 	const wanted = new Set(tags);
-	return entries.filter((entry) => entry.tags.some((tag) => wanted.has(tag)));
+	return spans.filter((span) => span.tags.some((tag) => wanted.has(tag)));
 }

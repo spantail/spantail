@@ -162,10 +162,7 @@ export function requireAuth(c: Context<AppEnv>): UserAuthContext {
 	const auth = c.var.auth;
 	if (!auth) throw new AppError("unauthorized", "Authentication required");
 	if (auth.via === "agent") {
-		throw new AppError(
-			"forbidden",
-			"Agent tokens can only ingest agent entries",
-		);
+		throw new AppError("forbidden", "Agent tokens can only ingest agent spans");
 	}
 	return auth;
 }

@@ -15,18 +15,18 @@ import {
 
 import type { Database } from "../index";
 import {
-	agentEntries,
 	agentEvents,
 	agentProjects,
+	agentSpans,
 	agents,
 	agentTokens,
 } from "../schema/agents";
 
 export type AgentRow = typeof agents.$inferSelect;
 export type AgentTokenRow = typeof agentTokens.$inferSelect;
-export type AgentEntryRow = typeof agentEntries.$inferSelect;
-export type AgentEntryUpsert = Omit<
-	typeof agentEntries.$inferInsert,
+export type AgentSpanRow = typeof agentSpans.$inferSelect;
+export type AgentSpanUpsert = Omit<
+	typeof agentSpans.$inferInsert,
 	"id" | "createdAt" | "updatedAt"
 >;
 export type AgentEventRow = typeof agentEvents.$inferSelect;
@@ -197,7 +197,7 @@ export async function getAgentById(
 	return db.select().from(agents).where(eq(agents.id, id)).get();
 }
 
-/** Soft-deletes an agent (scoped to its owner), preserving its entries. */
+/** Soft-deletes an agent (scoped to its owner), preserving its spans. */
 export async function archiveAgent(
 	db: Database,
 	userId: string,
@@ -220,7 +220,7 @@ export async function archiveAgent(
 /**
  * The caller's own agents shown under a workspace in the sidebar. Two arms,
  * unioned and deduplicated:
- *  - the caller's non-archived agents with at least one entry in the workspace
+ *  - the caller's non-archived agents with at least one span in the workspace
  *    (their activity here), and
  *  - the caller's non-archived agents registered to the workspace (their token's
  *    default workspace), so a freshly registered agent appears immediately even
@@ -237,11 +237,11 @@ export async function listWorkspaceAgents(
 		db
 			.selectDistinct(select)
 			.from(agents)
-			.innerJoin(agentEntries, eq(agentEntries.agentId, agents.id))
+			.innerJoin(agentSpans, eq(agentSpans.agentId, agents.id))
 			.where(
 				and(
 					eq(agents.userId, userId),
-					eq(agentEntries.workspaceId, workspaceId),
+					eq(agentSpans.workspaceId, workspaceId),
 					isNull(agents.archivedAt),
 				),
 			),
@@ -323,26 +323,26 @@ export async function touchAgentToken(db: Database, id: string): Promise<void> {
 		.where(eq(agentTokens.id, id));
 }
 
-// --- agent entries ---
+// --- agent spans ---
 
 /**
- * Inserts a session entry, or updates it when (agentId, sessionId) already
+ * Inserts a session span, or updates it when (agentId, sessionId) already
  * exists. Idempotent so retries and daily batch reconciliation never duplicate.
  */
-export async function upsertAgentEntry(
+export async function upsertAgentSpan(
 	db: Database,
-	values: AgentEntryUpsert,
-): Promise<AgentEntryRow> {
+	values: AgentSpanUpsert,
+): Promise<AgentSpanRow> {
 	const rows = await db
-		.insert(agentEntries)
+		.insert(agentSpans)
 		.values({ id: crypto.randomUUID(), ...values })
 		.onConflictDoUpdate({
-			target: [agentEntries.agentId, agentEntries.sessionId],
+			target: [agentSpans.agentId, agentSpans.sessionId],
 			set: {
 				workspaceId: values.workspaceId,
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
-				entryDate: values.entryDate,
+				spanDate: values.spanDate,
 				durationMinutes: values.durationMinutes,
 				usage: values.usage,
 				description: values.description,
@@ -353,13 +353,13 @@ export async function upsertAgentEntry(
 		})
 		.returning();
 	const row = rows[0];
-	if (!row) throw new Error("agent entry upsert returned no row");
+	if (!row) throw new Error("agent span upsert returned no row");
 	return row;
 }
 
-interface AgentEntryFilter {
+interface AgentSpanFilter {
 	workspaceId: string;
-	// When set, restricts to entries logged for this owner. Callers scope it to
+	// When set, restricts to spans logged for this owner. Callers scope it to
 	// the requesting user so members see only their own agents' activity.
 	ownerUserId?: string;
 	agentId?: string;
@@ -367,34 +367,34 @@ interface AgentEntryFilter {
 	to?: string;
 }
 
-function agentEntryConditions(query: AgentEntryFilter) {
-	const conditions = [eq(agentEntries.workspaceId, query.workspaceId)];
+function agentSpanConditions(query: AgentSpanFilter) {
+	const conditions = [eq(agentSpans.workspaceId, query.workspaceId)];
 	if (query.ownerUserId) {
-		conditions.push(eq(agentEntries.ownerUserId, query.ownerUserId));
+		conditions.push(eq(agentSpans.ownerUserId, query.ownerUserId));
 	}
-	if (query.agentId) conditions.push(eq(agentEntries.agentId, query.agentId));
-	if (query.from) conditions.push(gte(agentEntries.entryDate, query.from));
-	if (query.to) conditions.push(lte(agentEntries.entryDate, query.to));
+	if (query.agentId) conditions.push(eq(agentSpans.agentId, query.agentId));
+	if (query.from) conditions.push(gte(agentSpans.spanDate, query.from));
+	if (query.to) conditions.push(lte(agentSpans.spanDate, query.to));
 	return conditions;
 }
 
-export async function listAgentEntries(
+export async function listAgentSpans(
 	db: Database,
-	query: AgentEntryFilter & { limit: number; offset: number },
-): Promise<AgentEntryRow[]> {
+	query: AgentSpanFilter & { limit: number; offset: number },
+): Promise<AgentSpanRow[]> {
 	return db
 		.select()
-		.from(agentEntries)
-		.where(and(...agentEntryConditions(query)))
-		.orderBy(desc(agentEntries.entryDate), desc(agentEntries.createdAt))
+		.from(agentSpans)
+		.where(and(...agentSpanConditions(query)))
+		.orderBy(desc(agentSpans.spanDate), desc(agentSpans.createdAt))
 		.limit(query.limit)
 		.offset(query.offset);
 }
 
-export interface AgentEntryStatsResult {
+export interface AgentSpanStatsResult {
 	totalMinutes: number;
 	totalTokens: number;
-	entryCount: number;
+	spanCount: number;
 	byDate: Array<{
 		date: string;
 		minutes: number;
@@ -409,42 +409,42 @@ export interface AgentEntryStatsResult {
 	}>;
 }
 
-/** Aggregates entries matching the same filters as `listAgentEntries`. */
-export async function getAgentEntryStats(
+/** Aggregates spans matching the same filters as `listAgentSpans`. */
+export async function getAgentSpanStats(
 	db: Database,
-	query: AgentEntryFilter,
-): Promise<AgentEntryStatsResult> {
-	const conditions = agentEntryConditions(query);
+	query: AgentSpanFilter,
+): Promise<AgentSpanStatsResult> {
+	const conditions = agentSpanConditions(query);
 	const minutes =
-		sql<number>`coalesce(sum(${agentEntries.durationMinutes}), 0)`.mapWith(
+		sql<number>`coalesce(sum(${agentSpans.durationMinutes}), 0)`.mapWith(
 			Number,
 		);
-	// totalTokens lives inside the usage JSON; entries without usage count as 0.
+	// totalTokens lives inside the usage JSON; spans without usage count as 0.
 	const tokens =
-		sql<number>`coalesce(sum(coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)), 0)`.mapWith(
+		sql<number>`coalesce(sum(coalesce(json_extract(${agentSpans.usage}, '$.totalTokens'), 0)), 0)`.mapWith(
 			Number,
 		);
 	const count = sql<number>`count(*)`.mapWith(Number);
 
 	const [byDate, byAgent] = await Promise.all([
 		db
-			.select({ date: agentEntries.entryDate, minutes, tokens, count })
-			.from(agentEntries)
+			.select({ date: agentSpans.spanDate, minutes, tokens, count })
+			.from(agentSpans)
 			.where(and(...conditions))
-			.groupBy(agentEntries.entryDate)
-			.orderBy(asc(agentEntries.entryDate)),
+			.groupBy(agentSpans.spanDate)
+			.orderBy(asc(agentSpans.spanDate)),
 		db
-			.select({ agentId: agentEntries.agentId, minutes, tokens, count })
-			.from(agentEntries)
+			.select({ agentId: agentSpans.agentId, minutes, tokens, count })
+			.from(agentSpans)
 			.where(and(...conditions))
-			.groupBy(agentEntries.agentId)
+			.groupBy(agentSpans.agentId)
 			.orderBy(desc(tokens)),
 	]);
 
 	return {
 		totalMinutes: byDate.reduce((acc, row) => acc + row.minutes, 0),
 		totalTokens: byDate.reduce((acc, row) => acc + row.tokens, 0),
-		entryCount: byDate.reduce((acc, row) => acc + row.count, 0),
+		spanCount: byDate.reduce((acc, row) => acc + row.count, 0),
 		byDate,
 		byAgent,
 	};
@@ -480,7 +480,7 @@ export async function insertAgentEventsIgnoreConflicts(
 }
 
 export interface SessionRollup {
-	/** Normalized rollup written to `agent_entries.usage` (camelCase AgentUsage). */
+	/** Normalized rollup written to `agent_spans.usage` (camelCase AgentUsage). */
 	usage: AgentUsage;
 	startedAt: Date;
 	endedAt: Date;
@@ -496,10 +496,10 @@ function usageBucketSum(key: string) {
 }
 
 /**
- * Aggregates ONE session's events into the rollup `agent_entries` materializes.
+ * Aggregates ONE session's events into the rollup `agent_spans` materializes.
  * Bounded to a single session's rows. Token buckets are summed from the raw
  * snake_case `usage` JSON and normalized to the camelCase AgentUsage shape, so
- * the existing `getAgentEntryStats` (which reads `usage.totalTokens`) keeps
+ * the existing `getAgentSpanStats` (which reads `usage.totalTokens`) keeps
  * working unchanged. Returns null when the session has no events yet.
  */
 export async function computeSessionRollup(
@@ -563,7 +563,7 @@ export async function computeSessionRollup(
 }
 
 /**
- * Materializes a session's rollup into `agent_entries`, monotonically. Every
+ * Materializes a session's rollup into `agent_spans`, monotonically. Every
  * ingest re-sends the cumulative transcript, so a later recompute is always a
  * superset of an earlier one — its `endedAt` and `totalTokens` are both
  * non-decreasing. The conflict update is guarded to apply only when both hold,
@@ -576,18 +576,18 @@ export async function computeSessionRollup(
  */
 export async function materializeAgentSessionRollup(
 	db: Database,
-	values: AgentEntryUpsert,
-): Promise<AgentEntryRow> {
+	values: AgentSpanUpsert,
+): Promise<AgentSpanRow> {
 	const rows = await db
-		.insert(agentEntries)
+		.insert(agentSpans)
 		.values({ id: crypto.randomUUID(), ...values })
 		.onConflictDoUpdate({
-			target: [agentEntries.agentId, agentEntries.sessionId],
+			target: [agentSpans.agentId, agentSpans.sessionId],
 			set: {
 				workspaceId: values.workspaceId,
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
-				entryDate: values.entryDate,
+				spanDate: values.spanDate,
 				durationMinutes: values.durationMinutes,
 				usage: values.usage,
 				description: values.description,
@@ -595,9 +595,9 @@ export async function materializeAgentSessionRollup(
 				endedAt: values.endedAt,
 				updatedAt: new Date(),
 			},
-			setWhere: sql`${agentEntries.usage} is null or (
-				excluded.ended_at >= coalesce(${agentEntries.endedAt}, 0)
-				and coalesce(json_extract(excluded.usage, '$.totalTokens'), 0) >= coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)
+			setWhere: sql`${agentSpans.usage} is null or (
+				excluded.ended_at >= coalesce(${agentSpans.endedAt}, 0)
+				and coalesce(json_extract(excluded.usage, '$.totalTokens'), 0) >= coalesce(json_extract(${agentSpans.usage}, '$.totalTokens'), 0)
 			)`,
 		})
 		.returning();
@@ -606,14 +606,14 @@ export async function materializeAgentSessionRollup(
 	// The guard skipped the update (a newer rollup already exists): return it.
 	const current = await db
 		.select()
-		.from(agentEntries)
+		.from(agentSpans)
 		.where(
 			and(
-				eq(agentEntries.agentId, values.agentId),
-				eq(agentEntries.sessionId, values.sessionId),
+				eq(agentSpans.agentId, values.agentId),
+				eq(agentSpans.sessionId, values.sessionId),
 			),
 		)
 		.get();
-	if (!current) throw new Error("agent entry rollup returned no row");
+	if (!current) throw new Error("agent span rollup returned no row");
 	return current;
 }

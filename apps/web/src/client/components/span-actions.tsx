@@ -1,9 +1,9 @@
-import type { WorkEntry } from "@spantail/core";
+import type { WorkSpan } from "@spantail/core";
 import { useRouteContext } from "@tanstack/react-router";
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { useEntryDialog } from "@/components/entry-dialog";
+import { useSpanDialog } from "@/components/span-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -11,16 +11,16 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDeleteWorkEntry } from "@/hooks/use-delete-work-entry";
+import { useDeleteWorkSpan } from "@/hooks/use-delete-span";
 
-/** Kebab edit/delete menu for the viewer's own entries; null for others'. */
-export function EntryActions({ entry }: { entry: WorkEntry }) {
+/** Kebab edit/delete menu for the viewer's own spans; null for others'. */
+export function SpanActions({ span }: { span: WorkSpan }) {
 	const { t } = useTranslation();
-	const { openEdit } = useEntryDialog();
+	const { openEdit } = useSpanDialog();
 	const { session } = useRouteContext({ from: "/_authed" });
-	const deleteMutation = useDeleteWorkEntry(entry);
+	const deleteMutation = useDeleteWorkSpan(span);
 
-	if (entry.userId !== session.user.id) return null;
+	if (span.userId !== session.user.id) return null;
 
 	return (
 		<DropdownMenu>
@@ -29,22 +29,22 @@ export function EntryActions({ entry }: { entry: WorkEntry }) {
 					variant="ghost"
 					size="icon"
 					className="text-muted-foreground size-7"
-					aria-label={t("entries.actionsMenu")}
+					aria-label={t("spans.actionsMenu")}
 				>
 					<MoreHorizontalIcon />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				<DropdownMenuItem onClick={() => openEdit(entry)}>
+				<DropdownMenuItem onClick={() => openEdit(span)}>
 					<PencilIcon />
-					{t("entries.editAction")}
+					{t("spans.editAction")}
 				</DropdownMenuItem>
 				<DropdownMenuItem
 					variant="destructive"
 					onClick={() => deleteMutation.mutate()}
 				>
 					<Trash2Icon />
-					{t("entries.deleteAction")}
+					{t("spans.deleteAction")}
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>

@@ -4,7 +4,7 @@
 # template a workspace's reports use. Builtins are disabled (see instance.yaml).
 - key: daily-en
   name: Daily report
-  description: Entries grouped by project for a single day.
+  description: Spans grouped by project for a single day.
   language: en
   periodUnit: day
   bodyFrom: builtin:daily
@@ -23,17 +23,17 @@
   body: |
     # {{ report.name }}
 
-    **期間:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
+    **期間:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.spans }}件）
 
-    {% if totals.entries == 0 -%}
+    {% if totals.spans == 0 -%}
     _この期間の稼働記録はありません。_
 
     {% else -%}
     {% for group in groups.by_project -%}
     ## {{ group.name }} — {{ group.total_minutes | format_duration }}
 
-    {% for entry in group.entries -%}
-    - {{ entry.description }}（{{ entry.duration_minutes | format_duration }}、{{ entry.user_name }}{% if entry.tags.size > 0 %}、タグ: {{ entry.tags | join: ", " }}{% endif %}）
+    {% for span in group.spans -%}
+    - {{ span.description }}（{{ span.duration_minutes | format_duration }}、{{ span.user_name }}{% if span.tags.size > 0 %}、タグ: {{ span.tags | join: ", " }}{% endif %}）
     {% endfor %}
     {% endfor -%}
     {% endif -%}
@@ -54,9 +54,9 @@
   body: |
     # {{ report.name }}
 
-    **期間:** {{ period.from }} – {{ period.to }} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
+    **期間:** {{ period.from }} – {{ period.to }} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.spans }}件）
 
-    {% if totals.entries == 0 -%}
+    {% if totals.spans == 0 -%}
     _この期間の稼働記録はありません。_
 
     {% else -%}
@@ -65,14 +65,14 @@
     | プロジェクト | 件数 | 合計 |
     | --- | --- | --- |
     {% for group in groups.by_project -%}
-    | {{ group.name }} | {{ group.entries | size }} | {{ group.total_minutes | format_duration }} |
+    | {{ group.name }} | {{ group.spans | size }} | {{ group.total_minutes | format_duration }} |
     {% endfor %}
     ## メンバー別
 
     | メンバー | 件数 | 合計 |
     | --- | --- | --- |
     {% for group in groups.by_user -%}
-    | {{ group.name }} | {{ group.entries | size }} | {{ group.total_minutes | format_duration }} |
+    | {{ group.name }} | {{ group.spans | size }} | {{ group.total_minutes | format_duration }} |
     {% endfor %}
     {% endif -%}
     {% if report.note -%}

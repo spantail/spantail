@@ -128,7 +128,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 	const closeForm = () => setForm(null);
 
 	// `c` opens the create dialog from anywhere on the reports screen (mirrors
-	// the entry dialog's shortcut). A latest-callback ref keeps a single window
+	// the span dialog's shortcut). A latest-callback ref keeps a single window
 	// listener while always reading the current tab and template pool.
 	const trigger = useRef<() => void>(() => {});
 	useLayoutEffect(() => {

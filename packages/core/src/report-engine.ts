@@ -22,12 +22,12 @@ export interface ReportContextInput {
 		workspaceId: string;
 	}>;
 	users: Array<{ id: string; name: string }>;
-	entries: Array<{
+	spans: Array<{
 		id: string;
 		workspaceId: string;
 		projectId: string | null;
 		userId: string;
-		entryDate: string;
+		spanDate: string;
 		durationMinutes: number;
 		description: string;
 		note: string | null;
@@ -35,7 +35,7 @@ export interface ReportContextInput {
 	}>;
 }
 
-type ContextEntry = {
+type ContextSpan = {
 	id: string;
 	workspace_id: string;
 	workspace_name: string;
@@ -43,17 +43,17 @@ type ContextEntry = {
 	project_name: string;
 	user_id: string;
 	user_name: string;
-	entry_date: string;
+	span_date: string;
 	duration_minutes: number;
 	description: string;
 	note: string | null;
 	tags: string[];
 };
 
-type EntryGroup = {
+type SpanGroup = {
 	key: string;
 	name?: string;
-	entries: ContextEntry[];
+	spans: ContextSpan[];
 	total_minutes: number;
 };
 
@@ -109,22 +109,22 @@ function createEngine(): Liquid {
 // that drags liquidjs into bundles that never render reports (the SPA).
 let engine: Liquid | undefined;
 
-function groupEntries(
-	entries: ContextEntry[],
-	keyOf: (entry: ContextEntry) => string,
-	nameOf?: (entry: ContextEntry) => string,
-): EntryGroup[] {
-	const groups = new Map<string, EntryGroup>();
-	for (const entry of entries) {
-		const key = keyOf(entry);
+function groupSpans(
+	spans: ContextSpan[],
+	keyOf: (span: ContextSpan) => string,
+	nameOf?: (span: ContextSpan) => string,
+): SpanGroup[] {
+	const groups = new Map<string, SpanGroup>();
+	for (const span of spans) {
+		const key = keyOf(span);
 		let group = groups.get(key);
 		if (!group) {
-			group = { key, entries: [], total_minutes: 0 };
-			if (nameOf) group.name = nameOf(entry);
+			group = { key, spans: [], total_minutes: 0 };
+			if (nameOf) group.name = nameOf(span);
 			groups.set(key, group);
 		}
-		group.entries.push(entry);
-		group.total_minutes += entry.duration_minutes;
+		group.spans.push(span);
+		group.total_minutes += span.duration_minutes;
 	}
 	return [...groups.values()];
 }
@@ -138,42 +138,42 @@ export function buildReportContext(
 	const named = (map: Map<string, string>, id: string) =>
 		map.get(id) ?? "(unknown)";
 
-	const entries: ContextEntry[] = input.entries.map((entry) => ({
-		id: entry.id,
-		workspace_id: entry.workspaceId,
-		workspace_name: named(workspaceNames, entry.workspaceId),
-		// Entries whose project was deleted have a null projectId; group them
+	const spans: ContextSpan[] = input.spans.map((span) => ({
+		id: span.id,
+		workspace_id: span.workspaceId,
+		workspace_name: named(workspaceNames, span.workspaceId),
+		// Spans whose project was deleted have a null projectId; group them
 		// together under a stable empty key with a clear placeholder name.
-		project_id: entry.projectId ?? "",
-		project_name: entry.projectId
-			? named(projectNames, entry.projectId)
+		project_id: span.projectId ?? "",
+		project_name: span.projectId
+			? named(projectNames, span.projectId)
 			: "(no project)",
-		user_id: entry.userId,
-		user_name: named(userNames, entry.userId),
-		entry_date: entry.entryDate,
-		duration_minutes: entry.durationMinutes,
-		description: entry.description,
-		note: entry.note,
-		tags: entry.tags,
+		user_id: span.userId,
+		user_name: named(userNames, span.userId),
+		span_date: span.spanDate,
+		duration_minutes: span.durationMinutes,
+		description: span.description,
+		note: span.note,
+		tags: span.tags,
 	}));
 
-	const byName = (a: EntryGroup, b: EntryGroup) =>
+	const byName = (a: SpanGroup, b: SpanGroup) =>
 		(a.name ?? "").localeCompare(b.name ?? "");
-	const byDate = groupEntries(entries, (e) => e.entry_date).sort((a, b) =>
+	const byDate = groupSpans(spans, (e) => e.span_date).sort((a, b) =>
 		a.key.localeCompare(b.key),
 	);
-	const byProject = groupEntries(
-		entries,
+	const byProject = groupSpans(
+		spans,
 		(e) => e.project_id,
 		(e) => e.project_name,
 	).sort(byName);
-	const byUser = groupEntries(
-		entries,
+	const byUser = groupSpans(
+		spans,
 		(e) => e.user_id,
 		(e) => e.user_name,
 	).sort(byName);
 
-	const minutes = entries.reduce((acc, e) => acc + e.duration_minutes, 0);
+	const minutes = spans.reduce((acc, e) => acc + e.duration_minutes, 0);
 
 	return {
 		report: { name: input.report.name, note: input.report.note },
@@ -196,12 +196,12 @@ export function buildReportContext(
 			workspace_id: p.workspaceId,
 		})),
 		users: input.users.map((u) => ({ id: u.id, name: u.name })),
-		entries,
+		spans,
 		groups: { by_date: byDate, by_project: byProject, by_user: byUser },
 		totals: {
 			minutes,
 			hours: Math.round((minutes / 60) * 100) / 100,
-			entries: entries.length,
+			spans: spans.length,
 		},
 	};
 }

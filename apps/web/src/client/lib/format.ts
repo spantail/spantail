@@ -3,7 +3,7 @@
  * parts: `new Date("YYYY-MM-DD")` would parse as UTC midnight and shift a day
  * in behind-UTC locales.
  */
-export function formatEntryDate(
+export function formatSpanDate(
 	date: string,
 	locale: string,
 	options: Intl.DateTimeFormatOptions = {

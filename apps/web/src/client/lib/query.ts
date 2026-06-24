@@ -10,17 +10,17 @@ export const queryClient = new QueryClient({
 });
 
 /**
- * Refreshes everything derived from a workspace's entries after a mutation:
+ * Refreshes everything derived from a workspace's spans after a mutation:
  * timelines, project lists, stats, and the tag filter catalog (prefix-matched
  * query keys).
  */
-export function invalidateWorkEntryData(
+export function invalidateSpanData(
 	client: QueryClient,
 	workspaceId: string,
 ): void {
-	client.invalidateQueries({ queryKey: ["work-entries", workspaceId] });
-	client.invalidateQueries({ queryKey: ["work-entry-stats", workspaceId] });
-	client.invalidateQueries({ queryKey: ["work-entry-tags", workspaceId] });
+	client.invalidateQueries({ queryKey: ["work-spans", workspaceId] });
+	client.invalidateQueries({ queryKey: ["work-span-stats", workspaceId] });
+	client.invalidateQueries({ queryKey: ["work-span-tags", workspaceId] });
 }
 
 /**

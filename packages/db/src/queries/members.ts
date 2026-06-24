@@ -7,7 +7,7 @@ import { workspaceMembers } from "../schema/domain";
 /**
  * Users who are members of EVERY given workspace, excluding one user (the
  * sender). Used to scope the "Send to" recipient picker: a report's frozen body
- * includes entries from all of `report.filters.workspaceIds`, and reading a
+ * includes spans from all of `report.filters.workspaceIds`, and reading a
  * report requires membership in every one of them (`requireScopeWorkspaces`), so
  * recipients must clear the same bar — a member of only some of the workspaces
  * would otherwise receive data they cannot access.

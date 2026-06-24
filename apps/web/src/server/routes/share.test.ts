@@ -27,9 +27,9 @@ async function setup() {
 			admin,
 		)
 	).json()) as { id: string };
-	const entry = await apiJson(
+	const span = await apiJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: ws.id,
 			projectId: project.id,
@@ -38,7 +38,7 @@ async function setup() {
 		},
 		admin,
 	);
-	expect(entry.status).toBe(201);
+	expect(span.status).toBe(201);
 	const report = await apiJson(
 		"POST",
 		"/api/v1/reports",
@@ -97,7 +97,7 @@ it("serves shared content with hardening headers and sanitized markdown", async 
 
 	const body = await res.text();
 	expect(body).toContain('name="robots"');
-	// The report name is HTML-escaped, the entry shows, and the injection
+	// The report name is HTML-escaped, the span shows, and the injection
 	// attempts in the note are neutralized.
 	expect(body).toContain("Daily &lt;Report&gt;");
 	expect(body).toContain("Wired the share view");

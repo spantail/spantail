@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { Project, WorkEntry, WorkspaceWithRole } from "@spantail/core";
+import type { Project, WorkSpan, WorkspaceWithRole } from "@spantail/core";
 
 import type { CliContext } from "./context";
 import type { Prompter } from "./prompt";
@@ -122,13 +122,13 @@ export function projectFixture(
 	};
 }
 
-export function entryFixture(overrides: Partial<WorkEntry> = {}): WorkEntry {
+export function spanFixture(overrides: Partial<WorkSpan> = {}): WorkSpan {
 	return {
-		id: "entry-1",
+		id: "span-1",
 		workspaceId: "ws-acme",
 		projectId: "proj-api",
 		userId: "u1",
-		entryDate: "2026-06-12",
+		spanDate: "2026-06-12",
 		durationMinutes: 90,
 		startedAt: null,
 		endedAt: null,

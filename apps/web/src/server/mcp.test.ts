@@ -156,16 +156,16 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 	const tools = await rpcResult<{ tools: Array<{ name: string }> }>(toolsRes);
 	expect(tools.tools.map((tool) => tool.name).sort()).toEqual([
 		"get_report",
-		"list_entries",
 		"list_projects",
 		"list_report_templates",
 		"list_reports",
+		"list_spans",
 		"list_workspaces",
 		"log_work",
-		"update_entry",
+		"update_span",
 	]);
 
-	// tools/call log_work → entry persisted via the REST API loopback
+	// tools/call log_work → span persisted via the REST API loopback
 	const callRes = await rpc(token, {
 		jsonrpc: "2.0",
 		id: 3,
@@ -186,17 +186,17 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 		isError?: boolean;
 	}>(callRes);
 	expect(call.isError).toBeFalsy();
-	const entry = JSON.parse(call.content[0]?.text ?? "{}") as {
+	const span = JSON.parse(call.content[0]?.text ?? "{}") as {
 		id: string;
-		entryDate: string;
+		spanDate: string;
 	};
-	expect(entry.entryDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+	expect(span.spanDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 
 	const listed = (await (
-		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}`, cookie)
+		await apiGet(`/api/v1/work-spans?workspaceId=${ws.id}`, cookie)
 	).json()) as Array<{ id: string; description: string }>;
 	expect(
-		listed.some((e) => e.id === entry.id && e.description === "Logged via MCP"),
+		listed.some((e) => e.id === span.id && e.description === "Logged via MCP"),
 	).toBe(true);
 });
 
@@ -204,7 +204,7 @@ it("reads a rendered report end to end over mcp", async () => {
 	const { cookie, ws, project, token } = await setup();
 	await apiJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: ws.id,
 			projectId: project.id,

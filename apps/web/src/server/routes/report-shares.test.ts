@@ -27,15 +27,15 @@ async function setup() {
 	return { admin, other, ws, project };
 }
 
-/** Creates an entry + report (rendered inline); returns the report. */
+/** Creates an span + report (rendered inline); returns the report. */
 async function createReport(
 	cookie: string,
 	wsId: string,
 	projectId: string,
 ): Promise<{ id: string; renderedMarkdown: string }> {
-	const entry = await apiJson(
+	const span = await apiJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: wsId,
 			projectId,
@@ -44,7 +44,7 @@ async function createReport(
 		},
 		cookie,
 	);
-	expect(entry.status).toBe(201);
+	expect(span.status).toBe(201);
 	const res = await apiJson(
 		"POST",
 		"/api/v1/reports",

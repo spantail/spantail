@@ -9,7 +9,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatEntryDate } from "@/lib/format";
+import { formatSpanDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface DailyBarsProps {
@@ -70,7 +70,7 @@ export function DailyBars({
 								<TooltipTrigger asChild>
 									<button
 										type="button"
-										aria-label={`${formatEntryDate(day.date, i18n.language)} · ${formatDuration(day.minutes)}`}
+										aria-label={`${formatSpanDate(day.date, i18n.language)} · ${formatDuration(day.minutes)}`}
 										className="flex h-full flex-1 flex-col justify-end"
 										onMouseEnter={() => setHover(i)}
 										onMouseLeave={() => setHover(null)}
@@ -103,7 +103,7 @@ export function DailyBars({
 									</button>
 								</TooltipTrigger>
 								<TooltipContent>
-									{formatEntryDate(day.date, i18n.language)} ·{" "}
+									{formatSpanDate(day.date, i18n.language)} ·{" "}
 									{formatDuration(day.minutes)}
 								</TooltipContent>
 							</Tooltip>

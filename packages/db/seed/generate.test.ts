@@ -6,7 +6,7 @@ import { datasetToSql } from "./to-sql";
 type Row = Record<string, unknown>;
 
 // Mid-June: the activity window covers all of May, so May is the one completed
-// month and weekday entries land throughout.
+// month and weekday spans land throughout.
 const NOW = new Date("2026-06-18T09:00:00Z");
 
 async function build() {
@@ -39,12 +39,12 @@ describe("generateDataset", () => {
 
 	it("logs varied hours on weekdays only, in quarter-hour units", async () => {
 		const { rows } = await build();
-		const entries = rows("workEntries");
-		expect(entries.length).toBeGreaterThan(0);
+		const spans = rows("workSpans");
+		expect(spans.length).toBeGreaterThan(0);
 
 		const perUserDay = new Map<string, number>();
-		for (const e of entries) {
-			const date = e.entryDate as string;
+		for (const e of spans) {
+			const date = e.spanDate as string;
 			const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
 			expect(dow).toBeGreaterThanOrEqual(1);
 			expect(dow).toBeLessThanOrEqual(5);
@@ -95,7 +95,7 @@ describe("generateDataset", () => {
 		expect(juneTimezones.has("America/Los_Angeles")).toBe(false);
 	});
 
-	it("dates entries in the workspace timezone, not the author's home", async () => {
+	it("dates spans in the workspace timezone, not the author's home", async () => {
 		// 06:00Z: Tokyo is already Fri 2026-06-19; Los Angeles is still Thu 06-18.
 		const dataset = await generateDataset(new Date("2026-06-19T06:00:00Z"));
 		const rows = (name: string): Row[] =>
@@ -104,9 +104,9 @@ describe("generateDataset", () => {
 			rows("workspaces").map((w) => [w.id as string, w.timezone as string]),
 		);
 		const maxByTz = new Map<string, string>();
-		for (const e of rows("workEntries")) {
+		for (const e of rows("workSpans")) {
 			const tz = tzById.get(e.workspaceId as string) ?? "";
-			const date = e.entryDate as string;
+			const date = e.spanDate as string;
 			if (!maxByTz.has(tz) || date > (maxByTz.get(tz) ?? "")) {
 				maxByTz.set(tz, date);
 			}
@@ -261,23 +261,23 @@ describe("generateDataset", () => {
 	it("seeds agents with coherent per-session telemetry", async () => {
 		const { rows } = await build();
 		const agents = rows("agents");
-		const entries = rows("agentEntries");
+		const spans = rows("agentSpans");
 		const events = rows("agentEvents");
 		expect(agents.length).toBeGreaterThan(0);
 		expect(rows("agentTokens")).toHaveLength(agents.length);
-		expect(entries.length).toBeGreaterThan(0);
-		expect(events.length).toBeGreaterThan(entries.length);
+		expect(spans.length).toBeGreaterThan(0);
+		expect(events.length).toBeGreaterThan(spans.length);
 		expect(agents.every((a) => a.type === "claude_code")).toBe(true);
 		expect(agents.every((a) => a.name === "My Claude Code")).toBe(true);
 
-		// Each agent has a long history (50+ entries) so the activity view is
+		// Each agent has a long history (50+ spans) so the activity view is
 		// pageable in the demo.
 		for (const agent of agents) {
-			const owned = entries.filter((e) => e.agentId === agent.id);
+			const owned = spans.filter((e) => e.agentId === agent.id);
 			expect(owned.length).toBeGreaterThanOrEqual(50);
 		}
 
-		// Each entry's rollup must match its session's events exactly: the
+		// Each span's rollup must match its session's events exactly: the
 		// materialized totals are derived from the same per-turn rows the ingest
 		// route would aggregate (no double counting, duration = max−min).
 		const eventsBySession = new Map<string, Row[]>();
@@ -287,8 +287,8 @@ describe("generateDataset", () => {
 				e,
 			);
 		}
-		for (const entry of entries) {
-			const group = eventsBySession.get(`${entry.agentId}:${entry.sessionId}`);
+		for (const span of spans) {
+			const group = eventsBySession.get(`${span.agentId}:${span.sessionId}`);
 			expect(group?.length).toBeGreaterThan(0);
 			const summed = (group ?? []).reduce((acc, e) => {
 				const u = e.usage as Record<string, number | undefined>;
@@ -300,7 +300,7 @@ describe("generateDataset", () => {
 					(u.cache_read_input_tokens ?? 0)
 				);
 			}, 0);
-			const usage = entry.usage as { totalTokens: number };
+			const usage = span.usage as { totalTokens: number };
 			expect(usage.totalTokens).toBe(summed);
 
 			const times = (group ?? []).map((e) => (e.timestamp as Date).getTime());
@@ -308,7 +308,7 @@ describe("generateDataset", () => {
 				0,
 				Math.round((Math.max(...times) - Math.min(...times)) / 60_000),
 			);
-			expect(entry.durationMinutes).toBe(expectedDuration);
+			expect(span.durationMinutes).toBe(expectedDuration);
 		}
 	});
 
@@ -316,7 +316,7 @@ describe("generateDataset", () => {
 		const { dataset } = await build();
 		const sql = datasetToSql(dataset.tables);
 		expect(sql).toContain('INSERT INTO "user"');
-		expect(sql).toContain('INSERT INTO "work_entries"');
+		expect(sql).toContain('INSERT INTO "work_spans"');
 		expect(sql).toContain('INSERT INTO "report_deliveries"');
 		expect(sql).toContain('INSERT INTO "agent_events"');
 	});

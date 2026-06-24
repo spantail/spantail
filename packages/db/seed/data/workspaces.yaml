@@ -1,6 +1,6 @@
 # The instance owner is a fictional software firm (Northwind Software) plus
 # three client workspaces. `language` drives the language of seeded content
-# (project names, work-entry descriptions) and which report template is used.
+# (project names, work-span descriptions) and which report template is used.
 - key: ws-self
   slug: northwind
   name: Northwind Software

@@ -79,15 +79,15 @@ export const agentProjects = sqliteTable(
 );
 
 /** One agent work session, attributed to the owning user and a workspace. */
-export const agentEntries = sqliteTable(
-	"agent_entries",
+export const agentSpans = sqliteTable(
+	"agent_spans",
 	{
 		id: text("id").primaryKey(),
 		// Denormalized workspace id keeps every membership-scoped query cheap.
 		workspaceId: text("workspace_id")
 			.notNull()
 			.references(() => workspaces.id, { onDelete: "cascade" }),
-		// The user the agent acts for; entries inherit this user's visibility.
+		// The user the agent acts for; spans inherit this user's visibility.
 		ownerUserId: text("owner_user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
@@ -100,7 +100,7 @@ export const agentEntries = sqliteTable(
 		// External session identifier; (agentId, sessionId) is the idempotency key.
 		sessionId: text("session_id").notNull(),
 		// Local date (YYYY-MM-DD) in the workspace timezone, from startedAt/now.
-		entryDate: text("entry_date").notNull(),
+		spanDate: text("span_date").notNull(),
 		durationMinutes: integer("duration_minutes").notNull(),
 		// Null when the source can't expose token usage locally (e.g. Cursor).
 		usage: text("usage", { mode: "json" }).$type<AgentUsage | null>(),
@@ -114,19 +114,19 @@ export const agentEntries = sqliteTable(
 			.notNull(),
 	},
 	(table) => [
-		uniqueIndex("agent_entries_session_uq").on(table.agentId, table.sessionId),
-		index("agent_entries_workspace_idx").on(table.workspaceId, table.createdAt),
-		index("agent_entries_agent_idx").on(table.agentId),
+		uniqueIndex("agent_spans_session_uq").on(table.agentId, table.sessionId),
+		index("agent_spans_workspace_idx").on(table.workspaceId, table.createdAt),
+		index("agent_spans_agent_idx").on(table.agentId),
 	],
 );
 
 /**
  * Raw per-turn telemetry: one row per assistant message (one API response, which
  * carries exactly one `usage`). Immutable and append-only; the materialized
- * per-session rollup lives in `agent_entries`, recomputed from these rows on
+ * per-session rollup lives in `agent_spans`, recomputed from these rows on
  * ingest. Keyed by the natural (agentId, sessionId) pair — NOT a FK to
- * `agent_entries.id`, since events for a session can arrive before its entry is
- * upserted (the recompute reads events, then writes the entry).
+ * `agent_spans.id`, since events for a session can arrive before its span is
+ * upserted (the recompute reads events, then writes the span).
  */
 export const agentEvents = sqliteTable(
 	"agent_events",
@@ -149,7 +149,7 @@ export const agentEvents = sqliteTable(
 		model: text("model"),
 		// The raw `message.usage` object, stored verbatim (schema-on-read). Its
 		// shape is the agent's native usage (snake_case for Claude Code), distinct
-		// from agent_entries.usage which is the normalized AgentUsage rollup.
+		// from agent_spans.usage which is the normalized AgentUsage rollup.
 		usage: text("usage", { mode: "json" })
 			.$type<Record<string, unknown>>()
 			.notNull(),

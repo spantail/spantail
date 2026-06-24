@@ -6,7 +6,7 @@ import { useListKeyboardNav } from "./use-list-keyboard-nav";
 
 afterEach(cleanup);
 
-/** Drives the hook over a 3-item list with local selection (the entry-list
+/** Drives the hook over a 3-item list with local selection (the span-list
  *  shape), exposing the active index and the open/reach-end callbacks. */
 function Harness({
 	onOpen,

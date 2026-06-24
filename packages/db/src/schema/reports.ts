@@ -63,7 +63,7 @@ export const reports = sqliteTable(
 		// for seeding the edit form) and snapshotted onto each content version;
 		// kept out of the content front-matter because it is long/multi-line.
 		note: text("note"),
-		// Total logged minutes across the report's entries of the current version.
+		// Total logged minutes across the report's spans of the current version.
 		// Nullable: reports created before this column show no total until re-rendered.
 		totalMinutes: integer("total_minutes"),
 		// The current version number; 1 at creation, incremented on each edit.
@@ -79,7 +79,7 @@ export const reports = sqliteTable(
 // latest. `content` is self-describing Markdown: a system-generated YAML
 // front-matter header (filters, period, totals, …) followed by the rendered
 // body. Send/Share copy a content version; older versions may drift from the
-// source entries, but the current one never does.
+// source spans, but the current one never does.
 export const reportContent = sqliteTable(
 	"report_content",
 	{

@@ -545,7 +545,7 @@ export function ReportForm({
 				<span className="text-muted-foreground truncate text-xs">
 					{preview.data
 						? t("reports.preview.summary", {
-								entries: preview.data.entryCount,
+								spans: preview.data.spanCount,
 								total: formatDuration(preview.data.totalMinutes),
 								projects: preview.data.projectCount,
 							})

@@ -24,36 +24,34 @@ const fixture: ReportContextInput = {
 		{ id: "u1", name: "Alice" },
 		{ id: "u2", name: "Bob" },
 	],
-	entries: [
-		entry("e1", "p1", "u1", "2026-05-25", 90, "Designed the scope schema", [
+	spans: [
+		span("e1", "p1", "u1", "2026-05-25", 90, "Designed the scope schema", [
 			"api",
 		]),
-		entry("e2", "p1", "u2", "2026-05-25", 45, "Reviewed the schema design", [
+		span("e2", "p1", "u2", "2026-05-25", 45, "Reviewed the schema design", [
 			"review",
 		]),
-		entry("e3", "p2", "u1", "2026-05-26", 120, "Rebuilt the landing page", []),
-		entry("e4", "p1", "u1", "2026-05-27", 60, "Implemented date presets", [
+		span("e3", "p2", "u1", "2026-05-26", 120, "Rebuilt the landing page", []),
+		span("e4", "p1", "u1", "2026-05-27", 60, "Implemented date presets", [
 			"api",
 		]),
-		entry("e5", "p3", "u2", "2026-05-27", 180, "Benchmarked D1 queries", [
+		span("e5", "p3", "u2", "2026-05-27", 180, "Benchmarked D1 queries", [
 			"perf",
 		]),
-		entry("e6", "p2", "u2", "2026-05-28", 30, "Fixed the contact form", []),
-		entry("e7", "p1", "u2", "2026-05-29", 75, "Wired the run endpoint", [
-			"api",
-		]),
-		entry("e8", "p3", "u1", "2026-05-31", 150, "Wrote the benchmark report", [
+		span("e6", "p2", "u2", "2026-05-28", 30, "Fixed the contact form", []),
+		span("e7", "p1", "u2", "2026-05-29", 75, "Wired the run endpoint", ["api"]),
+		span("e8", "p3", "u1", "2026-05-31", 150, "Wrote the benchmark report", [
 			"perf",
 			"docs",
 		]),
 	],
 };
 
-function entry(
+function span(
 	id: string,
 	projectId: string,
 	userId: string,
-	entryDate: string,
+	spanDate: string,
 	durationMinutes: number,
 	description: string,
 	tags: string[],
@@ -63,7 +61,7 @@ function entry(
 		workspaceId: projectId === "p3" ? "ws2" : "ws1",
 		projectId,
 		userId,
-		entryDate,
+		spanDate,
 		durationMinutes,
 		description,
 		note: null,
@@ -97,22 +95,22 @@ it("renders an empty-period placeholder", async () => {
 	if (!template) throw new Error("missing builtin:monthly");
 	const rendered = await renderReport(template.body, {
 		...fixture,
-		entries: [],
+		spans: [],
 	});
-	expect(rendered).toContain("_No work entries in this period._");
+	expect(rendered).toContain("_No work spans in this period._");
 	expect(rendered).not.toContain("| Project |");
 });
 
 it("computes totals and group ordering in the context", () => {
 	const context = buildReportContext(fixture) as {
-		totals: { minutes: number; hours: number; entries: number };
+		totals: { minutes: number; hours: number; spans: number };
 		groups: {
 			by_date: Array<{ key: string }>;
 			by_project: Array<{ name?: string; total_minutes: number }>;
 		};
-		entries: Array<{ project_name: string; user_name: string }>;
+		spans: Array<{ project_name: string; user_name: string }>;
 	};
-	expect(context.totals).toEqual({ minutes: 750, hours: 12.5, entries: 8 });
+	expect(context.totals).toEqual({ minutes: 750, hours: 12.5, spans: 8 });
 	expect(context.groups.by_date.map((g) => g.key)).toEqual([
 		"2026-05-25",
 		"2026-05-26",
@@ -126,22 +124,22 @@ it("computes totals and group ordering in the context", () => {
 		"Spantail",
 		"Website",
 	]);
-	expect(context.entries[0]?.project_name).toBe("Spantail");
-	expect(context.entries[0]?.user_name).toBe("Alice");
+	expect(context.spans[0]?.project_name).toBe("Spantail");
+	expect(context.spans[0]?.user_name).toBe("Alice");
 });
 
-it("groups entries from a deleted project under a no-project placeholder", () => {
+it("groups spans from a deleted project under a no-project placeholder", () => {
 	const context = buildReportContext({
 		...fixture,
-		entries: [
-			entry("e1", "p1", "u1", "2026-05-25", 60, "Kept its project", []),
+		spans: [
+			span("e1", "p1", "u1", "2026-05-25", 60, "Kept its project", []),
 			// projectId is null when the project was deleted (ON DELETE SET NULL).
 			{
 				id: "e2",
 				workspaceId: "ws1",
 				projectId: null,
 				userId: "u1",
-				entryDate: "2026-05-26",
+				spanDate: "2026-05-26",
 				durationMinutes: 30,
 				description: "Orphaned by a project deletion",
 				note: null,
@@ -150,9 +148,9 @@ it("groups entries from a deleted project under a no-project placeholder", () =>
 		],
 	}) as {
 		groups: { by_project: Array<{ key: string; name?: string }> };
-		entries: Array<{ project_id: string; project_name: string }>;
+		spans: Array<{ project_id: string; project_name: string }>;
 	};
-	const orphan = context.entries.find((e) => e.project_id === "");
+	const orphan = context.spans.find((e) => e.project_id === "");
 	expect(orphan?.project_name).toBe("(no project)");
 	expect(context.groups.by_project.map((g) => g.name)).toContain(
 		"(no project)",
@@ -180,7 +178,7 @@ it("rejects unknown filters", async () => {
 });
 
 it("blocks prototype access and renders unknown variables as empty", async () => {
-	expect(await renderReport("[{{ entries[0].constructor }}]", fixture)).toBe(
+	expect(await renderReport("[{{ spans[0].constructor }}]", fixture)).toBe(
 		"[]",
 	);
 	expect(await renderReport("[{{ nonexistent.thing }}]", fixture)).toBe("[]");

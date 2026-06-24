@@ -1,4 +1,4 @@
-import { workEntrySources } from "@spantail/core";
+import { workSpanSources } from "@spantail/core";
 import { sql } from "drizzle-orm";
 import {
 	index,
@@ -75,8 +75,8 @@ export const projects = sqliteTable(
 	],
 );
 
-export const workEntries = sqliteTable(
-	"work_entries",
+export const workSpans = sqliteTable(
+	"work_spans",
 	{
 		id: text("id").primaryKey(),
 		// Denormalized workspace id keeps every query scoped by membership cheap.
@@ -84,7 +84,7 @@ export const workEntries = sqliteTable(
 			.notNull()
 			.references(() => workspaces.id, { onDelete: "cascade" }),
 		// Nullable: deleting a project sets this to null rather than cascading,
-		// so the work history is preserved as un-assigned entries.
+		// so the work history is preserved as un-assigned spans.
 		projectId: text("project_id").references(() => projects.id, {
 			onDelete: "set null",
 		}),
@@ -92,7 +92,7 @@ export const workEntries = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
 		// Local date (YYYY-MM-DD) in the workspace's timezone.
-		entryDate: text("entry_date").notNull(),
+		spanDate: text("span_date").notNull(),
 		durationMinutes: integer("duration_minutes").notNull(),
 		startedAt: integer("started_at", { mode: "timestamp_ms" }),
 		endedAt: integer("ended_at", { mode: "timestamp_ms" }),
@@ -102,8 +102,8 @@ export const workEntries = sqliteTable(
 			.$type<string[]>()
 			.notNull()
 			.default([]),
-		// Client channel the entry was created through (web/cli/mcp/api).
-		source: text("source", { enum: workEntrySources }).notNull().default("web"),
+		// Client channel the span was created through (web/cli/mcp/api).
+		source: text("source", { enum: workSpanSources }).notNull().default("web"),
 		createdAt: createdAtMs(),
 		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -111,11 +111,11 @@ export const workEntries = sqliteTable(
 			.notNull(),
 	},
 	(table) => [
-		index("work_entries_workspace_date_idx").on(
+		index("work_spans_workspace_date_idx").on(
 			table.workspaceId,
-			table.entryDate,
+			table.spanDate,
 		),
-		index("work_entries_project_idx").on(table.projectId),
-		index("work_entries_user_idx").on(table.userId),
+		index("work_spans_project_idx").on(table.projectId),
+		index("work_spans_user_idx").on(table.userId),
 	],
 );

@@ -1,6 +1,6 @@
 # Team weekly
 
-**Period:** 2026-05-25 – 2026-05-31 · **Total:** 12h 30m (8 entries)
+**Period:** 2026-05-25 – 2026-05-31 · **Total:** 12h 30m (8 spans)
 
 ## Research — 5h 30m
 

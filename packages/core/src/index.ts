@@ -17,5 +17,5 @@ export * from "./report-templates";
 export * from "./share";
 export * from "./token";
 export * from "./user";
-export * from "./work-entry";
+export * from "./work-span";
 export * from "./workspace";

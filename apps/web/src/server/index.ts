@@ -7,8 +7,8 @@ import { resolveSocialConfig } from "./lib/oauth";
 import { registerMcpRoute } from "./mcp";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
-import { agentEntryRoutes } from "./routes/agent-entries";
 import { agentEventRoutes } from "./routes/agent-events";
+import { agentSpanRoutes } from "./routes/agent-spans";
 import { agentRoutes } from "./routes/agents";
 import { avatarRoutes } from "./routes/avatars";
 import { devMailRoutes } from "./routes/dev-mail";
@@ -24,7 +24,7 @@ import { reportRoutes } from "./routes/reports";
 import { shareRoutes } from "./routes/share";
 import { tokenRoutes } from "./routes/tokens";
 import { userRoutes } from "./routes/users";
-import { workEntryRoutes } from "./routes/work-entries";
+import { workSpanRoutes } from "./routes/work-spans";
 import { workspaceRoutes } from "./routes/workspaces";
 import type { AppEnv } from "./types";
 
@@ -79,9 +79,9 @@ v1.route("/reports", reportRoutes);
 // Discussion endpoints (/reports/:id/discussion, comments, reactions) for the
 // owner + Send-to recipients; mounted after reportRoutes on the same prefix.
 v1.route("/reports", reportDiscussionRoutes);
-v1.route("/work-entries", workEntryRoutes);
+v1.route("/work-spans", workSpanRoutes);
 v1.route("/agents", agentRoutes);
-v1.route("/agent-entries", agentEntryRoutes);
+v1.route("/agent-spans", agentSpanRoutes);
 v1.route("/agent-events", agentEventRoutes);
 v1.route("/tokens", tokenRoutes);
 

@@ -164,7 +164,7 @@ it("rejects updating a slug to one already used in the workspace", async () => {
 	expect(conflict.status).toBe(409);
 });
 
-it("deletes an archived project and orphans its entries instead of cascading", async () => {
+it("deletes an archived project and orphans its spans instead of cascading", async () => {
 	const { admin, ws } = await setup();
 	const project = (await (
 		await apiJson(
@@ -174,10 +174,10 @@ it("deletes an archived project and orphans its entries instead of cascading", a
 			admin,
 		)
 	).json()) as { id: string };
-	const entry = (await (
+	const span = (await (
 		await apiJson(
 			"POST",
-			"/api/v1/work-entries",
+			"/api/v1/work-spans",
 			{
 				workspaceId: ws.id,
 				projectId: project.id,
@@ -215,11 +215,11 @@ it("deletes an archived project and orphans its entries instead of cascading", a
 	expect((await apiGet(`/api/v1/projects/${project.id}`, admin)).status).toBe(
 		404,
 	);
-	// ...but its entry survives with a null projectId (ON DELETE SET NULL).
-	const entries = (await (
-		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}`, admin)
+	// ...but its span survives with a null projectId (ON DELETE SET NULL).
+	const spans = (await (
+		await apiGet(`/api/v1/work-spans?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{ id: string; projectId: string | null }>;
-	const survivor = entries.find((e) => e.id === entry.id);
+	const survivor = spans.find((e) => e.id === span.id);
 	expect(survivor).toBeDefined();
 	expect(survivor?.projectId).toBeNull();
 });

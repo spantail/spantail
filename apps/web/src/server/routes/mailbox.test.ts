@@ -47,7 +47,7 @@ async function setup() {
 	).json()) as { id: string };
 	await apiJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: ws.id,
 			projectId: project.id,
@@ -90,7 +90,7 @@ const folder = async (cookie: string, name: string) =>
 		await apiGet(`/api/v1/inbox?folder=${name}`, cookie)
 	).json()) as MailItem[];
 
-it("groups a fan-out send into one Sent entry, one inbox row each", async () => {
+it("groups a fan-out send into one Sent span, one inbox row each", async () => {
 	const { owner, alice, bob, report, aliceId, bobId } = await setup();
 	const sent = await apiJson(
 		"POST",
@@ -102,7 +102,7 @@ it("groups a fan-out send into one Sent entry, one inbox row each", async () => 
 		delivered: 2,
 	});
 
-	// Sender's Sent: a single batch entry covering both recipients.
+	// Sender's Sent: a single batch span covering both recipients.
 	const ownerSent = await folder(owner, "sent");
 	expect(ownerSent).toHaveLength(1);
 	expect(ownerSent[0]?.scope).toBe("sent");

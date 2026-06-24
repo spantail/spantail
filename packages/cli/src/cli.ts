@@ -1,11 +1,11 @@
 import { SpantailApiError } from "@spantail/sdk";
 
 import { authLogin, authLogout, authStatus } from "./commands/auth";
-import { entriesList } from "./commands/entries";
 import { logCommand } from "./commands/log";
 import { mcpCommand } from "./commands/mcp";
 import { projectsList } from "./commands/projects";
 import { reportList, reportView } from "./commands/report";
+import { spansList } from "./commands/spans";
 import { workspacesList } from "./commands/workspaces";
 import type { CliContext } from "./context";
 import { CliError, isParseArgsError, UsageError } from "./errors";
@@ -21,7 +21,7 @@ const commands: Record<
 	workspaces: { list: workspacesList },
 	projects: { list: projectsList },
 	log: logCommand,
-	entries: { list: entriesList },
+	spans: { list: spansList },
 	report: { list: reportList, view: reportView },
 	mcp: mcpCommand,
 };
@@ -36,8 +36,8 @@ Commands:
   auth logout       Remove saved credentials
   workspaces list   List the workspaces you belong to
   projects list     List the projects in a workspace
-  log               Log a work entry
-  entries list      List recent work entries
+  log               Log a work span
+  spans list      List recent work spans
   report list       List your reports
   report view       Print a report's rendered markdown
   mcp               Run a stdio MCP server bridging AI clients to a Spantail instance
@@ -64,18 +64,18 @@ async function dispatch(argv: string[], ctx: CliContext): Promise<number> {
 		ctx.stdout.write(`${VERSION}\n`);
 		return 0;
 	}
-	const entry = commands[first];
-	if (entry === undefined) {
+	const span = commands[first];
+	if (span === undefined) {
 		ctx.stderr.write(USAGE);
 		ctx.stderr.write(`\nspantail: unknown command "${first}"\n`);
 		return 2;
 	}
-	if (typeof entry === "function") return invoke(first, entry, rest, ctx);
+	if (typeof span === "function") return invoke(first, span, rest, ctx);
 
 	const [second, ...subRest] = rest;
-	const handler = second === undefined ? undefined : entry[second];
+	const handler = second === undefined ? undefined : span[second];
 	if (handler === undefined) {
-		const expected = `spantail ${first} <${Object.keys(entry).join("|")}>`;
+		const expected = `spantail ${first} <${Object.keys(span).join("|")}>`;
 		ctx.stderr.write(
 			second === undefined
 				? `spantail: usage: ${expected}\n`

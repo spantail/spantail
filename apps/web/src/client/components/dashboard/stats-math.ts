@@ -62,7 +62,7 @@ export function pctDelta(current: number, previous: number): number | null {
 
 /**
  * Builds a contiguous, zero-filled day series of `length` days starting at
- * `from`. The stats endpoint only returns days that have entries, so callers
+ * `from`. The stats endpoint only returns days that have spans, so callers
  * zero-fill the gaps for charting.
  */
 export function buildDailyWindow(

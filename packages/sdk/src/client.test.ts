@@ -22,7 +22,7 @@ function stubClient(status: number, body: unknown) {
 it("builds urls, query strings, and auth headers", async () => {
 	const { client, calls } = stubClient(200, []);
 
-	await client.listWorkEntries({
+	await client.listWorkSpans({
 		workspaceId: "ws1",
 		from: "2026-06-01",
 		limit: 10,
@@ -32,7 +32,7 @@ it("builds urls, query strings, and auth headers", async () => {
 	const call = calls[0];
 	if (!call) throw new Error("expected a fetch call");
 	expect(call.url).toBe(
-		"https://spantail.example.com/api/v1/work-entries?workspaceId=ws1&from=2026-06-01&limit=10",
+		"https://spantail.example.com/api/v1/work-spans?workspaceId=ws1&from=2026-06-01&limit=10",
 	);
 	expect((call.init?.headers as Record<string, string>).authorization).toBe(
 		"Bearer spantail_pat_test",
@@ -42,7 +42,7 @@ it("builds urls, query strings, and auth headers", async () => {
 it("posts json bodies with content type", async () => {
 	const { client, calls } = stubClient(201, { id: "e1" });
 
-	await client.createWorkEntry({
+	await client.createWorkSpan({
 		workspaceId: "ws1",
 		projectId: "p1",
 		durationMinutes: 30,
@@ -64,12 +64,12 @@ it("maps structured errors to SpantailApiError", async () => {
 	const { client } = stubClient(403, {
 		error: {
 			code: "forbidden",
-			message: "Only the author can modify a work entry",
+			message: "Only the author can modify a work span",
 		},
 	});
 
 	const error = await client
-		.updateWorkEntry("e1", { durationMinutes: 1 })
+		.updateWorkSpan("e1", { durationMinutes: 1 })
 		.catch((e) => e);
 
 	expect(error).toBeInstanceOf(SpantailApiError);
@@ -81,5 +81,5 @@ it("maps structured errors to SpantailApiError", async () => {
 it("returns undefined for 204 responses", async () => {
 	const { client } = stubClient(204, undefined);
 
-	await expect(client.deleteWorkEntry("e1")).resolves.toBeUndefined();
+	await expect(client.deleteWorkSpan("e1")).resolves.toBeUndefined();
 });

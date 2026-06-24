@@ -1,22 +1,22 @@
 import {
-	createWorkEntryInputSchema,
-	listWorkEntriesQuerySchema,
+	createWorkSpanInputSchema,
+	listWorkSpansQuerySchema,
 	todayInTimezone,
-	updateWorkEntryInputSchema,
-	type WorkEntrySource,
-	workEntryStatsQuerySchema,
-	workEntryTagsQuerySchema,
+	updateWorkSpanInputSchema,
+	type WorkSpanSource,
+	workSpanStatsQuerySchema,
+	workSpanTagsQuerySchema,
 } from "@spantail/core";
 import {
-	createWorkEntry,
-	deleteWorkEntry,
+	createWorkSpan,
+	deleteWorkSpan,
 	getProjectById,
-	getWorkEntryById,
-	getWorkEntryStats,
-	listWorkEntries,
-	listWorkEntryTags,
-	updateWorkEntry,
-	type WorkEntryRow,
+	getWorkSpanById,
+	getWorkSpanStats,
+	listWorkSpans,
+	listWorkSpanTags,
+	updateWorkSpan,
+	type WorkSpanRow,
 } from "@spantail/db";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -41,14 +41,14 @@ async function requireProjectInWorkspace(
 	}
 }
 
-async function requireEntryAccess(
+async function requireSpanAccess(
 	c: Context<AppEnv>,
 	id: string,
-): Promise<WorkEntryRow> {
-	const entry = await getWorkEntryById(c.var.db, id);
-	if (!entry) throw new AppError("not_found", "Work entry not found");
-	await requireWorkspaceAccess(c, entry.workspaceId);
-	return entry;
+): Promise<WorkSpanRow> {
+	const span = await getWorkSpanById(c.var.db, id);
+	if (!span) throw new AppError("not_found", "Work span not found");
+	await requireWorkspaceAccess(c, span.workspaceId);
+	return span;
 }
 
 /**
@@ -57,38 +57,38 @@ async function requireEntryAccess(
  * default to "api" (e.g. direct curl). This is informational metadata, so an
  * unrecognized header value is ignored rather than rejected.
  */
-function resolveSource(c: Context<AppEnv>): WorkEntrySource {
+function resolveSource(c: Context<AppEnv>): WorkSpanSource {
 	if (c.var.auth?.via === "session") return "web";
 	const hint = c.req.header("x-spantail-client");
 	if (hint === "cli" || hint === "mcp") return hint;
 	return "api";
 }
 
-function requireAuthor(c: Context<AppEnv>, entry: WorkEntryRow): void {
+function requireAuthor(c: Context<AppEnv>, span: WorkSpanRow): void {
 	const { user } = requireAuth(c);
-	if (entry.userId !== user.id) {
-		throw new AppError("forbidden", "Only the author can modify a work entry");
+	if (span.userId !== user.id) {
+		throw new AppError("forbidden", "Only the author can modify a work span");
 	}
 }
 
-export const workEntryRoutes = new Hono<AppEnv>()
+export const workSpanRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		requireScope(c, "read");
-		const query = validate(listWorkEntriesQuerySchema, c.req.query());
+		const query = validate(listWorkSpansQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await listWorkEntries(c.var.db, query));
+		return c.json(await listWorkSpans(c.var.db, query));
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
-		const input = validate(createWorkEntryInputSchema, await c.req.json());
+		const input = validate(createWorkSpanInputSchema, await c.req.json());
 		const { workspace } = await requireWorkspaceAccess(c, input.workspaceId);
 		await requireProjectInWorkspace(c, input.projectId, input.workspaceId);
 
-		const entry = await createWorkEntry(c.var.db, {
+		const span = await createWorkSpan(c.var.db, {
 			workspaceId: input.workspaceId,
 			projectId: input.projectId,
 			userId: user.id,
-			entryDate: input.entryDate ?? todayInTimezone(workspace.timezone),
+			spanDate: input.spanDate ?? todayInTimezone(workspace.timezone),
 			durationMinutes: input.durationMinutes,
 			startedAt: input.startedAt ? new Date(input.startedAt) : null,
 			endedAt: input.endedAt ? new Date(input.endedAt) : null,
@@ -97,45 +97,45 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			tags: input.tags,
 			source: resolveSource(c),
 		});
-		return c.json(entry, 201);
+		return c.json(span, 201);
 	})
-	// Registered before "/:id" so "stats" is not captured as an entry id.
+	// Registered before "/:id" so "stats" is not captured as an span id.
 	.get("/stats", async (c) => {
 		requireScope(c, "read");
-		const query = validate(workEntryStatsQuerySchema, c.req.query());
+		const query = validate(workSpanStatsQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await getWorkEntryStats(c.var.db, query));
+		return c.json(await getWorkSpanStats(c.var.db, query));
 	})
-	// Likewise registered before "/:id" so "tags" is not captured as an entry id.
+	// Likewise registered before "/:id" so "tags" is not captured as an span id.
 	.get("/tags", async (c) => {
 		requireScope(c, "read");
-		const query = validate(workEntryTagsQuerySchema, c.req.query());
+		const query = validate(workSpanTagsQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await listWorkEntryTags(c.var.db, query));
+		return c.json(await listWorkSpanTags(c.var.db, query));
 	})
 	.get("/:id", async (c) => {
 		requireScope(c, "read");
-		const entry = await requireEntryAccess(c, c.req.param("id"));
-		return c.json(entry);
+		const span = await requireSpanAccess(c, c.req.param("id"));
+		return c.json(span);
 	})
 	.patch("/:id", async (c) => {
 		requireScope(c, "write");
-		const entry = await requireEntryAccess(c, c.req.param("id"));
-		requireAuthor(c, entry);
-		const input = validate(updateWorkEntryInputSchema, await c.req.json());
-		// A null projectId is only allowed to preserve an already-orphaned entry
-		// (its project was deleted); live entries cannot be unassigned.
-		if (input.projectId === null && entry.projectId !== null) {
+		const span = await requireSpanAccess(c, c.req.param("id"));
+		requireAuthor(c, span);
+		const input = validate(updateWorkSpanInputSchema, await c.req.json());
+		// A null projectId is only allowed to preserve an already-orphaned span
+		// (its project was deleted); live spans cannot be unassigned.
+		if (input.projectId === null && span.projectId !== null) {
 			throw new AppError(
 				"bad_request",
-				"Cannot unassign an entry from its project",
+				"Cannot unassign an span from its project",
 			);
 		}
 		if (input.projectId) {
-			await requireProjectInWorkspace(c, input.projectId, entry.workspaceId);
+			await requireProjectInWorkspace(c, input.projectId, span.workspaceId);
 		}
 		const { startedAt, endedAt, ...rest } = input;
-		const updated = await updateWorkEntry(c.var.db, entry.id, {
+		const updated = await updateWorkSpan(c.var.db, span.id, {
 			...rest,
 			...(startedAt === undefined
 				? {}
@@ -148,8 +148,8 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	})
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");
-		const entry = await requireEntryAccess(c, c.req.param("id"));
-		requireAuthor(c, entry);
-		await deleteWorkEntry(c.var.db, entry.id);
+		const span = await requireSpanAccess(c, c.req.param("id"));
+		requireAuthor(c, span);
+		await deleteWorkSpan(c.var.db, span.id);
 		return c.body(null, 204);
 	});

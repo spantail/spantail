@@ -65,12 +65,12 @@ export function DashboardStats({
 
 	const stats = useQuery({
 		queryKey: [
-			"work-entry-stats",
+			"work-span-stats",
 			scope.workspaceId,
 			{ ...scope, from: range.from, to: range.to },
 		],
 		queryFn: () =>
-			api.getWorkEntryStats({ ...scope, from: range.from, to: range.to }),
+			api.getWorkSpanStats({ ...scope, from: range.from, to: range.to }),
 	});
 
 	const projects = useProjects();

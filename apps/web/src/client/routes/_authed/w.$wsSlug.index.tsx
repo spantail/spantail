@@ -10,13 +10,13 @@ import {
 	type DashboardPeriod,
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
-import { useEntryDialog } from "@/components/entry-dialog";
-import { EntryTimeline } from "@/components/entry-timeline";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
+import { useSpanDialog } from "@/components/span-dialog";
+import { SpanTimeline } from "@/components/span-timeline";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
-import { formatEntryDate } from "@/lib/format";
+import { formatSpanDate } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
@@ -44,20 +44,20 @@ function Timeline({
 }) {
 	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
-	const { openCreate } = useEntryDialog();
+	const { openCreate } = useSpanDialog();
 	const navigate = useNavigate();
 	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
 	const today = todayInTimezone(current?.timezone ?? "UTC");
-	const dateLabel = formatEntryDate(today, i18n.language, {
+	const dateLabel = formatSpanDate(today, i18n.language, {
 		weekday: "long",
 		month: "long",
 		day: "numeric",
 	});
 	const projects = useProjects();
-	const entries = useInfiniteQuery({
-		queryKey: ["work-entries", workspaceId, "timeline", userId],
+	const spans = useInfiniteQuery({
+		queryKey: ["work-spans", workspaceId, "timeline", userId],
 		queryFn: ({ pageParam }) =>
-			api.listWorkEntries({
+			api.listWorkSpans({
 				workspaceId,
 				userId,
 				limit: PAGE_SIZE,
@@ -67,7 +67,7 @@ function Timeline({
 		getNextPageParam: (lastPage, allPages) =>
 			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 	});
-	const allEntries = entries.data?.pages.flat() ?? [];
+	const allSpans = spans.data?.pages.flat() ?? [];
 
 	return (
 		<div className="flex flex-col gap-7">
@@ -93,11 +93,11 @@ function Timeline({
 				<h2 className="font-heading text-lg font-semibold">
 					{t("timeline.title")}
 				</h2>
-				{entries.isPending ? (
+				{spans.isPending ? (
 					<p className="text-muted-foreground p-4 text-center text-sm">
 						{t("app.loading")}
 					</p>
-				) : allEntries.length === 0 ? (
+				) : allSpans.length === 0 ? (
 					<div className="flex flex-col items-center gap-2 p-8 text-center">
 						<p className="text-muted-foreground text-sm">
 							{t("timeline.empty")}
@@ -111,12 +111,12 @@ function Timeline({
 					</div>
 				) : (
 					<>
-						<EntryTimeline
-							entries={allEntries}
+						<SpanTimeline
+							spans={allSpans}
 							projects={projects.data ?? []}
 							onLoadMore={() => {
-								if (entries.hasNextPage && !entries.isFetchingNextPage)
-									entries.fetchNextPage();
+								if (spans.hasNextPage && !spans.isFetchingNextPage)
+									spans.fetchNextPage();
 							}}
 							onCreateReport={(day) =>
 								// Hand off to the reports shell, which opens a seeded create
@@ -135,9 +135,9 @@ function Timeline({
 							}
 						/>
 						<InfiniteSentinel
-							hasNextPage={Boolean(entries.hasNextPage)}
-							isFetchingNextPage={entries.isFetchingNextPage}
-							fetchNextPage={() => entries.fetchNextPage()}
+							hasNextPage={Boolean(spans.hasNextPage)}
+							isFetchingNextPage={spans.isFetchingNextPage}
+							fetchNextPage={() => spans.fetchNextPage()}
 						/>
 					</>
 				)}

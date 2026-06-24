@@ -11,9 +11,9 @@ import {
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
 import { Dot } from "@/components/dot";
-import { EntryList } from "@/components/entry-list";
 import { FilterChip } from "@/components/filter-chip";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
+import { SpanList } from "@/components/span-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,10 +67,10 @@ function ProjectPage() {
 		enabled: Boolean(workspaceId),
 	});
 
-	// Entry filters (local state). Like the Reports filter they live in a
+	// Span filters (local state). Like the Reports filter they live in a
 	// popover and are off by default: empty dates and a null member/tag keep
-	// every entry. They flow into the server query so results stay correct
-	// across the entry list's pagination.
+	// every span. They flow into the server query so results stay correct
+	// across the span list's pagination.
 	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
 	const [from, setFrom] = useState("");
 	const [to, setTo] = useState("");
@@ -78,27 +78,27 @@ function ProjectPage() {
 	const [tag, setTag] = useState<string | null>(null);
 
 	// Tag options come from a distinct-tags catalog scoped to this project, so
-	// the dropdown is complete regardless of how many entry pages are loaded.
+	// the dropdown is complete regardless of how many span pages are loaded.
 	const tags = useQuery({
-		queryKey: ["work-entry-tags", workspaceId, project?.id],
+		queryKey: ["work-span-tags", workspaceId, project?.id],
 		queryFn: () =>
-			api.listWorkEntryTags({
+			api.listWorkSpanTags({
 				workspaceId: workspaceId as string,
 				projectId: project?.id as string,
 			}),
 		enabled: Boolean(workspaceId) && Boolean(project),
 	});
 
-	const entries = useInfiniteQuery({
+	const spans = useInfiniteQuery({
 		queryKey: [
-			"work-entries",
+			"work-spans",
 			workspaceId,
 			"project",
 			project?.id,
 			{ from, to, member, tag },
 		],
 		queryFn: ({ pageParam }) =>
-			api.listWorkEntries({
+			api.listWorkSpans({
 				workspaceId: workspaceId as string,
 				projectId: project?.id as string,
 				userId: member ?? undefined,
@@ -141,7 +141,7 @@ function ProjectPage() {
 		);
 	}
 
-	const allEntries = entries.data?.pages.flat() ?? [];
+	const allSpans = spans.data?.pages.flat() ?? [];
 
 	const memberOptions = members.data ?? [];
 	const memberName = (id: string) =>
@@ -198,7 +198,7 @@ function ProjectPage() {
 			<section className="flex flex-col gap-3">
 				<div className="flex items-center justify-between gap-3">
 					<h2 className="font-heading text-lg font-semibold">
-						{t("projects.entriesTitle")}
+						{t("projects.spansTitle")}
 					</h2>
 					<Popover>
 						<PopoverTrigger asChild>
@@ -219,11 +219,11 @@ function ProjectPage() {
 							<div className="flex flex-col gap-3.5">
 								<div className="grid grid-cols-2 gap-3">
 									<div className="flex flex-col gap-1.5">
-										<Label htmlFor="entries-from" className="text-xs">
+										<Label htmlFor="spans-from" className="text-xs">
 											{t("reports.from")}
 										</Label>
 										<Input
-											id="entries-from"
+											id="spans-from"
 											type="date"
 											className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
 											value={from}
@@ -232,11 +232,11 @@ function ProjectPage() {
 										/>
 									</div>
 									<div className="flex flex-col gap-1.5">
-										<Label htmlFor="entries-to" className="text-xs">
+										<Label htmlFor="spans-to" className="text-xs">
 											{t("reports.to")}
 										</Label>
 										<Input
-											id="entries-to"
+											id="spans-to"
 											type="date"
 											className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
 											value={to}
@@ -248,7 +248,7 @@ function ProjectPage() {
 								{memberOptions.length > 0 && (
 									<div className="flex flex-col gap-1.5">
 										<Label className="text-xs">
-											{t("entries.filter.member")}
+											{t("spans.filter.member")}
 										</Label>
 										<Select
 											value={member ?? "all"}
@@ -259,7 +259,7 @@ function ProjectPage() {
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value="all">
-													{t("entries.filter.allMembers")}
+													{t("spans.filter.allMembers")}
 												</SelectItem>
 												{memberOptions.map((m) => (
 													<SelectItem key={m.userId} value={m.userId}>
@@ -272,7 +272,7 @@ function ProjectPage() {
 								)}
 								{tagOptions.length > 0 && (
 									<div className="flex flex-col gap-1.5">
-										<Label className="text-xs">{t("entries.filter.tag")}</Label>
+										<Label className="text-xs">{t("spans.filter.tag")}</Label>
 										<Select
 											value={tag === null ? TAG_ALL : `${TAG_PREFIX}${tag}`}
 											onValueChange={(v) =>
@@ -286,7 +286,7 @@ function ProjectPage() {
 											</SelectTrigger>
 											<SelectContent>
 												<SelectItem value={TAG_ALL}>
-													{t("entries.filter.allTags")}
+													{t("spans.filter.allTags")}
 												</SelectItem>
 												{tagOptions.map((option) => (
 													<SelectItem
@@ -355,30 +355,30 @@ function ProjectPage() {
 						)}
 					</div>
 				)}
-				{entries.isPending ? (
+				{spans.isPending ? (
 					<p className="text-muted-foreground p-4 text-center text-sm">
 						{t("app.loading")}
 					</p>
-				) : allEntries.length === 0 && activeFilterCount > 0 ? (
+				) : allSpans.length === 0 && activeFilterCount > 0 ? (
 					<p className="text-muted-foreground p-4 text-center text-sm">
-						{t("entries.filter.empty")}
+						{t("spans.filter.empty")}
 					</p>
 				) : (
 					<>
-						<EntryList
-							entries={allEntries}
+						<SpanList
+							spans={allSpans}
 							projects={[project]}
 							members={members.data ?? []}
 							showProject={false}
 							onLoadMore={() => {
-								if (entries.hasNextPage && !entries.isFetchingNextPage)
-									entries.fetchNextPage();
+								if (spans.hasNextPage && !spans.isFetchingNextPage)
+									spans.fetchNextPage();
 							}}
 						/>
 						<InfiniteSentinel
-							hasNextPage={Boolean(entries.hasNextPage)}
-							isFetchingNextPage={entries.isFetchingNextPage}
-							fetchNextPage={() => entries.fetchNextPage()}
+							hasNextPage={Boolean(spans.hasNextPage)}
+							isFetchingNextPage={spans.isFetchingNextPage}
+							fetchNextPage={() => spans.fetchNextPage()}
 						/>
 					</>
 				)}

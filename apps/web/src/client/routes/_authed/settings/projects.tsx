@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { invalidateWorkEntryData } from "@/lib/query";
+import { invalidateSpanData } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -322,7 +322,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 				onSaved={async () => {
 					setEditing(null);
 					await refresh();
-					invalidateWorkEntryData(queryClient, workspaceId);
+					invalidateSpanData(queryClient, workspaceId);
 					toast.success(t("settings.projects.toast.updated"));
 				}}
 			/>
@@ -334,7 +334,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 				onDeleted={async () => {
 					setDeleting(null);
 					await refresh();
-					invalidateWorkEntryData(queryClient, workspaceId);
+					invalidateSpanData(queryClient, workspaceId);
 					toast.success(t("settings.projects.toast.deleted"));
 				}}
 			/>

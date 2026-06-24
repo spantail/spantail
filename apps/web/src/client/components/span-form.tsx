@@ -1,4 +1,4 @@
-import type { Project, WorkEntry } from "@spantail/core";
+import type { Project, WorkSpan } from "@spantail/core";
 import {
 	formatDuration,
 	shiftDays,
@@ -24,16 +24,16 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { invalidateWorkEntryData } from "@/lib/query";
+import { invalidateSpanData } from "@/lib/query";
 
 // Sentinel select value for "no project" (Radix Select forbids an empty value).
 const NO_PROJECT = "__none__";
 
-interface EntryFormProps {
+interface SpanFormProps {
 	workspaceId: string;
 	timezone: string;
 	projects: Project[];
-	initial: WorkEntry | null;
+	initial: WorkSpan | null;
 	defaultProjectId?: string;
 	onSuccess: () => void;
 	onCancel: () => void;
@@ -96,10 +96,10 @@ function timeBefore(a: string, b: string): boolean {
 }
 
 /**
- * Create/edit form hosted by the entry dialog. Mounted fresh per open (the
+ * Create/edit form hosted by the span dialog. Mounted fresh per open (the
  * dialog keys it), so all state derives from props in the initializers.
  */
-export function EntryForm({
+export function SpanForm({
 	workspaceId,
 	timezone,
 	projects,
@@ -107,17 +107,17 @@ export function EntryForm({
 	defaultProjectId,
 	onSuccess,
 	onCancel,
-}: EntryFormProps) {
+}: SpanFormProps) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	// Editing an entry orphaned by a project deletion: keep it assignable to
+	// Editing an span orphaned by a project deletion: keep it assignable to
 	// "no project" so its other fields stay editable without forcing a project.
 	const canUnassign = Boolean(initial) && initial?.projectId == null;
 	const [projectId, setProjectId] = useState(
 		initial ? (initial.projectId ?? NO_PROJECT) : (defaultProjectId ?? ""),
 	);
-	const [entryDate, setEntryDate] = useState(
-		initial?.entryDate ?? todayInTimezone(timezone),
+	const [spanDate, setSpanDate] = useState(
+		initial?.spanDate ?? todayInTimezone(timezone),
 	);
 	const [duration, setDuration] = useState(
 		initial ? String(initial.durationMinutes) : "",
@@ -135,29 +135,29 @@ export function EntryForm({
 
 	// Start/end times drive the duration (counted across DST transitions), but
 	// minutes can still be entered directly, which nudges the end time.
-	const derived = rangeMinutes(entryDate, startTime, endTime, timezone);
+	const derived = rangeMinutes(spanDate, startTime, endTime, timezone);
 	const endsNextDay =
 		Boolean(startTime && endTime) && timeBefore(endTime, startTime);
 	const handleStartTime = (value: string) => {
 		setStartTime(value);
-		const mins = rangeMinutes(entryDate, value, endTime, timezone);
+		const mins = rangeMinutes(spanDate, value, endTime, timezone);
 		if (mins != null) setDuration(String(mins));
 	};
 	const handleEndTime = (value: string) => {
 		setEndTime(value);
-		const mins = rangeMinutes(entryDate, startTime, value, timezone);
+		const mins = rangeMinutes(spanDate, startTime, value, timezone);
 		if (mins != null) setDuration(String(mins));
 	};
 	const handleDuration = (value: string) => {
 		setDuration(value);
 		const mins = parseMinutes(value);
 		if (startTime && mins != null)
-			setEndTime(endClock(entryDate, startTime, mins, timezone));
+			setEndTime(endClock(spanDate, startTime, mins, timezone));
 	};
 	// Changing the date re-derives the duration: elapsed minutes depend on the
 	// date when the range spans a DST transition.
 	const handleDate = (value: string) => {
-		setEntryDate(value);
+		setSpanDate(value);
 		const mins = rangeMinutes(value, startTime, endTime, timezone);
 		if (mins != null) setDuration(String(mins));
 	};
@@ -165,12 +165,12 @@ export function EntryForm({
 
 	const mutation = useMutation({
 		mutationFn: () => {
-			// Start is the entry date at the start clock in the workspace timezone.
+			// Start is the span date at the start clock in the workspace timezone.
 			// The end instant is the start plus the (authoritative) duration, so it
-			// stays correct past midnight and for entries of 24h or longer.
+			// stays correct past midnight and for spans of 24h or longer.
 			const minutes = parseMinutes(duration);
 			const startedAt = startTime
-				? zonedDateTimeToUtc(entryDate, startTime, timezone)
+				? zonedDateTimeToUtc(spanDate, startTime, timezone)
 				: undefined;
 			const endedAt =
 				startedAt && minutes != null
@@ -178,10 +178,10 @@ export function EntryForm({
 							new Date(startedAt).getTime() + minutes * 60000,
 						).toISOString()
 					: endTime
-						? zonedDateTimeToUtc(entryDate, endTime, timezone)
+						? zonedDateTimeToUtc(spanDate, endTime, timezone)
 						: undefined;
 			const payload = {
-				entryDate,
+				spanDate,
 				durationMinutes: Number(duration),
 				description,
 				note: note.trim() === "" ? undefined : note,
@@ -191,14 +191,14 @@ export function EntryForm({
 					.filter(Boolean),
 			};
 			return initial
-				? api.updateWorkEntry(initial.id, {
+				? api.updateWorkSpan(initial.id, {
 						...payload,
 						projectId: projectId === NO_PROJECT ? null : projectId,
 						note: payload.note ?? null,
 						startedAt: startedAt ?? null,
 						endedAt: endedAt ?? null,
 					})
-				: api.createWorkEntry({
+				: api.createWorkSpan({
 						workspaceId,
 						projectId,
 						...payload,
@@ -207,7 +207,7 @@ export function EntryForm({
 					});
 		},
 		onSuccess: () => {
-			invalidateWorkEntryData(queryClient, workspaceId);
+			invalidateSpanData(queryClient, workspaceId);
 			onSuccess();
 		},
 		onError: (err: Error) => setError(err.message),
@@ -218,11 +218,9 @@ export function EntryForm({
 	if (activeProjects.length === 0 && !initial) {
 		return (
 			<div className="flex flex-col items-start gap-3">
-				<p className="text-muted-foreground text-sm">
-					{t("entries.noProjects")}
-				</p>
+				<p className="text-muted-foreground text-sm">{t("spans.noProjects")}</p>
 				<Button asChild variant="outline" onClick={onCancel}>
-					<Link to="/settings/projects">{t("entries.goToSettings")}</Link>
+					<Link to="/settings/projects">{t("spans.goToSettings")}</Link>
 				</Button>
 			</div>
 		);
@@ -238,16 +236,14 @@ export function EntryForm({
 			}}
 		>
 			<div className="flex flex-col gap-2">
-				<Label>{t("entries.project")}</Label>
+				<Label>{t("spans.project")}</Label>
 				<Select value={projectId} onValueChange={setProjectId} required>
 					<SelectTrigger>
-						<SelectValue placeholder={t("entries.selectProject")} />
+						<SelectValue placeholder={t("spans.selectProject")} />
 					</SelectTrigger>
 					<SelectContent>
 						{canUnassign && (
-							<SelectItem value={NO_PROJECT}>
-								{t("entries.noProject")}
-							</SelectItem>
+							<SelectItem value={NO_PROJECT}>{t("spans.noProject")}</SelectItem>
 						)}
 						{activeProjects.map((project) => (
 							<SelectItem key={project.id} value={project.id}>
@@ -258,20 +254,20 @@ export function EntryForm({
 				</Select>
 			</div>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor="entry-date">{t("entries.date")}</Label>
+				<Label htmlFor="span-date">{t("spans.date")}</Label>
 				<Input
-					id="entry-date"
+					id="span-date"
 					type="date"
 					className="[color-scheme:light] dark:[color-scheme:dark]"
-					value={entryDate}
+					value={spanDate}
 					onChange={(e) => handleDate(e.target.value)}
 					required
 				/>
 			</div>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor="entry-start">{t("entries.startTime")}</Label>
+				<Label htmlFor="span-start">{t("spans.startTime")}</Label>
 				<Input
-					id="entry-start"
+					id="span-start"
 					type="time"
 					className="[color-scheme:light] dark:[color-scheme:dark]"
 					value={startTime}
@@ -279,9 +275,9 @@ export function EntryForm({
 				/>
 			</div>
 			<div className="flex flex-col gap-2">
-				<Label htmlFor="entry-end">{t("entries.endTime")}</Label>
+				<Label htmlFor="span-end">{t("spans.endTime")}</Label>
 				<Input
-					id="entry-end"
+					id="span-end"
 					type="time"
 					className="[color-scheme:light] dark:[color-scheme:dark]"
 					value={endTime}
@@ -289,18 +285,18 @@ export function EntryForm({
 				/>
 				{sameAsStart ? (
 					<p className="text-muted-foreground text-xs">
-						{t("entries.sameAsStart")}
+						{t("spans.sameAsStart")}
 					</p>
 				) : endsNextDay ? (
 					<p className="text-muted-foreground text-xs">
-						{t("entries.endsNextDay")}
+						{t("spans.endsNextDay")}
 					</p>
 				) : null}
 			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
-				<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
+				<Label htmlFor="span-duration">{t("spans.duration")}</Label>
 				<Input
-					id="entry-duration"
+					id="span-duration"
 					type="number"
 					min={1}
 					step={1}
@@ -311,35 +307,35 @@ export function EntryForm({
 				/>
 				<p className="text-muted-foreground text-xs">
 					{derived != null
-						? t("entries.minutesFromRange", {
+						? t("spans.minutesFromRange", {
 								duration: formatDuration(derived),
 							})
-						: t("entries.minutesManual")}
+						: t("spans.minutesManual")}
 				</p>
 			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
-				<Label htmlFor="entry-tags">{t("entries.tags")}</Label>
+				<Label htmlFor="span-tags">{t("spans.tags")}</Label>
 				<Input
-					id="entry-tags"
-					placeholder={t("entries.tagsPlaceholder")}
+					id="span-tags"
+					placeholder={t("spans.tagsPlaceholder")}
 					value={tags}
 					onChange={(e) => setTags(e.target.value)}
 				/>
 			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
-				<Label htmlFor="entry-description">{t("entries.description")}</Label>
+				<Label htmlFor="span-description">{t("spans.description")}</Label>
 				<Input
-					id="entry-description"
+					id="span-description"
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
-					placeholder={t("entries.descriptionPlaceholder")}
+					placeholder={t("spans.descriptionPlaceholder")}
 					required
 				/>
 			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
-				<Label htmlFor="entry-note">{t("entries.note")}</Label>
+				<Label htmlFor="span-note">{t("spans.note")}</Label>
 				<Textarea
-					id="entry-note"
+					id="span-note"
 					className="field-sizing-fixed"
 					value={note}
 					onChange={(e) => setNote(e.target.value)}
@@ -351,10 +347,10 @@ export function EntryForm({
 			)}
 			<DialogFooter className="sm:col-span-2">
 				<Button type="button" variant="outline" onClick={onCancel}>
-					{t("entries.cancelAction")}
+					{t("spans.cancelAction")}
 				</Button>
 				<Button type="submit" disabled={mutation.isPending || !projectId}>
-					{initial ? t("entries.saveAction") : t("entries.logAction")}
+					{initial ? t("spans.saveAction") : t("spans.logAction")}
 				</Button>
 			</DialogFooter>
 		</form>

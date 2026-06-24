@@ -2,9 +2,9 @@ import type {
 	AcceptInvitationInput,
 	AddWorkspaceMemberInputData,
 	Agent,
-	AgentEntry,
-	AgentEntryStats,
-	AgentEntryStatsQuery,
+	AgentSpan,
+	AgentSpanStats,
+	AgentSpanStatsQuery,
 	AgentsEnabled,
 	AgentWithToken,
 	ApiToken,
@@ -20,17 +20,17 @@ import type {
 	CreateReportTemplateInput,
 	CreateTokenInput,
 	CreateUserInputData,
-	CreateWorkEntryInputData,
+	CreateWorkSpanInputData,
 	CreateWorkspaceInput,
 	EmailEnabled,
 	EmailSettings,
-	IngestAgentEntryInputData,
+	IngestAgentSpanInputData,
 	Invitation,
 	InvitationPreview,
-	ListAgentEntriesQueryData,
+	ListAgentSpansQueryData,
 	ListInboxQueryData,
 	ListReportsQueryData,
-	ListWorkEntriesQueryData,
+	ListWorkSpansQueryData,
 	MailFolder,
 	MailFolderCounts,
 	MailItem,
@@ -59,12 +59,12 @@ import type {
 	UpdateReportTemplateInput,
 	UpdateReportTemplateStateInput,
 	UpdateUserInput,
-	UpdateWorkEntryInput,
+	UpdateWorkSpanInput,
 	UpdateWorkspaceInput,
-	WorkEntry,
-	WorkEntryStats,
-	WorkEntryStatsQuery,
-	WorkEntryTagsQuery,
+	WorkSpan,
+	WorkSpanStats,
+	WorkSpanStatsQuery,
+	WorkSpanTagsQuery,
 	Workspace,
 	WorkspaceMember,
 	WorkspaceWithRole,
@@ -84,7 +84,7 @@ export interface SpantailClientOptions {
 	fetch?: typeof fetch;
 	/**
 	 * Programmatic client hint sent as the X-Spantail-Client header, which the
-	 * server records as a work entry's source. Only "cli" / "mcp" are honored:
+	 * server records as a work span's source. Only "cli" / "mcp" are honored:
 	 * "web" and "api" are derived server-side from the auth channel, so they are
 	 * not offered here.
 	 */
@@ -319,35 +319,35 @@ export class SpantailClient {
 		return this.request("DELETE", `/projects/${id}`);
 	}
 
-	listWorkEntries(query: ListWorkEntriesQueryData): Promise<WorkEntry[]> {
-		return this.request("GET", "/work-entries", { query });
+	listWorkSpans(query: ListWorkSpansQueryData): Promise<WorkSpan[]> {
+		return this.request("GET", "/work-spans", { query });
 	}
 
-	getWorkEntryStats(query: WorkEntryStatsQuery): Promise<WorkEntryStats> {
-		return this.request("GET", "/work-entries/stats", { query });
+	getWorkSpanStats(query: WorkSpanStatsQuery): Promise<WorkSpanStats> {
+		return this.request("GET", "/work-spans/stats", { query });
 	}
 
-	listWorkEntryTags(query: WorkEntryTagsQuery): Promise<string[]> {
-		return this.request("GET", "/work-entries/tags", { query });
+	listWorkSpanTags(query: WorkSpanTagsQuery): Promise<string[]> {
+		return this.request("GET", "/work-spans/tags", { query });
 	}
 
-	createWorkEntry(input: CreateWorkEntryInputData): Promise<WorkEntry> {
-		return this.request("POST", "/work-entries", { body: input });
+	createWorkSpan(input: CreateWorkSpanInputData): Promise<WorkSpan> {
+		return this.request("POST", "/work-spans", { body: input });
 	}
 
-	getWorkEntry(id: string): Promise<WorkEntry> {
-		return this.request("GET", `/work-entries/${id}`);
+	getWorkSpan(id: string): Promise<WorkSpan> {
+		return this.request("GET", `/work-spans/${id}`);
 	}
 
-	updateWorkEntry(id: string, input: UpdateWorkEntryInput): Promise<WorkEntry> {
-		return this.request("PATCH", `/work-entries/${id}`, { body: input });
+	updateWorkSpan(id: string, input: UpdateWorkSpanInput): Promise<WorkSpan> {
+		return this.request("PATCH", `/work-spans/${id}`, { body: input });
 	}
 
-	deleteWorkEntry(id: string): Promise<void> {
-		return this.request("DELETE", `/work-entries/${id}`);
+	deleteWorkSpan(id: string): Promise<void> {
+		return this.request("DELETE", `/work-spans/${id}`);
 	}
 
-	// --- AI agents: registry, access tokens, and work entries ---
+	// --- AI agents: registry, access tokens, and work spans ---
 
 	listAgents(): Promise<AgentWithToken[]> {
 		return this.request("GET", "/agents");
@@ -365,7 +365,7 @@ export class SpantailClient {
 		return this.request("PATCH", `/agents/${id}`, { body: input });
 	}
 
-	/** Soft-deletes (archives) an agent; its entries are preserved. */
+	/** Soft-deletes (archives) an agent; its spans are preserved. */
 	deleteAgent(id: string): Promise<void> {
 		return this.request("DELETE", `/agents/${id}`);
 	}
@@ -376,23 +376,23 @@ export class SpantailClient {
 	}
 
 	/** Ingests one agent session (agent access token auth). Idempotent. */
-	ingestAgentEntry(input: IngestAgentEntryInputData): Promise<AgentEntry> {
-		return this.request("POST", "/agent-entries", { body: input });
+	ingestAgentSpan(input: IngestAgentSpanInputData): Promise<AgentSpan> {
+		return this.request("POST", "/agent-spans", { body: input });
 	}
 
-	listAgentEntries(query: ListAgentEntriesQueryData): Promise<AgentEntry[]> {
-		return this.request("GET", "/agent-entries", { query });
+	listAgentSpans(query: ListAgentSpansQueryData): Promise<AgentSpan[]> {
+		return this.request("GET", "/agent-spans", { query });
 	}
 
-	getAgentEntryStats(query: AgentEntryStatsQuery): Promise<AgentEntryStats> {
-		return this.request("GET", "/agent-entries/stats", { query });
+	getAgentSpanStats(query: AgentSpanStatsQuery): Promise<AgentSpanStats> {
+		return this.request("GET", "/agent-spans/stats", { query });
 	}
 
 	/** Agents with activity in a workspace (for the sidebar's Agents group). */
 	listWorkspaceAgents(
 		workspaceId: string,
 	): Promise<Pick<Agent, "id" | "type" | "name">[]> {
-		return this.request("GET", "/agent-entries/agents", {
+		return this.request("GET", "/agent-spans/agents", {
 			query: { workspaceId },
 		});
 	}
@@ -464,7 +464,7 @@ export class SpantailClient {
 	previewReport(input: CreateReportInput): Promise<{
 		content: string;
 		totalMinutes: number;
-		entryCount: number;
+		spanCount: number;
 		projectCount: number;
 	}> {
 		return this.request("POST", "/reports/preview", { body: input });

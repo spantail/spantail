@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Raw per-turn agent telemetry: one event per assistant message (one API
  * response, which carries exactly one usage block). The materialized
- * per-session rollup lives in `agent_entries`; events are the immutable source
+ * per-session rollup lives in `agent_spans`; events are the immutable source
  * the rollup is recomputed from. See `local/agent-events-design.md`.
  */
 
@@ -41,7 +41,7 @@ export type AgentEventInput = z.infer<typeof agentEventSchema>;
  */
 export const ingestAgentEventsInputSchema = z.object({
 	workspaceId: z.string().optional(),
-	// Reject an empty/whitespace projectId at the boundary (mirrors agent-entries).
+	// Reject an empty/whitespace projectId at the boundary (mirrors agent-spans).
 	projectId: z.string().trim().min(1).optional(),
 	sessionId: z.string().min(1).max(200),
 	events: z.array(agentEventSchema).min(1).max(5000),

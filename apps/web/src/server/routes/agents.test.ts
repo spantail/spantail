@@ -25,7 +25,7 @@ async function createWorkspace(cookie: string, slug: string): Promise<string> {
 }
 
 function ingest(token: string, sessionId: string): Promise<Response> {
-	return appFetch("/api/v1/agent-entries", {
+	return appFetch("/api/v1/agent-spans", {
 		method: "POST",
 		headers: {
 			authorization: `Bearer ${token}`,
@@ -263,7 +263,7 @@ it("shows a member only their own agents in the sidebar", async () => {
 
 	const sidebar = async (cookie: string): Promise<string[]> => {
 		const rows = (await (
-			await apiGet(`/api/v1/agent-entries/agents?workspaceId=${wsId}`, cookie)
+			await apiGet(`/api/v1/agent-spans/agents?workspaceId=${wsId}`, cookie)
 		).json()) as Array<{ id: string }>;
 		return rows.map((r) => r.id);
 	};
@@ -276,7 +276,7 @@ it("shows a member only their own agents in the sidebar", async () => {
 	// other members — the sidebar shows each member only their own agents.
 	expect(
 		(
-			await appFetch("/api/v1/agent-entries", {
+			await appFetch("/api/v1/agent-spans", {
 				method: "POST",
 				headers: {
 					authorization: `Bearer ${agent.secret}`,

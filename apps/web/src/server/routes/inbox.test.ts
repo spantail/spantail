@@ -34,7 +34,7 @@ async function setup() {
 	).json()) as { id: string };
 	await apiJson(
 		"POST",
-		"/api/v1/work-entries",
+		"/api/v1/work-spans",
 		{
 			workspaceId: ws.id,
 			projectId: project.id,

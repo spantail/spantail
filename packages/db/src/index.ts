@@ -21,6 +21,6 @@ export * from "./queries/report-templates";
 export * from "./queries/reports";
 export * from "./queries/tokens";
 export * from "./queries/users";
-export * from "./queries/work-entries";
+export * from "./queries/work-spans";
 export * from "./queries/workspaces";
 export * as schema from "./schema";

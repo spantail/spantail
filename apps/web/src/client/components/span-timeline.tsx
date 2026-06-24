@@ -1,41 +1,41 @@
-import type { Project, WorkEntry } from "@spantail/core";
+import type { Project, WorkSpan } from "@spantail/core";
 import { formatDuration } from "@spantail/core";
 import { SquarePenIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Dot } from "@/components/dot";
-import { EntryActions } from "@/components/entry-actions";
-import { useEntryDialog } from "@/components/entry-dialog";
+import { SpanActions } from "@/components/span-actions";
+import { useSpanDialog } from "@/components/span-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
-import { formatEntryDate } from "@/lib/format";
+import { formatSpanDate } from "@/lib/format";
 
 export interface TimelineDay {
 	date: string;
 	totalMinutes: number;
-	entries: WorkEntry[];
+	spans: WorkSpan[];
 }
 
-/** Groups entries by entry date, preserving the given (date-desc) order. */
-export function groupEntriesByDate(entries: WorkEntry[]): TimelineDay[] {
+/** Groups spans by span date, preserving the given (date-desc) order. */
+export function groupSpansByDate(spans: WorkSpan[]): TimelineDay[] {
 	const days = new Map<string, TimelineDay>();
-	for (const entry of entries) {
-		let day = days.get(entry.entryDate);
+	for (const span of spans) {
+		let day = days.get(span.spanDate);
 		if (!day) {
-			day = { date: entry.entryDate, totalMinutes: 0, entries: [] };
-			days.set(entry.entryDate, day);
+			day = { date: span.spanDate, totalMinutes: 0, spans: [] };
+			days.set(span.spanDate, day);
 		}
-		day.entries.push(entry);
-		day.totalMinutes += entry.durationMinutes;
+		day.spans.push(span);
+		day.totalMinutes += span.durationMinutes;
 	}
 	return [...days.values()];
 }
 
-interface EntryTimelineProps {
-	entries: WorkEntry[];
+interface SpanTimelineProps {
+	spans: WorkSpan[];
 	projects: Project[];
-	/** Loads the next page when keyboard nav reaches the last entry. */
+	/** Loads the next page when keyboard nav reaches the last span. */
 	onLoadMore?: () => void;
 	/** Starts a daily report for the day (header pen button); hidden when absent. */
 	onCreateReport?: (day: TimelineDay) => void;
@@ -43,17 +43,17 @@ interface EntryTimelineProps {
 
 /**
  * The personal work log as a vertical timeline: each day is a band with a
- * continuous rail and project-tinted entry nodes carrying the description,
+ * continuous rail and project-tinted span nodes carrying the description,
  * project, tags, and duration.
  */
-export function EntryTimeline({
-	entries,
+export function SpanTimeline({
+	spans,
 	projects,
 	onLoadMore,
 	onCreateReport,
-}: EntryTimelineProps) {
+}: SpanTimelineProps) {
 	const { t, i18n } = useTranslation();
-	const { openView } = useEntryDialog();
+	const { openView } = useSpanDialog();
 	const projectById = useMemo(
 		() => new Map(projects.map((p) => [p.id, p])),
 		[projects],
@@ -61,22 +61,22 @@ export function EntryTimeline({
 	const currentYear = String(new Date().getFullYear());
 
 	// Keyboard nav over the flat (cross-day) order; the highlight maps back to a
-	// row via its entry id. Derive the grouping and the id→index map once per
-	// entry list so rapid j/k key repeats only update highlight/scroll.
-	const days = useMemo(() => groupEntriesByDate(entries), [entries]);
+	// row via its span id. Derive the grouping and the id→index map once per
+	// span list so rapid j/k key repeats only update highlight/scroll.
+	const days = useMemo(() => groupSpansByDate(spans), [spans]);
 	const indexById = useMemo(
-		() => new Map(entries.map((entry, i) => [entry.id, i])),
-		[entries],
+		() => new Map(spans.map((span, i) => [span.id, i])),
+		[spans],
 	);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(-1);
 	useListKeyboardNav({
-		length: entries.length,
+		length: spans.length,
 		index: active,
 		onMove: setActive,
 		onOpen: () => {
-			const entry = entries[active];
-			if (entry) openView(entry);
+			const span = spans[active];
+			if (span) openView(span);
 		},
 		onReachEnd: onLoadMore,
 		containerRef,
@@ -85,7 +85,7 @@ export function EntryTimeline({
 	return (
 		<div ref={containerRef} className="flex flex-col gap-7">
 			{days.map((day) => {
-				const dayLabel = formatEntryDate(day.date, i18n.language, {
+				const dayLabel = formatSpanDate(day.date, i18n.language, {
 					weekday: "long",
 					month: "short",
 					day: "numeric",
@@ -121,19 +121,19 @@ export function EntryTimeline({
 							{/* continuous rail behind the nodes */}
 							<span className="bg-border pointer-events-none absolute top-2 bottom-2 left-[5px] w-px" />
 							<ul className="flex flex-col gap-4">
-								{day.entries.map((entry) => {
-									const idx = indexById.get(entry.id);
-									const project = entry.projectId
-										? projectById.get(entry.projectId)
+								{day.spans.map((span) => {
+									const idx = indexById.get(span.id);
+									const project = span.projectId
+										? projectById.get(span.projectId)
 										: undefined;
-									const projectLabel = entry.projectId
-										? (project?.name ?? entry.projectId)
+									const projectLabel = span.projectId
+										? (project?.name ?? span.projectId)
 										: t("projects.unassigned");
 									return (
 										// The row body is a button (opens the detail dialog); the rail
 										// node and actions menu are siblings so buttons never nest.
 										<li
-											key={entry.id}
+											key={span.id}
 											data-nav-index={idx}
 											data-nav-active={
 												active >= 0 && active === idx ? "" : undefined
@@ -153,15 +153,15 @@ export function EntryTimeline({
 											</span>
 											<button
 												type="button"
-												onClick={() => openView(entry)}
+												onClick={() => openView(span)}
 												className="group-data-[nav-active]:bg-muted hover:bg-muted/50 -my-1 min-w-0 flex-1 rounded-lg px-2 py-1.5 text-left transition-colors"
 											>
 												<span className="flex items-start justify-between gap-3">
 													<span className="decoration-foreground/20 text-sm leading-snug underline-offset-4 group-hover:underline">
-														{entry.description}
+														{span.description}
 													</span>
 													<span className="text-muted-foreground shrink-0 pt-px text-sm whitespace-nowrap tabular-nums">
-														{formatDuration(entry.durationMinutes)}
+														{formatDuration(span.durationMinutes)}
 													</span>
 												</span>
 												<span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -173,14 +173,14 @@ export function EntryTimeline({
 														)}
 														{projectLabel}
 													</span>
-													{entry.tags.map((tag) => (
+													{span.tags.map((tag) => (
 														<Badge key={tag} variant="secondary">
 															{tag}
 														</Badge>
 													))}
 												</span>
 											</button>
-											<EntryActions entry={entry} />
+											<SpanActions span={span} />
 										</li>
 									);
 								})}

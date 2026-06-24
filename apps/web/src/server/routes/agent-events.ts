@@ -20,7 +20,7 @@ export const agentEventRoutes = new Hono<AppEnv>()
 	// Ingest raw per-turn telemetry (agent access token only). Idempotent on
 	// (agent, sourceId): re-posting the cumulative transcript every Stop is safe.
 	// Each call inserts new events, then recomputes the session's rollup into
-	// `agent_entries` — the same row the client-computed POST /agent-entries
+	// `agent_spans` — the same row the client-computed POST /agent-spans
 	// writes, so a session is fed by one path only (Claude Code via events,
 	// Cursor via the summary route) and they never collide.
 	.post("/", async (c) => {
@@ -85,18 +85,18 @@ export const agentEventRoutes = new Hono<AppEnv>()
 
 		// 3. Materialize the rollup (monotonic: a stale concurrent recompute can't
 		// shrink the row). Read cost on list/stats is unchanged.
-		const entry = await materializeAgentSessionRollup(c.var.db, {
+		const span = await materializeAgentSessionRollup(c.var.db, {
 			workspaceId,
 			ownerUserId: auth.ownerUserId,
 			projectId,
 			agentId: auth.agentId,
 			sessionId: input.sessionId,
-			entryDate: todayInTimezone(workspace.timezone, rollup.startedAt),
+			spanDate: todayInTimezone(workspace.timezone, rollup.startedAt),
 			durationMinutes: rollup.durationMinutes,
 			usage: rollup.usage,
 			description: null,
 			startedAt: rollup.startedAt,
 			endedAt: rollup.endedAt,
 		});
-		return c.json(entry);
+		return c.json(span);
 	});
