@@ -63,12 +63,13 @@ function AgentPage() {
 	);
 
 	const projects = useProjects();
+	// One id→project map per render so the sessions table's name/hue lookups stay
+	// O(1) per row rather than scanning the project list twice for every session.
+	const projectById = new Map((projects.data ?? []).map((p) => [p.id, p]));
 	const projectName = (id: string | null) =>
-		id
-			? (projects.data?.find((p) => p.id === id)?.name ?? id)
-			: t("projects.unassigned");
+		id ? (projectById.get(id)?.name ?? id) : t("projects.unassigned");
 	const projectHue = (id: string | null) =>
-		id ? projects.data?.find((p) => p.id === id)?.hue : undefined;
+		id ? projectById.get(id)?.hue : undefined;
 
 	const entries = useQuery({
 		queryKey: [

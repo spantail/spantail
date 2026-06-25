@@ -46,15 +46,16 @@ export function formatCompactRange(
 }
 
 /**
- * Compact token/count label: `27.5M`, `406K`, `980`. Latin K/M/B suffixes
- * (locale-agnostic on purpose — these are raw engineering counts, not prose),
- * mirroring the agent-screen mockup's `fmtCompact`.
+ * Compact token/count label: `27.5M`, `406K`, `980`. Always Latin K/M/B
+ * suffixes (fixed `en` locale — these are raw engineering counts, not prose,
+ * so they read the same across the app's locales). `Intl` compact notation
+ * promotes at the threshold, so 999,999 reads `1M`, never `1000K`.
  */
 export function formatCompactNumber(n: number): string {
-	if (n >= 1e9) return `${(n / 1e9).toFixed(2).replace(/\.?0+$/, "")}B`;
-	if (n >= 1e6) return `${(n / 1e6).toFixed(2).replace(/\.?0+$/, "")}M`;
-	if (n >= 1e3) return `${(n / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
-	return String(n);
+	return new Intl.NumberFormat("en", {
+		notation: "compact",
+		maximumFractionDigits: 1,
+	}).format(n);
 }
 
 /**
