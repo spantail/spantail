@@ -116,11 +116,23 @@ export type AgentWithToken = AgentRow & {
  * legacy agent may still carry several token rows; the join is deduplicated to
  * the oldest token per agent so the 1:1 UI never receives a duplicated agent.
  * An empty `projectIds` means the agent is associated with all projects.
+ *
+ * `tokenWorkspaceId` constrains the joined token to one default workspace, so a
+ * workspace-scoped read returns a token summary guaranteed to match that
+ * workspace even for a legacy agent with several token rows (no foreign default
+ * workspace id leaks through the oldest-token dedup).
  */
 async function listAgentsWithToken(
 	db: Database,
 	where: SQL | undefined,
+	tokenWorkspaceId?: string,
 ): Promise<AgentWithToken[]> {
+	const tokenJoin = tokenWorkspaceId
+		? and(
+				eq(agentTokens.agentId, agents.id),
+				eq(agentTokens.defaultWorkspaceId, tokenWorkspaceId),
+			)
+		: eq(agentTokens.agentId, agents.id);
 	const rows = await db
 		.select({
 			agent: agents,
@@ -130,7 +142,7 @@ async function listAgentsWithToken(
 			expiresAt: agentTokens.expiresAt,
 		})
 		.from(agents)
-		.leftJoin(agentTokens, eq(agentTokens.agentId, agents.id))
+		.leftJoin(agentTokens, tokenJoin)
 		.where(where)
 		.orderBy(desc(agents.createdAt), asc(agentTokens.createdAt));
 	const seen = new Set<string>();
@@ -203,6 +215,9 @@ export function listAgentsByWorkspace(
 			isNull(agents.archivedAt),
 			sql`exists (select 1 from ${agentTokens} where ${agentTokens.agentId} = ${agents.id} and ${agentTokens.defaultWorkspaceId} = ${workspaceId})`,
 		),
+		// Constrain the joined token to this workspace so the deduped summary
+		// always reports this workspace, never a legacy token bound elsewhere.
+		workspaceId,
 	);
 }
 

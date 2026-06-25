@@ -405,7 +405,6 @@ export async function listDeliveriesByWorkspace(
 			dateFrom: reportDeliveries.dateFrom,
 			dateTo: reportDeliveries.dateTo,
 			message: reportDeliveries.message,
-			readAt: reportDeliveries.readAt,
 			createdAt: reportDeliveries.createdAt,
 		})
 		.from(reportDeliveries)
