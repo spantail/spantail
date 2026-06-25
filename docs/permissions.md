@@ -20,6 +20,7 @@ MCP are not constrained by the UI and follow this spec directly.**
 | Workspace member | `workspace_members.role = "member"` | Belongs to a workspace. |
 | Project member | (project-level membership — see [Gap D](#gap-d-project-membership-does-not-exist)) | Belongs to a specific project. |
 | Self | the resource's owner (`userId` / `ownerUserId`) | The user who owns a user-scoped resource. |
+| Agent (AAT) | an Agent Access Token (`requireAgentAuth`) | A non-human principal: an AI agent that **ingests** its own activity (agent entries/events) on behalf of its owner. Write-only ingest, scoped to the owner's workspace membership. |
 
 Workspace roles are ranked `member < admin < owner` (`apps/web/src/server/lib/permissions.ts`).
 "Workspace admin" in this document means **owner or admin** unless stated otherwise.
@@ -85,7 +86,7 @@ of the project in question (always also a workspace member) · **Self** = the re
 | Projects: contained resources — work/agent entries (project) | R | R* | – | **–** | R | – |
 | Work entries — project-assigned (project) | R | R* | – | **–** | R | RW (own) |
 | Work entries — unassigned, `projectId = null` (workspace) | R | R | – | R | R | RW (own) |
-| Agent entries / events (project / workspace) | R | R* | – | per project | per project | R (own) |
+| Agent entries / events (project / workspace) | R | R* | – | per project | per project | R (own); write via AAT |
 | Reports (user) | R | R* | – | – | – | RW (own) |
 | Inbox / deliveries (user) | R | R* | – | – | – | RW (own) |
 | API tokens (user, secret hidden) | R (metadata) | – | – | – | – | RW (own, secret hidden) |
@@ -111,6 +112,10 @@ Notes:
   entries (`projectId = null`, the state left when a project is deleted) are workspace-scoped.
 - `R*` for workspace admins (reading a member's user-scoped resources limited to that workspace's
   data) has real implementation caveats — see [Gap C](#gap-c-workspace-admin-scoped-read-r).
+- **Agent entries/events are written only by the agent's Access Token (AAT).** Ingest goes through
+  `POST /api/v1/agent-entries` and `/api/v1/agent-events` guarded by `requireAgentAuth`, not by the
+  owner's normal session/user permissions; each ingest is checked against the owner's live
+  workspace membership. No human role writes these rows directly.
 
 ## UI vs API/MCP
 
@@ -124,8 +129,11 @@ Notes:
 - **Caveat (current state):** where [Known gaps](#known-gaps) exist the API can still exceed this
   spec until fixed. Most notably, with [Gap D](#gap-d-project-membership-does-not-exist) open,
   `GET /api/v1/work-entries` enforces only `requireWorkspaceAccess` (no project-membership check),
-  so a plain workspace member can currently read project-assigned entries. Treat the gaps as the
-  authoritative list of where today's API/MCP behavior diverges from this target.
+  so a plain workspace member can currently read project-assigned entries. The same data also
+  leaks through **report rendering** — `POST /api/v1/reports/preview`, create, and update call
+  `listWorkEntriesForReport` after only `requireScopeWorkspaces` — so locking down the list
+  endpoint alone would not close the gap. Treat the gaps as the authoritative list of where
+  today's API/MCP behavior diverges from this target.
 
 ## Known gaps
 
@@ -190,6 +198,9 @@ Closing this requires, roughly:
 - a `project_members` table + migration (`pnpm db:generate`),
 - a `requireProjectAccess`-style helper,
 - filtering work-entry / project-contained queries by project membership,
+- closing **every** read path to the same data, not just `GET /api/v1/work-entries`: report
+  rendering (`listWorkEntriesForReport` via `POST /api/v1/reports/preview`, create, and update),
+  work-entry stats/tags, and the agent-entry reads — otherwise reports remain a bypass,
 - a project-member management UI with `en`/`ja` strings.
 
 Granularity: a project's **list/metadata** (name, color) stays workspace-visible; only its
