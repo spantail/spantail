@@ -247,14 +247,20 @@ it("blocks create and list after membership loss but still allows revoke", async
 		{ email: "other@example.com" },
 		admin,
 	);
+	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
+		user: { id: string };
+	};
+	// Join the project so `other` can log work and own the report (project ACL).
+	await apiJson(
+		"POST",
+		`/api/v1/projects/${project.id}/members`,
+		{ userId: me.user.id },
+		admin,
+	);
 	const report = await createReport(other, ws.id, project.id);
 	const share = (await (
 		await apiJson("POST", `/api/v1/reports/${report.id}/shares`, {}, other)
 	).json()) as { id: string; token: string };
-
-	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
-		user: { id: string };
-	};
 	expect(
 		(
 			await apiJson(

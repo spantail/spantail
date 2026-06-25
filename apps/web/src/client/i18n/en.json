@@ -502,6 +502,22 @@
 				"deleted": "Project deleted.",
 				"archived": "Project archived.",
 				"unarchived": "Project unarchived."
+			},
+			"members": {
+				"title": "Members",
+				"label": "Members",
+				"manage": "Manage members",
+				"manageTitle": "Project members",
+				"manageDescription": "Only project members can see this project's time entries. Workspace admins always have access.",
+				"addLabel": "Add a workspace member",
+				"addPlaceholder": "Select a member",
+				"addAction": "Add",
+				"removeAction": "Remove",
+				"empty": "No members yet.",
+				"overflow": "{{count}} more",
+				"selectPlaceholder": "No members selected",
+				"selectedCount": "{{count}} selected",
+				"noWorkspaceMembers": "No workspace members to add."
 			}
 		},
 		"members": {

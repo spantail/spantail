@@ -236,6 +236,13 @@ it("redacts totalMinutes once the report owner loses workspace membership", asyn
 			admin,
 		)
 	).json()) as { userId: string };
+	// Bob joins the project so his report can see its entries (project ACL).
+	await apiJson(
+		"POST",
+		`/api/v1/projects/${project.id}/members`,
+		{ userId: membership.userId },
+		admin,
+	);
 
 	const report = (await (
 		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), bob)

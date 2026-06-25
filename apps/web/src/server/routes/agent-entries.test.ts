@@ -279,3 +279,57 @@ it("does not show a member another member's agents or activity", async () => {
 	).json()) as { totalTokens: number };
 	expect(adminStats.totalTokens).toBe(1000);
 });
+
+it("lets project members see co-members' agent activity in that project", async () => {
+	const { admin, member, ws, project, memberId } = await setup();
+	if (!memberId) throw new Error("memberId not resolved");
+	// Member joins the project; admin (owner) may log to any project.
+	await apiJson(
+		"POST",
+		`/api/v1/projects/${project.id}/members`,
+		{ userId: memberId },
+		admin,
+	);
+	const carol = await signUpUser("Carol", "carol@example.com");
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "carol@example.com" },
+		admin,
+	);
+
+	const a = await createAgentToken(admin, { defaultWorkspaceId: ws.id });
+	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
+	// Both agents log into the shared project.
+	await ingest(a.token, {
+		sessionId: "pa",
+		projectId: project.id,
+		durationMinutes: 10,
+		usage: { totalTokens: 1000 },
+	});
+	await ingest(b.token, {
+		sessionId: "pb",
+		projectId: project.id,
+		durationMinutes: 5,
+		usage: { totalTokens: 500 },
+	});
+	// Admin's agent also logs unassigned (no project) activity.
+	await ingest(a.token, {
+		sessionId: "pn",
+		durationMinutes: 7,
+		usage: { totalTokens: 700 },
+	});
+
+	// The member is a project member, so they see both agents' project activity
+	// (1000 + 500) but NOT the admin's unassigned, owner-only session (700).
+	const memberStats = (await (
+		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, member)
+	).json()) as { totalTokens: number };
+	expect(memberStats.totalTokens).toBe(1500);
+
+	// Carol is a workspace member but not a project member: she sees nothing.
+	const carolStats = (await (
+		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, carol)
+	).json()) as { totalTokens: number; entryCount: number };
+	expect(carolStats.entryCount).toBe(0);
+});

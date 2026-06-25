@@ -232,6 +232,20 @@
       "when": 1782254779717,
       "tag": "0032_right_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1782379439504,
+      "tag": "0033_tricky_living_tribunal",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1782384410040,
+      "tag": "0034_wakeful_master_chief",
+      "breakpoints": true
     }
   ]
 }

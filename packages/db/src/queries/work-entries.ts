@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { workEntries } from "../schema/domain";
+import { type EntryAccessScope, entryAccessCondition } from "./entry-access";
 
 export type WorkEntryRow = typeof workEntries.$inferSelect;
 export type WorkEntryInsert = Omit<
@@ -49,6 +50,9 @@ interface WorkEntryFilter {
 	tag?: string;
 	from?: string;
 	to?: string;
+	// When set, restricts results to entries the caller may read (project ACL).
+	// Omitted for trusted internal callers; route handlers always pass it.
+	access?: EntryAccessScope;
 }
 
 function workEntryConditions(query: WorkEntryFilter) {
@@ -63,6 +67,18 @@ function workEntryConditions(query: WorkEntryFilter) {
 		);
 	if (query.from) conditions.push(gte(workEntries.entryDate, query.from));
 	if (query.to) conditions.push(lte(workEntries.entryDate, query.to));
+	if (query.access) {
+		const cond = entryAccessCondition(
+			{
+				workspaceId: workEntries.workspaceId,
+				projectId: workEntries.projectId,
+				self: workEntries.userId,
+			},
+			query.access,
+			{ unassignedWorkspaceWide: true },
+		);
+		if (cond) conditions.push(cond);
+	}
 	return conditions;
 }
 
@@ -144,11 +160,23 @@ export async function getWorkEntryStats(
  */
 export async function listWorkEntryTags(
 	db: Database,
-	query: { workspaceId: string; projectId?: string },
+	query: { workspaceId: string; projectId?: string; access?: EntryAccessScope },
 ): Promise<string[]> {
 	const conditions = [eq(workEntries.workspaceId, query.workspaceId)];
 	if (query.projectId)
 		conditions.push(eq(workEntries.projectId, query.projectId));
+	if (query.access) {
+		const cond = entryAccessCondition(
+			{
+				workspaceId: workEntries.workspaceId,
+				projectId: workEntries.projectId,
+				self: workEntries.userId,
+			},
+			query.access,
+			{ unassignedWorkspaceWide: true },
+		);
+		if (cond) conditions.push(cond);
+	}
 	const rows = await db.all<{ value: string }>(sql`
 		select distinct value
 		from ${workEntries}, json_each(${workEntries.tags})
@@ -167,6 +195,7 @@ export async function listWorkEntriesForReport(
 		userIds?: string[];
 		from: string;
 		to: string;
+		access?: EntryAccessScope;
 	},
 ): Promise<WorkEntryRow[]> {
 	const conditions = [
@@ -178,6 +207,18 @@ export async function listWorkEntriesForReport(
 		conditions.push(inArray(workEntries.projectId, query.projectIds));
 	if (query.userIds?.length)
 		conditions.push(inArray(workEntries.userId, query.userIds));
+	if (query.access) {
+		const cond = entryAccessCondition(
+			{
+				workspaceId: workEntries.workspaceId,
+				projectId: workEntries.projectId,
+				self: workEntries.userId,
+			},
+			query.access,
+			{ unassignedWorkspaceWide: true },
+		);
+		if (cond) conditions.push(cond);
+	}
 
 	return db
 		.select()

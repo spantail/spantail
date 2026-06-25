@@ -10,6 +10,7 @@ import {
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
+import { requireProjectAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth } from "../middleware/auth";
@@ -56,6 +57,8 @@ export const agentEventRoutes = new Hono<AppEnv>()
 					"Project does not belong to this workspace",
 				);
 			}
+			// The agent's owner must belong to the project it logs into (project ACL).
+			await requireProjectAccess(c, projectId, membership, auth.ownerUserId);
 		}
 
 		// 1. Idempotently insert this session's events.

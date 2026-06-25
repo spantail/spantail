@@ -502,6 +502,22 @@
 				"deleted": "プロジェクトを削除しました。",
 				"archived": "プロジェクトをアーカイブしました。",
 				"unarchived": "アーカイブを解除しました。"
+			},
+			"members": {
+				"title": "メンバー",
+				"label": "メンバー",
+				"manage": "メンバーを管理",
+				"manageTitle": "プロジェクトメンバー",
+				"manageDescription": "プロジェクトの作業エントリーはプロジェクトメンバーのみが閲覧できます。ワークスペース管理者は常にアクセスできます。",
+				"addLabel": "ワークスペースメンバーを追加",
+				"addPlaceholder": "メンバーを選択",
+				"addAction": "追加",
+				"removeAction": "削除",
+				"empty": "メンバーがまだいません。",
+				"overflow": "他 {{count}} 人",
+				"selectPlaceholder": "メンバー未選択",
+				"selectedCount": "{{count}} 人選択中",
+				"noWorkspaceMembers": "追加できるワークスペースメンバーがいません。"
 			}
 		},
 		"members": {

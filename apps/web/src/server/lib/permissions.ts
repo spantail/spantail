@@ -1,7 +1,9 @@
 import type { WorkspaceRole } from "@spantail/core";
 import {
+	type EntryAccessScope,
 	getMembership,
 	getWorkspaceById,
+	isProjectMember,
 	listWorkspacesForUser,
 	type MembershipRow,
 	type WorkspaceRow,
@@ -11,6 +13,11 @@ import type { Context } from "hono";
 import { requireAuth, requireScope } from "../middleware/auth";
 import type { AppEnv, UserAuthContext } from "../types";
 import { AppError } from "./errors";
+
+/** Workspace admins/owners read every project; members are scoped by ACL. */
+function isWorkspaceAdmin(role: WorkspaceRole): boolean {
+	return role === "owner" || role === "admin";
+}
 
 const ROLE_RANK: Record<WorkspaceRole, number> = {
 	member: 0,
@@ -95,4 +102,66 @@ export async function requireScopeWorkspaces(
 		}
 	}
 	return workspaces;
+}
+
+/**
+ * Resolves what project-scoped entries the caller may read in a single
+ * workspace. A workspace admin/owner reads every project; a plain member is
+ * limited to the projects they belong to (checked in-SQL), plus unassigned and
+ * their own entries. Pass the result to the entry queries' `access` option.
+ */
+export function resolveEntryAccess(
+	workspaceId: string,
+	membership: MembershipRow,
+	userId: string,
+): EntryAccessScope {
+	return {
+		adminWorkspaceIds: isWorkspaceAdmin(membership.role) ? [workspaceId] : [],
+		userId,
+	};
+}
+
+/**
+ * Resolves agent-entry read access. Unlike work entries, agent activity is not
+ * workspace-readable by admins (that is admin-read, a separate concern): a
+ * caller sees only the agent activity in the projects they belong to, plus their
+ * own agents' activity. So no admin-workspace bypass.
+ */
+export function resolveAgentEntryAccess(userId: string): EntryAccessScope {
+	return { adminWorkspaceIds: [], userId };
+}
+
+/**
+ * Resolves entry-read access across several workspaces (report scope): the
+ * workspaces where the caller is an admin grant full read; elsewhere project
+ * membership (checked in-SQL) and own entries apply.
+ */
+export function resolveEntryAccessForWorkspaces(
+	workspaces: MemberWorkspace[],
+	userId: string,
+): EntryAccessScope {
+	return {
+		adminWorkspaceIds: workspaces
+			.filter((w) => isWorkspaceAdmin(w.role))
+			.map((w) => w.id),
+		userId,
+	};
+}
+
+/**
+ * Asserts the caller may write entries against a project: workspace admins/owners
+ * always may; otherwise the caller must be a member of the project. Used when an
+ * entry is assigned to a project so a non-member cannot log into (and then be
+ * unable to read) a project they do not belong to.
+ */
+export async function requireProjectAccess(
+	c: Context<AppEnv>,
+	projectId: string,
+	membership: MembershipRow,
+	userId: string,
+): Promise<void> {
+	if (isWorkspaceAdmin(membership.role)) return;
+	if (!(await isProjectMember(c.var.db, projectId, userId))) {
+		throw new AppError("forbidden", "You are not a member of this project");
+	}
 }

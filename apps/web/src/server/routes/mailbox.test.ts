@@ -37,11 +37,20 @@ async function setup() {
 			owner,
 		);
 	}
+	const idOf = async (cookie: string) =>
+		(
+			(await (await apiGet("/api/v1/me", cookie)).json()) as {
+				user: { id: string };
+			}
+		).user.id;
+	const aliceId = await idOf(alice);
+	const bobId = await idOf(bob);
+	// Both recipients join the project so they can receive a report including it.
 	const project = (await (
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "spantail", name: "Spantail" },
+			{ slug: "spantail", name: "Spantail", memberUserIds: [aliceId, bobId] },
 			owner,
 		)
 	).json()) as { id: string };
@@ -68,20 +77,14 @@ async function setup() {
 			owner,
 		)
 	).json()) as { id: string };
-	const idOf = async (cookie: string) =>
-		(
-			(await (await apiGet("/api/v1/me", cookie)).json()) as {
-				user: { id: string };
-			}
-		).user.id;
 	return {
 		owner,
 		alice,
 		bob,
 		outsider,
 		report,
-		aliceId: await idOf(alice),
-		bobId: await idOf(bob),
+		aliceId,
+		bobId,
 	};
 }
 

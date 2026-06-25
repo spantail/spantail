@@ -20,15 +20,20 @@ async function setup() {
 		{ email: "member@example.com" },
 		admin,
 	);
+	const memberId = (
+		(await (await apiGet("/api/v1/me", member)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
 	const project = (await (
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "spantail", name: "Spantail" },
+			{ slug: "spantail", name: "Spantail", memberUserIds: [memberId] },
 			admin,
 		)
 	).json()) as { id: string };
-	return { admin, member, ws, project };
+	return { admin, member, memberId, ws, project };
 }
 
 it("creates an entry defaulting the date to today in the workspace timezone", async () => {
@@ -333,7 +338,7 @@ async function setupStats() {
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ctx.ws.id}/projects`,
-			{ slug: "ops", name: "Ops" },
+			{ slug: "ops", name: "Ops", memberUserIds: [ctx.memberId] },
 			ctx.admin,
 		)
 	).json()) as { id: string };

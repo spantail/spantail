@@ -30,6 +30,24 @@ describe("generateDataset", () => {
 		expect(dataset.credentials).toHaveLength(5);
 	});
 
+	it("seeds project members who are all workspace members", async () => {
+		const { rows } = await build();
+		const projectMembers = rows("projectMembers");
+		expect(projectMembers.length).toBeGreaterThan(0);
+		const projectWorkspace = new Map(
+			rows("projects").map((p) => [p.id as string, p.workspaceId as string]),
+		);
+		const wsMembership = new Set(
+			rows("workspaceMembers").map(
+				(m) => `${m.workspaceId as string}:${m.userId as string}`,
+			),
+		);
+		for (const pm of projectMembers) {
+			const ws = projectWorkspace.get(pm.projectId as string);
+			expect(wsMembership.has(`${ws}:${pm.userId as string}`)).toBe(true);
+		}
+	});
+
 	it("flags exactly one instance admin and one template author", async () => {
 		const { rows } = await build();
 		const users = rows("user");
