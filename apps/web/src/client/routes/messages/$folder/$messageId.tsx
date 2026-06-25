@@ -38,7 +38,7 @@ function ReadingPane() {
 			? data.scope === "sent"
 				? t("messages.documentTitle.sent", {
 						report: data.reportName,
-						recipient: data.recipientNames[0] ?? "?",
+						recipient: data.recipientNames.join(", ") || "?",
 					})
 				: t("messages.documentTitle.received", {
 						report: data.reportName,
