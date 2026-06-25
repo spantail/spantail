@@ -499,7 +499,10 @@ export function AgentStats({ workspaceId, agentId, period }: AgentStatsProps) {
 					value={data.entryCount.toLocaleString(i18n.language)}
 					sub={t("agents.sessionsSub", {
 						days: activeDays,
-						perDay: avgPerDay.toFixed(1),
+						perDay: avgPerDay.toLocaleString(i18n.language, {
+							minimumFractionDigits: 1,
+							maximumFractionDigits: 1,
+						}),
 					})}
 					spark={days.map((d) => d.sessions)}
 				/>
