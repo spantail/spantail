@@ -62,8 +62,12 @@ function ProjectPage() {
 	const projects = useProjects();
 	const project = (projects.data ?? []).find((p) => p.slug === projectSlug);
 
+	// Once the project list settles without a match, fall back to the section
+	// title so a missing project never leaves a stale name in the tab.
 	useDocumentTitle(
-		project && current ? `${project.name} | ${current.name}` : undefined,
+		!current || projects.isPending
+			? undefined
+			: `${project ? project.name : t("nav.projects")} | ${current.name}`,
 	);
 
 	const members = useQuery({

@@ -35,8 +35,12 @@ function AgentPage() {
 	});
 	const agent = (agents.data ?? []).find((a) => a.id === agentId);
 
+	// Once the agent list settles without a match, fall back to the section
+	// title so a missing agent never leaves a stale name in the tab.
 	useDocumentTitle(
-		agent && current ? `${agent.name} | ${current.name}` : undefined,
+		!current || agents.isPending
+			? undefined
+			: `${agent ? agent.name : t("nav.agents")} | ${current.name}`,
 	);
 
 	const stats = useQuery({
