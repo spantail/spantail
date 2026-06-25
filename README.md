@@ -1,4 +1,6 @@
-# Spantail
+<p align="center">
+  <img src=".github/assets/spantail-logo.png" alt="Spantail" width="800">
+</p>
 
 > Understand how you and your AI agents actually work.
 
