@@ -27,6 +27,8 @@ import {
 	getInstanceSettings,
 	getReportById,
 	getReportTemplateById,
+	listMembers,
+	listMembersByProject,
 	listMembersInAllWorkspaces,
 	listProjectsByIds,
 	listReportMetaByOwner,
@@ -240,6 +242,81 @@ async function renderReportDocument(
 	};
 }
 
+/**
+ * Candidate recipients for a report's "Send to": members of all the report's
+ * workspaces who can also read its project-scoped content. A delivered snapshot
+ * is a frozen copy that bypasses the live read ACL, so a recipient must already
+ * be able to read every project that appears in the snapshot (resolved under the
+ * owner's access, mirroring the render) — a workspace admin/owner reads any
+ * project, otherwise the recipient must be a member of each. Reports with only
+ * unassigned/own entries impose no project restriction.
+ */
+async function reportRecipientCandidates(
+	c: Context<AppEnv>,
+	report: ReportRow,
+	ownerWorkspaces: MemberWorkspace[],
+	senderId: string,
+): Promise<
+	Array<{ id: string; name: string; email: string; image: string | null }>
+> {
+	const base = await listMembersInAllWorkspaces(
+		c.var.db,
+		report.filters.workspaceIds,
+		senderId,
+	);
+
+	const scoped = ownerWorkspaces.filter((w) =>
+		report.filters.workspaceIds.includes(w.id),
+	);
+	const anchor = scoped.find((w) => w.id === report.filters.workspaceIds[0]);
+	if (!anchor) return base;
+	const range = resolveDateRange(report.filters.dateRange, anchor.timezone);
+	const access = resolveEntryAccessForWorkspaces(scoped, report.ownerUserId);
+	const rows = await listWorkEntriesForReport(c.var.db, {
+		workspaceIds: report.filters.workspaceIds,
+		projectIds: report.filters.projectIds,
+		userIds: report.filters.userIds,
+		from: range.from,
+		to: range.to,
+		access,
+	});
+	const entries = filterEntriesByTags(rows, report.filters.tags);
+	const snapshotProjectIds = [
+		...new Set(entries.flatMap((e) => (e.projectId ? [e.projectId] : []))),
+	];
+	if (snapshotProjectIds.length === 0) return base;
+
+	const projects = await listProjectsByIds(c.var.db, snapshotProjectIds);
+	const projectWorkspace = new Map(projects.map((p) => [p.id, p.workspaceId]));
+	const adminsByWorkspace = new Map<string, Set<string>>();
+	const membersByProject = new Map<string, Set<string>>();
+	for (const wsId of report.filters.workspaceIds) {
+		const ms = await listMembers(c.var.db, wsId);
+		adminsByWorkspace.set(
+			wsId,
+			new Set(
+				ms
+					.filter((m) => m.role === "owner" || m.role === "admin")
+					.map((m) => m.userId),
+			),
+		);
+		for (const row of await listMembersByProject(c.var.db, wsId)) {
+			const set = membersByProject.get(row.projectId) ?? new Set<string>();
+			set.add(row.userId);
+			membersByProject.set(row.projectId, set);
+		}
+	}
+
+	const canRead = (userId: string) =>
+		snapshotProjectIds.every((pid) => {
+			const wsId = projectWorkspace.get(pid);
+			if (wsId && adminsByWorkspace.get(wsId)?.has(userId)) return true;
+			return membersByProject.get(pid)?.has(userId) ?? false;
+		});
+
+	return base.filter((m) => canRead(m.id));
+}
+
 export const reportRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
@@ -403,10 +480,14 @@ export const reportRoutes = new Hono<AppEnv>()
 	.get("/:id/recipients", async (c) => {
 		const { user } = requireScope(c, "read");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
-		const members = await listMembersInAllWorkspaces(
-			c.var.db,
+		const workspaces = await requireScopeWorkspaces(
+			c,
 			report.filters.workspaceIds,
+		);
+		const members = await reportRecipientCandidates(
+			c,
+			report,
+			workspaces,
 			user.id,
 		);
 		return c.json(
@@ -422,14 +503,18 @@ export const reportRoutes = new Hono<AppEnv>()
 	.post("/:id/send", async (c) => {
 		const { user } = requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const workspaces = await requireScopeWorkspaces(
+			c,
+			report.filters.workspaceIds,
+		);
 		const input = validate(
 			sendReportInputSchema,
 			await parseOptionalJsonBody(c),
 		);
-		const candidates = await listMembersInAllWorkspaces(
-			c.var.db,
-			report.filters.workspaceIds,
+		const candidates = await reportRecipientCandidates(
+			c,
+			report,
+			workspaces,
 			user.id,
 		);
 		const allowed = new Set(candidates.map((m) => m.id));
@@ -438,7 +523,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			if (!allowed.has(id)) {
 				throw new AppError(
 					"bad_request",
-					"Recipient must be a member of every workspace in the report",
+					"Recipient must be able to read every project in the report",
 				);
 			}
 		}

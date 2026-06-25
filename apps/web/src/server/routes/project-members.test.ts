@@ -198,6 +198,54 @@ it("excludes non-member project entries from a report render", async () => {
 	expect(preview.entryCount).toBe(1);
 });
 
+it("restricts report recipients to those who can read the snapshot's projects", async () => {
+	const { owner, alice, bobId, ws, projectA } = await setup();
+	const ownerId = await userId(owner);
+	await logEntry(alice, ws.id, projectA.id, 30);
+	// Alice's whole-workspace report snapshot contains only projectA's entry.
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Daily",
+				templateId: "builtin:daily",
+				filters: { workspaceIds: [ws.id], dateRange: "today" },
+			},
+			alice,
+		)
+	).json()) as { id: string };
+
+	// Bob is a workspace member but only in projectB, so he cannot receive it; the
+	// workspace owner (admin) can.
+	const recipients = (await (
+		await apiGet(`/api/v1/reports/${report.id}/recipients`, alice)
+	).json()) as Array<{ id: string }>;
+	expect(recipients.map((r) => r.id)).toContain(ownerId);
+	expect(recipients.map((r) => r.id)).not.toContain(bobId);
+
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/reports/${report.id}/send`,
+				{ recipientUserIds: [bobId] },
+				alice,
+			)
+		).status,
+	).toBe(400);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/reports/${report.id}/send`,
+				{ recipientUserIds: [ownerId] },
+				alice,
+			)
+		).status,
+	).toBe(201);
+});
+
 it("lets admins manage members and members view the list", async () => {
 	const { owner, alice, bob, aliceId, bobId, ws, projectA } = await setup();
 

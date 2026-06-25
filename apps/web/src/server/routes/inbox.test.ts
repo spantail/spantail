@@ -24,11 +24,17 @@ async function setup() {
 		{ email: "member@example.com" },
 		owner,
 	);
+	const memberId = (
+		(await (await apiGet("/api/v1/me", member)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	// The member joins the project so they can receive a report that includes it.
 	const project = (await (
 		await apiJson(
 			"POST",
 			`/api/v1/workspaces/${ws.id}/projects`,
-			{ slug: "spantail", name: "Spantail" },
+			{ slug: "spantail", name: "Spantail", memberUserIds: [memberId] },
 			owner,
 		)
 	).json()) as { id: string };
@@ -55,11 +61,6 @@ async function setup() {
 			owner,
 		)
 	).json()) as { id: string; renderedMarkdown: string };
-	const memberId = (
-		(await (await apiGet("/api/v1/me", member)).json()) as {
-			user: { id: string };
-		}
-	).user.id;
 	return { owner, member, outsider, ws, report, memberId };
 }
 
