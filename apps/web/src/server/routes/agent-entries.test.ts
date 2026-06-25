@@ -273,11 +273,12 @@ it("does not show a member another member's agents or activity", async () => {
 	expect(otherStats.entryCount).toBe(0);
 	expect(otherStats.totalTokens).toBe(0);
 
-	// And the admin still sees their own.
+	// The admin is the workspace owner, so they read all agent activity in the
+	// workspace (matrix R*): both agents' tokens, not just their own.
 	const adminStats = (await (
 		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
 	).json()) as { totalTokens: number };
-	expect(adminStats.totalTokens).toBe(1000);
+	expect(adminStats.totalTokens).toBe(1500);
 });
 
 it("lets project members see co-members' agent activity in that project", async () => {

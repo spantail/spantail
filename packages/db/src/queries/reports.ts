@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, type SQL, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { projects } from "../schema/domain";
@@ -89,17 +89,14 @@ export interface ListReportsFilter {
 }
 
 /**
- * List headers (no content), newest first. Filters are applied in SQL so a
- * paginated page is always populated. `projectIds`/`workspaceIds` live in the
- * `filters` JSON, matched via json_extract / json_each (mirroring the
- * work-entries tag filter). Date strings (YYYY-MM-DD) compare chronologically.
+ * The optional report filters (template tab, period overlap, project) applied in
+ * SQL, shared by every listing. `projectIds`/`workspaceIds` live in the `filters`
+ * JSON, matched via json_extract / json_each (mirroring the work-entries tag
+ * filter). Date strings (YYYY-MM-DD) compare chronologically. The scope
+ * condition (owner or workspace) is prepended by the caller.
  */
-export async function listReportMetaByOwner(
-	db: Database,
-	ownerUserId: string,
-	filter: ListReportsFilter,
-): Promise<ReportMetaRow[]> {
-	const conditions = [eq(reports.ownerUserId, ownerUserId)];
+function reportFilterConditions(filter: ListReportsFilter): SQL[] {
+	const conditions: SQL[] = [];
 	if (filter.templateId)
 		conditions.push(eq(reports.templateId, filter.templateId));
 	// Period overlap with the report's stored absolute range.
@@ -125,16 +122,52 @@ export async function listReportMetaByOwner(
 						where value = (select ${projects.workspaceId} from ${projects} where ${projects.id} = ${filter.projectId})))
 			)`,
 		);
+	return conditions;
+}
+
+/** Runs a report listing for the given scope condition + optional filters. */
+function listReportMeta(
+	db: Database,
+	scope: SQL,
+	filter: ListReportsFilter,
+): Promise<ReportMetaRow[]> {
 	const query = db
 		.select()
 		.from(reports)
-		.where(and(...conditions))
+		.where(and(scope, ...reportFilterConditions(filter)))
 		// id breaks createdAt ties so offset paging is stable.
 		.orderBy(desc(reports.createdAt), desc(reports.id))
 		.$dynamic();
 	if (filter.limit !== undefined)
 		query.limit(filter.limit).offset(filter.offset ?? 0);
 	return query;
+}
+
+/** List a single owner's report headers (no content), newest first. */
+export function listReportMetaByOwner(
+	db: Database,
+	ownerUserId: string,
+	filter: ListReportsFilter,
+): Promise<ReportMetaRow[]> {
+	return listReportMeta(db, eq(reports.ownerUserId, ownerUserId), filter);
+}
+
+/**
+ * List report headers scoped to a single workspace (a workspace admin's `R*`):
+ * only reports whose scope resolves to exactly this one workspace
+ * (`filters.workspaceIds === [workspaceId]`). Multi-workspace reports are not a
+ * per-workspace partial view — they stay visible to instance admins only.
+ */
+export function listReportMetaByWorkspace(
+	db: Database,
+	workspaceId: string,
+	filter: ListReportsFilter,
+): Promise<ReportMetaRow[]> {
+	const singleWorkspace = sql`(
+		json_array_length(json_extract(${reports.filters}, '$.workspaceIds')) = 1
+		and exists (select 1 from json_each(json_extract(${reports.filters}, '$.workspaceIds')) where value = ${workspaceId})
+	)`;
+	return listReportMeta(db, singleWorkspace, filter);
 }
 
 /** Distinct template ids that own at least one of the caller's reports. */

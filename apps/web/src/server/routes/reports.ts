@@ -25,6 +25,7 @@ import {
 	deleteReport,
 	getCurrentReportContent,
 	getInstanceSettings,
+	getMembership,
 	getReportById,
 	getReportTemplateById,
 	listMembers,
@@ -32,6 +33,7 @@ import {
 	listMembersInAllWorkspaces,
 	listProjectsByIds,
 	listReportMetaByOwner,
+	listReportMetaByWorkspace,
 	listReportSharesByReport,
 	listReportTemplateIdsByOwner,
 	listUsersByIds,
@@ -47,8 +49,10 @@ import { resolveAvatarUrl } from "../lib/avatar";
 import { AppError } from "../lib/errors";
 import { parseOptionalJsonBody } from "../lib/json";
 import {
+	isWorkspaceAdmin,
 	type MemberWorkspace,
 	requireScopeWorkspaces,
+	resolveAdminListScope,
 	resolveEntryAccessForWorkspaces,
 } from "../lib/permissions";
 import { toApiShare } from "../lib/share-api";
@@ -69,6 +73,30 @@ export async function requireReportOwner(
 		throw new AppError("not_found", "Report not found");
 	}
 	return report;
+}
+
+/**
+ * Read access to a report (docs/permissions.md Access matrix): the owner, an
+ * instance admin (full `R`), or a workspace admin/owner of the report's single
+ * workspace (`R*` — only when the report is scoped to exactly one workspace; a
+ * multi-workspace report is not a per-workspace partial view, so it stays
+ * instance-admin-only). Anyone else gets 404 — existence is never revealed.
+ * Write routes keep requireReportOwner (owner-only).
+ */
+export async function requireReportReadAccess(
+	c: Context<AppEnv>,
+	id: string,
+): Promise<ReportRow> {
+	const { user } = requireAuth(c);
+	const report = await getReportById(c.var.db, id);
+	if (!report) throw new AppError("not_found", "Report not found");
+	if (report.ownerUserId === user.id || user.isAdmin) return report;
+	const [workspaceId] = report.filters.workspaceIds;
+	if (report.filters.workspaceIds.length === 1 && workspaceId) {
+		const membership = await getMembership(c.var.db, workspaceId, user.id);
+		if (membership && isWorkspaceAdmin(membership.role)) return report;
+	}
+	throw new AppError("not_found", "Report not found");
 }
 
 /**
@@ -310,15 +338,32 @@ async function reportRecipientCandidates(
 
 export const reportRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
-		const { user } = requireScope(c, "read");
+		// Admin reads are addressed by ?ownerUserId (instance admin, full R) or
+		// ?workspaceId (workspace admin, R* — single-workspace reports only);
+		// otherwise the caller reads their own.
+		const scope = await resolveAdminListScope(c, {
+			ownerUserId: c.req.query("ownerUserId"),
+			workspaceId: c.req.query("workspaceId"),
+		});
 		const query = validate(listReportsQuerySchema, c.req.query());
 		// Metadata only: the rendered body is fetched on demand via GET /:id.
-		const metas = await listReportMetaByOwner(c.var.db, user.id, query);
+		if (scope.kind === "workspace") {
+			return c.json(
+				await listReportMetaByWorkspace(c.var.db, scope.workspaceId, query),
+			);
+		}
+		if (scope.kind === "user") {
+			// Instance admin sees the user's full set (no membership redaction).
+			return c.json(
+				await listReportMetaByOwner(c.var.db, scope.ownerUserId, query),
+			);
+		}
+		const metas = await listReportMetaByOwner(c.var.db, scope.userId, query);
 		// totalMinutes is an aggregate of workspace entries (report content), so it
 		// is redacted for reports whose scope the owner no longer fully covers —
 		// mirroring the membership re-check that gates the full report read.
 		const memberIds = new Set(
-			(await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id),
+			(await listWorkspacesForUser(c.var.db, scope.userId)).map((w) => w.id),
 		);
 		return c.json(
 			metas.map((report) =>
@@ -377,11 +422,15 @@ export const reportRoutes = new Hono<AppEnv>()
 		return c.json(toApiReport(report, contentRow.content), 201);
 	})
 	.get("/:id", async (c) => {
-		requireScope(c, "read");
-		const report = await requireReportOwner(c, c.req.param("id"));
-		// The rendered markdown is workspace data: losing membership in any
-		// filtered workspace also revokes access to the report's content.
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const { user } = requireScope(c, "read");
+		const report = await requireReportReadAccess(c, c.req.param("id"));
+		// For the owner, the rendered markdown is workspace data: losing membership
+		// in any filtered workspace revokes access to the content. Admin readers are
+		// already authorized by requireReportReadAccess and need not be members, so
+		// the membership re-check applies to the owner path only.
+		if (report.ownerUserId === user.id) {
+			await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		}
 		const current = await getCurrentReportContent(c.var.db, report.id);
 		if (!current) throw new AppError("internal", "Report content missing");
 		return c.json(toApiReport(report, current.content));
@@ -459,12 +508,15 @@ export const reportRoutes = new Hono<AppEnv>()
 		});
 		return c.json(toApiShare(share), 201);
 	})
-	// Listed shares include plaintext tokens (content capabilities), so the list
-	// needs the membership re-check too.
+	// Listed shares include plaintext tokens (content capabilities); reading them
+	// follows the report's read access. The owner path re-checks membership (the
+	// tokens are workspace data); admin readers are already authorized.
 	.get("/:id/shares", async (c) => {
-		requireScope(c, "read");
-		const report = await requireReportOwner(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const { user } = requireScope(c, "read");
+		const report = await requireReportReadAccess(c, c.req.param("id"));
+		if (report.ownerUserId === user.id) {
+			await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		}
 		const shares = await listReportSharesByReport(c.var.db, report.id);
 		return c.json(shares.map(toApiShare));
 	})

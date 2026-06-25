@@ -10,6 +10,8 @@ import {
 	isNull,
 	lte,
 	ne,
+	or,
+	type SQL,
 	sql,
 } from "drizzle-orm";
 
@@ -104,19 +106,22 @@ export type AgentTokenSummaryRow = {
 	expiresAt: Date | null;
 };
 
+export type AgentWithToken = AgentRow & {
+	token: AgentTokenSummaryRow | null;
+	projectIds: string[];
+};
+
 /**
- * Active (non-archived) agents owned by the user with their single bound token
+ * Active (non-archived) agents matching `where`, with their single bound token
  * and associated project ids, newest first. Agent and token are 1:1, but a
  * legacy agent may still carry several token rows; the join is deduplicated to
  * the oldest token per agent so the 1:1 UI never receives a duplicated agent.
  * An empty `projectIds` means the agent is associated with all projects.
  */
-export async function listAgentsWithTokenForUser(
+async function listAgentsWithToken(
 	db: Database,
-	userId: string,
-): Promise<
-	Array<AgentRow & { token: AgentTokenSummaryRow | null; projectIds: string[] }>
-> {
+	where: SQL | undefined,
+): Promise<AgentWithToken[]> {
 	const rows = await db
 		.select({
 			agent: agents,
@@ -127,12 +132,10 @@ export async function listAgentsWithTokenForUser(
 		})
 		.from(agents)
 		.leftJoin(agentTokens, eq(agentTokens.agentId, agents.id))
-		.where(and(eq(agents.userId, userId), isNull(agents.archivedAt)))
+		.where(where)
 		.orderBy(desc(agents.createdAt), asc(agentTokens.createdAt));
 	const seen = new Set<string>();
-	const result: Array<
-		AgentRow & { token: AgentTokenSummaryRow | null; projectIds: string[] }
-	> = [];
+	const result: AgentWithToken[] = [];
 	for (const { agent, tokenId, ...token } of rows) {
 		if (seen.has(agent.id)) continue;
 		seen.add(agent.id);
@@ -168,6 +171,40 @@ export async function listAgentsWithTokenForUser(
 		}
 	}
 	return result;
+}
+
+/** A single user's active agents with token + project ids (their own list). */
+export function listAgentsWithTokenForUser(
+	db: Database,
+	userId: string,
+): Promise<AgentWithToken[]> {
+	return listAgentsWithToken(
+		db,
+		and(eq(agents.userId, userId), isNull(agents.archivedAt)),
+	);
+}
+
+/**
+ * Every active agent with activity in (or a token bound to) the workspace,
+ * regardless of owner — a workspace/instance admin's read of agents under a
+ * workspace (matrix `R`/`R*`). Same shape as the owner list; secrets are never
+ * selected (token summary only). Membership is checked with correlated EXISTS
+ * subqueries (not an id `inArray`) so it never hits D1's bound-parameter limit.
+ */
+export function listAgentsByWorkspace(
+	db: Database,
+	workspaceId: string,
+): Promise<AgentWithToken[]> {
+	return listAgentsWithToken(
+		db,
+		and(
+			isNull(agents.archivedAt),
+			or(
+				sql`exists (select 1 from ${agentEntries} where ${agentEntries.agentId} = ${agents.id} and ${agentEntries.workspaceId} = ${workspaceId})`,
+				sql`exists (select 1 from ${agentTokens} where ${agentTokens.agentId} = ${agents.id} and ${agentTokens.defaultWorkspaceId} = ${workspaceId})`,
+			),
+		),
+	);
 }
 
 /** Toggles an agent's reversible disabled state (scoped to its owner). */

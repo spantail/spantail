@@ -110,8 +110,18 @@ Notes:
 - **Work entries are hybrid-scoped.** Writes are always author-only (self-service). Reads depend
   on `projectId`: assigned entries are project-scoped (project members + admins); unassigned
   entries (`projectId = null`, the state left when a project is deleted) are workspace-scoped.
-- `R*` for workspace admins (reading a member's user-scoped resources limited to that workspace's
-  data) has real implementation caveats — see [Gap C](#gap-c-workspace-admin-scoped-read-r).
+- **`R*` for workspace admins** (reading a member's user-scoped resources limited to that
+  workspace's data) is realized through **single-workspace reports**: a workspace admin reads a
+  report — and, by extension, its inbox deliveries, shares, and discussion — only when the report
+  is scoped to exactly that one workspace (`filters.workspaceIds === [thatWorkspace]`). A
+  multi-workspace report is not a per-workspace partial view, so it stays instance-admin-only
+  (`R`). The admin read is addressed by query param: `?ownerUserId` (instance admin, `R`) or
+  `?workspaceId` (workspace admin, `R*`) on the collection endpoints; both run through the
+  scope-based guards, so they are reachable over PAT/MCP.
+- **Agent entries** carry a denormalized `workspaceId`, so an admin read is scoped directly by it:
+  a workspace/instance admin reads all agent activity in the workspace (`R`/`R*`), a member reads
+  only their projects' activity plus their own. Raw agent **events** (per-turn telemetry) have **no
+  read route** for any role — only aggregated agent entries are readable.
 - **Agent entries/events are written only by the agent's Access Token (AAT).** Ingest goes through
   `POST /api/v1/agent-entries` and `/api/v1/agent-events` guarded by `requireAgentAuth`, not by the
   owner's normal session/user permissions; each ingest is checked against the owner's live
@@ -126,101 +136,25 @@ Notes:
   the exact same authorization as the REST API.
 - Therefore the API/MCP surface is *broader* than the UI by design. It is never *intentionally*
   broader than this spec — the API never loosens a rule merely because the UI hides it.
-- **Caveat (current state):** where [Known gaps](#known-gaps) exist the API can still exceed this
-  spec until fixed. Treat the gaps as the authoritative list of where today's API/MCP behavior
-  diverges from this target.
+- The REST API and MCP enforce this spec directly, with no known divergence — there is no class of
+  resource where the API exceeds or falls short of this matrix.
 
-## Known gaps
+## Intentional deviations
 
-The current code diverges from this spec in the following ways. Each is tracked here as backlog;
-this document is the target.
+The implementation matches this spec. A few behaviors are deliberate refinements, called out here
+so they are not mistaken for divergence:
 
-### Gap A — instance-admin workspace bypass ✅ resolved
-
-The instance-admin workspace bypass is implemented. `requireWorkspaceAccess`
-(`apps/web/src/server/lib/permissions.ts`) now lets an instance admin who is not a member act on a
-workspace by returning a synthetic `admin` membership, so every call site (projects / members /
-work-entries / workspace-settings / logo routes) grants admin the container access Principle 1
-requires — without loosening anything for non-admins (a missing workspace is still `404` for
-everyone). Writes to user-authored entries stay author-only, and agent activity stays owner-scoped
-(`resolveAgentEntryAccess` has no admin bypass — admin-wide agent reads are [Gap B](#gap-b--admin-read-of-user-report-and-agent-scoped-resources-not-implemented)).
-
-The **collection** endpoints are covered too: an admin-scoped `listAllWorkspaces`
-(`packages/db/src/queries/workspaces.ts`) lists every workspace via a `listVisibleWorkspaces`
-helper used by `GET /api/v1/workspaces` and `GET /api/v1/me`, so an admin with no membership can
-discover the ids the item routes need. Each listed workspace carries the caller's `role`, or
-`null` for workspaces they do not belong to.
-
-In the **SPA** the workspace switcher shows an admin every workspace; selecting one they are not a
-member of (`role: null`) blanks the workspace-scoped sidebar navigation while keeping the switcher
-and the Settings cog, so the admin reaches Settings but is not presented as a member. This is a
-usability choice — the security boundary stays the API.
-
-### Gap B — admin read of user-, report-, and agent-scoped resources not implemented
-
-Several read paths in the matrix grant admins access that the current endpoints do not yet
-provide. All are strictly owner/participant-only today, so an admin (or member) following this
-document would hit `404`. The matrix is the target; this gap lists every resource that needs an
-admin (and, where the matrix says so, member/project) read path:
-
-- **Reports** — `requireReportOwner` (`apps/web/src/server/routes/reports.ts`) is owner-only.
-- **Inbox / deliveries** — owner-only (`apps/web/src/server/routes/inbox.ts`).
-- **Agents** — owner-only (`apps/web/src/server/routes/agents.ts`).
-- **API tokens** — owner-only; admin read is metadata only, secrets never returned.
-- **Agent entries / events** — `GET /api/v1/agent-entries` and `/stats` now scope by the project
-  ACL ([Gap D](#gap-d--project-membership--resolved)): a caller reads their own agents' activity
-  plus the activity in projects they belong to. What is still missing is the **admin** read — a
-  workspace/instance admin cannot yet read all agent activity workspace-wide (matrix `R` / `R*`),
-  and raw agent **events** still have no read route. An explicit admin read path (and an events
-  read route, if exposed) is required.
-- **Report shares** — listing calls `requireReportOwner`
-  (`apps/web/src/server/routes/reports.ts`), so admins cannot read another user's shares.
-- **Report discussion** (comments / reactions) — `requireParticipant`
-  (`apps/web/src/server/routes/report-discussion.ts`) limits access to the report owner or a
-  Send-to recipient; admins have no read path.
-
-**Fix:** add admin read paths for the resources above, backed by admin-scoped list queries in
-`packages/db`. Confirm secrets stay hidden — token values are stored hashed and shown once at
-creation; passwords are never returned.
-
-### Gap C — workspace-admin scoped read (`R*`)
-
-Letting a workspace admin read a member's user-scoped resources *limited to that workspace's data*
-is non-trivial:
-
-- **Reports** are frozen rendered-Markdown snapshots, so a per-workspace partial view is not
-  feasible by slicing. Practical options: expose only reports whose filters resolve to that single
-  workspace, or re-render workspace-scoped. Needs a decision.
-- **API tokens** have no workspace dimension, so `R*` does not apply — token metadata is
-  instance-admin-only (reflected in the matrix).
-- **Inbox / deliveries** carry workspace context and can be filtered by workspace relatively easily.
-
-### Gap D — project membership ✅ resolved
-
-Project membership is implemented. A `project_members` table
-(`packages/db/src/schema/domain.ts`) holds binary memberships (no per-project role), managed by
-workspace admins. A shared access predicate (`entryAccessCondition`,
-`packages/db/src/queries/entry-access.ts`) gates **every** read path to project-assigned entries:
-work-entry list / stats / tags / item reads, **report rendering**
-(`listWorkEntriesForReport` via `POST /api/v1/reports/preview`, create, and update), and agent-entry
-list / stats. A non-member also cannot *write* to a project: `requireProjectAccess`
-(`apps/web/src/server/lib/permissions.ts`) guards work-entry create/update and agent ingest.
-A project-member management UI lives on the Projects settings screen (`en`/`ja` strings provided).
-
-Resolved per these rules:
-
-- A project's **list/metadata** (name, color) stays workspace-visible; only its **contained**
-  entries are project-member-only (matrix granularity).
-- **Unassigned** work entries (`project_id = null`, e.g. orphaned by a project deletion) stay
-  workspace-scoped; agent activity with no project stays owner-only.
-- Removing a user from a workspace also drops their project memberships in that workspace.
-
-**Frozen snapshots are point-in-time** (accepted policy): the ACL is enforced at live render/read
-time, so a snapshot captures exactly what its author could see when it was generated. Persisted
-report content (`GET /api/v1/reports/:id`, `GET /api/v1/inbox/:id`, public `/share/:token`) is not
-re-filtered on later reads.
-
-**Still open (not part of project membership):** admin/instance-admin reads of agent activity
-(matrix `R` / `R*`) remain unimplemented — see [Gap B](#gap-b--admin-read-of-user-report-and-agent-scoped-resources-not-implemented)
-and [Gap C](#gap-c--workspace-admin-scoped-read-r). Agent entries are now readable by project
-members and the owner, but not yet by admins as a workspace-wide read.
+- **Workspace-admin `R*` is single-workspace-only.** A workspace admin reads a member's reports,
+  inbox deliveries, shares, and discussion only for reports scoped to exactly that one workspace;
+  a multi-workspace report is not a per-workspace partial view, so it stays instance-admin-only
+  (`R`). The admin read is addressed by `?ownerUserId` (instance admin) or `?workspaceId`
+  (workspace admin) on the collection endpoints. See the Access matrix notes.
+- **Frozen snapshots are point-in-time.** The project ACL is enforced at live render/read time, so
+  a snapshot captures exactly what its author could see when it was generated. Persisted report
+  content (`GET /api/v1/reports/:id`, `GET /api/v1/inbox/:id`, public `/share/:token`) is not
+  re-filtered on later reads.
+- **Raw agent events have no read route.** Only aggregated agent entries are readable; per-turn
+  event telemetry is write-only (ingest), for every role.
+- **Off-boarding is future work.** Admins never *write* user-scoped resources (see
+  [Self-service](#self-service)); acting on a departed user's data will be a dedicated, audited
+  admin API when the need arrives.
