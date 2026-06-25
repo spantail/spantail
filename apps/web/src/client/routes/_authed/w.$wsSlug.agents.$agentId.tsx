@@ -13,6 +13,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/w/$wsSlug/agents/$agentId")({
@@ -33,6 +34,10 @@ function AgentPage() {
 		enabled: Boolean(workspaceId),
 	});
 	const agent = (agents.data ?? []).find((a) => a.id === agentId);
+
+	useDocumentTitle(
+		agent && current ? `${agent.name} | ${current.name}` : undefined,
+	);
 
 	const stats = useQuery({
 		queryKey: ["agent-entry-stats", workspaceId, agentId],

@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import { useDocumentTitle } from "@/lib/document-title";
 
 export const Route = createFileRoute("/forgot-password")({
 	component: ForgotPasswordPage,
@@ -33,6 +34,8 @@ function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
 	const [sent, setSent] = useState(false);
 	const [busy, setBusy] = useState(false);
+
+	useDocumentTitle(`${t("auth.forgotPasswordTitle")} | ${t("app.name")}`);
 
 	async function onSubmit(event: React.FormEvent) {
 		event.preventDefault();

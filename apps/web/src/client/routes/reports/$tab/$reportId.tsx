@@ -12,6 +12,7 @@ import { ReportToolbar } from "@/components/report-toolbar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 
 export const Route = createFileRoute("/reports/$tab/$reportId")({
 	component: ReportReadingPane,
@@ -28,6 +29,8 @@ function ReportReadingPane() {
 		queryFn: () => api.getReport(reportId),
 	});
 	const report = detail.data;
+
+	useDocumentTitle(report?.name);
 
 	if (detail.isPending) {
 		return (

@@ -324,6 +324,10 @@
 	"messages": {
 		"back": "Back to",
 		"backToWorkspace": "Back to {{name}}",
+		"documentTitle": {
+			"received": "{{report}} by {{sender}}",
+			"sent": "{{report}} to {{recipient}}"
+		},
 		"folder": {
 			"inbox": "Inbox",
 			"starred": "Starred",

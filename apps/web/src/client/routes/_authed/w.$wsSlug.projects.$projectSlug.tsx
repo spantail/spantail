@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
@@ -60,6 +61,10 @@ function ProjectPage() {
 	// there is no cross-workspace data to guard against.
 	const projects = useProjects();
 	const project = (projects.data ?? []).find((p) => p.slug === projectSlug);
+
+	useDocumentTitle(
+		project && current ? `${project.name} | ${current.name}` : undefined,
+	);
 
 	const members = useQuery({
 		queryKey: ["members", workspaceId],

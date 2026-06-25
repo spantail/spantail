@@ -12,6 +12,7 @@ import { ReportDiscussion } from "@/components/report-discussion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 import { formatRelativeTime } from "@/lib/format";
 import { invalidateMail } from "@/lib/query";
 import { downloadMarkdown } from "@/lib/report-download";
@@ -31,6 +32,20 @@ function ReadingPane() {
 		queryFn: () => api.getInboxMessage(messageId),
 	});
 	const data = detail.data;
+
+	useDocumentTitle(
+		data
+			? data.scope === "sent"
+				? t("messages.documentTitle.sent", {
+						report: data.reportName,
+						recipient: data.recipientNames[0] ?? "?",
+					})
+				: t("messages.documentTitle.received", {
+						report: data.reportName,
+						sender: data.senderName,
+					})
+			: undefined,
+	);
 
 	// Mark a received message read on open; refreshes the unread dot and badge.
 	useEffect(() => {

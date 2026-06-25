@@ -149,6 +149,16 @@ const GROUPS: SettingsNavGroup[] = [
 	},
 ];
 
+/** The i18n label key for the settings section a pathname belongs to, if any. */
+export function settingsSectionLabelKey(pathname: string): string | undefined {
+	for (const group of GROUPS) {
+		for (const item of group.items) {
+			if (item.to === pathname) return item.labelKey;
+		}
+	}
+	return undefined;
+}
+
 export function SettingsNav({
 	isAdmin,
 	canManageTemplates,
