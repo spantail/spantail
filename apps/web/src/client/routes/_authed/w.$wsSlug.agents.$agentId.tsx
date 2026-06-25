@@ -268,7 +268,7 @@ function AgentPage() {
 						<InfiniteSentinel
 							hasNextPage={Boolean(entries.hasNextPage)}
 							isFetchingNextPage={entries.isFetchingNextPage}
-							fetchNextPage={() => entries.fetchNextPage()}
+							fetchNextPage={entries.fetchNextPage}
 						/>
 					</div>
 				)}
