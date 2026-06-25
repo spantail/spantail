@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import { useDocumentTitle } from "@/lib/document-title";
 import { queryClient } from "@/lib/query";
 
 export const Route = createFileRoute("/login")({
@@ -34,6 +35,10 @@ function LoginPage() {
 		queryKey: ["authProviders"],
 		queryFn: () => api.getAuthProviders(),
 	});
+
+	useDocumentTitle(
+		`${mode === "login" ? t("auth.login") : t("auth.signup")} | ${t("app.name")}`,
+	);
 
 	async function signInSocial(provider: "google" | "github") {
 		setError(null);

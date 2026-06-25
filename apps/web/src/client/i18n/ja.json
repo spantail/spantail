@@ -324,6 +324,10 @@
 	"messages": {
 		"back": "戻る",
 		"backToWorkspace": "{{name}} に戻る",
+		"documentTitle": {
+			"received": "{{report}}（{{sender}} より）",
+			"sent": "{{report}}（{{recipient}} 宛）"
+		},
 		"folder": {
 			"inbox": "受信トレイ",
 			"starred": "スター付き",

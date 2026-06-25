@@ -12,6 +12,7 @@ import { ReportToolbar } from "@/components/report-toolbar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 
 export const Route = createFileRoute("/reports/$tab/$reportId")({
 	component: ReportReadingPane,
@@ -28,6 +29,12 @@ function ReportReadingPane() {
 		queryFn: () => api.getReport(reportId),
 	});
 	const report = detail.data;
+
+	// Fall back to the generic title once the fetch settles without a report, so
+	// an inaccessible/deleted report never leaves the prior name in the tab.
+	useDocumentTitle(
+		report?.name ?? (detail.isPending ? undefined : t("reports.title")),
+	);
 
 	if (detail.isPending) {
 		return (

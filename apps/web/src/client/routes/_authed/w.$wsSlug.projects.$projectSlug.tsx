@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
@@ -60,6 +61,14 @@ function ProjectPage() {
 	// there is no cross-workspace data to guard against.
 	const projects = useProjects();
 	const project = (projects.data ?? []).find((p) => p.slug === projectSlug);
+
+	// Once the project list settles without a match, fall back to the section
+	// title so a missing project never leaves a stale name in the tab.
+	useDocumentTitle(
+		!current || projects.isPending
+			? undefined
+			: `${project ? project.name : t("nav.projects")} | ${current.name}`,
+	);
 
 	const members = useQuery({
 		queryKey: ["members", workspaceId],

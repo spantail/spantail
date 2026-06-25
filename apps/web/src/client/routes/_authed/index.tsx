@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 import { Button } from "@/components/ui/button";
+import { useDocumentTitle } from "@/lib/document-title";
 import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/")({
@@ -18,6 +19,8 @@ function Home() {
 	const { current } = useWorkspace();
 	const { session } = Route.useRouteContext();
 	const [createOpen, setCreateOpen] = useState(false);
+
+	useDocumentTitle(t("nav.home"));
 
 	if (current) {
 		return (

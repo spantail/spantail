@@ -13,6 +13,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 import { useWorkspace } from "@/lib/workspace";
 
 export const Route = createFileRoute("/_authed/w/$wsSlug/agents/$agentId")({
@@ -33,6 +34,14 @@ function AgentPage() {
 		enabled: Boolean(workspaceId),
 	});
 	const agent = (agents.data ?? []).find((a) => a.id === agentId);
+
+	// Once the agent list settles without a match, fall back to the section
+	// title so a missing agent never leaves a stale name in the tab.
+	useDocumentTitle(
+		!current || agents.isPending
+			? undefined
+			: `${agent ? agent.name : t("nav.agents")} | ${current.name}`,
+	);
 
 	const stats = useQuery({
 		queryKey: ["agent-entry-stats", workspaceId, agentId],

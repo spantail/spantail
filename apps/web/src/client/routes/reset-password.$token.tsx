@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { useDocumentTitle } from "@/lib/document-title";
 
 export const Route = createFileRoute("/reset-password/$token")({
 	component: ResetPasswordPage,
@@ -27,6 +28,8 @@ function ResetPasswordPage() {
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [error, setError] = useState<string | null>(null);
 	const [busy, setBusy] = useState(false);
+
+	useDocumentTitle(`${t("auth.resetPasswordTitle")} | ${t("app.name")}`);
 
 	async function onSubmit(event: React.FormEvent) {
 		event.preventDefault();

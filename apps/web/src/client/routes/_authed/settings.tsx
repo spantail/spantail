@@ -1,9 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Outlet,
+	useRouterState,
+} from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
-import { SettingsNav } from "@/components/settings-nav";
+import {
+	SettingsNav,
+	settingsSectionLabelKey,
+} from "@/components/settings-nav";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 
 export const Route = createFileRoute("/_authed/settings")({
 	component: SettingsLayout,
@@ -14,6 +22,11 @@ export const Route = createFileRoute("/_authed/settings")({
 // behind a left sub-nav. Each section is its own deep-linkable child route.
 function SettingsLayout() {
 	const { t } = useTranslation();
+	const pathname = useRouterState({ select: (s) => s.location.pathname });
+	const labelKey = settingsSectionLabelKey(pathname);
+	useDocumentTitle(
+		labelKey ? `${t(labelKey)} | ${t("nav.settings")}` : t("settings.title"),
+	);
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 	const agentsEnabled = useQuery({
 		queryKey: ["agents-enabled"],

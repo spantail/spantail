@@ -5,6 +5,7 @@ import {
 	redirect,
 	useParams,
 } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 
 import { MessageList } from "@/components/message-list";
 import {
@@ -13,6 +14,7 @@ import {
 	ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDocumentTitle } from "@/lib/document-title";
 
 export const Route = createFileRoute("/messages/$folder")({
 	beforeLoad: ({ params }) => {
@@ -24,6 +26,7 @@ export const Route = createFileRoute("/messages/$folder")({
 });
 
 function FolderLayout() {
+	const { t } = useTranslation();
 	const folder = Route.useParams().folder as MailFolder;
 	// Available only when a message child route is active.
 	const selected = useParams({
@@ -31,6 +34,9 @@ function FolderLayout() {
 		select: (p) => p.messageId,
 	}) as string | undefined;
 	const isMobile = useIsMobile();
+
+	// The open message sets its own title; only the folder list owns it here.
+	useDocumentTitle(selected ? undefined : t(`messages.folder.${folder}`));
 
 	// Mobile: single pane driven by the URL — the list, or the open message.
 	if (isMobile) {

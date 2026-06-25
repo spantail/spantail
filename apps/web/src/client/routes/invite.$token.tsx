@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import { useDocumentTitle } from "@/lib/document-title";
 
 export const Route = createFileRoute("/invite/$token")({
 	component: InvitePage,
@@ -34,6 +35,8 @@ function InvitePage() {
 		queryKey: ["authProviders"],
 		queryFn: () => api.getAuthProviders(),
 	});
+
+	useDocumentTitle(`${t("invite.title")} | ${t("app.name")}`);
 
 	async function acceptWithGoogle() {
 		setError(null);

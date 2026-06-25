@@ -16,6 +16,7 @@ import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
+import { useDocumentTitle } from "@/lib/document-title";
 import { formatEntryDate } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -26,8 +27,11 @@ export const Route = createFileRoute("/_authed/w/$wsSlug/")({
 });
 
 function Dashboard() {
+	const { t } = useTranslation();
 	const { current } = useWorkspace();
 	const { session } = Route.useRouteContext();
+
+	useDocumentTitle(current ? `${t("nav.home")} | ${current.name}` : undefined);
 
 	// The parent layout redirects when the slug has no matching workspace, so
 	// `current` resolves to this workspace by the time the dashboard renders.
