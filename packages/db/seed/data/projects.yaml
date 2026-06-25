@@ -130,3 +130,24 @@
     - 売上サマリ画面を作成
     - 権限まわりの不具合を修正
     - グラフ表示のパフォーマンスを改善
+
+- key: p-initech-crm
+  workspace: ws-initech
+  slug: crm
+  name: CRM Platform
+  hue: 60
+  description: Customer relationship management platform.
+  activities:
+    - Built the contact deduplication job
+    - Added the deal-pipeline kanban board
+    - Fixed timezone handling in activity logs
+- key: p-initech-billing
+  workspace: ws-initech
+  slug: billing
+  name: Billing Service
+  hue: 320
+  description: Subscription billing and invoicing.
+  activities:
+    - Implemented proration on plan changes
+    - Added retry logic for failed charges
+    - Reconciled the monthly invoice export

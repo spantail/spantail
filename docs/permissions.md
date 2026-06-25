@@ -135,16 +135,26 @@ Notes:
 The current code diverges from this spec in the following ways. Each is tracked here as backlog;
 this document is the target.
 
-### Gap A — instance-admin workspace bypass not implemented
+### Gap A — instance-admin workspace bypass ✅ resolved
 
-`requireWorkspaceAccess` (`apps/web/src/server/lib/permissions.ts`) requires membership for
-everyone, so an instance admin who is not a member of a workspace gets `404` on its resources.
-Principle 1 grants admin bypass. **Fix:** add an instance-admin bypass to `requireWorkspaceAccess`
-(or a sibling helper) and propagate to the projects / members / work-entries / workspace-settings
-routes. Also cover the **collection** endpoint: `GET /api/v1/workspaces` returns
-`listWorkspacesForUser`, so without an admin-scoped workspace listing an instance admin with no
-membership would still see no workspaces (and could not discover the ids needed for the item
-routes). Add an admin-scoped "list all workspaces" query so the bypass is complete end-to-end.
+The instance-admin workspace bypass is implemented. `requireWorkspaceAccess`
+(`apps/web/src/server/lib/permissions.ts`) now lets an instance admin who is not a member act on a
+workspace by returning a synthetic `admin` membership, so every call site (projects / members /
+work-entries / workspace-settings / logo routes) grants admin the container access Principle 1
+requires — without loosening anything for non-admins (a missing workspace is still `404` for
+everyone). Writes to user-authored entries stay author-only, and agent activity stays owner-scoped
+(`resolveAgentEntryAccess` has no admin bypass — admin-wide agent reads are [Gap B](#gap-b--admin-read-of-user-report-and-agent-scoped-resources-not-implemented)).
+
+The **collection** endpoints are covered too: an admin-scoped `listAllWorkspaces`
+(`packages/db/src/queries/workspaces.ts`) lists every workspace via a `listVisibleWorkspaces`
+helper used by `GET /api/v1/workspaces` and `GET /api/v1/me`, so an admin with no membership can
+discover the ids the item routes need. Each listed workspace carries the caller's `role`, or
+`null` for workspaces they do not belong to.
+
+In the **SPA** the workspace switcher shows an admin every workspace; selecting one they are not a
+member of (`role: null`) blanks the workspace-scoped sidebar navigation while keeping the switcher
+and the Settings cog, so the admin reaches Settings but is not presented as a member. This is a
+usability choice — the security boundary stays the API.
 
 ### Gap B — admin read of user-, report-, and agent-scoped resources not implemented
 

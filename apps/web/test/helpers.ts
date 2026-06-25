@@ -73,6 +73,48 @@ export async function signUpUser(name: string, email: string): Promise<string> {
 	return cookieFromResponse(signIn);
 }
 
+/**
+ * Creates a *second* instance admin through the bootstrap admin and returns
+ * their session cookie. Requires a prior signUpUser to have established the
+ * bootstrap admin. Useful for testing the instance-admin workspace bypass,
+ * which needs an admin who is not a member of a workspace another admin owns.
+ */
+export async function signUpAdmin(
+	name: string,
+	email: string,
+): Promise<string> {
+	if (!bootstrapAdminCookie) {
+		throw new Error("signUpAdmin requires an existing bootstrap admin");
+	}
+	const created = await apiJson(
+		"POST",
+		"/api/v1/users",
+		{ email, name, grantAdmin: true },
+		bootstrapAdminCookie,
+	);
+	if (created.status !== 201) {
+		throw new Error(
+			`admin create failed with ${created.status}: ${await created.text()}`,
+		);
+	}
+	const { generatedPassword } = (await created.json()) as {
+		generatedPassword?: string;
+	};
+	if (!generatedPassword) throw new Error("create did not return a password");
+
+	const signIn = await appFetch("/api/auth/sign-in/email", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ email, password: generatedPassword }),
+	});
+	if (signIn.status !== 200) {
+		throw new Error(
+			`sign-in failed with ${signIn.status}: ${await signIn.text()}`,
+		);
+	}
+	return cookieFromResponse(signIn);
+}
+
 export async function apiGet(path: string, cookie?: string): Promise<Response> {
 	return appFetch(path, { headers: cookie ? { cookie } : {} });
 }

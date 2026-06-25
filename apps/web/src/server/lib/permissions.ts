@@ -1,9 +1,11 @@
 import type { WorkspaceRole } from "@spantail/core";
 import {
+	type Database,
 	type EntryAccessScope,
 	getMembership,
 	getWorkspaceById,
 	isProjectMember,
+	listAllWorkspaces,
 	listWorkspacesForUser,
 	type MembershipRow,
 	type WorkspaceRow,
@@ -53,9 +55,15 @@ export function requireTemplateManager(c: Context<AppEnv>): UserAuthContext {
 }
 
 /**
- * Asserts the current user is a member of the workspace with at least
- * `minRole`. Non-members get 404 (existence is not revealed); members with an
- * insufficient role get 403.
+ * Asserts the current user may act on the workspace with at least `minRole`.
+ * Members are checked against their stored role; non-members get 404 (existence
+ * is not revealed) and members with an insufficient role get 403.
+ *
+ * Instance admins bypass membership (Principle 1 in docs/permissions.md): they
+ * read and write workspace/project containers without belonging to the
+ * workspace. The bypass returns a synthetic `admin` membership so every call
+ * site behaves as if the admin were a workspace admin. A missing workspace is
+ * still 404 for everyone, including admins.
  */
 export async function requireWorkspaceAccess(
 	c: Context<AppEnv>,
@@ -64,16 +72,44 @@ export async function requireWorkspaceAccess(
 ): Promise<{ workspace: WorkspaceRow; membership: MembershipRow }> {
 	const { user } = requireAuth(c);
 	const workspace = await getWorkspaceById(c.var.db, workspaceId);
-	const membership = workspace
-		? await getMembership(c.var.db, workspaceId, user.id)
-		: undefined;
-	if (!workspace || !membership) {
+	if (!workspace) {
+		throw new AppError("not_found", "Workspace not found");
+	}
+	const membership = await getMembership(c.var.db, workspaceId, user.id);
+	if (!membership) {
+		if (user.isAdmin) {
+			return {
+				workspace,
+				membership: {
+					workspaceId,
+					userId: user.id,
+					role: "admin",
+					createdAt: workspace.createdAt,
+				},
+			};
+		}
 		throw new AppError("not_found", "Workspace not found");
 	}
 	if (ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
 		throw new AppError("forbidden", `Requires workspace ${minRole} role`);
 	}
 	return { workspace, membership };
+}
+
+/**
+ * Lists the workspaces a caller may see. Plain users get the workspaces they
+ * belong to; instance admins get every workspace (Principle 1), with `role`
+ * `null` for the ones they are not a member of so the SPA can blank the
+ * workspace-scoped sidebar. Used by the `/me` and `/workspaces` collection
+ * endpoints.
+ */
+export async function listVisibleWorkspaces(
+	db: Database,
+	user: { id: string; isAdmin: boolean },
+): Promise<Array<WorkspaceRow & { role: MembershipRow["role"] | null }>> {
+	return user.isAdmin
+		? listAllWorkspaces(db, user.id)
+		: listWorkspacesForUser(db, user.id);
 }
 
 export type MemberWorkspace = Awaited<

@@ -8,14 +8,16 @@ import {
 import {
 	createWorkspace,
 	getWorkspaceBySlug,
-	listWorkspacesForUser,
 	updateWorkspace,
 } from "@spantail/db";
 import { Hono } from "hono";
 
 import { readBodyWithLimit } from "../lib/avatar";
 import { AppError } from "../lib/errors";
-import { requireWorkspaceAccess } from "../lib/permissions";
+import {
+	listVisibleWorkspaces,
+	requireWorkspaceAccess,
+} from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
@@ -29,7 +31,7 @@ const workspaceLogoKey = (workspaceId: string) =>
 export const workspaceRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
-		return c.json(await listWorkspacesForUser(c.var.db, user.id));
+		return c.json(await listVisibleWorkspaces(c.var.db, user));
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "admin");

@@ -24,6 +24,7 @@ Every seeded user shares the password **`password`**:
 | `carol@northwind.example` | member |
 | `daichi@northwind.example` | member |
 | `erin@northwind.example` | member |
+| `frank@initech.example` | member |
 
 ## The demo world
 
@@ -42,6 +43,11 @@ Every seeded user shares the password **`password`**:
   - **Carol** (Globex lead) — mostly Globex, helps Acme now and then.
   - **Daichi** (桜 lead) — mostly the Japanese client; his 桜 work logs are in
     Japanese (his lighter internal work, like everyone's, is in English).
+- **Initech** — a separate English workspace that **no Northwind member belongs
+  to**, run solo by **Frank** (`frank@initech.example`). Because Alice is the
+  instance admin but not a member here, Initech surfaces for her only through the
+  instance-admin bypass: she can see it in the workspace switcher and reach its
+  Settings, but the workspace-scoped sidebar stays blank (she is not a member).
 - Members log Mon–Fri for the last 45 days, but the days have texture: hours rise
   and fall around a typical ~8h, lines are worked at different cadences (daily /
   most days / weekly / a few days a month), the occasional weekday is taken off,

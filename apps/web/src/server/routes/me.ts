@@ -1,4 +1,4 @@
-import { listWorkspacesForUser, updateUser } from "@spantail/db";
+import { updateUser } from "@spantail/db";
 import { Hono } from "hono";
 
 import {
@@ -10,13 +10,14 @@ import {
 	resolveAvatarUrl,
 } from "../lib/avatar";
 import { AppError } from "../lib/errors";
+import { listVisibleWorkspaces } from "../lib/permissions";
 import { requireScope, requireSession } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 export const meRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const { user } = requireScope(c, "read");
-		const memberships = await listWorkspacesForUser(c.var.db, user.id);
+		const memberships = await listVisibleWorkspaces(c.var.db, user);
 		return c.json({ user, memberships });
 	})
 	// Upload (replace) the caller's avatar. Interactive sessions only — avatars
@@ -44,7 +45,7 @@ export const meRoutes = new Hono<AppEnv>()
 		});
 		const token = newAvatarToken();
 		await updateUser(c.var.db, user.id, { image: token });
-		const memberships = await listWorkspacesForUser(c.var.db, user.id);
+		const memberships = await listVisibleWorkspaces(c.var.db, user);
 		return c.json({
 			user: { ...user, imageUrl: resolveAvatarUrl(user.id, token) },
 			memberships,
@@ -55,6 +56,6 @@ export const meRoutes = new Hono<AppEnv>()
 		const { user } = requireSession(c);
 		await c.env.UPLOADS.delete(avatarObjectKey(user.id));
 		await updateUser(c.var.db, user.id, { image: null });
-		const memberships = await listWorkspacesForUser(c.var.db, user.id);
+		const memberships = await listVisibleWorkspaces(c.var.db, user);
 		return c.json({ user: { ...user, imageUrl: null }, memberships });
 	});

@@ -51,3 +51,8 @@
 - workspace: ws-sakura
   user: u-admin
   role: member
+
+# Frank runs Initech alone; no Northwind member (and not Alice) belongs here.
+- workspace: ws-initech
+  user: u-frank
+  role: owner

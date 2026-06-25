@@ -93,4 +93,7 @@ export type AddWorkspaceMemberInputData = z.input<
 	typeof addWorkspaceMemberInputSchema
 >;
 
-export type WorkspaceWithRole = Workspace & { role: WorkspaceRole };
+// `role` is the caller's role in the workspace, or `null` when an instance
+// admin is shown a workspace they are not a member of (the admin bypass — see
+// docs/permissions.md). Plain members always carry a concrete role.
+export type WorkspaceWithRole = Workspace & { role: WorkspaceRole | null };
