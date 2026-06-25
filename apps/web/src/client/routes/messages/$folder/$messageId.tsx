@@ -33,6 +33,8 @@ function ReadingPane() {
 	});
 	const data = detail.data;
 
+	// Fall back to the folder title once the fetch settles without a message, so
+	// an inaccessible/deleted message never leaves the prior title in the tab.
 	useDocumentTitle(
 		data
 			? data.scope === "sent"
@@ -44,7 +46,9 @@ function ReadingPane() {
 						report: data.reportName,
 						sender: data.senderName,
 					})
-			: undefined,
+			: detail.isPending
+				? undefined
+				: t(`messages.folder.${folderTyped}`),
 	);
 
 	// Mark a received message read on open; refreshes the unread dot and badge.
