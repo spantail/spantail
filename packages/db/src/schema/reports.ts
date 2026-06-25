@@ -66,6 +66,14 @@ export const reports = sqliteTable(
 		// Total logged minutes across the report's entries of the current version.
 		// Nullable: reports created before this column show no total until re-rendered.
 		totalMinutes: integer("total_minutes"),
+		// Distinct project ids whose entries appear in the current snapshot, captured
+		// at render time. Drives the Send-to ACL: a recipient must be able to read
+		// every one of these projects. Frozen with the content, so it stays correct
+		// even if the owner later loses access or the source entries change.
+		snapshotProjectIds: text("snapshot_project_ids", { mode: "json" })
+			.$type<string[]>()
+			.notNull()
+			.default([]),
 		// The current version number; 1 at creation, incremented on each edit.
 		version: integer("version").notNull().default(1),
 		createdAt: createdAtMs(),

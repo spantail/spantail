@@ -239,6 +239,13 @@
       "when": 1782379439504,
       "tag": "0033_tricky_living_tribunal",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "6",
+      "when": 1782383664151,
+      "tag": "0034_thin_menace",
+      "breakpoints": true
     }
   ]
 }

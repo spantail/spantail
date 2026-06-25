@@ -141,6 +141,9 @@ async function renderReportDocument(
 	totalMinutes: number;
 	entryCount: number;
 	projectCount: number;
+	// Distinct project ids present in this snapshot — persisted to drive the
+	// Send-to ACL against the frozen content rather than re-querying live entries.
+	projectIds: string[];
 }> {
 	const { filters, templateId } = doc;
 	const { workspaces, templateBody, enabled } =
@@ -239,6 +242,7 @@ async function renderReportDocument(
 		// Distinct projects with at least one entry (entries with no project are
 		// excluded, mirroring how they group under "(no project)" in the body).
 		projectCount: projects.length,
+		projectIds: projects.map((p) => p.id),
 	};
 }
 
@@ -246,15 +250,16 @@ async function renderReportDocument(
  * Candidate recipients for a report's "Send to": members of all the report's
  * workspaces who can also read its project-scoped content. A delivered snapshot
  * is a frozen copy that bypasses the live read ACL, so a recipient must already
- * be able to read every project that appears in the snapshot (resolved under the
- * owner's access, mirroring the render) — a workspace admin/owner reads any
- * project, otherwise the recipient must be a member of each. Reports with only
- * unassigned/own entries impose no project restriction.
+ * be able to read every project that appears in the snapshot — a workspace
+ * admin/owner reads any project, otherwise the recipient must be a member of
+ * each. The project set is the one captured at render time
+ * (`report.snapshotProjectIds`), not a re-query of live entries, so it stays
+ * correct even if the owner later loses access or the entries change. Reports
+ * with only unassigned/own entries impose no project restriction.
  */
 async function reportRecipientCandidates(
 	c: Context<AppEnv>,
 	report: ReportRow,
-	ownerWorkspaces: MemberWorkspace[],
 	senderId: string,
 ): Promise<
 	Array<{ id: string; name: string; email: string; image: string | null }>
@@ -265,25 +270,7 @@ async function reportRecipientCandidates(
 		senderId,
 	);
 
-	const scoped = ownerWorkspaces.filter((w) =>
-		report.filters.workspaceIds.includes(w.id),
-	);
-	const anchor = scoped.find((w) => w.id === report.filters.workspaceIds[0]);
-	if (!anchor) return base;
-	const range = resolveDateRange(report.filters.dateRange, anchor.timezone);
-	const access = resolveEntryAccessForWorkspaces(scoped, report.ownerUserId);
-	const rows = await listWorkEntriesForReport(c.var.db, {
-		workspaceIds: report.filters.workspaceIds,
-		projectIds: report.filters.projectIds,
-		userIds: report.filters.userIds,
-		from: range.from,
-		to: range.to,
-		access,
-	});
-	const entries = filterEntriesByTags(rows, report.filters.tags);
-	const snapshotProjectIds = [
-		...new Set(entries.flatMap((e) => (e.projectId ? [e.projectId] : []))),
-	];
+	const snapshotProjectIds = report.snapshotProjectIds;
 	if (snapshotProjectIds.length === 0) return base;
 
 	const projects = await listProjectsByIds(c.var.db, snapshotProjectIds);
@@ -365,7 +352,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
 		const note = normalizeNote(input.note ?? null);
-		const { content, resolvedFilters, totalMinutes } =
+		const { content, resolvedFilters, totalMinutes, projectIds } =
 			await renderReportDocument(c, {
 				name: input.name,
 				templateId: input.templateId,
@@ -380,6 +367,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			filters: resolvedFilters,
 			note,
 			totalMinutes,
+			snapshotProjectIds: projectIds,
 			content,
 		});
 		return c.json(toApiReport(report, contentRow.content), 201);
@@ -406,7 +394,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		const input = validate(updateReportInputSchema, await c.req.json());
 		const note = normalizeNote(input.note ?? null);
 		const version = report.version + 1;
-		const { content, resolvedFilters, totalMinutes } =
+		const { content, resolvedFilters, totalMinutes, projectIds } =
 			await renderReportDocument(c, {
 				name: input.name,
 				templateId: input.templateId,
@@ -420,6 +408,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			filters: resolvedFilters,
 			note,
 			totalMinutes,
+			snapshotProjectIds: projectIds,
 			version,
 			content,
 		});
@@ -480,16 +469,8 @@ export const reportRoutes = new Hono<AppEnv>()
 	.get("/:id/recipients", async (c) => {
 		const { user } = requireScope(c, "read");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		const workspaces = await requireScopeWorkspaces(
-			c,
-			report.filters.workspaceIds,
-		);
-		const members = await reportRecipientCandidates(
-			c,
-			report,
-			workspaces,
-			user.id,
-		);
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const members = await reportRecipientCandidates(c, report, user.id);
 		return c.json(
 			members.map(({ image, ...m }) => ({
 				...m,
@@ -503,20 +484,12 @@ export const reportRoutes = new Hono<AppEnv>()
 	.post("/:id/send", async (c) => {
 		const { user } = requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		const workspaces = await requireScopeWorkspaces(
-			c,
-			report.filters.workspaceIds,
-		);
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
 		const input = validate(
 			sendReportInputSchema,
 			await parseOptionalJsonBody(c),
 		);
-		const candidates = await reportRecipientCandidates(
-			c,
-			report,
-			workspaces,
-			user.id,
-		);
+		const candidates = await reportRecipientCandidates(c, report, user.id);
 		const allowed = new Set(candidates.map((m) => m.id));
 		const recipientIds = [...new Set(input.recipientUserIds)];
 		for (const id of recipientIds) {

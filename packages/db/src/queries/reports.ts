@@ -16,7 +16,12 @@ export type ReportInsert = Omit<
 >;
 export type ReportHeaderPatch = Pick<
 	typeof reports.$inferInsert,
-	"name" | "templateId" | "filters" | "note" | "totalMinutes"
+	| "name"
+	| "templateId"
+	| "filters"
+	| "note"
+	| "totalMinutes"
+	| "snapshotProjectIds"
 >;
 
 /**
