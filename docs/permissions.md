@@ -36,10 +36,12 @@ Every resource belongs to exactly one scope:
 
 ## Principles
 
-1. **Instance admin** can read and write all non-user-scoped resources and settings.
-   This includes workspace- and project-scoped resources **without requiring membership**
-   (admin bypass). For user-scoped resources, instance admin is **read-only** (never write —
-   see self-service below), and secrets are never exposed.
+1. **Instance admin** can read and write instance-, workspace-, and project-scoped resources and
+   settings (the "containers"), **without requiring workspace/project membership** (admin bypass).
+   For **user-scoped** resources, instance admin is **read-only** (never write — see self-service
+   below). For **report-scoped** resources (shares, comments, reactions), instance admin is also
+   **read-only** — writing them belongs to the report owner and discussion participants, not admins.
+   Secrets are never exposed.
 2. **Workspace admin** can read and write workspace resources and settings. For user-scoped
    resources belonging to that workspace's members, workspace admin is **read-only, limited to
    that workspace's data** (`R*`). Secrets are never exposed. (Resources with no workspace
@@ -117,8 +119,13 @@ Notes:
 - The REST API and MCP enforce this spec directly. **MCP** (the remote `/mcp` endpoint and the CLI
   stdio server) issues loopback REST calls carrying the caller's token, so every MCP tool inherits
   the exact same authorization as the REST API.
-- Therefore the API/MCP surface is *broader* than the UI by design, but never broader than this
-  spec. There is no case where the API loosens a rule because the UI hides it.
+- Therefore the API/MCP surface is *broader* than the UI by design. It is never *intentionally*
+  broader than this spec — the API never loosens a rule merely because the UI hides it.
+- **Caveat (current state):** where [Known gaps](#known-gaps) exist the API can still exceed this
+  spec until fixed. Most notably, with [Gap D](#gap-d-project-membership-does-not-exist) open,
+  `GET /api/v1/work-entries` enforces only `requireWorkspaceAccess` (no project-membership check),
+  so a plain workspace member can currently read project-assigned entries. Treat the gaps as the
+  authoritative list of where today's API/MCP behavior diverges from this target.
 
 ## Known gaps
 
