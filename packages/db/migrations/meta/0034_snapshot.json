@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "21b237fb-d32d-402f-856d-7312caee0ae7",
+  "id": "36173df9-5907-444e-bdf7-88a28bae0b36",
   "prevId": "ddf41851-6d44-42ec-b1ac-5777f06f79d6",
   "tables": {
     "agent_entries": {
@@ -2378,9 +2378,8 @@
           "name": "snapshot_project_ids",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'[]'"
+          "notNull": false,
+          "autoincrement": false
         },
         "version": {
           "name": "version",

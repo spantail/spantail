@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
@@ -244,6 +245,35 @@ it("restricts report recipients to those who can read the snapshot's projects", 
 			)
 		).status,
 	).toBe(201);
+});
+
+it("blocks Send-to for a legacy report with unknown snapshot scope", async () => {
+	const { alice, ws, projectA } = await setup();
+	await logEntry(alice, ws.id, projectA.id, 30);
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Daily",
+				templateId: "builtin:daily",
+				filters: { workspaceIds: [ws.id], dateRange: "today" },
+			},
+			alice,
+		)
+	).json()) as { id: string };
+	// Simulate a report rendered before snapshot capture existed.
+	await env.DB.prepare(
+		"update reports set snapshot_project_ids = null where id = ?",
+	)
+		.bind(report.id)
+		.run();
+
+	// No one is eligible until the report is re-rendered.
+	const recipients = (await (
+		await apiGet(`/api/v1/reports/${report.id}/recipients`, alice)
+	).json()) as unknown[];
+	expect(recipients).toHaveLength(0);
 });
 
 it("lets admins manage members and members view the list", async () => {

@@ -70,10 +70,13 @@ export const reports = sqliteTable(
 		// at render time. Drives the Send-to ACL: a recipient must be able to read
 		// every one of these projects. Frozen with the content, so it stays correct
 		// even if the owner later loses access or the source entries change.
-		snapshotProjectIds: text("snapshot_project_ids", { mode: "json" })
-			.$type<string[]>()
-			.notNull()
-			.default([]),
+		// Nullable = unknown scope (a report rendered before this column existed):
+		// Send-to is blocked until the report is re-rendered, since the frozen body
+		// may contain project-scoped data we can no longer enumerate. An empty array
+		// means "rendered, no project-assigned entries" — no restriction.
+		snapshotProjectIds: text("snapshot_project_ids", {
+			mode: "json",
+		}).$type<string[]>(),
 		// The current version number; 1 at creation, incremented on each edit.
 		version: integer("version").notNull().default(1),
 		createdAt: createdAtMs(),

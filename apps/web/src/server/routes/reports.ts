@@ -255,7 +255,10 @@ async function renderReportDocument(
  * each. The project set is the one captured at render time
  * (`report.snapshotProjectIds`), not a re-query of live entries, so it stays
  * correct even if the owner later loses access or the entries change. Reports
- * with only unassigned/own entries impose no project restriction.
+ * with only unassigned/own entries impose no project restriction. A null
+ * `snapshotProjectIds` means the report predates this capture (unknown scope):
+ * no one is eligible until it is re-rendered, since the frozen body may hold
+ * project-scoped data we can't enumerate.
  */
 async function reportRecipientCandidates(
 	c: Context<AppEnv>,
@@ -264,13 +267,14 @@ async function reportRecipientCandidates(
 ): Promise<
 	Array<{ id: string; name: string; email: string; image: string | null }>
 > {
+	const snapshotProjectIds = report.snapshotProjectIds;
+	if (snapshotProjectIds === null) return [];
+
 	const base = await listMembersInAllWorkspaces(
 		c.var.db,
 		report.filters.workspaceIds,
 		senderId,
 	);
-
-	const snapshotProjectIds = report.snapshotProjectIds;
 	if (snapshotProjectIds.length === 0) return base;
 
 	const projects = await listProjectsByIds(c.var.db, snapshotProjectIds);
