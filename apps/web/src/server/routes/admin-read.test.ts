@@ -210,16 +210,33 @@ it("lets admins read inbox deliveries by user and by workspace", async () => {
 	expect(byUser).toHaveLength(1);
 	const deliveryId = byUser[0]?.id ?? "";
 
-	// Workspace admin reads the workspace's deliveries (R*, single-ws report).
+	// The recipient reads their own copy, setting their per-recipient read state.
+	expect(
+		(await apiJson("POST", `/api/v1/inbox/${deliveryId}/read`, {}, recipient))
+			.status,
+	).toBe(204);
+
+	// Workspace admin reads the workspace's deliveries (R*, single-ws report). The
+	// recipient's read-state never leaks into this cross-recipient view.
 	const byWs = (await (
 		await apiGet(`/api/v1/inbox?workspaceId=${ws1.id}`, wsAdmin)
-	).json()) as Array<{ id: string }>;
-	expect(byWs.map((d) => d.id)).toContain(deliveryId);
+	).json()) as Array<{ id: string; readAt: string | null }>;
+	const wsItem = byWs.find((d) => d.id === deliveryId);
+	expect(wsItem).toBeDefined();
+	expect(wsItem?.readAt).toBeNull();
 
-	// Item read: admins read the delivery; an outsider does not.
-	expect((await apiGet(`/api/v1/inbox/${deliveryId}`, iAdmin)).status).toBe(
-		200,
-	);
+	// Folders are per-recipient state and do not apply to the workspace view.
+	expect(
+		(await apiGet(`/api/v1/inbox?workspaceId=${ws1.id}&folder=trash`, wsAdmin))
+			.status,
+	).toBe(400);
+
+	// Item read: admins read the delivery (read-state still not leaked); an
+	// outsider does not.
+	const adminItem = (await (
+		await apiGet(`/api/v1/inbox/${deliveryId}`, iAdmin)
+	).json()) as { readAt: string | null };
+	expect(adminItem.readAt).toBeNull();
 	expect((await apiGet(`/api/v1/inbox/${deliveryId}`, wsAdmin)).status).toBe(
 		200,
 	);

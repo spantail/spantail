@@ -47,8 +47,8 @@ export const agentRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
 	// Own list is session-only (agent management is an interactive surface). Admin
 	// reads are addressed by ?ownerUserId (instance admin reads a user's agents, R)
-	// or ?workspaceId (workspace admin reads agents active in / bound to the
-	// workspace, R*); both go through the scope guards so they are PAT/MCP-reachable.
+	// or ?workspaceId (workspace admin reads agents bound to the workspace, R*);
+	// both go through the scope guards so they are PAT/MCP-reachable.
 	// userId/tokenHash are never returned (token summary only).
 	.get("/", async (c) => {
 		const ownerUserId = c.req.query("ownerUserId");

@@ -10,7 +10,6 @@ import {
 	isNull,
 	lte,
 	ne,
-	or,
 	type SQL,
 	sql,
 } from "drizzle-orm";
@@ -185,11 +184,14 @@ export function listAgentsWithTokenForUser(
 }
 
 /**
- * Every active agent with activity in (or a token bound to) the workspace,
- * regardless of owner — a workspace/instance admin's read of agents under a
- * workspace (matrix `R`/`R*`). Same shape as the owner list; secrets are never
- * selected (token summary only). Membership is checked with correlated EXISTS
- * subqueries (not an id `inArray`) so it never hits D1's bound-parameter limit.
+ * Every active agent *bound to* the workspace (its token's default workspace),
+ * regardless of owner — a workspace/instance admin's read of the agent registry
+ * under a workspace (matrix `R`/`R*`). Scoped to bound agents only: an agent
+ * that merely logged activity here but belongs to another workspace would expose
+ * its foreign binding and project ids, breaking R*; that cross-workspace
+ * *activity* is still readable through agent entries, which carry their own
+ * workspace id. Same shape as the owner list; secrets are never selected (token
+ * summary only). The correlated EXISTS keeps it clear of D1's parameter limit.
  */
 export function listAgentsByWorkspace(
 	db: Database,
@@ -199,10 +201,7 @@ export function listAgentsByWorkspace(
 		db,
 		and(
 			isNull(agents.archivedAt),
-			or(
-				sql`exists (select 1 from ${agentEntries} where ${agentEntries.agentId} = ${agents.id} and ${agentEntries.workspaceId} = ${workspaceId})`,
-				sql`exists (select 1 from ${agentTokens} where ${agentTokens.agentId} = ${agents.id} and ${agentTokens.defaultWorkspaceId} = ${workspaceId})`,
-			),
+			sql`exists (select 1 from ${agentTokens} where ${agentTokens.agentId} = ${agents.id} and ${agentTokens.defaultWorkspaceId} = ${workspaceId})`,
 		),
 	);
 }

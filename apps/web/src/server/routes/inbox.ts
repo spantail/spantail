@@ -42,7 +42,15 @@ export const inboxRoutes = new Hono<AppEnv>()
 			c.req.query(),
 		);
 		if (scope.kind === "workspace") {
-			// Cross-recipient view: per-user folders/flags don't apply.
+			// Cross-recipient view: folders are per-recipient mailbox state and do
+			// not apply here, so an explicit non-default folder is rejected rather
+			// than silently ignored (it would return the unfiltered list).
+			if (c.req.query("folder") !== undefined && folder !== "inbox") {
+				throw new AppError(
+					"bad_request",
+					"Folder filtering does not apply to a workspace-scoped delivery view",
+				);
+			}
 			return c.json(
 				await listDeliveriesByWorkspace(
 					c.var.db,

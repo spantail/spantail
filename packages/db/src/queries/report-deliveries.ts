@@ -427,7 +427,9 @@ export async function listDeliveriesByWorkspace(
 		dateFrom: r.dateFrom,
 		dateTo: r.dateTo,
 		message: r.message,
-		readAt: r.readAt,
+		// readAt is the recipient's own read-state; an admin is not the recipient,
+		// so it is never surfaced in this cross-recipient view.
+		readAt: null,
 		createdAt: r.createdAt,
 		starred: false,
 		archived: false,
@@ -464,7 +466,8 @@ export async function getDeliveryDetailById(
 		dateFrom: row.dateFrom,
 		dateTo: row.dateTo,
 		message: row.message,
-		readAt: row.readAt,
+		// readAt is the recipient's own read-state, not the admin's; never leak it.
+		readAt: null,
 		createdAt: row.createdAt,
 		starred: false,
 		archived: false,
