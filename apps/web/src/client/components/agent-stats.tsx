@@ -324,14 +324,16 @@ function AgentActivityChart({
 				)}
 
 				<div className="mt-1.5 flex gap-[3px]">
-					{days.map((d, i) => {
+					{days.map((d) => {
 						const dayNum = Number(d.date.slice(8));
+						// Label odd calendar days (not every other index) so the ticks stay
+						// stable across custom ranges, matching the dashboard's daily bars.
 						return (
 							<div
 								key={d.date}
 								className="text-muted-foreground flex-1 text-center text-[10px] tabular-nums"
 							>
-								{i % 2 === 0 ? dayNum : ""}
+								{dayNum % 2 === 1 ? dayNum : ""}
 							</div>
 						);
 					})}

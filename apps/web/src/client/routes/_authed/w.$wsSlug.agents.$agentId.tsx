@@ -140,7 +140,10 @@ function AgentPage() {
 					<h2 className="font-heading text-lg font-semibold">
 						{t("agents.entriesTitle")}
 					</h2>
-					{list.length > 0 && (
+					{/* Row count only when the page isn't capped — at the limit it
+					    would read as a total when it's really "showing 200". The
+					    period's true session total is in the Sessions stat widget. */}
+					{list.length > 0 && list.length < SESSION_LIMIT && (
 						<span className="text-muted-foreground text-sm tabular-nums">
 							{t("agents.sessionCount", { count: list.length })}
 						</span>
