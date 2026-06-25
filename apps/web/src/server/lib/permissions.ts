@@ -223,6 +223,10 @@ export async function resolveAdminListScope(
 		return { kind: "user", ownerUserId: params.ownerUserId };
 	}
 	if (params.workspaceId) {
+		// A workspace-scoped read still needs the "read" scope (PAT callers),
+		// matching every other workspace read; requireWorkspaceAccess itself only
+		// checks membership/role, not the token scope.
+		requireScope(c, "read");
 		await requireWorkspaceAccess(c, params.workspaceId, "admin");
 		return { kind: "workspace", workspaceId: params.workspaceId };
 	}

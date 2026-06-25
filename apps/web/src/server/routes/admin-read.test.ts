@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 // Admin read paths for user-/report-/agent-scoped resources (docs/permissions.md
 // Access matrix): an instance admin reads any user's data (R) via ?ownerUserId; a
@@ -264,6 +264,32 @@ it("lets admins read agents without leaking token secrets", async () => {
 	expect(
 		(await apiGet(`/api/v1/agents?workspaceId=${ws1.id}`, outsider)).status,
 	).toBe(404);
+});
+
+it("requires the read scope for workspace-scoped admin reads via PAT", async () => {
+	const { wsAdmin, ws1 } = await setup();
+	const mint = async (scopes: string[]) =>
+		(
+			(await (
+				await apiJson(
+					"POST",
+					"/api/v1/tokens",
+					{ name: scopes.join("-"), scopes },
+					wsAdmin,
+				)
+			).json()) as { token: string }
+		).token;
+	const read = async (token: string) =>
+		(
+			await appFetch(`/api/v1/reports?workspaceId=${ws1.id}`, {
+				headers: { authorization: `Bearer ${token}` },
+			})
+		).status;
+
+	// A write-only PAT cannot reach the workspace-scoped read (insufficient_scope),
+	// matching every other workspace read; a read-scoped PAT succeeds.
+	expect(await read(await mint(["write"]))).toBe(403);
+	expect(await read(await mint(["read"]))).toBe(200);
 });
 
 it("lets only instance admins read another user's token metadata", async () => {

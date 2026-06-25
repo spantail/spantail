@@ -25,7 +25,7 @@ import {
 } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
-import { requireSession } from "../middleware/auth";
+import { requireScope, requireSession } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -59,6 +59,9 @@ export const agentRoutes = new Hono<AppEnv>()
 			return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
 		}
 		if (workspaceId) {
+			// PAT callers need the "read" scope, like every other workspace read;
+			// requireWorkspaceAccess only checks membership/role, not token scope.
+			requireScope(c, "read");
 			await requireWorkspaceAccess(c, workspaceId, "admin");
 			const rows = await listAgentsByWorkspace(c.var.db, workspaceId);
 			return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
