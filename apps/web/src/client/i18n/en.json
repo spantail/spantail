@@ -68,16 +68,31 @@
 		"notFound": "No activity for this agent in this workspace.",
 		"backHome": "Back to home",
 		"totalTokens": "Tokens",
-		"totalMinutes": "Minutes",
 		"entryCount": "Sessions",
 		"entriesTitle": "Sessions",
 		"empty": "No sessions logged yet.",
+		"sessionTime": "Session time",
+		"sessionsSub": "{{days}} active days · {{perDay}}/day",
+		"sessionTimeSub": "avg {{avg}} / session",
+		"sessionCount_one": "{{count}} session",
+		"sessionCount_other": "{{count}} sessions",
+		"input": "Input",
+		"output": "Output",
+		"dailyActivity": "Daily activity",
+		"tokensSplit": "Input {{input}} · Output {{output}}",
+		"metric": {
+			"sessions": "Sessions",
+			"time": "Time",
+			"tokens": "Tokens"
+		},
 		"table": {
 			"date": "Date",
 			"duration": "Duration",
-			"tokens": "Tokens",
 			"model": "Model",
-			"description": "Description"
+			"description": "Description",
+			"project": "Project",
+			"input": "Input",
+			"output": "Output"
 		}
 	},
 	"workspace": {

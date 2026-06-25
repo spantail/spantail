@@ -411,11 +411,15 @@ export async function listAgentEntries(
 export interface AgentEntryStatsResult {
 	totalMinutes: number;
 	totalTokens: number;
+	totalInputTokens: number;
+	totalOutputTokens: number;
 	entryCount: number;
 	byDate: Array<{
 		date: string;
 		minutes: number;
 		tokens: number;
+		inputTokens: number;
+		outputTokens: number;
 		count: number;
 	}>;
 	byAgent: Array<{
@@ -436,16 +440,26 @@ export async function getAgentEntryStats(
 		sql<number>`coalesce(sum(${agentEntries.durationMinutes}), 0)`.mapWith(
 			Number,
 		);
-	// totalTokens lives inside the usage JSON; entries without usage count as 0.
-	const tokens =
-		sql<number>`coalesce(sum(coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)), 0)`.mapWith(
+	// Token buckets live inside the usage JSON; entries without usage count as 0.
+	const tokenBucket = (key: string) =>
+		sql<number>`coalesce(sum(coalesce(json_extract(${agentEntries.usage}, ${`$.${key}`}), 0)), 0)`.mapWith(
 			Number,
 		);
+	const tokens = tokenBucket("totalTokens");
+	const inputTokens = tokenBucket("inputTokens");
+	const outputTokens = tokenBucket("outputTokens");
 	const count = sql<number>`count(*)`.mapWith(Number);
 
 	const [byDate, byAgent] = await Promise.all([
 		db
-			.select({ date: agentEntries.entryDate, minutes, tokens, count })
+			.select({
+				date: agentEntries.entryDate,
+				minutes,
+				tokens,
+				inputTokens,
+				outputTokens,
+				count,
+			})
 			.from(agentEntries)
 			.where(and(...conditions))
 			.groupBy(agentEntries.entryDate)
@@ -461,6 +475,8 @@ export async function getAgentEntryStats(
 	return {
 		totalMinutes: byDate.reduce((acc, row) => acc + row.minutes, 0),
 		totalTokens: byDate.reduce((acc, row) => acc + row.tokens, 0),
+		totalInputTokens: byDate.reduce((acc, row) => acc + row.inputTokens, 0),
+		totalOutputTokens: byDate.reduce((acc, row) => acc + row.outputTokens, 0),
 		entryCount: byDate.reduce((acc, row) => acc + row.count, 0),
 		byDate,
 		byAgent,

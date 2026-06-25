@@ -93,7 +93,7 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 		sessionId: "s1",
 		projectId: project.id,
 		durationMinutes: 25,
-		usage: { totalTokens: 3000 },
+		usage: { totalTokens: 3000, inputTokens: 1200, outputTokens: 1800 },
 	});
 	expect(second.status).toBe(200);
 
@@ -115,11 +115,19 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 		entryCount: number;
 		totalMinutes: number;
 		totalTokens: number;
+		totalInputTokens: number;
+		totalOutputTokens: number;
+		byDate: Array<{ inputTokens: number; outputTokens: number }>;
 		byAgent: Array<{ agentId: string; tokens: number }>;
 	};
 	expect(stats.entryCount).toBe(1);
 	expect(stats.totalMinutes).toBe(25);
 	expect(stats.totalTokens).toBe(3000);
+	// Input/output buckets are summed from usage JSON for the agent-screen widgets.
+	expect(stats.totalInputTokens).toBe(1200);
+	expect(stats.totalOutputTokens).toBe(1800);
+	expect(stats.byDate[0]?.inputTokens).toBe(1200);
+	expect(stats.byDate[0]?.outputTokens).toBe(1800);
 	expect(stats.byAgent[0]?.agentId).toBe(agentId);
 
 	// The agent now shows up as active in the workspace (powers the sidebar).

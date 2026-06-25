@@ -68,16 +68,30 @@
 		"notFound": "このワークスペースにこのエージェントの記録がありません。",
 		"backHome": "ホームへ戻る",
 		"totalTokens": "トークン",
-		"totalMinutes": "分",
 		"entryCount": "セッション",
 		"entriesTitle": "セッション",
 		"empty": "記録されたセッションはまだありません。",
+		"sessionTime": "セッション時間",
+		"sessionsSub": "稼働 {{days}}日 · {{perDay}}/日",
+		"sessionTimeSub": "平均 {{avg}}/セッション",
+		"sessionCount_other": "{{count}}件のセッション",
+		"input": "入力",
+		"output": "出力",
+		"dailyActivity": "日々のアクティビティ",
+		"tokensSplit": "入力 {{input}} · 出力 {{output}}",
+		"metric": {
+			"sessions": "セッション",
+			"time": "時間",
+			"tokens": "トークン"
+		},
 		"table": {
 			"date": "日付",
 			"duration": "時間",
-			"tokens": "トークン",
 			"model": "モデル",
-			"description": "内容"
+			"description": "内容",
+			"project": "プロジェクト",
+			"input": "入力",
+			"output": "出力"
 		}
 	},
 	"workspace": {

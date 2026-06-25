@@ -46,6 +46,31 @@ export function formatCompactRange(
 }
 
 /**
+ * Compact token/count label: `27.5M`, `406K`, `980`. Latin K/M/B suffixes
+ * (locale-agnostic on purpose — these are raw engineering counts, not prose),
+ * mirroring the agent-screen mockup's `fmtCompact`.
+ */
+export function formatCompactNumber(n: number): string {
+	if (n >= 1e9) return `${(n / 1e9).toFixed(2).replace(/\.?0+$/, "")}B`;
+	if (n >= 1e6) return `${(n / 1e6).toFixed(2).replace(/\.?0+$/, "")}M`;
+	if (n >= 1e3) return `${(n / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
+	return String(n);
+}
+
+/**
+ * Wall-clock `HH:MM` (24h) for a UTC ISO timestamp, rendered in the workspace
+ * timezone so a session's start/end read in the user's local working hours.
+ */
+export function formatClock(iso: string, timeZone: string): string {
+	return new Intl.DateTimeFormat("en-GB", {
+		hour: "2-digit",
+		minute: "2-digit",
+		hourCycle: "h23",
+		timeZone,
+	}).format(new Date(iso));
+}
+
+/**
  * Formats an ISO timestamp as a GitHub-inbox-style relative time
  * ("37 minutes ago", "yesterday", "2 days ago"), localized via
  * `Intl.RelativeTimeFormat` so en/ja need no extra catalog strings.
