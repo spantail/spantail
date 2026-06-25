@@ -153,8 +153,19 @@ const statBucketFields = {
 export const agentEntryStatsSchema = z.object({
 	totalMinutes: z.number().int().min(0),
 	totalTokens: z.number().int().min(0),
+	// Input/output split of totalTokens, for the agent screen's Tokens widget.
+	// Agents that don't expose buckets contribute 0, so their sum can be < totalTokens.
+	totalInputTokens: z.number().int().min(0),
+	totalOutputTokens: z.number().int().min(0),
 	entryCount: z.number().int().min(0),
-	byDate: z.array(z.object({ date: localDateSchema, ...statBucketFields })),
+	byDate: z.array(
+		z.object({
+			date: localDateSchema,
+			...statBucketFields,
+			inputTokens: z.number().int().min(0),
+			outputTokens: z.number().int().min(0),
+		}),
+	),
 	byAgent: z.array(z.object({ agentId: z.string(), ...statBucketFields })),
 });
 export type AgentEntryStats = z.infer<typeof agentEntryStatsSchema>;

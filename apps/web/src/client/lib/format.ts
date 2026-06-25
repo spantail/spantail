@@ -45,6 +45,44 @@ export function formatCompactRange(
 	return `${monthDay.format(a)} – ${end}`;
 }
 
+// Constructing an Intl formatter is relatively costly, and these run once per
+// token cell / session-row time in large tables — so build each once and reuse.
+const compactNumberFormat = new Intl.NumberFormat("en", {
+	notation: "compact",
+	maximumFractionDigits: 1,
+});
+
+/**
+ * Compact token/count label: `27.5M`, `406K`, `980`. Always Latin K/M/B
+ * suffixes (fixed `en` locale — these are raw engineering counts, not prose,
+ * so they read the same across the app's locales). `Intl` compact notation
+ * promotes at the threshold, so 999,999 reads `1M`, never `1000K`.
+ */
+export function formatCompactNumber(n: number): string {
+	return compactNumberFormat.format(n);
+}
+
+// One clock formatter per timezone (workspaces rarely use more than one).
+const clockFormats = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Wall-clock `HH:MM` (24h) for a UTC ISO timestamp, rendered in the workspace
+ * timezone so a session's start/end read in the user's local working hours.
+ */
+export function formatClock(iso: string, timeZone: string): string {
+	let format = clockFormats.get(timeZone);
+	if (!format) {
+		format = new Intl.DateTimeFormat("en-GB", {
+			hour: "2-digit",
+			minute: "2-digit",
+			hourCycle: "h23",
+			timeZone,
+		});
+		clockFormats.set(timeZone, format);
+	}
+	return format.format(new Date(iso));
+}
+
 /**
  * Formats an ISO timestamp as a GitHub-inbox-style relative time
  * ("37 minutes ago", "yesterday", "2 days ago"), localized via
