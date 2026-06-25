@@ -30,7 +30,11 @@ function ReportReadingPane() {
 	});
 	const report = detail.data;
 
-	useDocumentTitle(report?.name);
+	// Fall back to the generic title once the fetch settles without a report, so
+	// an inaccessible/deleted report never leaves the prior name in the tab.
+	useDocumentTitle(
+		report?.name ?? (detail.isPending ? undefined : t("reports.title")),
+	);
 
 	if (detail.isPending) {
 		return (
