@@ -26,7 +26,11 @@ import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
-import { formatClock, formatCompactNumber } from "@/lib/format";
+import {
+	formatClock,
+	formatCompactNumber,
+	formatEntryDate,
+} from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
 // Page size for the in-range sessions table, loaded incrementally on scroll.
@@ -37,7 +41,7 @@ export const Route = createFileRoute("/_authed/w/$wsSlug/agents/$agentId")({
 });
 
 function AgentPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const { agentId } = Route.useParams();
 	const { current } = useWorkspace();
 	const workspaceId = current?.id;
@@ -211,7 +215,13 @@ function AgentPage() {
 											className="data-[nav-active]:bg-muted"
 										>
 											<TableCell className="whitespace-nowrap">
-												<div className="tabular-nums">{entry.entryDate}</div>
+												<div>
+													{formatEntryDate(entry.entryDate, i18n.language, {
+														weekday: "short",
+														month: "short",
+														day: "numeric",
+													})}
+												</div>
 												{entry.startedAt && entry.endedAt && (
 													<div className="text-muted-foreground text-xs tabular-nums">
 														{formatClock(entry.startedAt, timezone)}–
