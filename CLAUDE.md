@@ -65,7 +65,9 @@ pnpm deploy             # wrangler deploy (apps/web)
 - **Dates and time.** `work_entries.entry_date` is a local date string (`YYYY-MM-DD`) in the
   workspace's timezone. All timestamps are UTC. Durations are integer minutes.
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report filters
-  must be validated against the union of the user's workspaces.
+  must be validated against the union of the user's workspaces. See
+  [`docs/permissions.md`](docs/permissions.md) for the full role × resource access model (the
+  single source of truth).
 - **Report templates are instance-scoped formats.** A template is a presentation format,
   independent of any workspace, project, user, or period — a report freely combines any template
   with any scope and date range at run time. Builtins are code-defined; their enabled/cadence

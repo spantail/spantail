@@ -32,6 +32,8 @@ Spantail runs entirely on Cloudflare:
 
 Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and [Better Auth](https://better-auth.com). Frontend is a React SPA built with Vite, TanStack Router/Query, and shadcn/ui.
 
+See [`docs/permissions.md`](docs/permissions.md) for the role-based permissions and resource visibility model.
+
 ## Monorepo
 
 | Path | Description |
