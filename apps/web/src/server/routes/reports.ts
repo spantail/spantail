@@ -161,7 +161,7 @@ async function renderReportDocument(
 	// projects they belong to (admins see all in their workspaces). Snapshots are
 	// point-in-time — this is enforced at render, not on stored content.
 	const { user } = requireAuth(c);
-	const access = await resolveEntryAccessForWorkspaces(c, scoped, user.id);
+	const access = resolveEntryAccessForWorkspaces(scoped, user.id);
 	const rows = await listWorkEntriesForReport(c.var.db, {
 		workspaceIds: filters.workspaceIds,
 		projectIds: filters.projectIds,

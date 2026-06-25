@@ -94,12 +94,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "read");
 		const query = validate(listWorkEntriesQuerySchema, c.req.query());
 		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
-		const access = await resolveEntryAccess(
-			c,
-			query.workspaceId,
-			membership,
-			user.id,
-		);
+		const access = resolveEntryAccess(query.workspaceId, membership, user.id);
 		return c.json(await listWorkEntries(c.var.db, { ...query, access }));
 	})
 	.post("/", async (c) => {
@@ -132,12 +127,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "read");
 		const query = validate(workEntryStatsQuerySchema, c.req.query());
 		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
-		const access = await resolveEntryAccess(
-			c,
-			query.workspaceId,
-			membership,
-			user.id,
-		);
+		const access = resolveEntryAccess(query.workspaceId, membership, user.id);
 		return c.json(await getWorkEntryStats(c.var.db, { ...query, access }));
 	})
 	// Likewise registered before "/:id" so "tags" is not captured as an entry id.
@@ -145,12 +135,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "read");
 		const query = validate(workEntryTagsQuerySchema, c.req.query());
 		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
-		const access = await resolveEntryAccess(
-			c,
-			query.workspaceId,
-			membership,
-			user.id,
-		);
+		const access = resolveEntryAccess(query.workspaceId, membership, user.id);
 		return c.json(await listWorkEntryTags(c.var.db, { ...query, access }));
 	})
 	.get("/:id", async (c) => {
@@ -171,7 +156,10 @@ export const workEntryRoutes = new Hono<AppEnv>()
 				"Cannot unassign an entry from its project",
 			);
 		}
-		if (input.projectId) {
+		// Project membership is only required when assigning to a *different* live
+		// project. Editing other fields of an own entry whose project is unchanged
+		// stays allowed even if the author has since left that project.
+		if (input.projectId && input.projectId !== entry.projectId) {
 			await requireProjectInWorkspace(c, input.projectId, entry.workspaceId);
 			const { membership } = await requireWorkspaceAccess(c, entry.workspaceId);
 			await requireProjectAccess(c, input.projectId, membership, user.id);

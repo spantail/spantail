@@ -94,22 +94,14 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		const auth = requireScope(c, "read");
 		const query = validate(listAgentEntriesQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		const access = await resolveAgentEntryAccess(
-			c,
-			query.workspaceId,
-			auth.user.id,
-		);
+		const access = resolveAgentEntryAccess(auth.user.id);
 		return c.json(await listAgentEntries(c.var.db, { ...query, access }));
 	})
 	.get("/stats", async (c) => {
 		const auth = requireScope(c, "read");
 		const query = validate(agentEntryStatsQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		const access = await resolveAgentEntryAccess(
-			c,
-			query.workspaceId,
-			auth.user.id,
-		);
+		const access = resolveAgentEntryAccess(auth.user.id);
 		return c.json(await getAgentEntryStats(c.var.db, { ...query, access }));
 	})
 	// The caller's own agents, shown under a workspace in the sidebar: those with

@@ -4,8 +4,6 @@ import {
 	getMembership,
 	getWorkspaceById,
 	isProjectMember,
-	listProjectIdsForMember,
-	listProjectIdsForMemberInWorkspaces,
 	listWorkspacesForUser,
 	type MembershipRow,
 	type WorkspaceRow,
@@ -109,22 +107,17 @@ export async function requireScopeWorkspaces(
 /**
  * Resolves what project-scoped entries the caller may read in a single
  * workspace. A workspace admin/owner reads every project; a plain member is
- * limited to the projects they belong to (plus unassigned entries and their own
- * entries). Pass the result to the entry queries' `access` option.
+ * limited to the projects they belong to (checked in-SQL), plus unassigned and
+ * their own entries. Pass the result to the entry queries' `access` option.
  */
-export async function resolveEntryAccess(
-	c: Context<AppEnv>,
+export function resolveEntryAccess(
 	workspaceId: string,
 	membership: MembershipRow,
 	userId: string,
-): Promise<EntryAccessScope> {
-	const admin = isWorkspaceAdmin(membership.role);
+): EntryAccessScope {
 	return {
-		adminWorkspaceIds: admin ? [workspaceId] : [],
-		memberProjectIds: admin
-			? []
-			: await listProjectIdsForMember(c.var.db, workspaceId, userId),
-		selfUserId: userId,
+		adminWorkspaceIds: isWorkspaceAdmin(membership.role) ? [workspaceId] : [],
+		userId,
 	};
 }
 
@@ -132,49 +125,26 @@ export async function resolveEntryAccess(
  * Resolves agent-entry read access. Unlike work entries, agent activity is not
  * workspace-readable by admins (that is admin-read, a separate concern): a
  * caller sees only the agent activity in the projects they belong to, plus their
- * own agents' activity. So no admin-workspace bypass — member projects are
- * always resolved, even for admins.
+ * own agents' activity. So no admin-workspace bypass.
  */
-export async function resolveAgentEntryAccess(
-	c: Context<AppEnv>,
-	workspaceId: string,
-	userId: string,
-): Promise<EntryAccessScope> {
-	return {
-		adminWorkspaceIds: [],
-		memberProjectIds: await listProjectIdsForMember(
-			c.var.db,
-			workspaceId,
-			userId,
-		),
-		selfUserId: userId,
-	};
+export function resolveAgentEntryAccess(userId: string): EntryAccessScope {
+	return { adminWorkspaceIds: [], userId };
 }
 
 /**
- * Resolves entry-read access across several workspaces (report scope). Member
- * project ids are only fetched for the workspaces where the caller is not an
- * admin, since admin workspaces are already fully covered.
+ * Resolves entry-read access across several workspaces (report scope): the
+ * workspaces where the caller is an admin grant full read; elsewhere project
+ * membership (checked in-SQL) and own entries apply.
  */
-export async function resolveEntryAccessForWorkspaces(
-	c: Context<AppEnv>,
+export function resolveEntryAccessForWorkspaces(
 	workspaces: MemberWorkspace[],
 	userId: string,
-): Promise<EntryAccessScope> {
-	const adminWorkspaceIds = workspaces
-		.filter((w) => isWorkspaceAdmin(w.role))
-		.map((w) => w.id);
-	const memberOnlyIds = workspaces
-		.filter((w) => !isWorkspaceAdmin(w.role))
-		.map((w) => w.id);
+): EntryAccessScope {
 	return {
-		adminWorkspaceIds,
-		memberProjectIds: await listProjectIdsForMemberInWorkspaces(
-			c.var.db,
-			memberOnlyIds,
-			userId,
-		),
-		selfUserId: userId,
+		adminWorkspaceIds: workspaces
+			.filter((w) => isWorkspaceAdmin(w.role))
+			.map((w) => w.id),
+		userId,
 	};
 }
 

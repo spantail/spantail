@@ -143,6 +143,39 @@ it("makes unassigned entries visible to every workspace member", async () => {
 	expect(list[0]?.projectId).toBeNull();
 });
 
+it("still lets an author edit their own entry after leaving the project", async () => {
+	const { owner, alice, aliceId, ws, projectA, projectB } = await setup();
+	// Bob owns projectB; add Alice too so she has somewhere to (fail to) reassign.
+	const entry = (await (
+		await logEntry(alice, ws.id, projectA.id, 30)
+	).json()) as { id: string };
+	// Owner removes Alice from projectA.
+	await apiJson(
+		"DELETE",
+		`/api/v1/projects/${projectA.id}/members/${aliceId}`,
+		undefined,
+		owner,
+	);
+
+	// Editing other fields with the project unchanged stays allowed.
+	const edit = await apiJson(
+		"PATCH",
+		`/api/v1/work-entries/${entry.id}`,
+		{ projectId: projectA.id, note: "still mine" },
+		alice,
+	);
+	expect(edit.status).toBe(200);
+
+	// But reassigning to a project she is not a member of is rejected.
+	const reassign = await apiJson(
+		"PATCH",
+		`/api/v1/work-entries/${entry.id}`,
+		{ projectId: projectB.id },
+		alice,
+	);
+	expect(reassign.status).toBe(403);
+});
+
 it("excludes non-member project entries from a report render", async () => {
 	const { alice, bob, ws, projectA, projectB } = await setup();
 	await logEntry(alice, ws.id, projectA.id, 30);
