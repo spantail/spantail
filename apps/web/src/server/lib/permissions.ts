@@ -17,7 +17,7 @@ import type { AppEnv, UserAuthContext } from "../types";
 import { AppError } from "./errors";
 
 /** Workspace admins/owners read every project; members are scoped by ACL. */
-function isWorkspaceAdmin(role: WorkspaceRole): boolean {
+export function isWorkspaceAdmin(role: WorkspaceRole): boolean {
 	return role === "owner" || role === "admin";
 }
 
@@ -158,16 +158,6 @@ export function resolveEntryAccess(
 }
 
 /**
- * Resolves agent-entry read access. Unlike work entries, agent activity is not
- * workspace-readable by admins (that is admin-read, a separate concern): a
- * caller sees only the agent activity in the projects they belong to, plus their
- * own agents' activity. So no admin-workspace bypass.
- */
-export function resolveAgentEntryAccess(userId: string): EntryAccessScope {
-	return { adminWorkspaceIds: [], userId };
-}
-
-/**
  * Resolves entry-read access across several workspaces (report scope): the
  * workspaces where the caller is an admin grant full read; elsewhere project
  * membership (checked in-SQL) and own entries apply.
@@ -200,4 +190,46 @@ export async function requireProjectAccess(
 	if (!(await isProjectMember(c.var.db, projectId, userId))) {
 		throw new AppError("forbidden", "You are not a member of this project");
 	}
+}
+
+/**
+ * Which slice of a user-scoped collection an admin read addresses, and who is
+ * authorized for it. See docs/permissions.md (Access matrix): an admin read of
+ * another user's resources is addressed either by user (`?ownerUserId`, the
+ * instance admin's full `R`) or by workspace (`?workspaceId`, a workspace
+ * admin's scoped `R*`).
+ */
+export type AdminListScope =
+	| { kind: "own"; userId: string }
+	| { kind: "user"; ownerUserId: string }
+	| { kind: "workspace"; workspaceId: string };
+
+/**
+ * Authorizes and classifies a collection read that supports admin scoping:
+ *  - `?ownerUserId` → instance admin reads that user's resources (`R`),
+ *  - `?workspaceId` → workspace admin reads that workspace's data (`R*`; an
+ *    instance admin reaches it too via the membership bypass),
+ *  - neither → the caller reads their own (`read` scope).
+ * Each admin branch uses the scope-based guards (not `requireSession`) so the
+ * reads are reachable over PAT/MCP, while a resource's own-list keeps its
+ * existing middleware at the call site.
+ */
+export async function resolveAdminListScope(
+	c: Context<AppEnv>,
+	params: { ownerUserId?: string; workspaceId?: string },
+): Promise<AdminListScope> {
+	if (params.ownerUserId) {
+		requireInstanceAdmin(c);
+		return { kind: "user", ownerUserId: params.ownerUserId };
+	}
+	if (params.workspaceId) {
+		// A workspace-scoped read still needs the "read" scope (PAT callers),
+		// matching every other workspace read; requireWorkspaceAccess itself only
+		// checks membership/role, not the token scope.
+		requireScope(c, "read");
+		await requireWorkspaceAccess(c, params.workspaceId, "admin");
+		return { kind: "workspace", workspaceId: params.workspaceId };
+	}
+	const { user } = requireScope(c, "read");
+	return { kind: "own", userId: user.id };
 }

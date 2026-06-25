@@ -13,6 +13,15 @@ import type { Database } from "../index";
 import { user } from "../schema/auth";
 import { reportDeliveries } from "../schema/deliveries";
 import { deliveryFlags } from "../schema/delivery-flags";
+import { reports } from "../schema/reports";
+
+// Deliveries belong to exactly one source report; a report scoped to a single
+// workspace is the unit a workspace admin may read (`R*`). Multi-workspace
+// reports stay instance-admin-only, mirroring listReportMetaByWorkspace.
+const singleWorkspaceReport = (workspaceId: string) => sql`(
+	json_array_length(json_extract(${reports.filters}, '$.workspaceIds')) = 1
+	and exists (select 1 from json_each(json_extract(${reports.filters}, '$.workspaceIds')) where value = ${workspaceId})
+)`;
 
 export type ReportDeliveryRow = typeof reportDeliveries.$inferSelect;
 export type ReportDeliveryInsert = Omit<
@@ -372,6 +381,100 @@ export async function getMailItemDetail(
 	}
 
 	return undefined;
+}
+
+/**
+ * Deliveries whose source report is scoped to exactly this one workspace — a
+ * workspace admin's `R*` view of inbox/deliveries (every recipient's copy,
+ * newest-first). No per-user flags: the admin is not the recipient.
+ */
+export async function listDeliveriesByWorkspace(
+	db: Database,
+	workspaceId: string,
+	limit?: number,
+	offset?: number,
+): Promise<MailItemRow[]> {
+	const query = db
+		.select({
+			id: reportDeliveries.id,
+			batchId: reportDeliveries.batchId,
+			reportId: reportDeliveries.reportId,
+			senderName: reportDeliveries.senderName,
+			senderEmail: reportDeliveries.senderEmail,
+			reportName: reportDeliveries.reportName,
+			dateFrom: reportDeliveries.dateFrom,
+			dateTo: reportDeliveries.dateTo,
+			message: reportDeliveries.message,
+			createdAt: reportDeliveries.createdAt,
+		})
+		.from(reportDeliveries)
+		.innerJoin(reports, eq(reports.id, reportDeliveries.reportId))
+		.where(singleWorkspaceReport(workspaceId))
+		// id breaks createdAt ties so offset paging is stable.
+		.orderBy(desc(reportDeliveries.createdAt), desc(reportDeliveries.id))
+		.$dynamic();
+	if (limit !== undefined) query.limit(limit).offset(offset ?? 0);
+	const rows = await query;
+	return rows.map((r) => ({
+		id: r.id,
+		scope: "received",
+		batchId: r.batchId ?? r.id,
+		reportId: r.reportId,
+		senderName: r.senderName,
+		senderEmail: r.senderEmail,
+		reportName: r.reportName,
+		dateFrom: r.dateFrom,
+		dateTo: r.dateTo,
+		message: r.message,
+		// readAt is the recipient's own read-state; an admin is not the recipient,
+		// so it is never surfaced in this cross-recipient view.
+		readAt: null,
+		createdAt: r.createdAt,
+		starred: false,
+		archived: false,
+		trashed: false,
+		recipientNames: [],
+		recipientCount: 0,
+	}));
+}
+
+/**
+ * Admin read of any delivery by id as a received-detail view (no per-user flags
+ * — the admin is not the recipient). Authorization (instance admin for any
+ * delivery, or a workspace admin of the report's single workspace) is enforced
+ * by the caller, which uses the returned `reportId` to scope-check.
+ */
+export async function getDeliveryDetailById(
+	db: Database,
+	id: string,
+): Promise<ReceivedDetailRow | undefined> {
+	const row = await db
+		.select()
+		.from(reportDeliveries)
+		.where(eq(reportDeliveries.id, id))
+		.get();
+	if (!row) return undefined;
+	return {
+		id: row.id,
+		scope: "received",
+		batchId: row.batchId ?? row.id,
+		reportId: row.reportId,
+		senderName: row.senderName,
+		senderEmail: row.senderEmail,
+		reportName: row.reportName,
+		dateFrom: row.dateFrom,
+		dateTo: row.dateTo,
+		message: row.message,
+		// readAt is the recipient's own read-state, not the admin's; never leak it.
+		readAt: null,
+		createdAt: row.createdAt,
+		starred: false,
+		archived: false,
+		trashed: false,
+		recipientNames: [],
+		recipientCount: 0,
+		renderedMarkdown: row.renderedMarkdown,
+	};
 }
 
 /** Scoped to the recipient so one user can never read another's inbox. */

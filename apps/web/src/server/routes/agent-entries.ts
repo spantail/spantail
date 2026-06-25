@@ -19,7 +19,7 @@ import { AppError } from "../lib/errors";
 import {
 	requireProjectAccess,
 	requireWorkspaceAccess,
-	resolveAgentEntryAccess,
+	resolveEntryAccess,
 } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
@@ -86,22 +86,31 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		});
 		return c.json(entry);
 	})
-	// Reads follow the project ACL: a caller sees agent activity in the projects
-	// they belong to (workspace admins see all), plus their own agents' activity
-	// (unassigned activity is workspace-scoped). The access scope is resolved
-	// server-side, so it can't be spoofed to read another member's private data.
+	// Reads follow the project ACL: a member sees agent activity in the projects
+	// they belong to plus their own agents' activity (unassigned activity stays
+	// owner-only). A workspace/instance admin reads all agent activity in the
+	// workspace (matrix `R`/`R*`). The access scope is resolved server-side from
+	// the caller's membership, so it can't be spoofed to widen the read.
 	.get("/", async (c) => {
 		const auth = requireScope(c, "read");
 		const query = validate(listAgentEntriesQuerySchema, c.req.query());
-		await requireWorkspaceAccess(c, query.workspaceId);
-		const access = resolveAgentEntryAccess(auth.user.id);
+		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
+		const access = resolveEntryAccess(
+			query.workspaceId,
+			membership,
+			auth.user.id,
+		);
 		return c.json(await listAgentEntries(c.var.db, { ...query, access }));
 	})
 	.get("/stats", async (c) => {
 		const auth = requireScope(c, "read");
 		const query = validate(agentEntryStatsQuerySchema, c.req.query());
-		await requireWorkspaceAccess(c, query.workspaceId);
-		const access = resolveAgentEntryAccess(auth.user.id);
+		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
+		const access = resolveEntryAccess(
+			query.workspaceId,
+			membership,
+			auth.user.id,
+		);
 		return c.json(await getAgentEntryStats(c.var.db, { ...query, access }));
 	})
 	// The caller's own agents, shown under a workspace in the sidebar: those with

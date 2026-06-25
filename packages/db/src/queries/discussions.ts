@@ -49,36 +49,44 @@ export async function getReportDiscussionAccess(
 	if (!isOwner && !isRecipient) return undefined;
 
 	// A recipient implies a delivery; only the owner-without-delivery case needs
-	// the extra check. An existing discussion (comments/reactions) also counts as
-	// shared: when the last recipient's account is deleted their delivery cascades
-	// away, but retained comments (author_user_id set null) keep the thread alive,
-	// so the owner must not lose access to it.
-	let shared = isRecipient;
-	if (!shared) {
-		const [anyDelivery, anyComment, anyReaction] = await Promise.all([
-			db
-				.select({ id: reportDeliveries.id })
-				.from(reportDeliveries)
-				.where(eq(reportDeliveries.reportId, reportId))
-				.get(),
-			db
-				.select({ id: reportComments.id })
-				.from(reportComments)
-				.where(eq(reportComments.reportId, reportId))
-				.get(),
-			db
-				.select({ id: reportReactions.id })
-				.from(reportReactions)
-				.where(eq(reportReactions.reportId, reportId))
-				.get(),
-		]);
-		shared =
-			anyDelivery !== undefined ||
-			anyComment !== undefined ||
-			anyReaction !== undefined;
-	}
-
+	// the extra check.
+	const shared = isRecipient ? true : await isReportShared(db, reportId);
 	return { report, isOwner, isRecipient, shared };
+}
+
+/**
+ * Whether a report's discussion exists: ≥1 delivery, comment, or reaction. An
+ * existing discussion counts as shared even with no live delivery — when the
+ * last recipient's account is deleted their delivery cascades away, but retained
+ * comments (author_user_id set null) keep the thread alive. Used to surface the
+ * `shared` flag to the owner and to admin readers who hold no delivery.
+ */
+export async function isReportShared(
+	db: Database,
+	reportId: string,
+): Promise<boolean> {
+	const [anyDelivery, anyComment, anyReaction] = await Promise.all([
+		db
+			.select({ id: reportDeliveries.id })
+			.from(reportDeliveries)
+			.where(eq(reportDeliveries.reportId, reportId))
+			.get(),
+		db
+			.select({ id: reportComments.id })
+			.from(reportComments)
+			.where(eq(reportComments.reportId, reportId))
+			.get(),
+		db
+			.select({ id: reportReactions.id })
+			.from(reportReactions)
+			.where(eq(reportReactions.reportId, reportId))
+			.get(),
+	]);
+	return (
+		anyDelivery !== undefined ||
+		anyComment !== undefined ||
+		anyReaction !== undefined
+	);
 }
 
 /** A report's comments, oldest first (thread order). */

@@ -107,6 +107,17 @@ export class SpantailApiError extends Error {
 
 type Query = Record<string, string | number | undefined>;
 
+/**
+ * Admin read scoping for user-scoped collections (see docs/permissions.md): an
+ * instance admin reads another user's data with `ownerUserId`; a workspace admin
+ * reads a workspace's data with `workspaceId` (the scoped `R*`). Omit both to
+ * read your own.
+ */
+export type AdminListParams = {
+	ownerUserId?: string;
+	workspaceId?: string;
+};
+
 export class SpantailClient {
 	private readonly baseUrl: string;
 	private readonly token?: string;
@@ -382,8 +393,9 @@ export class SpantailClient {
 
 	// --- AI agents: registry, access tokens, and work entries ---
 
-	listAgents(): Promise<AgentWithToken[]> {
-		return this.request("GET", "/agents");
+	/** Own agents; admins pass ownerUserId (R) or workspaceId (R*) to read others'. */
+	listAgents(params: AdminListParams = {}): Promise<AgentWithToken[]> {
+		return this.request("GET", "/agents", { query: params });
 	}
 
 	/** Registers an agent and issues its access token; `secret` is shown once. */
@@ -475,8 +487,13 @@ export class SpantailClient {
 		return this.request("DELETE", `/report-templates/${id}`);
 	}
 
-	/** Metadata only (no rendered body); fetch the full report with getReport. */
-	listReports(query: ListReportsQueryData = {}): Promise<ReportMeta[]> {
+	/**
+	 * Metadata only (no rendered body); fetch the full report with getReport.
+	 * Admins pass ownerUserId (R) or workspaceId (R*) to read others' reports.
+	 */
+	listReports(
+		query: ListReportsQueryData & AdminListParams = {},
+	): Promise<ReportMeta[]> {
 		return this.request("GET", "/reports", { query });
 	}
 
@@ -548,10 +565,13 @@ export class SpantailClient {
 		return this.request("POST", `/reports/${reportId}/send`, { body: input });
 	}
 
-	/** Lists a mailbox folder. Defaults to the Inbox. */
+	/**
+	 * Lists a mailbox folder. Defaults to the Inbox. Admins pass ownerUserId (read
+	 * a user's mailbox, R) or workspaceId (the workspace's deliveries, R*).
+	 */
 	listInbox(
 		folder: MailFolder = "inbox",
-		query: Omit<ListInboxQueryData, "folder"> = {},
+		query: Omit<ListInboxQueryData, "folder"> & AdminListParams = {},
 	): Promise<MailItem[]> {
 		return this.request("GET", "/inbox", { query: { folder, ...query } });
 	}
@@ -635,8 +655,11 @@ export class SpantailClient {
 		);
 	}
 
-	listTokens(): Promise<ApiToken[]> {
-		return this.request("GET", "/tokens");
+	/** Own token metadata; an instance admin passes ownerUserId to read a user's. */
+	listTokens(
+		params: Pick<AdminListParams, "ownerUserId"> = {},
+	): Promise<ApiToken[]> {
+		return this.request("GET", "/tokens", { query: params });
 	}
 
 	createToken(input: CreateTokenInput): Promise<ApiToken & { token: string }> {

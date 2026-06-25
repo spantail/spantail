@@ -9,6 +9,7 @@ import {
 	archiveAgent,
 	createAgentWithToken,
 	getAgentById,
+	listAgentsByWorkspace,
 	listAgentsWithTokenForUser,
 	listProjectsByIds,
 	rotateAgentToken,
@@ -18,10 +19,13 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
-import { requireWorkspaceAccess } from "../lib/permissions";
+import {
+	requireInstanceAdmin,
+	requireWorkspaceAccess,
+} from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
-import { requireSession } from "../middleware/auth";
+import { requireScope, requireSession } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -41,7 +45,27 @@ async function requireOwnedAgent(
 
 export const agentRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
+	// Own list is session-only (agent management is an interactive surface). Admin
+	// reads are addressed by ?ownerUserId (instance admin reads a user's agents, R)
+	// or ?workspaceId (workspace admin reads agents bound to the workspace, R*);
+	// both go through the scope guards so they are PAT/MCP-reachable.
+	// userId/tokenHash are never returned (token summary only).
 	.get("/", async (c) => {
+		const ownerUserId = c.req.query("ownerUserId");
+		const workspaceId = c.req.query("workspaceId");
+		if (ownerUserId) {
+			requireInstanceAdmin(c);
+			const rows = await listAgentsWithTokenForUser(c.var.db, ownerUserId);
+			return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
+		}
+		if (workspaceId) {
+			// PAT callers need the "read" scope, like every other workspace read;
+			// requireWorkspaceAccess only checks membership/role, not token scope.
+			requireScope(c, "read");
+			await requireWorkspaceAccess(c, workspaceId, "admin");
+			const rows = await listAgentsByWorkspace(c.var.db, workspaceId);
+			return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
+		}
 		const { user } = requireSession(c);
 		const rows = await listAgentsWithTokenForUser(c.var.db, user.id);
 		return c.json(rows.map(({ userId: _userId, ...rest }) => rest));

@@ -9,6 +9,7 @@ import {
 	deleteReportComment,
 	getReportComment,
 	getReportDiscussionAccess,
+	isReportShared,
 	listReportComments,
 	listReportReactions,
 	listUsersByIds,
@@ -25,6 +26,7 @@ import { AppError } from "../lib/errors";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
+import { requireReportReadAccess } from "./reports";
 
 /**
  * Resolves the caller as a discussion participant (report owner or a Send-to
@@ -72,7 +74,18 @@ function reactionsByComment(
 export const reportDiscussionRoutes = new Hono<AppEnv>()
 	.get("/:id/discussion", async (c) => {
 		const reportId = c.req.param("id");
-		const { user, shared } = await requireParticipant(c, reportId, "read");
+		const { user } = requireScope(c, "read");
+		// A participant (owner or Send-to recipient) reads the thread directly; an
+		// admin who is neither still reads it under the report's read access
+		// (matrix R/R*). Writes stay participant-only (requireParticipant).
+		const access = await getReportDiscussionAccess(c.var.db, reportId, user.id);
+		let shared: boolean;
+		if (access) {
+			shared = access.shared;
+		} else {
+			await requireReportReadAccess(c, reportId);
+			shared = await isReportShared(c.var.db, reportId);
+		}
 		const [comments, reactions] = await Promise.all([
 			listReportComments(c.var.db, reportId),
 			listReportReactions(c.var.db, reportId),
