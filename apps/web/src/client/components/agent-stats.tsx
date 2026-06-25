@@ -209,7 +209,9 @@ function AgentActivityChart({
 				: t("agents.sessionCount", { count: totals.entryCount });
 
 	return (
-		<Card className="p-5">
+		// overflow-visible so the hover tooltip can float above the bars without
+		// being clipped by the card (Card defaults to overflow-hidden).
+		<Card className="overflow-visible p-5">
 			<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
 				<div className="flex items-baseline gap-2">
 					<h2 className="text-sm font-semibold">{t("agents.dailyActivity")}</h2>
