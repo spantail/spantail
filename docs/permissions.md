@@ -80,7 +80,7 @@ of the project in question (always also a workspace member) · **Self** = the re
 | Workspace settings (workspace) | RW | RW | – | R | R | – |
 | Members (workspace) | RW | RW | – | R | R | – |
 | Projects: list / metadata (workspace) | RW | RW | – | R | R | – |
-| Projects: contained resources (project) | RW | RW | – | **–** | R | – |
+| Projects: contained resources — work/agent entries (project) | R | R* | – | **–** | R | – |
 | Work entries — project-assigned (project) | R | R* | – | **–** | R | RW (own) |
 | Work entries — unassigned, `projectId = null` (workspace) | R | R | – | R | R | RW (own) |
 | Agent entries / events (project / workspace) | R | R* | – | per project | per project | R (own) |
@@ -97,6 +97,10 @@ Notes:
 
 - A **project member** can read everything a WS member can, plus the resources of the projects
   they belong to.
+- **A project's contained resources are user-authored entries.** Admins/project members read them
+  (per the row above and the work-entries rows), but **writes are always author-only** — no admin
+  can edit or delete another user's entry. Only the project *container* (name, color, archive) is
+  admin-writable, via the "Projects: list / metadata" row.
 - **API tokens have no workspace dimension** — a token grants access across all of the owner's
   workspaces. There is no workspace-scoped view of a token, so workspace admins get no token
   access (`–`); only instance admins can read token metadata. Secret values are never returned.
