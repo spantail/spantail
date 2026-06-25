@@ -5,6 +5,7 @@ import {
 	getMembership,
 	listMembers,
 	removeMember,
+	removeMemberFromWorkspaceProjects,
 } from "@spantail/db";
 import { Hono } from "hono";
 
@@ -67,6 +68,9 @@ export const memberRoutes = new Hono<AppEnv>()
 		if (target.role === "owner") {
 			throw new AppError("forbidden", "The workspace owner cannot be removed");
 		}
+		// A project member must be a workspace member, so drop their project
+		// memberships in this workspace too.
+		await removeMemberFromWorkspaceProjects(c.var.db, workspaceId, userId);
 		await removeMember(c.var.db, workspaceId, userId);
 		return c.body(null, 204);
 	});

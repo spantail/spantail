@@ -110,6 +110,24 @@ export function EntryDialogProvider({
 		[openCreate, openEdit, openView],
 	);
 
+	// The entry form may only assign projects the caller can log to: workspace
+	// admins/owners can use any, other members only the projects they belong to.
+	// An entry being edited keeps its current project selectable regardless.
+	const canLogToAll = current?.role === "owner" || current?.role === "admin";
+	const myProjectIds = useQuery({
+		queryKey: ["my-projects", current?.id],
+		queryFn: () => api.listMyProjectIds(current?.id as string),
+		enabled: Boolean(current) && !canLogToAll,
+	});
+	const editingProjectId =
+		state?.mode === "edit" ? state.entry.projectId : null;
+	const formProjects = useMemo(() => {
+		const all = projects.data ?? [];
+		if (canLogToAll) return all;
+		const allowed = new Set(myProjectIds.data ?? []);
+		return all.filter((p) => allowed.has(p.id) || p.id === editingProjectId);
+	}, [projects.data, canLogToAll, myProjectIds.data, editingProjectId]);
+
 	// In view mode the entry's description is the dialog title; project, date,
 	// duration, tags and note make up the body. The author byline (and the
 	// member lookup it needs) only applies to entries the viewer doesn't own.
@@ -213,7 +231,7 @@ export function EntryDialogProvider({
 								key={instanceId}
 								workspaceId={current.id}
 								timezone={current.timezone}
-								projects={projects.data ?? []}
+								projects={formProjects}
 								initial={state.mode === "edit" ? state.entry : null}
 								defaultProjectId={
 									state.mode === "create" ? state.defaultProjectId : undefined

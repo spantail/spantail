@@ -13,6 +13,7 @@ import {
 	getProjectById,
 	getWorkEntryById,
 	getWorkEntryStats,
+	isProjectMember,
 	listWorkEntries,
 	listWorkEntryTags,
 	updateWorkEntry,
@@ -22,7 +23,11 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
-import { requireWorkspaceAccess } from "../lib/permissions";
+import {
+	requireProjectAccess,
+	requireWorkspaceAccess,
+	resolveEntryAccess,
+} from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
@@ -45,9 +50,22 @@ async function requireEntryAccess(
 	c: Context<AppEnv>,
 	id: string,
 ): Promise<WorkEntryRow> {
+	const { user } = requireAuth(c);
 	const entry = await getWorkEntryById(c.var.db, id);
 	if (!entry) throw new AppError("not_found", "Work entry not found");
-	await requireWorkspaceAccess(c, entry.workspaceId);
+	const { membership } = await requireWorkspaceAccess(c, entry.workspaceId);
+	// Project ACL: an entry assigned to a project is readable only by workspace
+	// admins, the entry's author, or a member of that project. Others get 404 so
+	// the entry's existence is not revealed.
+	const isAdmin = membership.role === "owner" || membership.role === "admin";
+	if (
+		entry.projectId !== null &&
+		!isAdmin &&
+		entry.userId !== user.id &&
+		!(await isProjectMember(c.var.db, entry.projectId, user.id))
+	) {
+		throw new AppError("not_found", "Work entry not found");
+	}
 	return entry;
 }
 
@@ -73,16 +91,26 @@ function requireAuthor(c: Context<AppEnv>, entry: WorkEntryRow): void {
 
 export const workEntryRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
-		requireScope(c, "read");
+		const { user } = requireScope(c, "read");
 		const query = validate(listWorkEntriesQuerySchema, c.req.query());
-		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await listWorkEntries(c.var.db, query));
+		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
+		const access = await resolveEntryAccess(
+			c,
+			query.workspaceId,
+			membership,
+			user.id,
+		);
+		return c.json(await listWorkEntries(c.var.db, { ...query, access }));
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createWorkEntryInputSchema, await c.req.json());
-		const { workspace } = await requireWorkspaceAccess(c, input.workspaceId);
+		const { workspace, membership } = await requireWorkspaceAccess(
+			c,
+			input.workspaceId,
+		);
 		await requireProjectInWorkspace(c, input.projectId, input.workspaceId);
+		await requireProjectAccess(c, input.projectId, membership, user.id);
 
 		const entry = await createWorkEntry(c.var.db, {
 			workspaceId: input.workspaceId,
@@ -101,17 +129,29 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	})
 	// Registered before "/:id" so "stats" is not captured as an entry id.
 	.get("/stats", async (c) => {
-		requireScope(c, "read");
+		const { user } = requireScope(c, "read");
 		const query = validate(workEntryStatsQuerySchema, c.req.query());
-		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await getWorkEntryStats(c.var.db, query));
+		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
+		const access = await resolveEntryAccess(
+			c,
+			query.workspaceId,
+			membership,
+			user.id,
+		);
+		return c.json(await getWorkEntryStats(c.var.db, { ...query, access }));
 	})
 	// Likewise registered before "/:id" so "tags" is not captured as an entry id.
 	.get("/tags", async (c) => {
-		requireScope(c, "read");
+		const { user } = requireScope(c, "read");
 		const query = validate(workEntryTagsQuerySchema, c.req.query());
-		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(await listWorkEntryTags(c.var.db, query));
+		const { membership } = await requireWorkspaceAccess(c, query.workspaceId);
+		const access = await resolveEntryAccess(
+			c,
+			query.workspaceId,
+			membership,
+			user.id,
+		);
+		return c.json(await listWorkEntryTags(c.var.db, { ...query, access }));
 	})
 	.get("/:id", async (c) => {
 		requireScope(c, "read");
@@ -119,7 +159,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		return c.json(entry);
 	})
 	.patch("/:id", async (c) => {
-		requireScope(c, "write");
+		const { user } = requireScope(c, "write");
 		const entry = await requireEntryAccess(c, c.req.param("id"));
 		requireAuthor(c, entry);
 		const input = validate(updateWorkEntryInputSchema, await c.req.json());
@@ -133,6 +173,8 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		}
 		if (input.projectId) {
 			await requireProjectInWorkspace(c, input.projectId, entry.workspaceId);
+			const { membership } = await requireWorkspaceAccess(c, entry.workspaceId);
+			await requireProjectAccess(c, input.projectId, membership, user.id);
 		}
 		const { startedAt, endedAt, ...rest } = input;
 		const updated = await updateWorkEntry(c.var.db, entry.id, {

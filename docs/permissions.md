@@ -18,7 +18,7 @@ MCP are not constrained by the UI and follow this spec directly.**
 | Workspace owner | `workspace_members.role = "owner"` | Workspace creator. Same powers as workspace admin, but cannot be removed and the last admin cannot be demoted. |
 | Workspace admin | `workspace_members.role = "admin"` | Manages a workspace and its resources/settings. |
 | Workspace member | `workspace_members.role = "member"` | Belongs to a workspace. |
-| Project member | (project-level membership — see [Gap D](#gap-d-project-membership-does-not-exist)) | Belongs to a specific project. |
+| Project member | `project_members` (`packages/db/src/schema/domain.ts`) | Belongs to a specific project. Binary membership (no per-project role), managed by workspace admins. |
 | Self | the resource's owner (`userId` / `ownerUserId`) | The user who owns a user-scoped resource. |
 | Agent (AAT) | an Agent Access Token (`requireAgentAuth`) | A non-human principal: an AI agent that **ingests** its own activity (agent entries/events) on behalf of its owner. Write-only ingest, scoped to the owner's workspace membership. |
 
@@ -127,13 +127,8 @@ Notes:
 - Therefore the API/MCP surface is *broader* than the UI by design. It is never *intentionally*
   broader than this spec — the API never loosens a rule merely because the UI hides it.
 - **Caveat (current state):** where [Known gaps](#known-gaps) exist the API can still exceed this
-  spec until fixed. Most notably, with [Gap D](#gap-d-project-membership-does-not-exist) open,
-  `GET /api/v1/work-entries` enforces only `requireWorkspaceAccess` (no project-membership check),
-  so a plain workspace member can currently read project-assigned entries. The same data also
-  leaks through **report rendering** — `POST /api/v1/reports/preview`, create, and update call
-  `listWorkEntriesForReport` after only `requireScopeWorkspaces` — so locking down the list
-  endpoint alone would not close the gap. Treat the gaps as the authoritative list of where
-  today's API/MCP behavior diverges from this target.
+  spec until fixed. Treat the gaps as the authoritative list of where today's API/MCP behavior
+  diverges from this target.
 
 ## Known gaps
 
@@ -162,12 +157,12 @@ admin (and, where the matrix says so, member/project) read path:
 - **Inbox / deliveries** — owner-only (`apps/web/src/server/routes/inbox.ts`).
 - **Agents** — owner-only (`apps/web/src/server/routes/agents.ts`).
 - **API tokens** — owner-only; admin read is metadata only, secrets never returned.
-- **Agent entries / events** — `GET /api/v1/agent-entries` and `/stats` always inject
-  `ownerUserId: auth.user.id` (`apps/web/src/server/routes/agent-entries.ts`), and raw agent
-  **events** have no read route at all. So today agent activity is owner-only: admins cannot read
-  it and members cannot read project-scoped activity. Note this is independent of [Gap D](#gap-d-project-membership-does-not-exist) —
-  closing the project ACL alone would not remove the existing `ownerUserId` filter; an explicit
-  admin/member read path (and an events read route) is still required.
+- **Agent entries / events** — `GET /api/v1/agent-entries` and `/stats` now scope by the project
+  ACL ([Gap D](#gap-d--project-membership--resolved)): a caller reads their own agents' activity
+  plus the activity in projects they belong to. What is still missing is the **admin** read — a
+  workspace/instance admin cannot yet read all agent activity workspace-wide (matrix `R` / `R*`),
+  and raw agent **events** still have no read route. An explicit admin read path (and an events
+  read route, if exposed) is required.
 - **Report shares** — listing calls `requireReportOwner`
   (`apps/web/src/server/routes/reports.ts`), so admins cannot read another user's shares.
 - **Report discussion** (comments / reactions) — `requireParticipant`
@@ -190,35 +185,32 @@ is non-trivial:
   instance-admin-only (reflected in the matrix).
 - **Inbox / deliveries** carry workspace context and can be filtered by workspace relatively easily.
 
-### Gap D — project membership does not exist
+### Gap D — project membership ✅ resolved
 
-There is no `project_members` table and no project-level access check
-(`packages/db/src/schema/domain.ts`). Today **every workspace member can read every project's work
-entries** — broader than principle 6 (the only over-permissive gap; the others are admin-narrower).
+Project membership is implemented. A `project_members` table
+(`packages/db/src/schema/domain.ts`) holds binary memberships (no per-project role), managed by
+workspace admins. A shared access predicate (`entryAccessCondition`,
+`packages/db/src/queries/entry-access.ts`) gates **every** read path to project-assigned entries:
+work-entry list / stats / tags / item reads, **report rendering**
+(`listWorkEntriesForReport` via `POST /api/v1/reports/preview`, create, and update), and agent-entry
+list / stats. A non-member also cannot *write* to a project: `requireProjectAccess`
+(`apps/web/src/server/lib/permissions.ts`) guards work-entry create/update and agent ingest.
+A project-member management UI lives on the Projects settings screen (`en`/`ja` strings provided).
 
-Closing this requires, roughly:
+Resolved per these rules:
 
-- a `project_members` table + migration (`pnpm db:generate`),
-- a `requireProjectAccess`-style helper,
-- filtering work-entry / project-contained queries by project membership,
-- closing **every** read path to the same data, not just `GET /api/v1/work-entries`: report
-  rendering (`listWorkEntriesForReport` via `POST /api/v1/reports/preview`, create, and update),
-  work-entry stats/tags, and the agent-entry reads — otherwise reports remain a bypass,
-- a project-member management UI with `en`/`ja` strings.
+- A project's **list/metadata** (name, color) stays workspace-visible; only its **contained**
+  entries are project-member-only (matrix granularity).
+- **Unassigned** work entries (`project_id = null`, e.g. orphaned by a project deletion) stay
+  workspace-scoped; agent activity with no project stays owner-only.
+- Removing a user from a workspace also drops their project memberships in that workspace.
 
-Note on **frozen snapshots**: persisted report content reread later — `GET /api/v1/reports/:id`
-(rendered Markdown), `GET /api/v1/inbox/:id` (delivery snapshots), and public `/share/:token` rows —
-embeds project-assigned entries captured at render time. A member who created, received, or shared a
-report *before* losing project membership could still read that data from the snapshot. Decide the
-policy explicitly: snapshots are point-in-time copies (accept as-is), or revoke/redact them when
-project access is lost (as the report engine already redacts on lost *workspace* membership).
+**Frozen snapshots are point-in-time** (accepted policy): the ACL is enforced at live render/read
+time, so a snapshot captures exactly what its author could see when it was generated. Persisted
+report content (`GET /api/v1/reports/:id`, `GET /api/v1/inbox/:id`, public `/share/:token`) is not
+re-filtered on later reads.
 
-Granularity: a project's **list/metadata** (name, color) stays workspace-visible; only its
-**contained** resources (entries) become project-member-only — as reflected in the matrix.
-
-Because `work_entries.project_id` is nullable (set null on project delete), the read split must be
-maintained: assigned entries → project members; unassigned entries → workspace members.
-
-**Decision pending:** implement project ACL now, or keep this document's rule as the stated
-direction and leave reads workspace-wide for now (YAGNI). Given the size (new table + migration +
-ACL + UI), it warrants its own task.
+**Still open (not part of project membership):** admin/instance-admin reads of agent activity
+(matrix `R` / `R*`) remain unimplemented — see [Gap B](#gap-b--admin-read-of-user-report-and-agent-scoped-resources-not-implemented)
+and [Gap C](#gap-c--workspace-admin-scoped-read-r). Agent entries are now readable by project
+members and the owner, but not yet by admins as a workspace-wide read.

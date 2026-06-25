@@ -16,7 +16,11 @@ import {
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
-import { requireWorkspaceAccess } from "../lib/permissions";
+import {
+	requireProjectAccess,
+	requireWorkspaceAccess,
+	resolveAgentEntryAccess,
+} from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth, requireScope } from "../middleware/auth";
@@ -60,6 +64,9 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 					"Project does not belong to this workspace",
 				);
 			}
+			// The agent's owner must belong to the project it logs into, so the
+			// owner can read back the activity (project ACL).
+			await requireProjectAccess(c, projectId, membership, auth.ownerUserId);
 		}
 
 		const startedAt = input.startedAt ? new Date(input.startedAt) : null;
@@ -79,31 +86,31 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		});
 		return c.json(entry);
 	})
-	// Reads are scoped to the caller's own agents: an agent acts for one user,
-	// and members only see their own agents' activity (ownerUserId is fixed to
-	// the caller server-side — not a client-supplied filter — so it can't be
-	// spoofed to read another member's data).
+	// Reads follow the project ACL: a caller sees agent activity in the projects
+	// they belong to (workspace admins see all), plus their own agents' activity
+	// (unassigned activity is workspace-scoped). The access scope is resolved
+	// server-side, so it can't be spoofed to read another member's private data.
 	.get("/", async (c) => {
 		const auth = requireScope(c, "read");
 		const query = validate(listAgentEntriesQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(
-			await listAgentEntries(c.var.db, {
-				...query,
-				ownerUserId: auth.user.id,
-			}),
+		const access = await resolveAgentEntryAccess(
+			c,
+			query.workspaceId,
+			auth.user.id,
 		);
+		return c.json(await listAgentEntries(c.var.db, { ...query, access }));
 	})
 	.get("/stats", async (c) => {
 		const auth = requireScope(c, "read");
 		const query = validate(agentEntryStatsQuerySchema, c.req.query());
 		await requireWorkspaceAccess(c, query.workspaceId);
-		return c.json(
-			await getAgentEntryStats(c.var.db, {
-				...query,
-				ownerUserId: auth.user.id,
-			}),
+		const access = await resolveAgentEntryAccess(
+			c,
+			query.workspaceId,
+			auth.user.id,
 		);
+		return c.json(await getAgentEntryStats(c.var.db, { ...query, access }));
 	})
 	// The caller's own agents, shown under a workspace in the sidebar: those with
 	// activity here plus the ones registered to this workspace.

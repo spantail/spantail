@@ -21,6 +21,7 @@ import {
 	agents,
 	agentTokens,
 } from "../schema/agents";
+import { type EntryAccessScope, entryAccessCondition } from "./entry-access";
 
 export type AgentRow = typeof agents.$inferSelect;
 export type AgentTokenRow = typeof agentTokens.$inferSelect;
@@ -365,6 +366,8 @@ interface AgentEntryFilter {
 	agentId?: string;
 	from?: string;
 	to?: string;
+	// Project ACL: restricts results to agent entries the caller may read.
+	access?: EntryAccessScope;
 }
 
 function agentEntryConditions(query: AgentEntryFilter) {
@@ -375,6 +378,20 @@ function agentEntryConditions(query: AgentEntryFilter) {
 	if (query.agentId) conditions.push(eq(agentEntries.agentId, query.agentId));
 	if (query.from) conditions.push(gte(agentEntries.entryDate, query.from));
 	if (query.to) conditions.push(lte(agentEntries.entryDate, query.to));
+	if (query.access) {
+		// Agent activity is private by default: unassigned (no-project) sessions
+		// stay owner-only, unlike work entries which are workspace-wide.
+		const cond = entryAccessCondition(
+			{
+				workspaceId: agentEntries.workspaceId,
+				projectId: agentEntries.projectId,
+				self: agentEntries.ownerUserId,
+			},
+			query.access,
+			{ unassignedWorkspaceWide: false },
+		);
+		if (cond) conditions.push(cond);
+	}
 	return conditions;
 }
 

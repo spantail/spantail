@@ -283,6 +283,23 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		});
 	}
 
+	// --- Project members ----------------------------------------------------
+	// Project access starts empty in production; the demo seeds every workspace
+	// member into every project in their workspace so demo data is fully visible
+	// and the seeded reports (scoped to each member's projects) still render.
+	const projectMemberRows: Row[] = [];
+	for (const proj of projByKey.values()) {
+		for (const userKey of memberKeysByWs.get(proj.workspace.key) ?? []) {
+			const user = usersByKey.get(userKey);
+			if (!user) throw new Error("dangling project member reference");
+			projectMemberRows.push({
+				projectId: proj.id,
+				userId: user.id,
+				createdAt: baseCreatedAt,
+			});
+		}
+	}
+
 	// --- Templates (4: daily/monthly × en/ja) ------------------------------
 	const author =
 		[...usersByKey.values()].find((u) => {
@@ -922,6 +939,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		{ table: "workspaces", rows: workspaceRows },
 		{ table: "workspaceMembers", rows: memberRows },
 		{ table: "projects", rows: projectRows },
+		{ table: "projectMembers", rows: projectMemberRows },
 		{ table: "workEntries", rows: entryRows },
 		{ table: "reportTemplates", rows: templateRows },
 		{ table: "instanceSettings", rows: instanceRows },

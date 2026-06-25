@@ -1,5 +1,6 @@
 import type {
 	AcceptInvitationInput,
+	AddProjectMemberInput,
 	AddWorkspaceMemberInputData,
 	Agent,
 	AgentEntry,
@@ -38,6 +39,8 @@ import type {
 	ManagedUser,
 	OauthSettings,
 	Project,
+	ProjectMember,
+	ProjectMemberAvatar,
 	ReactionEmoji,
 	ReactionSummary,
 	Recipient,
@@ -317,6 +320,36 @@ export class SpantailClient {
 
 	deleteProject(id: string): Promise<void> {
 		return this.request("DELETE", `/projects/${id}`);
+	}
+
+	/** Members of a single project. */
+	listProjectMembers(projectId: string): Promise<ProjectMember[]> {
+		return this.request("GET", `/projects/${projectId}/members`);
+	}
+
+	addProjectMember(
+		projectId: string,
+		input: AddProjectMemberInput,
+	): Promise<ProjectMember> {
+		return this.request("POST", `/projects/${projectId}/members`, {
+			body: input,
+		});
+	}
+
+	removeProjectMember(projectId: string, userId: string): Promise<void> {
+		return this.request("DELETE", `/projects/${projectId}/members/${userId}`);
+	}
+
+	/** All project memberships in a workspace, for the projects table avatars. */
+	listWorkspaceProjectMembers(
+		workspaceId: string,
+	): Promise<ProjectMemberAvatar[]> {
+		return this.request("GET", `/workspaces/${workspaceId}/projects/members`);
+	}
+
+	/** Project ids the caller belongs to in a workspace (entry-form picker). */
+	listMyProjectIds(workspaceId: string): Promise<string[]> {
+		return this.request("GET", `/workspaces/${workspaceId}/projects/mine`);
 	}
 
 	listWorkEntries(query: ListWorkEntriesQueryData): Promise<WorkEntry[]> {

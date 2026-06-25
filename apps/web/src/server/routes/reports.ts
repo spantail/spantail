@@ -47,6 +47,7 @@ import { parseOptionalJsonBody } from "../lib/json";
 import {
 	type MemberWorkspace,
 	requireScopeWorkspaces,
+	resolveEntryAccessForWorkspaces,
 } from "../lib/permissions";
 import { toApiShare } from "../lib/share-api";
 import { validate } from "../lib/validate";
@@ -156,12 +157,18 @@ async function renderReportDocument(
 		anchor.timezone,
 	);
 
+	// Project ACL: the report owner sees project-assigned entries only for the
+	// projects they belong to (admins see all in their workspaces). Snapshots are
+	// point-in-time — this is enforced at render, not on stored content.
+	const { user } = requireAuth(c);
+	const access = await resolveEntryAccessForWorkspaces(c, scoped, user.id);
 	const rows = await listWorkEntriesForReport(c.var.db, {
 		workspaceIds: filters.workspaceIds,
 		projectIds: filters.projectIds,
 		userIds: filters.userIds,
 		from: range.from,
 		to: range.to,
+		access,
 	});
 	const entries = filterEntriesByTags(rows, filters.tags);
 	const [projects, users] = await Promise.all([

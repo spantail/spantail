@@ -75,6 +75,27 @@ export const projects = sqliteTable(
 	],
 );
 
+// Project-level access control. A project's entries are readable only by its
+// members (plus workspace admins/owners and an entry's own author). Membership
+// is binary — no per-project role — and is managed by workspace admins. A
+// project member is always also a workspace member.
+export const projectMembers = sqliteTable(
+	"project_members",
+	{
+		projectId: text("project_id")
+			.notNull()
+			.references(() => projects.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		createdAt: createdAtMs(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.projectId, table.userId] }),
+		index("project_members_user_idx").on(table.userId),
+	],
+);
+
 export const workEntries = sqliteTable(
 	"work_entries",
 	{
