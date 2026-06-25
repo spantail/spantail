@@ -129,13 +129,32 @@ Principle 1 grants admin bypass. **Fix:** add an instance-admin bypass to `requi
 (or a sibling helper) and propagate to the projects / members / work-entries / workspace-settings
 routes.
 
-### Gap B — admin read of user-scoped resources not implemented
+### Gap B — admin read of user-, report-, and agent-scoped resources not implemented
 
-`requireReportOwner` (`apps/web/src/server/routes/reports.ts`) and the equivalent checks for
-inbox, agents, and tokens are strictly owner-only, so no admin can read them. Principles 1–2 grant
-admins read access (secrets excluded). **Fix:** add admin read paths for reports / inbox / agents /
-tokens (metadata only), backed by admin-scoped list queries in `packages/db`. Confirm secrets stay
-hidden — token values are stored hashed and shown once at creation; passwords are never returned.
+Several read paths in the matrix grant admins access that the current endpoints do not yet
+provide. All are strictly owner/participant-only today, so an admin (or member) following this
+document would hit `404`. The matrix is the target; this gap lists every resource that needs an
+admin (and, where the matrix says so, member/project) read path:
+
+- **Reports** — `requireReportOwner` (`apps/web/src/server/routes/reports.ts`) is owner-only.
+- **Inbox / deliveries** — owner-only (`apps/web/src/server/routes/inbox.ts`).
+- **Agents** — owner-only (`apps/web/src/server/routes/agents.ts`).
+- **API tokens** — owner-only; admin read is metadata only, secrets never returned.
+- **Agent entries / events** — `GET /api/v1/agent-entries` and `/stats` always inject
+  `ownerUserId: auth.user.id` (`apps/web/src/server/routes/agent-entries.ts`), and raw agent
+  **events** have no read route at all. So today agent activity is owner-only: admins cannot read
+  it and members cannot read project-scoped activity. Note this is independent of [Gap D](#gap-d-project-membership-does-not-exist) —
+  closing the project ACL alone would not remove the existing `ownerUserId` filter; an explicit
+  admin/member read path (and an events read route) is still required.
+- **Report shares** — listing calls `requireReportOwner`
+  (`apps/web/src/server/routes/reports.ts`), so admins cannot read another user's shares.
+- **Report discussion** (comments / reactions) — `requireParticipant`
+  (`apps/web/src/server/routes/report-discussion.ts`) limits access to the report owner or a
+  Send-to recipient; admins have no read path.
+
+**Fix:** add admin read paths for the resources above, backed by admin-scoped list queries in
+`packages/db`. Confirm secrets stay hidden — token values are stored hashed and shown once at
+creation; passwords are never returned.
 
 ### Gap C — workspace-admin scoped read (`R*`)
 
