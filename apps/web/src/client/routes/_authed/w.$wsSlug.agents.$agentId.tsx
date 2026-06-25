@@ -194,7 +194,11 @@ function AgentPage() {
 											)}
 										</TableCell>
 										<TableCell>
-											{entry.description ?? (
+											{/* Ingest preserves an empty-string description, so treat
+											    blank/whitespace as missing to show the em dash. */}
+											{entry.description?.trim() ? (
+												entry.description
+											) : (
 												<span className="text-muted-foreground/40">—</span>
 											)}
 										</TableCell>
