@@ -146,7 +146,10 @@ this document is the target.
 everyone, so an instance admin who is not a member of a workspace gets `404` on its resources.
 Principle 1 grants admin bypass. **Fix:** add an instance-admin bypass to `requireWorkspaceAccess`
 (or a sibling helper) and propagate to the projects / members / work-entries / workspace-settings
-routes.
+routes. Also cover the **collection** endpoint: `GET /api/v1/workspaces` returns
+`listWorkspacesForUser`, so without an admin-scoped workspace listing an instance admin with no
+membership would still see no workspaces (and could not discover the ids needed for the item
+routes). Add an admin-scoped "list all workspaces" query so the bypass is complete end-to-end.
 
 ### Gap B — admin read of user-, report-, and agent-scoped resources not implemented
 
@@ -202,6 +205,13 @@ Closing this requires, roughly:
   rendering (`listWorkEntriesForReport` via `POST /api/v1/reports/preview`, create, and update),
   work-entry stats/tags, and the agent-entry reads — otherwise reports remain a bypass,
 - a project-member management UI with `en`/`ja` strings.
+
+Note on **frozen snapshots**: persisted report content reread later — `GET /api/v1/reports/:id`
+(rendered Markdown), `GET /api/v1/inbox/:id` (delivery snapshots), and public `/share/:token` rows —
+embeds project-assigned entries captured at render time. A member who created, received, or shared a
+report *before* losing project membership could still read that data from the snapshot. Decide the
+policy explicitly: snapshots are point-in-time copies (accept as-is), or revoke/redact them when
+project access is lost (as the report engine already redacts on lost *workspace* membership).
 
 Granularity: a project's **list/metadata** (name, color) stays workspace-visible; only its
 **contained** resources (entries) become project-member-only — as reflected in the matrix.
