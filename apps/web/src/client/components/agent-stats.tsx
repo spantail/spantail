@@ -166,7 +166,7 @@ function AgentActivityChart({
 	locale: string;
 }) {
 	const { t } = useTranslation();
-	const [metric, setMetric] = useState<Metric>("sessions");
+	const [metric, setMetric] = useState<Metric>("tokens");
 	const [hover, setHover] = useState<number | null>(null);
 
 	const grouped = metric === "tokens";

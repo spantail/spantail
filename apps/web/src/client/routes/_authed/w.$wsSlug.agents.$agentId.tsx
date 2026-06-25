@@ -1,8 +1,8 @@
 import { formatDuration, resolveDateRange } from "@spantail/core";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SparklesIcon } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentTypeIcon } from "@/components/agent-icon";
 import { AgentStats } from "@/components/agent-stats";
@@ -11,6 +11,7 @@ import {
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
 import { Dot } from "@/components/dot";
+import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,15 +22,15 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
 import { formatClock, formatCompactNumber } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
-// Listing cap for the in-range sessions table; the stats widgets above already
-// summarise the full period, so a single page of recent sessions is enough.
-const SESSION_LIMIT = 200;
+// Page size for the in-range sessions table, loaded incrementally on scroll.
+const PAGE_SIZE = 50;
 
 export const Route = createFileRoute("/_authed/w/$wsSlug/agents/$agentId")({
 	component: AgentPage,
@@ -71,22 +72,43 @@ function AgentPage() {
 	const projectHue = (id: string | null) =>
 		id ? projectById.get(id)?.hue : undefined;
 
-	const entries = useQuery({
+	const entries = useInfiniteQuery({
 		queryKey: [
 			"agent-entries",
 			workspaceId,
 			agentId,
 			{ from: range.from, to: range.to },
 		],
-		queryFn: () =>
+		queryFn: ({ pageParam }) =>
 			api.listAgentEntries({
 				workspaceId: workspaceId as string,
 				agentId,
 				from: range.from,
 				to: range.to,
-				limit: SESSION_LIMIT,
+				limit: PAGE_SIZE,
+				offset: pageParam,
 			}),
+		initialPageParam: 0,
+		getNextPageParam: (lastPage, allPages) =>
+			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 		enabled: Boolean(workspaceId),
+	});
+	const list = entries.data?.pages.flat() ?? [];
+	const loadMore = () => {
+		if (entries.hasNextPage && !entries.isFetchingNextPage)
+			entries.fetchNextPage();
+	};
+
+	// Vim-style j/k navigation over the loaded session rows; j at the last row
+	// pulls the next page so keyboard users aren't stuck at the scroll sentinel.
+	const tableRef = useRef<HTMLDivElement>(null);
+	const [active, setActive] = useState(-1);
+	useListKeyboardNav({
+		length: list.length,
+		index: active,
+		onMove: setActive,
+		onReachEnd: loadMore,
+		containerRef: tableRef,
 	});
 
 	if (!current) {
@@ -114,8 +136,6 @@ function AgentPage() {
 		);
 	}
 
-	const list = entries.data ?? [];
-
 	return (
 		<div className="flex flex-col gap-7">
 			<div className="flex flex-wrap items-start justify-between gap-3">
@@ -140,10 +160,10 @@ function AgentPage() {
 					<h2 className="font-heading text-lg font-semibold">
 						{t("agents.entriesTitle")}
 					</h2>
-					{/* Row count only when the page isn't capped — at the limit it
-					    would read as a total when it's really "showing 200". The
+					{/* Row count only once every page is loaded — a partial set would
+					    read as a total when it's really "showing the first N". The
 					    period's true session total is in the Sessions stat widget. */}
-					{list.length > 0 && list.length < SESSION_LIMIT && (
+					{list.length > 0 && !entries.hasNextPage && (
 						<span className="text-muted-foreground text-sm tabular-nums">
 							{t("agents.sessionCount", { count: list.length })}
 						</span>
@@ -161,74 +181,86 @@ function AgentPage() {
 						<p className="text-sm">{t("agents.empty")}</p>
 					</div>
 				) : (
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>{t("agents.table.date")}</TableHead>
-								<TableHead>{t("agents.table.description")}</TableHead>
-								<TableHead>{t("agents.table.project")}</TableHead>
-								<TableHead>{t("agents.table.model")}</TableHead>
-								<TableHead className="text-right">
-									{t("agents.table.duration")}
-								</TableHead>
-								<TableHead className="text-right">
-									{t("agents.table.input")}
-								</TableHead>
-								<TableHead className="text-right">
-									{t("agents.table.output")}
-								</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{list.map((entry) => {
-								const hue = projectHue(entry.projectId);
-								return (
-									<TableRow key={entry.id}>
-										<TableCell className="whitespace-nowrap">
-											<div className="tabular-nums">{entry.entryDate}</div>
-											{entry.startedAt && entry.endedAt && (
-												<div className="text-muted-foreground text-xs tabular-nums">
-													{formatClock(entry.startedAt, timezone)}–
-													{formatClock(entry.endedAt, timezone)}
-												</div>
-											)}
-										</TableCell>
-										<TableCell>
-											{/* Ingest preserves an empty-string description, so treat
+					<div ref={tableRef}>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>{t("agents.table.date")}</TableHead>
+									<TableHead>{t("agents.table.description")}</TableHead>
+									<TableHead>{t("agents.table.project")}</TableHead>
+									<TableHead>{t("agents.table.model")}</TableHead>
+									<TableHead className="text-right">
+										{t("agents.table.duration")}
+									</TableHead>
+									<TableHead className="text-right">
+										{t("agents.table.input")}
+									</TableHead>
+									<TableHead className="text-right">
+										{t("agents.table.output")}
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{list.map((entry, index) => {
+									const hue = projectHue(entry.projectId);
+									return (
+										<TableRow
+											key={entry.id}
+											data-nav-index={index}
+											data-nav-active={active === index ? "" : undefined}
+											className="data-[nav-active]:bg-muted"
+										>
+											<TableCell className="whitespace-nowrap">
+												<div className="tabular-nums">{entry.entryDate}</div>
+												{entry.startedAt && entry.endedAt && (
+													<div className="text-muted-foreground text-xs tabular-nums">
+														{formatClock(entry.startedAt, timezone)}–
+														{formatClock(entry.endedAt, timezone)}
+													</div>
+												)}
+											</TableCell>
+											<TableCell>
+												{/* Ingest preserves an empty-string description, so treat
 											    blank/whitespace as missing to show the em dash. */}
-											{entry.description?.trim() ? (
-												entry.description
-											) : (
-												<span className="text-muted-foreground/40">—</span>
-											)}
-										</TableCell>
-										<TableCell className="whitespace-nowrap">
-											<span className="flex items-center gap-1.5">
-												{hue !== undefined && <Dot hue={hue} size={6} />}
-												{projectName(entry.projectId)}
-											</span>
-										</TableCell>
-										<TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-											{entry.usage?.model ?? "—"}
-										</TableCell>
-										<TableCell className="text-right whitespace-nowrap tabular-nums">
-											{formatDuration(entry.durationMinutes)}
-										</TableCell>
-										<TableCell className="text-muted-foreground text-right tabular-nums">
-											{entry.usage?.inputTokens !== undefined
-												? formatCompactNumber(entry.usage.inputTokens)
-												: "—"}
-										</TableCell>
-										<TableCell className="text-muted-foreground text-right tabular-nums">
-											{entry.usage?.outputTokens !== undefined
-												? formatCompactNumber(entry.usage.outputTokens)
-												: "—"}
-										</TableCell>
-									</TableRow>
-								);
-							})}
-						</TableBody>
-					</Table>
+												{entry.description?.trim() ? (
+													entry.description
+												) : (
+													<span className="text-muted-foreground/40">—</span>
+												)}
+											</TableCell>
+											<TableCell className="whitespace-nowrap">
+												<span className="flex items-center gap-1.5">
+													{hue !== undefined && <Dot hue={hue} size={6} />}
+													{projectName(entry.projectId)}
+												</span>
+											</TableCell>
+											<TableCell className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+												{entry.usage?.model ?? "—"}
+											</TableCell>
+											<TableCell className="text-right whitespace-nowrap tabular-nums">
+												{formatDuration(entry.durationMinutes)}
+											</TableCell>
+											<TableCell className="text-muted-foreground text-right tabular-nums">
+												{entry.usage?.inputTokens !== undefined
+													? formatCompactNumber(entry.usage.inputTokens)
+													: "—"}
+											</TableCell>
+											<TableCell className="text-muted-foreground text-right tabular-nums">
+												{entry.usage?.outputTokens !== undefined
+													? formatCompactNumber(entry.usage.outputTokens)
+													: "—"}
+											</TableCell>
+										</TableRow>
+									);
+								})}
+							</TableBody>
+						</Table>
+						<InfiniteSentinel
+							hasNextPage={Boolean(entries.hasNextPage)}
+							isFetchingNextPage={entries.isFetchingNextPage}
+							fetchNextPage={() => entries.fetchNextPage()}
+						/>
+					</div>
 				)}
 			</section>
 		</div>
