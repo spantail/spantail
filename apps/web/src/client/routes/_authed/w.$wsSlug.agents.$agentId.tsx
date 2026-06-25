@@ -2,7 +2,7 @@ import { formatDuration, resolveDateRange } from "@spantail/core";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SparklesIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AgentTypeIcon } from "@/components/agent-icon";
 import { AgentStats } from "@/components/agent-stats";
@@ -97,7 +97,12 @@ function AgentPage() {
 			lastPage.length < PAGE_SIZE ? undefined : allPages.length * PAGE_SIZE,
 		enabled: Boolean(workspaceId),
 	});
-	const list = entries.data?.pages.flat() ?? [];
+	// Memoised off the loaded pages so j/k selection re-renders don't re-flatten
+	// the whole list on every keypress.
+	const list = useMemo(
+		() => entries.data?.pages.flat() ?? [],
+		[entries.data?.pages],
+	);
 	const loadMore = () => {
 		if (entries.hasNextPage && !entries.isFetchingNextPage)
 			entries.fetchNextPage();
