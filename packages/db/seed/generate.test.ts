@@ -19,15 +19,15 @@ async function build() {
 describe("generateDataset", () => {
 	it("creates the expected world", async () => {
 		const { dataset, rows } = await build();
-		expect(rows("user")).toHaveLength(5);
-		expect(rows("account")).toHaveLength(5);
-		expect(rows("workspaces")).toHaveLength(4);
-		// 5 internal + Acme 3 + Globex 3 + 桜 2.
-		expect(rows("workspaceMembers")).toHaveLength(13);
-		expect(rows("projects")).toHaveLength(12);
+		expect(rows("user")).toHaveLength(6);
+		expect(rows("account")).toHaveLength(6);
+		expect(rows("workspaces")).toHaveLength(5);
+		// 5 internal + Acme 3 + Globex 3 + 桜 2 + Initech 1.
+		expect(rows("workspaceMembers")).toHaveLength(14);
+		expect(rows("projects")).toHaveLength(14);
 		expect(rows("reportTemplates")).toHaveLength(4);
 		expect(rows("instanceSettings")).toHaveLength(1);
-		expect(dataset.credentials).toHaveLength(5);
+		expect(dataset.credentials).toHaveLength(6);
 	});
 
 	it("seeds project members who are all workspace members", async () => {
@@ -234,13 +234,18 @@ describe("generateDataset", () => {
 			);
 		}
 
-		// The internal workspace (Northwind) is the only non-client one.
-		const internalWs = rows("workspaces").find((w) => w.slug === "northwind");
+		// Northwind (internal) and Initech (Frank's solo workspace) are the two
+		// non-client workspaces; client workspaces are Acme, Globex, and 桜.
+		const nonClientSlugs = new Set(["northwind", "initech"]);
+		const nonClientWsIds = new Set(
+			rows("workspaces")
+				.filter((w) => nonClientSlugs.has(w.slug as string))
+				.map((w) => w.id as string),
+		);
 		expect(
-			internalWs,
-			"internal workspace (slug 'northwind') is missing",
-		).toBeDefined();
-		const internalWsId = internalWs?.id as string;
+			nonClientWsIds.size,
+			"non-client workspaces (northwind, initech) are missing",
+		).toBe(2);
 		const sharesByReport = new Map<string, number>();
 		for (const s of shares) {
 			const id = s.reportId as string;
@@ -248,10 +253,10 @@ describe("generateDataset", () => {
 		}
 
 		// Invariant: every monthly report in a client workspace has exactly one
-		// share; an internal monthly report has none. Deterministic NOW, so we can
+		// share; a non-client monthly report has none. Deterministic NOW, so we can
 		// assert exact counts without hard-coding a total.
 		let clientMonthlies = 0;
-		let internalMonthlies = 0;
+		let nonClientMonthlies = 0;
 		for (const r of rows("reports")) {
 			const filters = r.filters as {
 				workspaceIds: string[];
@@ -262,8 +267,8 @@ describe("generateDataset", () => {
 				filters.dateRange.from < filters.dateRange.to;
 			if (!isMonthly) continue;
 			const shareCount = sharesByReport.get(r.id as string) ?? 0;
-			if (filters.workspaceIds[0] === internalWsId) {
-				internalMonthlies++;
+			if (nonClientWsIds.has(filters.workspaceIds[0] as string)) {
+				nonClientMonthlies++;
 				expect(shareCount).toBe(0);
 			} else {
 				clientMonthlies++;
@@ -272,7 +277,7 @@ describe("generateDataset", () => {
 		}
 		// Both branches are exercised by the demo world.
 		expect(clientMonthlies).toBeGreaterThan(0);
-		expect(internalMonthlies).toBeGreaterThan(0);
+		expect(nonClientMonthlies).toBeGreaterThan(0);
 		expect(shares).toHaveLength(clientMonthlies);
 	});
 

@@ -40,6 +40,10 @@ allocations:
     - { project: p-globex-portal, minutes: 195, cadence: daily }
     - { project: p-self-devops, minutes: 120, cadence: often }
     - { project: p-acme-data, minutes: 90, cadence: occasional }
+  # Frank runs Initech solo (its own workspace, no Northwind overlap).
+  u-frank:
+    - { project: p-initech-crm, minutes: 270, cadence: daily }
+    - { project: p-initech-billing, minutes: 180, cadence: daily }
 
 tags:
   en: [feature, review, bugfix, test, refactor, docs]

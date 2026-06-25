@@ -63,6 +63,31 @@ export async function listWorkspacesForUser(
 	}));
 }
 
+/**
+ * Lists every workspace for an instance admin, joined to the caller's own
+ * membership so the UI can tell which ones they actually belong to. `role` is
+ * the caller's role where they are a member, or `null` when they are not (an
+ * admin viewing a workspace via the instance-admin bypass). Plain members use
+ * `listWorkspacesForUser` instead — this is admin-only.
+ */
+export async function listAllWorkspaces(
+	db: Database,
+	userId: string,
+): Promise<Array<WorkspaceRow & { role: MembershipRow["role"] | null }>> {
+	const rows = await db
+		.select({ workspace: workspaces, role: workspaceMembers.role })
+		.from(workspaces)
+		.leftJoin(
+			workspaceMembers,
+			and(
+				eq(workspaceMembers.workspaceId, workspaces.id),
+				eq(workspaceMembers.userId, userId),
+			),
+		)
+		.orderBy(workspaces.createdAt);
+	return rows.map((row) => ({ ...row.workspace, role: row.role }));
+}
+
 export async function updateWorkspace(
 	db: Database,
 	id: string,

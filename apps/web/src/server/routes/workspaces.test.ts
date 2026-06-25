@@ -1,6 +1,12 @@
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	appFetch,
+	signUpAdmin,
+	signUpUser,
+} from "../../../test/helpers";
 
 const WS = { slug: "acme", name: "Acme", timezone: "Asia/Tokyo" };
 
@@ -70,6 +76,83 @@ it("scopes workspace reads to members", async () => {
 
 	const denied = await apiGet(`/api/v1/workspaces/${ws.id}`, outsider);
 	expect(denied.status).toBe(404);
+});
+
+it("lets an instance admin act on a workspace it is not a member of", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com"); // bootstrap admin
+	const otherAdmin = await signUpAdmin(
+		"Other Admin",
+		"other-admin@example.com",
+	);
+	const outsider = await signUpUser("Outsider", "outsider@example.com");
+
+	// otherAdmin owns a workspace the bootstrap admin never joined.
+	const ws = (await (
+		await apiJson("POST", "/api/v1/workspaces", WS, otherAdmin)
+	).json()) as { id: string };
+
+	// Instance-admin bypass: read the container and its nested collections,
+	// and write workspace-admin-only routes — all without membership.
+	expect((await apiGet(`/api/v1/workspaces/${ws.id}`, admin)).status).toBe(200);
+	expect(
+		(await apiGet(`/api/v1/workspaces/${ws.id}/members`, admin)).status,
+	).toBe(200);
+	expect(
+		(await apiGet(`/api/v1/workspaces/${ws.id}/projects`, admin)).status,
+	).toBe(200);
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/workspaces/${ws.id}`,
+				{ name: "Renamed" },
+				admin,
+			)
+		).status,
+	).toBe(200);
+
+	// A non-admin non-member still gets 404 (existence is not revealed).
+	expect((await apiGet(`/api/v1/workspaces/${ws.id}`, outsider)).status).toBe(
+		404,
+	);
+
+	// A missing workspace is 404 even for an instance admin.
+	expect(
+		(await apiGet("/api/v1/workspaces/does-not-exist", admin)).status,
+	).toBe(404);
+});
+
+it("lists every workspace for an instance admin, role null for non-members", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const otherAdmin = await signUpAdmin(
+		"Other Admin",
+		"other-admin@example.com",
+	);
+
+	const owned = (await (
+		await apiJson("POST", "/api/v1/workspaces", WS, admin)
+	).json()) as { id: string };
+	const foreign = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ ...WS, slug: "beta", name: "Beta" },
+			otherAdmin,
+		)
+	).json()) as { id: string };
+
+	// The collection endpoint and /me both surface every workspace for an admin.
+	for (const path of ["/api/v1/workspaces", "/api/v1/me"]) {
+		const res = await apiGet(path, admin);
+		const payload = (await res.json()) as
+			| Array<{ id: string; role: string | null }>
+			| { memberships: Array<{ id: string; role: string | null }> };
+		const listed = Array.isArray(payload) ? payload : payload.memberships;
+		const roleById = new Map(listed.map((w) => [w.id, w.role]));
+		expect(listed).toHaveLength(2);
+		expect(roleById.get(owned.id)).toBe("owner"); // a member of this one
+		expect(roleById.get(foreign.id)).toBeNull(); // not a member of this one
+	}
 });
 
 it("updates and archives workspaces for admins only", async () => {
