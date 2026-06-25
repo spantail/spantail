@@ -146,6 +146,8 @@ function TokensWidget({
 
 type Metric = "sessions" | "time" | "tokens";
 const METRICS: Metric[] = ["sessions", "time", "tokens"];
+// Plot height in px; shared by the bars and the hover-tooltip placement math.
+const PLOT_HEIGHT = 104;
 
 /**
  * Per-day bar chart with a Sessions / Time / Tokens toggle. Tokens renders
@@ -197,6 +199,19 @@ function AgentActivityChart({
 	const avg = nonZero.length
 		? Math.round(nonZero.reduce((a, b) => a + b, 0) / nonZero.length)
 		: 0;
+
+	// Place the tooltip just above the hovered bar's tip (8px gap) rather than at
+	// a fixed spot atop the plot, so it tracks the bar instead of floating away.
+	const hoveredDay = hover === null ? undefined : days[hover];
+	const hoveredFrac = hoveredDay
+		? Math.min(
+				1,
+				grouped
+					? Math.max(...tokenSeries.map((s) => s.read(hoveredDay) / max))
+					: readSingle(hoveredDay) / max,
+			)
+		: 0;
+	const tooltipTop = PLOT_HEIGHT * (1 - hoveredFrac) - 8;
 
 	const totalLabel =
 		metric === "tokens"
@@ -253,7 +268,10 @@ function AgentActivityChart({
 			</div>
 
 			<div className="relative">
-				<div className="flex h-[104px] items-end gap-[3px]">
+				<div
+					className="flex items-end gap-[3px]"
+					style={{ height: PLOT_HEIGHT }}
+				>
 					{days.map((d, i) => {
 						const dim =
 							hover === null ? (d.isWeekend ? 0.5 : 1) : hover === i ? 1 : 0.3;
@@ -343,9 +361,10 @@ function AgentActivityChart({
 
 				{hover !== null && (
 					<div
-						className="border-border bg-popover pointer-events-none absolute -top-1 z-20 -translate-y-full rounded-md border px-2.5 py-1.5 text-xs shadow-md"
+						className="border-border bg-popover pointer-events-none absolute z-20 rounded-md border px-2.5 py-1.5 text-xs shadow-md"
 						style={{
 							left: `${((hover + 0.5) / days.length) * 100}%`,
+							top: tooltipTop,
 							transform: "translate(-50%,-100%)",
 						}}
 					>
