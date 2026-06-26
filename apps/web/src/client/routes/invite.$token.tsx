@@ -87,7 +87,9 @@ function InvitePage() {
 					<CardTitle className="font-heading text-xl">
 						{t("invite.title")}
 					</CardTitle>
-					<CardDescription>
+					{/* whitespace-pre-line so the tagline's phrase-boundary newline (ja)
+					  renders as a break here too; invite.description has no newline. */}
+					<CardDescription className="whitespace-pre-line">
 						{preview.isSuccess
 							? t("invite.description", { email: preview.data.email })
 							: t("app.tagline")}
