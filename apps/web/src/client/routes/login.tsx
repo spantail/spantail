@@ -90,7 +90,10 @@ function LoginPage() {
 							? t("auth.welcomeBack")
 							: t("auth.welcomeToApp", { name: t("app.name") })}
 					</p>
-					<p className="mt-4 text-base leading-relaxed text-[#aeb6bf]">
+					{/* whitespace-pre-line honors the explicit newline in the Japanese
+					  tagline so it wraps at the phrase boundary instead of mid-word;
+					  locales without a newline (en) just wrap normally. */}
+					<p className="mt-4 text-base leading-relaxed whitespace-pre-line text-[#aeb6bf]">
 						{t("app.tagline")}
 					</p>
 				</div>

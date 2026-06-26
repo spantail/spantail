@@ -1,7 +1,7 @@
 {
 	"app": {
 		"name": "Spantail",
-		"tagline": "あなたと AI エージェントの働き方を、ありのままに。",
+		"tagline": "あなたと AI エージェントの働き方を、\nありのままに。",
 		"loading": "読み込み中…",
 		"loadingMore": "さらに読み込み中…"
 	},
