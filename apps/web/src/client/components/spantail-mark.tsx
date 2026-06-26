@@ -12,21 +12,28 @@ const BARS = [
 	{ x: 116, y: 247, w: 150, from: "#4a9eff", to: "#8fe3c4", opacity: 1 },
 ];
 
+// The bars + dot occupy only the middle of the 340×340 canvas; this viewBox is
+// cropped to their bounding box (+ small padding) so the mark fills its box
+// instead of floating in whitespace. `size` is the rendered width; height keeps
+// the cropped aspect ratio.
+const VIEW_BOX = "42 55 263 230";
+const ASPECT = 230 / 263;
+
 export function SpantailMark({
-	size = 340,
+	size = 120,
 	className,
 }: {
 	size?: number;
 	className?: string;
 }) {
-	// Gradient ids must be unique per instance: two marks on the same page (the
-	// small lockup and the large decorative bleed) would otherwise share ids.
+	// Gradient ids must be unique per instance: two marks on the same page would
+	// otherwise share ids.
 	const uid = useId();
 	return (
 		<svg
 			width={size}
-			height={size}
-			viewBox="0 0 340 340"
+			height={size * ASPECT}
+			viewBox={VIEW_BOX}
 			fill="none"
 			aria-hidden="true"
 			className={cn(className)}

@@ -74,28 +74,36 @@ function LoginPage() {
 	return (
 		<div className="grid min-h-svh lg:grid-cols-2">
 			{/* Brand panel — a fixed dark showcase, shown on wide viewports only. */}
-			<section className="relative hidden flex-col justify-between overflow-hidden bg-[#20262d] p-16 text-[#f4f7fa] lg:flex">
-				<SpantailMark
-					size={340}
-					className="pointer-events-none absolute -right-16 -bottom-14 opacity-90"
-				/>
-				<div className="relative z-10 flex items-center gap-3">
-					<SpantailMark size={44} />
-					<span className="font-heading text-2xl font-bold tracking-tight">
+			<section className="hidden flex-col justify-between bg-[#20262d] p-16 text-[#f4f7fa] lg:flex">
+				<div className="flex items-center gap-3">
+					<SpantailMark size={60} />
+					<span className="font-heading text-3xl font-bold tracking-tight">
 						{t("app.name")}
 					</span>
 				</div>
-				<div className="relative z-10 max-w-[30ch]">
-					<h1 className="font-heading text-4xl leading-tight font-semibold tracking-tight">
+				<div className="max-w-[30ch]">
+					{/* Decorative greeting, not the page heading — the form title is the
+					  single <h1> (present at every breakpoint; this panel is hidden on
+					  small screens). */}
+					<p className="font-heading text-4xl leading-tight font-semibold tracking-tight">
 						{mode === "login"
 							? t("auth.welcomeBack")
 							: t("auth.welcomeToApp", { name: t("app.name") })}
-					</h1>
+					</p>
 					<p className="mt-4 text-base leading-relaxed text-[#aeb6bf]">
 						{t("app.tagline")}
 					</p>
 				</div>
-				<div className="relative z-10 text-sm text-[#7e8893]">
+				<div className="text-sm text-[#7e8893]">
+					<a
+						href="https://spantail.com"
+						target="_blank"
+						rel="noreferrer"
+						className="underline-offset-4 hover:text-[#aeb6bf] hover:underline"
+					>
+						© {new Date().getFullYear()} {t("app.name")}
+					</a>
+					{" · "}
 					{t("auth.brandFooter")}
 				</div>
 			</section>
@@ -105,16 +113,16 @@ function LoginPage() {
 				<div className="w-full max-w-sm">
 					{/* Compact lockup for small screens, where the brand panel is hidden. */}
 					<div className="mb-8 flex items-center gap-2.5 lg:hidden">
-						<SpantailMark size={36} />
-						<span className="font-heading text-xl font-bold tracking-tight">
+						<SpantailMark size={44} />
+						<span className="font-heading text-2xl font-bold tracking-tight">
 							{t("app.name")}
 						</span>
 					</div>
 
 					<div className="mb-8">
-						<h2 className="font-heading text-2xl font-semibold tracking-tight">
+						<h1 className="font-heading text-2xl font-semibold tracking-tight">
 							{mode === "login" ? t("auth.login") : t("auth.signup")}
-						</h2>
+						</h1>
 						<p className="text-muted-foreground mt-2 text-sm">
 							{mode === "login"
 								? t("auth.loginSubtitle")
