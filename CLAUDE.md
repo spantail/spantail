@@ -69,7 +69,9 @@ pnpm deploy             # wrangler deploy (apps/web)
   must be validated against the union of the user's workspaces. See
   [`docs/permissions.md`](docs/permissions.md) for the full role × resource access model (the
   single source of truth), and [`docs/data-model.md`](docs/data-model.md) for the entities and how
-  they relate.
+  they relate. See [`docs/security.md`](docs/security.md) for the Spantail-specific security threat
+  model (untrusted ingest, sensitive captured content, capability-URL sharing, secure self-hosting
+  defaults) and the invariants that protect it.
 - **Docs stay in sync.** When you change the data model (`packages/db` schema or `packages/core`
   entities) or the permissions model, update the matching source-of-truth doc — `docs/data-model.md`
   or `docs/permissions.md` — in the same change, so the docs never drift from the code.
