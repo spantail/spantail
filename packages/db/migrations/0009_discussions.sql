@@ -25,5 +25,6 @@ CREATE TABLE `report_reactions` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE INDEX `report_reactions_report_idx` ON `report_reactions` (`report_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `report_reactions_report_uq` ON `report_reactions` (`report_id`,`user_id`,`emoji`) WHERE comment_id is null;--> statement-breakpoint
 CREATE UNIQUE INDEX `report_reactions_comment_uq` ON `report_reactions` (`comment_id`,`user_id`,`emoji`) WHERE comment_id is not null;

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "187df3f4-d512-4b13-9846-b83f9b5a3d31",
+  "id": "7ed79f16-9753-4a4b-ba97-5c0655445cfc",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -281,6 +281,22 @@
         },
         "is_admin": {
           "name": "is_admin",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "can_manage_templates": {
+          "name": "can_manage_templates",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": false
+        },
+        "disabled": {
+          "name": "disabled",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

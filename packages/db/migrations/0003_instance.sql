@@ -3,6 +3,10 @@ CREATE TABLE `instance_settings` (
 	`email_enabled` integer DEFAULT false NOT NULL,
 	`email_from_address` text,
 	`email_from_name` text,
+	`google_oauth_enabled` integer DEFAULT false NOT NULL,
+	`github_oauth_enabled` integer DEFAULT false NOT NULL,
+	`google_allowed_domains` text DEFAULT '[]' NOT NULL,
+	`agents_enabled` integer DEFAULT false NOT NULL,
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
 );
 --> statement-breakpoint
@@ -12,6 +16,7 @@ CREATE TABLE `user_invitations` (
 	`token_hash` text NOT NULL,
 	`invited_by_user_id` text NOT NULL,
 	`grant_admin` integer DEFAULT false NOT NULL,
+	`grant_can_manage_templates` integer DEFAULT false NOT NULL,
 	`expires_at` integer NOT NULL,
 	`accepted_at` integer,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,

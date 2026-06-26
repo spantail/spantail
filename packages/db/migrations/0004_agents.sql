@@ -22,19 +22,42 @@ CREATE TABLE `agent_entries` (
 CREATE UNIQUE INDEX `agent_entries_session_uq` ON `agent_entries` (`agent_id`,`session_id`);--> statement-breakpoint
 CREATE INDEX `agent_entries_workspace_idx` ON `agent_entries` (`workspace_id`,`created_at`);--> statement-breakpoint
 CREATE INDEX `agent_entries_agent_idx` ON `agent_entries` (`agent_id`);--> statement-breakpoint
+CREATE TABLE `agent_events` (
+	`id` text PRIMARY KEY NOT NULL,
+	`agent_id` text NOT NULL,
+	`workspace_id` text NOT NULL,
+	`session_id` text NOT NULL,
+	`source_id` text NOT NULL,
+	`timestamp` integer NOT NULL,
+	`model` text,
+	`usage` text NOT NULL,
+	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+	FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `agent_events_source_uq` ON `agent_events` (`agent_id`,`source_id`);--> statement-breakpoint
+CREATE INDEX `agent_events_session_idx` ON `agent_events` (`agent_id`,`session_id`);--> statement-breakpoint
+CREATE INDEX `agent_events_workspace_idx` ON `agent_events` (`workspace_id`,`created_at`);--> statement-breakpoint
+CREATE TABLE `agent_projects` (
+	`agent_id` text NOT NULL,
+	`project_id` text NOT NULL,
+	PRIMARY KEY(`agent_id`, `project_id`),
+	FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `agent_tokens` (
 	`id` text PRIMARY KEY NOT NULL,
 	`agent_id` text NOT NULL,
 	`name` text NOT NULL,
 	`token_hash` text NOT NULL,
 	`default_workspace_id` text,
-	`default_project_id` text,
 	`last_used_at` integer,
 	`expires_at` integer,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`default_workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`default_project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE set null
+	FOREIGN KEY (`default_workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `agent_tokens_token_hash_unique` ON `agent_tokens` (`token_hash`);--> statement-breakpoint
@@ -45,9 +68,9 @@ CREATE TABLE `agents` (
 	`type` text NOT NULL,
 	`name` text NOT NULL,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+	`disabled_at` integer,
 	`archived_at` integer,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `agents_user_idx` ON `agents` (`user_id`);--> statement-breakpoint
-ALTER TABLE `instance_settings` ADD `agents_enabled` integer DEFAULT false NOT NULL;
+CREATE INDEX `agents_user_idx` ON `agents` (`user_id`);
