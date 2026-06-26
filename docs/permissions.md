@@ -1,8 +1,9 @@
 # Permissions & resource visibility
 
 This is the single source of truth for **who can read and write each resource** in
-Spantail. It defines the intended model (the spec). Where the current code diverges
-from this spec, it is called out explicitly under [Known gaps](#known-gaps).
+Spantail. It defines the model the implementation follows. A few deliberate
+refinements are called out under [Intentional deviations](#intentional-deviations) so
+they are not mistaken for divergence.
 
 Business logic lives in `packages/core`/`packages/db`; the REST API at `/api/v1` is the
 only enforcement point. The Web SPA, CLI, and MCP are all clients of that API. The Web UI
