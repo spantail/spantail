@@ -25,7 +25,8 @@ describe("generateDataset", () => {
 		// 5 internal + Acme 3 + Globex 3 + 桜 2 + Initech 1.
 		expect(rows("workspaceMembers")).toHaveLength(14);
 		expect(rows("projects")).toHaveLength(14);
-		expect(rows("reportTemplates")).toHaveLength(4);
+		// One default template per locale (en + ja).
+		expect(rows("reportTemplates")).toHaveLength(2);
 		expect(rows("instanceSettings")).toHaveLength(1);
 		expect(dataset.credentials).toHaveLength(6);
 	});
@@ -133,17 +134,16 @@ describe("generateDataset", () => {
 		expect(maxByTz.get("America/Los_Angeles")).toBe("2026-06-18");
 	});
 
-	it("uses only enabled custom templates and disables builtins", async () => {
+	it("seeds the default templates and references them from every report", async () => {
 		const { rows } = await build();
-		const templateIds = new Set(rows("reportTemplates").map((t) => t.id));
+		const templateRows = rows("reportTemplates");
+		// One default template per locale (en + ja), all enabled.
+		expect(templateRows.length).toBe(2);
+		expect(templateRows.every((t) => t.enabled === true)).toBe(true);
+		const templateIds = new Set(templateRows.map((t) => t.id));
 		for (const report of rows("reports")) {
 			expect(templateIds.has(report.templateId)).toBe(true);
 		}
-		const overrides = rows("instanceSettings")[0]
-			?.reportTemplateOverrides as Record<string, { enabled: boolean }>;
-		expect(overrides["builtin:daily"]?.enabled).toBe(false);
-		expect(overrides["builtin:weekly"]?.enabled).toBe(false);
-		expect(overrides["builtin:monthly"]?.enabled).toBe(false);
 	});
 
 	it("renders daily and monthly reports with a total and body", async () => {
@@ -162,10 +162,10 @@ describe("generateDataset", () => {
 			expect(r.totalMinutes as number).toBeGreaterThan(0);
 			expect(r.version).toBe(1);
 		}
-		// Japanese monthly reports (Sakura) use the translated template.
+		// Japanese reports (Sakura) render with the translated default template.
 		const ja = reports.find((r) => String(r.name).startsWith("月報"));
 		expect(ja).toBeDefined();
-		expect(contentByReport.get(ja?.id as string)).toContain("プロジェクト別");
+		expect(contentByReport.get(ja?.id as string)).toContain("合計");
 	});
 
 	it("delivers reports to a workspace manager (never the sender)", async () => {

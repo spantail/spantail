@@ -1,7 +1,12 @@
 import { env } from "cloudflare:workers";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
 
 /**
  * Project membership ACL (docs/permissions.md, Gap D). A project's entries are
@@ -189,7 +194,7 @@ it("excludes non-member project entries from a report render", async () => {
 			"/api/v1/reports/preview",
 			{
 				name: "Daily",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(alice),
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			alice,
@@ -210,7 +215,7 @@ it("restricts report recipients to those who can read the snapshot's projects", 
 			"/api/v1/reports",
 			{
 				name: "Daily",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(alice),
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			alice,
@@ -256,7 +261,7 @@ it("blocks Send-to for a legacy report with unknown snapshot scope", async () =>
 			"/api/v1/reports",
 			{
 				name: "Daily",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(alice),
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			alice,

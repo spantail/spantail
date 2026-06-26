@@ -3,14 +3,21 @@ import { generateShareToken } from "@spantail/core";
 import { createDb, createReportShare } from "@spantail/db";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	appFetch,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
 
 /**
  * Builds a report whose markdown carries injection attempts: the report note
- * flows verbatim into the builtin daily template's Notes section.
+ * flows verbatim into the default template's Notes section.
  */
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
+	const templateId = await defaultTemplateId(admin);
 	const ws = (await (
 		await apiJson(
 			"POST",
@@ -44,7 +51,7 @@ async function setup() {
 		"/api/v1/reports",
 		{
 			name: "Daily <Report>",
-			templateId: "builtin:daily",
+			templateId,
 			filters: { workspaceIds: [ws.id], dateRange: "today" },
 			note: "<script>alert(1)</script> and [a link](javascript:alert(1))",
 		},

@@ -1,6 +1,12 @@
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	appFetch,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
 
 // Admin read paths for user-/report-/agent-scoped resources (docs/permissions.md
 // Access matrix): an instance admin reads any user's data (R) via ?ownerUserId; a
@@ -70,7 +76,7 @@ async function setup() {
 			"/api/v1/reports",
 			{
 				name: "Single",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(member),
 				filters: { workspaceIds: [ws1.id], dateRange: "today" },
 			},
 			member,
@@ -82,7 +88,7 @@ async function setup() {
 			"/api/v1/reports",
 			{
 				name: "Multi",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(member),
 				filters: { workspaceIds: [ws1.id, ws2.id], dateRange: "today" },
 			},
 			member,

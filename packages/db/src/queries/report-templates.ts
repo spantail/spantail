@@ -9,10 +9,7 @@ export type ReportTemplateInsert = Omit<
 	"id" | "createdAt" | "updatedAt"
 >;
 export type ReportTemplatePatch = Partial<
-	Pick<
-		ReportTemplateRow,
-		"name" | "description" | "body" | "enabled" | "periodUnit"
-	>
+	Pick<ReportTemplateRow, "name" | "description" | "body" | "enabled">
 >;
 
 export async function createReportTemplate(
@@ -26,6 +23,26 @@ export async function createReportTemplate(
 	const row = rows[0];
 	if (!row) throw new Error("report template insert returned no row");
 	return row;
+}
+
+/** Reserved id for the seeded default template (see seedDefaultReportTemplate). */
+export const DEFAULT_REPORT_TEMPLATE_ID = "default";
+
+/**
+ * Seeds the instance default template idempotently. Triggered lazily when the
+ * templates list is read and the instance has none. The fixed id plus
+ * onConflictDoNothing makes the insert itself race-safe: two concurrent first
+ * reads converge on a single default row instead of inserting duplicates.
+ * A no-op once the row exists.
+ */
+export async function seedDefaultReportTemplate(
+	db: Database,
+	values: ReportTemplateInsert,
+): Promise<void> {
+	await db
+		.insert(reportTemplates)
+		.values({ id: DEFAULT_REPORT_TEMPLATE_ID, ...values })
+		.onConflictDoNothing();
 }
 
 export async function getReportTemplateById(

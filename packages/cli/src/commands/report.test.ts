@@ -10,7 +10,7 @@ function reportFixture(overrides: Partial<Report> = {}): Report {
 		id: "rep-1",
 		name: "Weekly",
 		ownerUserId: "u1",
-		templateId: "builtin:weekly",
+		templateId: "tmpl-weekly",
 		filters: {
 			workspaceIds: ["ws-acme"],
 			dateRange: { from: "2026-06-08", to: "2026-06-14" },

@@ -13,10 +13,6 @@ export const dateRangePresetSchema = z.enum([
 ]);
 export type DateRangePreset = z.infer<typeof dateRangePresetSchema>;
 
-/** Cadence of a report and of the template that produces it. */
-export const periodUnitSchema = z.enum(["day", "week", "month", "custom"]);
-export type PeriodUnit = z.infer<typeof periodUnitSchema>;
-
 /** Inclusive day count between two local dates (`YYYY-MM-DD`). */
 function dateRangeSpanDays(from: string, to: string): number {
 	const utcMs = (date: string) => {
@@ -72,11 +68,8 @@ export const reportTemplateSchema = z.object({
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).nullable(),
 	body: z.string().min(1).max(50000),
-	builtin: z.boolean(),
 	// Admin-controlled: disabled templates are hidden from the report tabs.
 	enabled: z.boolean(),
-	// Cadence used to default a new report's period, name, and Duplicate step.
-	periodUnit: periodUnitSchema,
 	createdBy: z.string().nullable(),
 	createdAt: z.string().nullable(),
 	updatedAt: z.string().nullable(),
@@ -87,7 +80,6 @@ export const createReportTemplateInputSchema = z.object({
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).optional(),
 	body: z.string().min(1).max(50000),
-	periodUnit: periodUnitSchema.default("custom"),
 });
 export type CreateReportTemplateInput = z.infer<
 	typeof createReportTemplateInputSchema
@@ -101,13 +93,10 @@ export const updateReportTemplateInputSchema = z
 	})
 	.partial();
 
-/** State changes (enabled/cadence) are separate from body edits and admin-gated. */
-export const updateReportTemplateStateInputSchema = z
-	.object({
-		enabled: z.boolean(),
-		periodUnit: periodUnitSchema,
-	})
-	.partial();
+/** Enabling/disabling a template is separate from body edits and admin-gated. */
+export const updateReportTemplateStateInputSchema = z.object({
+	enabled: z.boolean(),
+});
 export type UpdateReportTemplateStateInput = z.infer<
 	typeof updateReportTemplateStateInputSchema
 >;
@@ -182,12 +171,6 @@ export type CreateReportInput = z.infer<typeof createReportInputSchema>;
  */
 export const updateReportInputSchema = createReportInputSchema;
 export type UpdateReportInput = z.infer<typeof updateReportInputSchema>;
-
-export const BUILTIN_TEMPLATE_ID_PREFIX = "builtin:";
-
-export function isBuiltinTemplateId(id: string): boolean {
-	return id.startsWith(BUILTIN_TEMPLATE_ID_PREFIX);
-}
 
 /** Last day of the month as `YYYY-MM-DD`; monthIndex is 0-based (UTC math). */
 export function lastDayOfMonth(year: number, monthIndex: number): string {

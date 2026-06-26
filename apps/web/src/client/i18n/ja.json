@@ -424,14 +424,6 @@
 		"description": "説明",
 		"body": "テンプレート本文",
 		"bodyHint": "Markdown + Liquid タグで記述します。利用できるデータ: report, period, entries, groups, totals / フィルタ: format_date, format_duration, sum, group_by。",
-		"builtin": "ビルトイン",
-		"periodUnit": "周期",
-		"cadence": {
-			"day": "日次",
-			"week": "週次",
-			"month": "月次",
-			"custom": "カスタム"
-		},
 		"disabledBadge": "無効",
 		"enableAction": "有効化",
 		"disableAction": "無効化",

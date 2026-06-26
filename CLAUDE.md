@@ -39,6 +39,7 @@ pnpm deploy             # wrangler deploy (apps/web)
 | `packages/core` | Domain logic, Zod schemas, report engine. Runtime-agnostic — no Workers/DOM APIs. |
 | `packages/db` | Drizzle schema, migrations, query functions. |
 | `packages/sdk` | Typed API client (reuses core schemas). |
+| `packages/templates` | Default report-template catalog (`.liquid` files). Worker reads via `?raw`; the seed via `/node` (fs). |
 | `packages/cli` | `spantail` CLI + stdio MCP server. A thin client of the REST API. |
 
 ## Architecture invariants
@@ -74,8 +75,11 @@ pnpm deploy             # wrangler deploy (apps/web)
   or `docs/permissions.md` — in the same change, so the docs never drift from the code.
 - **Report templates are instance-scoped formats.** A template is a presentation format,
   independent of any workspace, project, user, or period — a report freely combines any template
-  with any scope and date range at run time. Builtins are code-defined; their enabled/cadence
-  overrides live on the instance settings row. Managing templates requires instance admin or the
+  with any scope and date range at run time. Templates are ordinary `report_templates` rows; there
+  are no code-defined builtins. When the templates list is read and the instance has none — a fresh
+  or an upgraded instance — a single default template (from `@spantail/templates`, in the request's
+  `Accept-Language`) is lazily seeded so reports are always composable; the insert is idempotent
+  (fixed id + `onConflictDoNothing`). Managing templates requires instance admin or the
   template-author capability (`user.canManageTemplates`), not a workspace role.
 - **Report templates are user input.** LiquidJS rendering must keep the safety settings
   (own-property access only, strict filters, parse/render/memory limits, file tags disabled).

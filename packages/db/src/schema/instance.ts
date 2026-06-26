@@ -1,4 +1,3 @@
-import type { ReportTemplateOverrides } from "@spantail/core";
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -44,13 +43,6 @@ export const instanceSettings = sqliteTable("instance_settings", {
 	agentsEnabled: integer("agents_enabled", { mode: "boolean" })
 		.notNull()
 		.default(false),
-	// Instance-wide enabled/cadence overrides for builtin report templates,
-	// keyed by builtin id. Builtin bodies are code-defined; only their state is
-	// configurable, and it lives here rather than per workspace.
-	reportTemplateOverrides: text("report_template_overrides", { mode: "json" })
-		.$type<ReportTemplateOverrides>()
-		.notNull()
-		.default({}),
 	updatedAt: updatedAtMs(),
 });
 

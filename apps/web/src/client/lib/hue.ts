@@ -4,14 +4,7 @@ export function hueFromString(value: string): number {
 	return (value.charCodeAt(0) * 47 + (value.charCodeAt(1) || 0) * 13) % 360;
 }
 
-/** Builtin templates keep the mockup's hand-picked hues; custom templates fall
- *  back to a stable hash so every template gets a consistent color. */
-const BUILTIN_TEMPLATE_HUE: Record<string, number> = {
-	"builtin:daily": 264,
-	"builtin:weekly": 200,
-	"builtin:monthly": 150,
-};
-
+/** A template's marker hue: a stable hash so every template gets one color. */
 export function templateHue(templateId: string): number {
-	return BUILTIN_TEMPLATE_HUE[templateId] ?? hueFromString(templateId);
+	return hueFromString(templateId);
 }

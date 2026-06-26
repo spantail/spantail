@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
 	generateShareToken,
-	getBuiltinTemplate,
 	hashToken,
 	lastDayOfMonth,
 	type ReportContextInput,
@@ -12,6 +11,7 @@ import {
 	type WorkEntrySource,
 	zonedDateTimeToUtc,
 } from "@spantail/core";
+import { defaultTemplates } from "@spantail/templates/node";
 import { hashPassword } from "better-auth/crypto";
 
 import {
@@ -300,35 +300,33 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		}
 	}
 
-	// --- Templates (4: daily/monthly × en/ja) ------------------------------
+	// --- Templates (the default catalog template, en + ja) -----------------
+	// One instance-scoped template per locale, seeded from @spantail/templates —
+	// the same default a fresh instance gets when its first admin is created.
 	const author =
 		[...usersByKey.values()].find((u) => {
 			const cfg = config.users.find((c) => c.key === u.key);
 			return cfg?.canManageTemplates || cfg?.isAdmin;
 		}) ?? [...usersByKey.values()][0];
 	const templateRows: Row[] = [];
-	const templateByLangUnit = new Map<string, { id: string; body: string }>();
-	for (const t of config.templates) {
-		const body = t.body ?? getBuiltinTemplate(t.bodyFrom ?? "")?.body;
-		if (!body)
-			throw new Error(`template ${t.key}: unknown bodyFrom ${t.bodyFrom}`);
+	const templateByLang = new Map<string, { id: string; body: string }>();
+	for (const t of defaultTemplates) {
 		const id = randomUUID();
 		templateRows.push({
 			id,
 			name: t.name,
-			description: t.description ?? null,
-			body,
+			description: t.description,
+			body: t.body,
 			enabled: true,
-			periodUnit: t.periodUnit,
 			createdBy: author?.id ?? null,
 			createdAt: baseCreatedAt,
 			updatedAt: baseCreatedAt,
 		});
-		templateByLangUnit.set(`${t.language}:${t.periodUnit}`, { id, body });
+		templateByLang.set(t.locale, { id, body: t.body });
 	}
-	const templateFor = (language: Language, unit: "day" | "month") => {
-		const t = templateByLangUnit.get(`${language}:${unit}`);
-		if (!t) throw new Error(`no ${language} ${unit} template`);
+	const templateFor = (language: Language) => {
+		const t = templateByLang.get(language);
+		if (!t) throw new Error(`no ${language} template`);
 		return t;
 	};
 
@@ -487,7 +485,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
 			// Covered by a cross-workspace route → reported there, not here.
 			if (routeWsByUser.get(user.key)?.has(ws.key)) continue;
-			const tmpl = templateFor(ws.language, "day");
+			const tmpl = templateFor(ws.language);
 			const manager = managerByWs.get(ws.key);
 			const byDate = new Map<string, EntryRecord[]>();
 			for (const entry of byWs.get(ws.key) ?? [])
@@ -572,7 +570,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			return ws;
 		});
 		const anchor = routeWs[0] as ResolvedWorkspace;
-		const tmpl = templateFor(anchor.language, "day");
+		const tmpl = templateFor(anchor.language);
 		const recipients = [...usersByKey.values()].filter(
 			(u) =>
 				u.key !== sender.key &&
@@ -689,7 +687,7 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 		const byWs =
 			entriesByUserWs.get(user.key) ?? new Map<string, EntryRecord[]>();
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
-			const tmpl = templateFor(ws.language, "month");
+			const tmpl = templateFor(ws.language);
 			for (const month of completedMonthsFor(ws.timezone)) {
 				const entries = (byWs.get(ws.key) ?? []).filter(
 					(e) => e.date >= month.first && e.date <= month.last,
@@ -782,9 +780,6 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 	}
 
 	// --- Instance settings (singleton) -------------------------------------
-	const overrides: Record<string, { enabled: boolean }> = {};
-	for (const id of config.instance.disableBuiltinTemplates)
-		overrides[id] = { enabled: false };
 	const instanceRows: Row[] = [
 		{
 			id: "singleton",
@@ -795,7 +790,6 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			githubOAuthEnabled: config.instance.githubOAuthEnabled,
 			googleAllowedDomains: [],
 			agentsEnabled: config.instance.agentsEnabled,
-			reportTemplateOverrides: overrides,
 			updatedAt: baseCreatedAt,
 		},
 	];

@@ -1,6 +1,11 @@
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
 
 /**
  * Sets up an owner + a workspace member (eligible recipient) + an outsider
@@ -55,7 +60,7 @@ async function setup() {
 			"/api/v1/reports",
 			{
 				name: "Daily",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(owner),
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			owner,
@@ -306,7 +311,7 @@ it("restricts recipients to members of every workspace in the report", async () 
 			"/api/v1/reports",
 			{
 				name: "Cross",
-				templateId: "builtin:monthly",
+				templateId: await defaultTemplateId(owner),
 				filters: { workspaceIds: [wsA.id, wsB.id], dateRange: "this_month" },
 			},
 			owner,

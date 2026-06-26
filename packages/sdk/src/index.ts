@@ -473,7 +473,7 @@ export class SpantailClient {
 		return this.request("PATCH", `/report-templates/${id}`, { body: input });
 	}
 
-	/** Manager-only: toggle enabled / set cadence (builtin or custom template). */
+	/** Manager-only: enable or disable a template. */
 	updateReportTemplateState(
 		templateId: string,
 		input: UpdateReportTemplateStateInput,

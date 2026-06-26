@@ -425,14 +425,6 @@
 		"description": "Description",
 		"body": "Template body",
 		"bodyHint": "Markdown with Liquid tags. Available data: report, period, entries, groups, totals; filters: format_date, format_duration, sum, group_by.",
-		"builtin": "Built-in",
-		"periodUnit": "Cadence",
-		"cadence": {
-			"day": "Daily",
-			"week": "Weekly",
-			"month": "Monthly",
-			"custom": "Custom"
-		},
 		"disabledBadge": "Disabled",
 		"enableAction": "Enable",
 		"disableAction": "Disable",

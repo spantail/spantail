@@ -3,7 +3,6 @@ import { expect, it } from "vitest";
 import {
 	absoluteDateRangeSchema,
 	filterEntriesByTags,
-	isBuiltinTemplateId,
 	MAX_REPORT_SPAN_DAYS,
 	reportFiltersInputSchema,
 	reportFiltersSchema,
@@ -130,9 +129,4 @@ it("filters entries by any matching tag", () => {
 	expect(
 		filterEntriesByTags(entries, ["api", "docs"]).map((e) => e.id),
 	).toEqual(["a"]);
-});
-
-it("recognizes builtin template ids", () => {
-	expect(isBuiltinTemplateId("builtin:daily")).toBe(true);
-	expect(isBuiltinTemplateId(crypto.randomUUID())).toBe(false);
 });

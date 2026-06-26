@@ -21,6 +21,7 @@
 		"@spantail/core": "workspace:*",
 		"@spantail/db": "workspace:*",
 		"@spantail/sdk": "workspace:*",
+		"@spantail/templates": "workspace:*",
 		"agents": "^0.15.0",
 		"better-auth": "^1.6.16",
 		"class-variance-authority": "^0.7.1",

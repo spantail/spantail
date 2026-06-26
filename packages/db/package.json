@@ -17,6 +17,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260611.1",
+		"@spantail/templates": "workspace:*",
 		"@types/node": "^25.9.3",
 		"better-auth": "^1.6.16",
 		"drizzle-kit": "^0.31.10",

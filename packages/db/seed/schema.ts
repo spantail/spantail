@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import {
-	periodUnitSchema,
 	slugSchema,
 	tagSchema,
 	timezoneSchema,
@@ -50,22 +49,6 @@ const projectConfigSchema = z.object({
 	activities: z.array(z.string().min(1).max(200)).min(1),
 });
 
-const templateConfigSchema = z
-	.object({
-		key: z.string().min(1),
-		name: z.string().min(1).max(100),
-		description: z.string().max(1000).optional(),
-		language: languageSchema,
-		periodUnit: periodUnitSchema,
-		// Exactly one of these must be set.
-		body: z.string().min(1).max(50000).optional(),
-		bodyFrom: z.string().min(1).optional(),
-	})
-	.refine(
-		(t) => Boolean(t.body) !== Boolean(t.bodyFrom),
-		"a template needs exactly one of `body` or `bodyFrom`",
-	);
-
 // How often a member works a project: `daily` every working day, the rest on a
 // deterministic subset (often ≈ most days, weekly ≈ once a week, occasional ≈ a
 // few days a month) so a week is mostly the main engagement with lighter
@@ -107,14 +90,12 @@ const instanceConfigSchema = z.object({
 	googleOAuthEnabled: z.boolean().default(false),
 	githubOAuthEnabled: z.boolean().default(false),
 	agentsEnabled: z.boolean().default(false),
-	disableBuiltinTemplates: z.array(z.string().min(1)).default([]),
 });
 
 export type UserConfig = z.infer<typeof userConfigSchema>;
 export type WorkspaceConfig = z.infer<typeof workspaceConfigSchema>;
 export type MemberConfig = z.infer<typeof memberConfigSchema>;
 export type ProjectConfig = z.infer<typeof projectConfigSchema>;
-export type TemplateConfig = z.infer<typeof templateConfigSchema>;
 export type WorkPatternsConfig = z.infer<typeof workPatternsConfigSchema>;
 export type ReportRouteConfig = z.infer<typeof reportRouteSchema>;
 export type InstanceConfig = z.infer<typeof instanceConfigSchema>;
@@ -124,7 +105,6 @@ export interface SeedConfig {
 	workspaces: WorkspaceConfig[];
 	members: MemberConfig[];
 	projects: ProjectConfig[];
-	templates: TemplateConfig[];
 	workPatterns: WorkPatternsConfig;
 	reportRoutes: ReportRouteConfig[];
 	instance: InstanceConfig;
@@ -150,7 +130,6 @@ export function loadConfig(): SeedConfig {
 		workspaces: read("workspaces.yaml", z.array(workspaceConfigSchema).min(1)),
 		members: read("members.yaml", z.array(memberConfigSchema).min(1)),
 		projects: read("projects.yaml", z.array(projectConfigSchema).min(1)),
-		templates: read("templates.yaml", z.array(templateConfigSchema).min(1)),
 		workPatterns: read("work-patterns.yaml", workPatternsConfigSchema),
 		reportRoutes: read("report-routes.yaml", z.array(reportRouteSchema)),
 		instance: read("instance.yaml", instanceConfigSchema),
