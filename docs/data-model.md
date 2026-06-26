@@ -28,7 +28,7 @@ also a single user's own resource. This is the same five-scope model
 flowchart TB
     subgraph INSTANCE["Instance — one per deployment"]
         instNote["user accounts · instance settings<br/>invitations · report templates"]
-        subgraph WORKSPACE["Workspace — tenancy boundary"]
+        subgraph WORKSPACE["Workspace — org unit: department / team / client"]
             wsNote["settings · members · projects<br/>unassigned work entries · agent activity"]
             subgraph PROJECT["Project"]
                 projNote["project members<br/>project-assigned work & agent entries"]
@@ -97,8 +97,8 @@ The four domains below give the precise relationships within each area.
 
 Accounts, authentication substrate, personal API credentials, and instance configuration.
 
-Schema: `packages/db/src/schema/auth.ts`, `tokens.ts`, `instance.ts` ·
-Core types: `packages/core/src/user.ts`, `token.ts`, `instance.ts`, `invitation.ts`
+Schema: [`packages/db/src/schema/auth.ts`](../packages/db/src/schema/auth.ts), [`tokens.ts`](../packages/db/src/schema/tokens.ts), [`instance.ts`](../packages/db/src/schema/instance.ts) ·
+Core types: [`packages/core/src/user.ts`](../packages/core/src/user.ts), [`token.ts`](../packages/core/src/token.ts), [`instance.ts`](../packages/core/src/instance.ts), [`invitation.ts`](../packages/core/src/invitation.ts)
 
 ```mermaid
 erDiagram
@@ -120,10 +120,10 @@ erDiagram
 
 ## Domain: Workspaces & work
 
-The tenancy structure and the core human-work unit.
+The organizational structure and the core human-work unit.
 
-Schema: `packages/db/src/schema/domain.ts` ·
-Core types: `packages/core/src/workspace.ts`, `project.ts`, `work-entry.ts`
+Schema: [`packages/db/src/schema/domain.ts`](../packages/db/src/schema/domain.ts) ·
+Core types: [`packages/core/src/workspace.ts`](../packages/core/src/workspace.ts), [`project.ts`](../packages/core/src/project.ts), [`work-entry.ts`](../packages/core/src/work-entry.ts)
 
 ```mermaid
 erDiagram
@@ -139,7 +139,7 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `workspaces` | Workspace | Tenancy boundary — one company per deployment. Has timezone, accent color, optional logo. | contains projects, members, entries |
+| `workspaces` | Workspace | Organizational unit (department, team, or client) and the primary membership scope — not an isolated tenant (users can belong to several, and reports can span them). Has timezone, accent color, optional logo. | contains projects, members, entries |
 | `workspace_members` | Workspace | Membership and role: `owner` / `admin` / `member`. PK (workspaceId, userId). | joins `workspaces` and `user` |
 | `projects` | Workspace | A workspace subdivision. Status `active` / `archived`; color hue; slug unique per workspace. | belongs to `workspaces` (cascade) |
 | `project_members` | Project | Binary membership (no per-project role), managed by workspace admins. | joins `projects` and `user` |
@@ -149,8 +149,8 @@ erDiagram
 
 AI coding agents as delegated identities, their ingest credentials, and the activity they stream in.
 
-Schema: `packages/db/src/schema/agents.ts` ·
-Core types: `packages/core/src/agent.ts`, `agent-events.ts`
+Schema: [`packages/db/src/schema/agents.ts`](../packages/db/src/schema/agents.ts) ·
+Core types: [`packages/core/src/agent.ts`](../packages/core/src/agent.ts), [`agent-events.ts`](../packages/core/src/agent-events.ts)
 
 ```mermaid
 erDiagram
@@ -180,8 +180,8 @@ erDiagram
 A report combines a template with freely chosen filters, renders to an immutable snapshot, and is
 distributed by sharing, sending, or discussing.
 
-Schema: `packages/db/src/schema/reports.ts`, `shares.ts`, `deliveries.ts`, `delivery-flags.ts`, `discussions.ts` ·
-Core types: `packages/core/src/report.ts`, `report-templates.ts`, `share.ts`, `delivery.ts`, `discussion.ts`
+Schema: [`packages/db/src/schema/reports.ts`](../packages/db/src/schema/reports.ts), [`shares.ts`](../packages/db/src/schema/shares.ts), [`deliveries.ts`](../packages/db/src/schema/deliveries.ts), [`delivery-flags.ts`](../packages/db/src/schema/delivery-flags.ts), [`discussions.ts`](../packages/db/src/schema/discussions.ts) ·
+Core types: [`packages/core/src/report.ts`](../packages/core/src/report.ts), [`report-templates.ts`](../packages/core/src/report-templates.ts), [`share.ts`](../packages/core/src/share.ts), [`delivery.ts`](../packages/core/src/delivery.ts), [`discussion.ts`](../packages/core/src/discussion.ts)
 
 ```mermaid
 erDiagram
