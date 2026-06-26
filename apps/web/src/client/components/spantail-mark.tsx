@@ -27,8 +27,9 @@ export function SpantailMark({
 	className?: string;
 }) {
 	// Gradient ids must be unique per instance: two marks on the same page would
-	// otherwise share ids.
-	const uid = useId();
+	// otherwise share ids. Strip non-alphanumerics from useId() (it can contain
+	// ":" etc.) so the value is safe inside SVG `url(#…)` references.
+	const uid = useId().replace(/[^a-z0-9]/gi, "");
 	return (
 		<svg
 			width={size}
