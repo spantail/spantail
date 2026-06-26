@@ -1,4 +1,4 @@
-# Data model &amp; resources
+# Data model & resources
 
 This page maps **what entities Spantail stores and how they relate** — the structural
 companion to [`permissions.md`](./permissions.md), which covers **who may read and write each
@@ -9,7 +9,7 @@ It is a **map, not a field reference**. The single source of truth for exact col
 validation stays in code:
 
 - **Database tables** — Drizzle schema in `packages/db/src/schema` (one file per domain).
-- **Domain types &amp; request/response shapes** — Zod schemas in `packages/core/src`.
+- **Domain types & request/response shapes** — Zod schemas in `packages/core/src`.
 
 Where this page names a table it uses its SQL name (`work_entries`); where it names a scope or role
 it matches the vocabulary in [`permissions.md`](./permissions.md). All timestamps are UTC; see
@@ -19,23 +19,24 @@ it matches the vocabulary in [`permissions.md`](./permissions.md). All timestamp
 
 Every resource belongs to exactly one **scope**. Scopes nest: an instance contains workspaces, a
 workspace contains projects. Users are instance-wide principals that own their personal resources;
-a report owns its shares and discussion. This is the same five-scope model
+a report owns its shares and discussion. Each user account, with its sessions and OAuth links, is
+also a single user's own resource. This is the same five-scope model
 [`permissions.md`](./permissions.md#scopes) gates access by.
 
 ```mermaid
 flowchart TB
     subgraph INSTANCE["Instance — one per deployment"]
-        instNote["users · sessions · accounts · instance_settings<br/>user_invitations · report_templates"]
+        instNote["users · instance_settings<br/>user_invitations · report_templates"]
         subgraph WORKSPACE["Workspace — tenancy boundary"]
             wsNote["settings · members · projects<br/>unassigned work entries · agent activity"]
             subgraph PROJECT["Project"]
-                projNote["project members<br/>project-assigned work &amp; agent entries"]
+                projNote["project members<br/>project-assigned work & agent entries"]
             end
         end
     end
 
     subgraph USER["User — instance-wide, self-service"]
-        userNote["account · API tokens · agents<br/>reports · inbox"]
+        userNote["sessions · accounts · API tokens · agents<br/>reports · inbox"]
     end
 
     subgraph REPORT["Report"]
@@ -47,10 +48,10 @@ flowchart TB
 
 | Scope | Resources that live here |
 |---|---|
-| **Instance** | `user`, `session`, `account`, `verification`, `instance_settings`, `user_invitations`, `report_templates` |
+| **Instance** | `user`, `verification`, `instance_settings`, `user_invitations`, `report_templates` |
 | **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events` |
 | **Project** | `project_members`, `agent_projects`, project-assigned `work_entries` / `agent_entries` |
-| **User** | `api_tokens`, `agents`, `agent_tokens`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), account/profile |
+| **User** | `session`, `account`, `api_tokens`, `agents`, `agent_tokens`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), profile |
 | **Report** | `report_shares`, `report_comments`, `report_reactions` |
 
 > Two resources are **hybrid-scoped** by a nullable `projectId`: a `work_entries` or `agent_entries`
@@ -91,7 +92,7 @@ flowchart LR
 
 The four domains below give the precise relationships within each area.
 
-## Domain: Identity &amp; access
+## Domain: Identity & access
 
 Accounts, authentication substrate, personal API credentials, and instance configuration.
 
@@ -116,7 +117,7 @@ erDiagram
 | `instance_settings` | Instance | Singleton row (`id = "singleton"`): email, social login, agents toggle, builtin-template overrides. | none |
 | `user_invitations` | Instance | Pending email invitations; may grant admin or template-author on accept. | invited by `user` (cascade) |
 
-## Domain: Workspaces &amp; work
+## Domain: Workspaces & work
 
 The tenancy structure and the core human-work unit.
 
@@ -143,7 +144,7 @@ erDiagram
 | `project_members` | Project | Binary membership (no per-project role), managed by workspace admins. | joins `projects` and `user` |
 | `work_entries` | Project / Workspace | Human-logged work: `entry_date`, `durationMinutes`, description, tags, `source`. | author `user`; denormalized `workspaceId`; optional `projectId` (set null on project delete) |
 
-## Domain: Agents &amp; observability
+## Domain: Agents & observability
 
 AI coding agents as delegated identities, their ingest credentials, and the activity they stream in.
 
@@ -173,7 +174,7 @@ erDiagram
 | `agent_entries` | Project / Workspace | One agent **session** rollup: duration and token usage. Idempotent by (agentId, sessionId). Sits on the timeline beside human work. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
 | `agent_events` | Project / Workspace | Raw **per-turn** telemetry — one row per assistant message, native usage stored verbatim. Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
 
-## Domain: Reports &amp; distribution
+## Domain: Reports & distribution
 
 A report combines a template with freely chosen filters, renders to an immutable snapshot, and is
 distributed by sharing, sending, or discussing.
