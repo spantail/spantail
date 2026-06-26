@@ -3,14 +3,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { GitHubIcon, GoogleIcon } from "@/components/provider-icons";
+import { SpantailMark } from "@/components/spantail-mark";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
@@ -75,22 +70,75 @@ function LoginPage() {
 		await navigate({ to: "/" });
 	}
 
+	const showSocial = providers.data?.google || providers.data?.github;
+
 	return (
-		<div className="flex min-h-svh items-center justify-center p-4">
-			<Card className="w-full max-w-sm">
-				<CardHeader>
-					<CardTitle className="font-heading text-xl">
-						{mode === "login" ? t("auth.login") : t("auth.signup")}
-					</CardTitle>
-					<CardDescription>{t("app.tagline")}</CardDescription>
-				</CardHeader>
-				<CardContent>
+		<div className="grid min-h-svh lg:grid-cols-2">
+			{/* Brand panel — a fixed dark showcase, shown on wide viewports only. */}
+			<section className="hidden flex-col justify-between bg-[#20262d] p-16 text-[#f4f7fa] lg:flex">
+				<div className="flex items-center gap-3">
+					<SpantailMark size={60} />
+					<span className="font-heading text-3xl font-bold tracking-tight">
+						{t("app.name")}
+					</span>
+				</div>
+				<div className="max-w-[30ch]">
+					{/* Decorative greeting, not the page heading — the form title is the
+					  single <h1> (present at every breakpoint; this panel is hidden on
+					  small screens). */}
+					<p className="font-heading text-4xl leading-tight font-semibold tracking-tight">
+						{mode === "login"
+							? t("auth.welcomeBack")
+							: t("auth.welcomeToApp", { name: t("app.name") })}
+					</p>
+					{/* whitespace-pre-line honors the explicit newline in the Japanese
+					  tagline so it wraps at the phrase boundary instead of mid-word;
+					  locales without a newline (en) just wrap normally. */}
+					<p className="mt-4 text-base leading-relaxed whitespace-pre-line text-[#aeb6bf]">
+						{t("app.tagline")}
+					</p>
+				</div>
+				<div className="text-[13px] tracking-[0.01em] text-[#7e8893]">
+					<a
+						href="https://spantail.com"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="underline-offset-4 hover:text-[#aeb6bf] hover:underline"
+					>
+						© {new Date().getFullYear()} {t("app.name")}
+					</a>
+				</div>
+			</section>
+
+			{/* Form panel — always visible; stands alone on small screens. */}
+			<section className="flex items-center justify-center p-6 sm:p-12">
+				<div className="w-full max-w-sm">
+					{/* Compact lockup for small screens, where the brand panel is hidden. */}
+					<div className="mb-8 flex items-center gap-2.5 lg:hidden">
+						<SpantailMark size={44} />
+						<span className="font-heading text-2xl font-bold tracking-tight">
+							{t("app.name")}
+						</span>
+					</div>
+
+					<div className="mb-8">
+						<h1 className="font-heading text-2xl font-semibold tracking-tight">
+							{mode === "login" ? t("auth.login") : t("auth.signup")}
+						</h1>
+						<p className="text-muted-foreground mt-2 text-sm">
+							{mode === "login"
+								? t("auth.loginSubtitle")
+								: t("auth.signupSubtitle")}
+						</p>
+					</div>
+
 					<form onSubmit={onSubmit} className="flex flex-col gap-4">
 						{mode === "signup" && (
 							<div className="flex flex-col gap-2">
 								<Label htmlFor="name">{t("auth.name")}</Label>
 								<Input
 									id="name"
+									className="h-11"
 									value={name}
 									onChange={(e) => setName(e.target.value)}
 									required
@@ -102,6 +150,8 @@ function LoginPage() {
 							<Input
 								id="email"
 								type="email"
+								className="h-11"
+								placeholder={t("auth.emailPlaceholder")}
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								autoComplete="email"
@@ -109,10 +159,23 @@ function LoginPage() {
 							/>
 						</div>
 						<div className="flex flex-col gap-2">
-							<Label htmlFor="password">{t("auth.password")}</Label>
+							<div className="flex items-baseline justify-between">
+								<Label htmlFor="password">{t("auth.password")}</Label>
+								{mode === "login" && (
+									<button
+										type="button"
+										className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 hover:underline"
+										onClick={() => navigate({ to: "/forgot-password" })}
+									>
+										{t("auth.forgotPassword")}
+									</button>
+								)}
+							</div>
 							<Input
 								id="password"
 								type="password"
+								className="h-11"
+								placeholder={t("auth.passwordPlaceholder")}
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								autoComplete={
@@ -123,14 +186,15 @@ function LoginPage() {
 							/>
 						</div>
 						{error && <p className="text-destructive text-sm">{error}</p>}
-						<Button type="submit" disabled={busy}>
+						<Button type="submit" className="mt-1 h-12 w-full" disabled={busy}>
 							{mode === "login"
 								? t("auth.loginAction")
 								: t("auth.signupAction")}
 						</Button>
 					</form>
-					{(providers.data?.google || providers.data?.github) && (
-						<div className="mt-4 flex flex-col gap-3">
+
+					{showSocial && (
+						<div className="mt-6 flex flex-col gap-3">
 							<div className="flex items-center gap-3">
 								<span className="bg-border h-px flex-1" />
 								<span className="text-muted-foreground text-xs">
@@ -142,8 +206,10 @@ function LoginPage() {
 								<Button
 									type="button"
 									variant="outline"
+									className="h-12 w-full"
 									onClick={() => signInSocial("google")}
 								>
+									<GoogleIcon className="size-[18px]" decorative />
 									{t("auth.continueWithGoogle")}
 								</Button>
 							)}
@@ -151,39 +217,35 @@ function LoginPage() {
 								<Button
 									type="button"
 									variant="outline"
+									className="h-12 w-full"
 									onClick={() => signInSocial("github")}
 								>
+									<GitHubIcon className="size-[18px]" decorative />
 									{t("auth.continueWithGithub")}
 								</Button>
 							)}
 						</div>
 					)}
-					{mode === "login" && (
-						<button
-							type="button"
-							className="text-muted-foreground mt-4 block text-sm underline-offset-4 hover:underline"
-							onClick={() => navigate({ to: "/forgot-password" })}
-						>
-							{t("auth.forgotPassword")}
-						</button>
-					)}
+
 					{/* Public sign-up is closed once the instance is claimed; the toggle
 					  appears only to bootstrap the first super-admin. Everyone else
 					  joins by invitation or social sign-in. */}
 					{providers.data?.selfSignupAvailable && (
-						<button
-							type="button"
-							className="text-muted-foreground mt-4 text-sm underline-offset-4 hover:underline"
-							onClick={() => {
-								setMode(mode === "login" ? "signup" : "login");
-								setError(null);
-							}}
-						>
-							{mode === "login" ? t("auth.noAccount") : t("auth.haveAccount")}
-						</button>
+						<p className="text-muted-foreground mt-8 text-center text-sm">
+							<button
+								type="button"
+								className="text-foreground font-semibold underline-offset-4 hover:underline"
+								onClick={() => {
+									setMode(mode === "login" ? "signup" : "login");
+									setError(null);
+								}}
+							>
+								{mode === "login" ? t("auth.noAccount") : t("auth.haveAccount")}
+							</button>
+						</p>
 					)}
-				</CardContent>
-			</Card>
+				</div>
+			</section>
 		</div>
 	);
 }

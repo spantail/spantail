@@ -1,16 +1,22 @@
 {
 	"app": {
 		"name": "Spantail",
-		"tagline": "Know where the work goes — yours and your agents'.",
+		"tagline": "Understand how you and your AI agents actually work.",
 		"loading": "Loading…",
 		"loadingMore": "Loading more…"
 	},
 	"auth": {
 		"login": "Log in",
 		"signup": "Sign up",
+		"welcomeBack": "Welcome back",
+		"welcomeToApp": "Welcome to {{name}}",
+		"loginSubtitle": "Sign in to your workspace.",
+		"signupSubtitle": "Create your account to get started.",
 		"name": "Name",
 		"email": "Email",
 		"password": "Password",
+		"emailPlaceholder": "you@company.com",
+		"passwordPlaceholder": "••••••••",
 		"loginAction": "Log in",
 		"signupAction": "Create account",
 		"noAccount": "No account? Sign up",

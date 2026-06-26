@@ -1,14 +1,23 @@
 // Brand marks for the social login providers, sized via `className` (defaults
-// to size-4). Used by the sign-in settings and the admin user list; kept here
-// as the single source so both render the same icon.
+// to size-4). Used by the sign-in settings, the admin user list, and the login
+// screen; kept here as the single source so they all render the same icon.
+// Pass `decorative` to render as `aria-hidden` (e.g. inside an already-labeled
+// button, where the icon's own label would be redundant).
 
-export function GoogleIcon({ className = "size-4" }: { className?: string }) {
+export function GoogleIcon({
+	className = "size-4",
+	decorative = false,
+}: {
+	className?: string;
+	decorative?: boolean;
+}) {
 	return (
 		<svg
 			className={className}
 			viewBox="0 0 24 24"
 			role="img"
 			aria-label="Google"
+			aria-hidden={decorative || undefined}
 			xmlns="http://www.w3.org/2000/svg"
 		>
 			<path
@@ -31,13 +40,20 @@ export function GoogleIcon({ className = "size-4" }: { className?: string }) {
 	);
 }
 
-export function GitHubIcon({ className = "size-4" }: { className?: string }) {
+export function GitHubIcon({
+	className = "size-4",
+	decorative = false,
+}: {
+	className?: string;
+	decorative?: boolean;
+}) {
 	return (
 		<svg
 			className={className}
 			viewBox="0 0 24 24"
 			role="img"
 			aria-label="GitHub"
+			aria-hidden={decorative || undefined}
 			fill="currentColor"
 			xmlns="http://www.w3.org/2000/svg"
 		>
