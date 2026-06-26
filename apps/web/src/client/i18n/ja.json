@@ -1,13 +1,18 @@
 {
 	"app": {
 		"name": "Spantail",
-		"tagline": "人とエージェント、作業の行方を可視化する。",
+		"tagline": "あなたと AI エージェントの働き方を、ありのままに。",
 		"loading": "読み込み中…",
 		"loadingMore": "さらに読み込み中…"
 	},
 	"auth": {
 		"login": "ログイン",
 		"signup": "新規登録",
+		"welcomeBack": "おかえりなさい",
+		"welcomeToApp": "{{name}} へようこそ",
+		"brandFooter": "オープンソースの作業オブザーバビリティ",
+		"loginSubtitle": "ワークスペースにサインイン。",
+		"signupSubtitle": "アカウントを作成して始めましょう。",
 		"name": "名前",
 		"email": "メールアドレス",
 		"password": "パスワード",
