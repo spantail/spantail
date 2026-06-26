@@ -1,4 +1,5 @@
 import { exports } from "cloudflare:workers";
+import { DEFAULT_REPORT_TEMPLATE_ID } from "@spantail/db";
 
 export const BASE = "https://example.com";
 
@@ -120,16 +121,17 @@ export async function apiGet(path: string, cookie?: string): Promise<Response> {
 }
 
 /**
- * The id of the default report template seeded when the bootstrap admin was
- * created. Reports need a real template id now that builtins are gone; call
- * this after the first signUpUser to back a report.
+ * The id of the lazily-seeded default report template. Reports need a real
+ * template id now that builtins are gone; reading the list seeds the default
+ * when the instance has none. Selects the deterministic seeded id explicitly
+ * (not list[0]) so a pre-existing custom template can't shadow it.
  */
 export async function defaultTemplateId(cookie: string): Promise<string> {
 	const res = await apiGet("/api/v1/report-templates", cookie);
 	const list = (await res.json()) as Array<{ id: string }>;
-	const id = list[0]?.id;
-	if (!id) throw new Error("no default report template was seeded");
-	return id;
+	const found = list.find((t) => t.id === DEFAULT_REPORT_TEMPLATE_ID);
+	if (!found) throw new Error("no default report template was seeded");
+	return found.id;
 }
 
 export async function apiJson(
