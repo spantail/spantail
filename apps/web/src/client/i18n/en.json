@@ -16,6 +16,8 @@
 		"name": "Name",
 		"email": "Email",
 		"password": "Password",
+		"emailPlaceholder": "you@company.com",
+		"passwordPlaceholder": "••••••••",
 		"loginAction": "Log in",
 		"signupAction": "Create account",
 		"noAccount": "No account? Sign up",

@@ -94,7 +94,7 @@ function LoginPage() {
 						{t("app.tagline")}
 					</p>
 				</div>
-				<div className="text-sm text-[#7e8893]">
+				<div className="text-[13px] tracking-[0.01em] text-[#7e8893]">
 					<a
 						href="https://spantail.com"
 						target="_blank"
@@ -149,6 +149,7 @@ function LoginPage() {
 								id="email"
 								type="email"
 								className="h-11"
+								placeholder={t("auth.emailPlaceholder")}
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								autoComplete="email"
@@ -172,6 +173,7 @@ function LoginPage() {
 								id="password"
 								type="password"
 								className="h-11"
+								placeholder={t("auth.passwordPlaceholder")}
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								autoComplete={
@@ -182,7 +184,7 @@ function LoginPage() {
 							/>
 						</div>
 						{error && <p className="text-destructive text-sm">{error}</p>}
-						<Button type="submit" className="mt-1 h-11 w-full" disabled={busy}>
+						<Button type="submit" className="mt-1 h-12 w-full" disabled={busy}>
 							{mode === "login"
 								? t("auth.loginAction")
 								: t("auth.signupAction")}
@@ -202,7 +204,7 @@ function LoginPage() {
 								<Button
 									type="button"
 									variant="outline"
-									className="h-11 w-full"
+									className="h-12 w-full"
 									onClick={() => signInSocial("google")}
 								>
 									<GoogleIcon />
@@ -213,7 +215,7 @@ function LoginPage() {
 								<Button
 									type="button"
 									variant="outline"
-									className="h-11 w-full"
+									className="h-12 w-full"
 									onClick={() => signInSocial("github")}
 								>
 									<GithubIcon />

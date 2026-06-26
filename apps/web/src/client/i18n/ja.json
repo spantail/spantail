@@ -16,6 +16,8 @@
 		"name": "名前",
 		"email": "メールアドレス",
 		"password": "パスワード",
+		"emailPlaceholder": "you@company.com",
+		"passwordPlaceholder": "••••••••",
 		"loginAction": "ログイン",
 		"signupAction": "アカウント作成",
 		"noAccount": "アカウントをお持ちでない方はこちら",
