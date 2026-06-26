@@ -3,13 +3,13 @@ import {
 	authOptions,
 	countReportTemplates,
 	countUsers,
-	createReportTemplate,
 	type Database,
 	getInstanceSettings,
 	getPendingInvitationByEmail,
 	getUserById,
 	markInvitationAccepted,
 	schema,
+	seedDefaultReportTemplate,
 	updateUser,
 } from "@spantail/db";
 import { defaultTemplateForLocale } from "@spantail/templates";
@@ -157,17 +157,17 @@ export function createAuth(
 					after: async (user, hookCtx) => {
 						// Seed a default report template the first time the instance has
 						// none, so reports can be composed immediately — builtins no longer
-						// exist. Keying on an empty report_templates table (not the user
-						// count) is idempotent and race-safe: two racing first sign-ups can
-						// both miss `countUsers === 1`, but at least one still sees an empty
-						// table and seeds. Locale comes from Accept-Language (the SPA's
-						// language preference is localStorage-only and never reaches the
-						// server); missing → "en".
+						// exist. The empty-table check is a cheap fast-path (skips the write
+						// once seeded); seedDefaultReportTemplate is itself idempotent (fixed
+						// id + onConflictDoNothing), so two racing first sign-ups converge on
+						// a single default row rather than inserting duplicates. Locale comes
+						// from Accept-Language (the SPA's language preference is
+						// localStorage-only and never reaches the server); missing → "en".
 						if ((await countReportTemplates(db)) === 0) {
 							const template = defaultTemplateForLocale(
 								negotiateLocale(acceptLanguageOf(hookCtx)),
 							);
-							await createReportTemplate(db, {
+							await seedDefaultReportTemplate(db, {
 								name: template.name,
 								description: template.description,
 								body: template.body,

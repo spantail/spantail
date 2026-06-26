@@ -25,6 +25,25 @@ export async function createReportTemplate(
 	return row;
 }
 
+/** Reserved id for the seeded default template (see seedDefaultReportTemplate). */
+export const DEFAULT_REPORT_TEMPLATE_ID = "default";
+
+/**
+ * Seeds the instance default template idempotently. The fixed id plus
+ * onConflictDoNothing makes the insert itself race-safe: two concurrent first
+ * sign-ups converge on a single default row instead of inserting duplicates.
+ * A no-op once the row exists.
+ */
+export async function seedDefaultReportTemplate(
+	db: Database,
+	values: ReportTemplateInsert,
+): Promise<void> {
+	await db
+		.insert(reportTemplates)
+		.values({ id: DEFAULT_REPORT_TEMPLATE_ID, ...values })
+		.onConflictDoNothing();
+}
+
 export async function countReportTemplates(db: Database): Promise<number> {
 	const rows = await db.select({ value: count() }).from(reportTemplates);
 	return rows[0]?.value ?? 0;
