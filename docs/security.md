@@ -11,9 +11,12 @@ resource) and [`data-model.md`](./data-model.md) (the entities and how they rela
 architecture invariants in [`CLAUDE.md`](../CLAUDE.md) come first. Where a rule already
 lives in one of those, this doc summarizes and links rather than restating it.
 
-The REST API at `/api/v1` (and the MCP endpoint) is the only enforcement point. The Web
-SPA, CLI, and MCP are all clients of that API — **never trust the client**; every property
-below is enforced server-side, in `packages/core` / `packages/db`.
+Enforcement is server-side. The REST API at `/api/v1` and the MCP endpoint are the gate
+for every client — the Web SPA, CLI, and MCP are all clients of that API, so **never trust
+the client**. The public `/share/:token` page is itself a server-rendered surface in
+`apps/web`, not an API client. Route handlers in `apps/web/src/server` enforce the
+properties below (authentication, scoping, response hardening), calling the shared
+validation and domain logic that lives in `packages/core` / `packages/db`.
 
 ## 1. Ingested data is untrusted input
 
@@ -89,11 +92,17 @@ drift. See [`permissions.md`](./permissions.md) for the full matrix.
 
 ## 5. Snapshots are point-in-time and intentionally not re-filtered
 
-A report snapshot captures exactly what its author could see when it was generated.
-Persisted content (`GET /api/v1/reports/:id`, the inbox, public `/share/:token`) is **not
-re-filtered on later reads** — see [`permissions.md`](./permissions.md). The deliberate
-consequence: someone who loses access to a project or workspace can still view a snapshot
-(or a share/delivery) produced while they had access.
+A report snapshot captures exactly what its author could see when it was generated, and
+persisted content is **not re-filtered against live entries on later reads** — see
+[`permissions.md`](./permissions.md). The deliberate consequence differs by surface:
+
+- The **owner** reading their own report (`GET /api/v1/reports/:id`) still has workspace
+  membership re-checked, so losing **workspace** membership revokes access. Losing only a
+  **project** ACL (while remaining a workspace member) does not — the snapshot still shows
+  the projects the author could read at render time.
+- A **public share** (`/share/:token`) or a **Send-to delivery** is reached by capability
+  token / recipient identity, with no live membership check, so an already-shared or
+  delivered copy stays viewable even after the author or recipient loses access.
 
 This is a usability-vs-exposure trade-off, not a leak: a saved link must not break
 unpredictably, and the stored snapshot is disconnected from live access control.
