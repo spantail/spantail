@@ -1,1 +1,0 @@
-ALTER TABLE `agents` ADD `disabled_at` integer;

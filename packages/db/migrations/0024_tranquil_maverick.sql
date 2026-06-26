@@ -1,1 +1,0 @@
-ALTER TABLE `report_shares` DROP COLUMN `r2_key`;
