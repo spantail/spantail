@@ -119,6 +119,19 @@ export async function apiGet(path: string, cookie?: string): Promise<Response> {
 	return appFetch(path, { headers: cookie ? { cookie } : {} });
 }
 
+/**
+ * The id of the default report template seeded when the bootstrap admin was
+ * created. Reports need a real template id now that builtins are gone; call
+ * this after the first signUpUser to back a report.
+ */
+export async function defaultTemplateId(cookie: string): Promise<string> {
+	const res = await apiGet("/api/v1/report-templates", cookie);
+	const list = (await res.json()) as Array<{ id: string }>;
+	const id = list[0]?.id;
+	if (!id) throw new Error("no default report template was seeded");
+	return id;
+}
+
 export async function apiJson(
 	method: "POST" | "PUT" | "PATCH" | "DELETE",
 	path: string,

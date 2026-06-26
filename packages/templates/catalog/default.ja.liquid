@@ -1,0 +1,25 @@
+# {{ report.name }}
+
+**期間:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
+
+{% if totals.entries == 0 -%}
+_この期間の稼働記録はありません。_
+
+{% else -%}
+{% for group in groups.by_project -%}
+## {{ group.name }} — {{ group.total_minutes | format_duration }}
+
+{% for entry in group.entries -%}
+- {{ entry.description }}（{{ entry.duration_minutes | format_duration }}、{{ entry.user_name }}{% if entry.tags.size > 0 %}、タグ: {{ entry.tags | join: ", " }}{% endif %}）
+{% endfor %}
+{% endfor -%}
+{% endif -%}
+{% if report.note -%}
+## 備考
+
+{{ report.note }}
+
+{% endif -%}
+---
+
+_生成日時 {{ generated_date }}_

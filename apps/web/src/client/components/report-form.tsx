@@ -169,7 +169,7 @@ export function ReportForm({
 		!templatesReady ||
 		availableTemplates.some((template) => template.id === templateId)
 			? templateId
-			: (availableTemplates[0]?.id ?? "builtin:daily");
+			: (availableTemplates[0]?.id ?? "");
 
 	const singleWorkspaceId = workspaceIds.length === 1 ? workspaceIds[0] : null;
 	const projects = useQuery({

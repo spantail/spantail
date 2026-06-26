@@ -1,0 +1,16 @@
+{
+	"name": "@spantail/templates",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./node": "./src/node.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "^25.9.3"
+	}
+}

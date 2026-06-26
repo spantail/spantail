@@ -1,4 +1,4 @@
-import type { PeriodUnit, ReportMeta, ReportTemplate } from "@spantail/core";
+import type { ReportMeta, ReportTemplate } from "@spantail/core";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
 	createContext,
@@ -20,13 +20,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { isTypingTarget } from "@/lib/keyboard";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { useWorkspace } from "@/lib/workspace";
-
-const UNIT_PRESET: Record<PeriodUnit, ReportFormSeed["rangeChoice"]> = {
-	day: "today",
-	week: "this_week",
-	month: "this_month",
-	custom: "custom",
-};
 
 interface ReportDialogsApi {
 	openCreate: (template: ReportTemplate) => void;
@@ -89,7 +82,8 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		workspaceIds: current ? [current.id] : [],
 		projectIds: [],
 		userIds: [],
-		rangeChoice: UNIT_PRESET[template.periodUnit],
+		// Period is chosen at run time; default a new report to the current month.
+		rangeChoice: "this_month",
 		from: "",
 		to: "",
 		tags: "",

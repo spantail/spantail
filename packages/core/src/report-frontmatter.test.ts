@@ -9,7 +9,7 @@ import {
 const meta: ReportFrontMatter = {
 	name: "Weekly: Q3 — review",
 	version: 2,
-	templateId: "builtin:weekly",
+	templateId: "tmpl-weekly",
 	period: { from: "2026-06-15", to: "2026-06-21", preset: "last_week" },
 	filters: { workspaceIds: ["ws-1"], tags: ["api", "needs: triage"] },
 	totalMinutes: 525,

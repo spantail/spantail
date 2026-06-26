@@ -5,15 +5,12 @@ import {
 	createReportShareInputSchema,
 	filterEntriesByTags,
 	generateShareToken,
-	getBuiltinTemplate,
 	hashSharePasscode,
-	isBuiltinTemplateId,
 	listReportsQuerySchema,
 	MAX_REPORT_MARKDOWN_LENGTH,
 	type ReportFilters,
 	type ReportFiltersInput,
 	renderReport,
-	resolveBuiltinTemplateSettings,
 	resolveDateRange,
 	sendReportInputSchema,
 	updateReportInputSchema,
@@ -24,7 +21,6 @@ import {
 	createReportShare,
 	deleteReport,
 	getCurrentReportContent,
-	getInstanceSettings,
 	getMembership,
 	getReportById,
 	getReportTemplateById,
@@ -104,7 +100,7 @@ export async function requireReportReadAccess(
  * memberships. Templates are instance-scoped formats, independent of the
  * report's scope, so any template may back any scope. Returns the caller's
  * memberships, the template body to render with (baked into the document), and
- * whether the template is enabled (builtins read the instance override).
+ * whether the template is enabled.
  */
 async function validateFiltersAndTemplate(
 	c: Context<AppEnv>,
@@ -116,17 +112,6 @@ async function validateFiltersAndTemplate(
 	enabled: boolean;
 }> {
 	const workspaces = await requireScopeWorkspaces(c, workspaceIds);
-
-	if (isBuiltinTemplateId(templateId)) {
-		const builtin = getBuiltinTemplate(templateId);
-		if (!builtin) throw new AppError("not_found", "Report template not found");
-		const settings = await getInstanceSettings(c.var.db);
-		const enabled = resolveBuiltinTemplateSettings(
-			settings?.reportTemplateOverrides,
-			templateId,
-		).enabled;
-		return { workspaces, templateBody: builtin.body, enabled };
-	}
 	const template = await getReportTemplateById(c.var.db, templateId);
 	if (!template) throw new AppError("not_found", "Report template not found");
 	return { workspaces, templateBody: template.body, enabled: template.enabled };

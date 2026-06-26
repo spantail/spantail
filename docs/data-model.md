@@ -115,7 +115,7 @@ erDiagram
 | `account` | User | OAuth provider link (google, github) or password credential. | belongs to `user` (cascade) |
 | `verification` | Instance | Email-verification and password-reset tokens, keyed by email. No user FK — standalone. | none |
 | `api_tokens` | User | Personal access tokens for the REST API; scopes `read` / `write` / `admin`. Hashed; value shown once. | belongs to `user` (cascade) |
-| `instance_settings` | Instance | Singleton row (`id = "singleton"`): email, social login, agents toggle, builtin-template overrides. | none |
+| `instance_settings` | Instance | Singleton row (`id = "singleton"`): email, social login, agents toggle. | none |
 | `user_invitations` | Instance | Pending email invitations; may grant admin or template-author on accept. | invited by `user` (cascade) |
 
 ## Domain: Workspaces & work
@@ -200,8 +200,8 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `report_templates` | Instance | Custom presentation format (Markdown + Liquid). Builtins are code-defined; only their state lives in `instance_settings`. Cadence `periodUnit`. | optional author `user` (set null) |
-| `reports` | User | Mutable report header: `templateId` + `filters` + note. May span multiple workspaces via `filters.workspaceIds`. `version` points at the current snapshot. | owner `user`; `templateId` is `builtin:*` or a custom id (no FK) |
+| `report_templates` | Instance | Presentation format (Markdown + Liquid). A fresh instance is seeded with one default template from `@spantail/templates`. | optional author `user` (set null) |
+| `reports` | User | Mutable report header: `templateId` + `filters` + note. May span multiple workspaces via `filters.workspaceIds`. `version` points at the current snapshot. | owner `user`; `templateId` is a `report_templates` id (no FK) |
 | `report_content` | User (per report) | Immutable rendered snapshot per version: YAML front-matter + Markdown body. | belongs to `reports` (cascade) |
 | `report_shares` | Report | Public capability link to a frozen snapshot; optional passcode (hashed), expiry, revoke; view counter. | belongs to `reports` (cascade) |
 | `report_deliveries` | User (recipient) | "Send to" inbox copy, frozen at send time (email model). One send fans out to N rows grouped by `batchId`. | source `reports` (cascade); sender + recipient `user` |
@@ -251,7 +251,7 @@ frozen content.
 ```mermaid
 flowchart TB
     FILT["Filters<br/>workspaces · projects · users · tags · date range"] --> RUN["Render<br/>template + filters to Markdown"]
-    TPL["report_templates<br/>builtin or custom (Liquid)"] --> RUN
+    TPL["report_templates<br/>(Liquid)"] --> RUN
     RUN --> REP["reports (header)<br/>+ report_content (version N, frozen)"]
     REP -->|"Share"| SH["report_shares<br/>public link · passcode · expiry"]
     REP -->|"Send to"| DEL["report_deliveries<br/>recipient inbox (frozen copy)"]

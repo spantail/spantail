@@ -124,13 +124,14 @@ function Timeline({
 							}}
 							onCreateReport={(day) =>
 								// Hand off to the reports shell, which opens a seeded create
-								// dialog (daily template, scoped to just this day + this
+								// dialog (the default template, scoped to just this day + this
 								// workspace) from the search params — see ReportDialogsProvider.
+								// "all" lets createTargetForTab pick the default template.
 								navigate({
 									to: "/reports/$tab",
-									params: { tab: "builtin:daily" },
+									params: { tab: "all" },
 									search: {
-										create: "builtin:daily",
+										create: "all",
 										from: day.date,
 										to: day.date,
 										ws: workspaceId,

@@ -1,19 +1,31 @@
 import { env, exports } from "cloudflare:workers";
 import { createDb, findUserByEmail } from "@spantail/db";
+import { defaultTemplateForLocale } from "@spantail/templates";
 import { expect, it } from "vitest";
 
 import { socialProviderOf } from "./auth";
 
 const BASE = "https://example.com";
 
-async function signUp(name: string, email: string) {
+async function signUp(name: string, email: string, acceptLanguage?: string) {
 	return exports.default.fetch(
 		new Request(`${BASE}/api/auth/sign-up/email`, {
 			method: "POST",
-			headers: { "content-type": "application/json" },
+			headers: {
+				"content-type": "application/json",
+				...(acceptLanguage ? { "accept-language": acceptLanguage } : {}),
+			},
 			body: JSON.stringify({ name, email, password: "password1234" }),
 		}),
 	);
+}
+
+async function listTemplateNames(cookie: string): Promise<string[]> {
+	const res = await exports.default.fetch(
+		new Request(`${BASE}/api/v1/report-templates`, { headers: { cookie } }),
+	);
+	const list = (await res.json()) as Array<{ name: string }>;
+	return list.map((t) => t.name);
 }
 
 function sessionCookie(res: Response): string {
@@ -74,6 +86,24 @@ it("makes the first user an instance admin and closes public sign-up", async () 
 	// public sign-up is rejected for everyone after the first user.
 	const secondRes = await signUp("Second", "second@example.com");
 	expect(secondRes.status).toBe(403);
+});
+
+it("seeds the bootstrap admin a default template in the Accept-Language locale", async () => {
+	const res = await signUp("First", "first@example.com", "ja,en;q=0.8");
+	expect(res.status).toBe(200);
+	// Exactly one template is seeded for the first admin (builtins are gone),
+	// in the negotiated locale.
+	expect(await listTemplateNames(sessionCookie(res))).toEqual([
+		defaultTemplateForLocale("ja").name,
+	]);
+});
+
+it("seeds the English default template when no language is sent", async () => {
+	const res = await signUp("First", "first@example.com");
+	expect(res.status).toBe(200);
+	expect(await listTemplateNames(sessionCookie(res))).toEqual([
+		defaultTemplateForLocale("en").name,
+	]);
 });
 
 it("detects the social provider behind a user-create hook", () => {

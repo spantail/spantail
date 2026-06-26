@@ -1,6 +1,12 @@
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	appFetch,
+	defaultTemplateId,
+	signUpUser,
+} from "../../test/helpers";
 
 const MCP_HEADERS = {
 	"content-type": "application/json",
@@ -220,7 +226,7 @@ it("reads a rendered report end to end over mcp", async () => {
 			"/api/v1/reports",
 			{
 				name: "Daily via MCP",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(cookie),
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 				note: "Generated through the MCP loopback",
 			},

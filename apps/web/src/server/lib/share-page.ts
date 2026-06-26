@@ -48,6 +48,34 @@ export function pickShareLocale(c: Context): ShareLocale {
 	}) as ShareLocale;
 }
 
+/**
+ * Narrows a raw `Accept-Language` header to a supported locale. Used where only
+ * the header string is available (no Hono Context), e.g. the better-auth
+ * user-create hook seeding a default template. Missing/unknown header → "en".
+ */
+export function negotiateLocale(
+	acceptLanguage: string | null | undefined,
+): ShareLocale {
+	if (!acceptLanguage) return "en";
+	const ranked = acceptLanguage
+		.split(",")
+		.map((part) => {
+			const [tag = "", ...params] = part.trim().split(";");
+			const q = params.map((p) => p.trim()).find((p) => p.startsWith("q="));
+			const quality = q ? Number.parseFloat(q.slice(2)) : 1;
+			return {
+				tag: tag.trim().toLowerCase(),
+				quality: Number.isNaN(quality) ? 0 : quality,
+			};
+		})
+		.sort((a, b) => b.quality - a.quality);
+	for (const { tag } of ranked) {
+		if (tag === "ja" || tag.startsWith("ja-")) return "ja";
+		if (tag === "en" || tag.startsWith("en-")) return "en";
+	}
+	return "en";
+}
+
 // Standalone styling on purpose: share pages are served outside the SPA and
 // must not pull in the app shell or its CSS bundle.
 const STYLE = `

@@ -3,7 +3,13 @@ import { generatePat, hashPat, isShareTokenFormat } from "@spantail/core";
 import { createApiToken, createDb, getReportShareByToken } from "@spantail/db";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	appFetch,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
 
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
@@ -50,7 +56,7 @@ async function createReport(
 		"/api/v1/reports",
 		{
 			name: "Daily",
-			templateId: "builtin:daily",
+			templateId: await defaultTemplateId(cookie),
 			filters: { workspaceIds: [wsId], dateRange: "today" },
 		},
 		cookie,
@@ -136,7 +142,7 @@ it("keeps a published share frozen when the report is edited", async () => {
 		`/api/v1/reports/${report.id}`,
 		{
 			name: "Edited",
-			templateId: "builtin:daily",
+			templateId: await defaultTemplateId(admin),
 			filters: { workspaceIds: [ws.id], dateRange: "today" },
 		},
 		admin,

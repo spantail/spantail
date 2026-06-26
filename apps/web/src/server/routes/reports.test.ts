@@ -1,11 +1,21 @@
 import { splitFrontMatter, todayInTimezone } from "@spantail/core";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
+
+// The default template seeded for the bootstrap admin; baseReport renders with
+// it. Set by setup() (a file's tests run sequentially, so this stays coherent).
+let seededTemplateId = "";
 
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const other = await signUpUser("Other", "other@example.com");
+	seededTemplateId = await defaultTemplateId(admin);
 	const ws = (await (
 		await apiJson(
 			"POST",
@@ -22,7 +32,7 @@ async function setup() {
 			admin,
 		)
 	).json()) as { id: string };
-	return { admin, other, ws, project };
+	return { admin, other, ws, project, templateId: seededTemplateId };
 }
 
 async function createEntry(
@@ -51,7 +61,7 @@ async function createEntry(
 
 const baseReport = (wsId: string) => ({
 	name: "Daily standup",
-	templateId: "builtin:daily",
+	templateId: seededTemplateId,
 	filters: { workspaceIds: [wsId], tags: ["api"], dateRange: "today" },
 	note: "Reviewed by QA",
 });
@@ -152,10 +162,21 @@ it("re-renders on edit, bumping the version and picking up field changes", async
 	// Log more matching work, then edit: the new version re-renders from source,
 	// and provenance (template, totals) follows the new fields.
 	await createEntry(admin, ws.id, project.id, "More API work", ["api"]);
+	const otherTemplate = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/report-templates",
+			{
+				name: "Weekly",
+				body: "# {{ report.name }}\n{% for e in entries %}- {{ e.description }}\n{% endfor %}",
+			},
+			admin,
+		)
+	).json()) as { id: string };
 	const res = await apiJson(
 		"PATCH",
 		`/api/v1/reports/${report.id}`,
-		{ ...baseReport(ws.id), templateId: "builtin:weekly" },
+		{ ...baseReport(ws.id), templateId: otherTemplate.id },
 		admin,
 	);
 	expect(res.status).toBe(200);
@@ -166,7 +187,7 @@ it("re-renders on edit, bumping the version and picking up field changes", async
 		renderedMarkdown: string;
 	};
 	expect(patched.version).toBe(2);
-	expect(patched.templateId).toBe("builtin:weekly");
+	expect(patched.templateId).toBe(otherTemplate.id);
 	// The re-render reflects current entries and the new template.
 	expect(patched.totalMinutes).toBe(60);
 	expect(patched.renderedMarkdown).toContain("More API work");
@@ -483,7 +504,7 @@ it("revokes report content access when workspace membership is lost", async () =
 			"/api/v1/reports",
 			{
 				name: "Mine",
-				templateId: "builtin:daily",
+				templateId: seededTemplateId,
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			other,
@@ -581,12 +602,12 @@ it("rejects creating a report with a disabled template", async () => {
 		).status,
 	).toBe(400);
 
-	// Builtins respect the instance override too.
+	// The seeded default template respects the same rule.
 	expect(
 		(
 			await apiJson(
 				"PATCH",
-				"/api/v1/report-templates/builtin:daily/state",
+				`/api/v1/report-templates/${seededTemplateId}/state`,
 				{ enabled: false },
 				admin,
 			)
@@ -642,7 +663,7 @@ it("filters and paginates the report list server-side", async () => {
 			"/api/v1/reports",
 			{
 				name,
-				templateId: "builtin:daily",
+				templateId: seededTemplateId,
 				filters: {
 					workspaceIds: [ws.id],
 					...(projectIds ? { projectIds } : {}),
@@ -706,8 +727,8 @@ it("filters and paginates the report list server-side", async () => {
 	]);
 
 	// templateId is the tab filter; an unused template returns nothing.
-	expect(await names("?templateId=builtin:weekly")).toEqual([]);
-	expect(await names("?templateId=builtin:daily")).toEqual([
+	expect(await names(`?templateId=${crypto.randomUUID()}`)).toEqual([]);
+	expect(await names(`?templateId=${seededTemplateId}`)).toEqual([
 		"Apr",
 		"Feb",
 		"Jan",
@@ -723,5 +744,5 @@ it("lists distinct template ids in use", async () => {
 	await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin);
 	expect(
 		await (await apiGet("/api/v1/reports/template-ids", admin)).json(),
-	).toEqual(["builtin:daily"]);
+	).toEqual([seededTemplateId]);
 });

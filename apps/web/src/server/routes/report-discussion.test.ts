@@ -1,6 +1,11 @@
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
 
 interface Discussion {
 	shared: boolean;
@@ -49,7 +54,7 @@ async function setup() {
 			"/api/v1/reports",
 			{
 				name: "Daily",
-				templateId: "builtin:daily",
+				templateId: await defaultTemplateId(owner),
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			owner,

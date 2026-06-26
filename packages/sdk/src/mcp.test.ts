@@ -23,9 +23,7 @@ function makeStub() {
 		}),
 		listWorkEntries: record("listWorkEntries", []),
 		updateWorkEntry: record("updateWorkEntry", { id: "e1" }),
-		listReportTemplates: record("listReportTemplates", [
-			{ id: "builtin:daily" },
-		]),
+		listReportTemplates: record("listReportTemplates", [{ id: "tmpl-1" }]),
 		listReports: record("listReports", [{ id: "r1" }]),
 		getReport: record("getReport", { id: "r1", renderedMarkdown: "# Report" }),
 	} as unknown as SpantailClient;

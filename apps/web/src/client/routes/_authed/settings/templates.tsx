@@ -1,4 +1,4 @@
-import type { PeriodUnit, ReportTemplate } from "@spantail/core";
+import type { ReportTemplate } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -16,13 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import {
 	Table,
 	TableBody,
 	TableCell,
@@ -33,8 +26,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 
-const PERIOD_UNITS: PeriodUnit[] = ["day", "week", "month", "custom"];
-
 export const Route = createFileRoute("/_authed/settings/templates")({
 	component: TemplatesSection,
 });
@@ -44,7 +35,6 @@ interface TemplateDraft {
 	name: string;
 	description: string;
 	body: string;
-	periodUnit: PeriodUnit;
 }
 
 const EMPTY_DRAFT: TemplateDraft = {
@@ -52,7 +42,6 @@ const EMPTY_DRAFT: TemplateDraft = {
 	name: "",
 	description: "",
 	body: "",
-	periodUnit: "custom",
 };
 
 function TemplatesSection() {
@@ -86,7 +75,6 @@ function TemplatesSection() {
 						name: template.name,
 						description: template.description ?? "",
 						body: template.body,
-						periodUnit: template.periodUnit,
 					})
 				}
 				onDuplicate={(template) =>
@@ -95,7 +83,6 @@ function TemplatesSection() {
 						name: t("templates.copyName", { name: template.name }),
 						description: template.description ?? "",
 						body: template.body,
-						periodUnit: template.periodUnit,
 					})
 				}
 			/>
@@ -123,17 +110,11 @@ function TemplateFormCard({
 				body: draft.body,
 			};
 			if (draft.editingId) {
-				const updated = await api.updateReportTemplate(draft.editingId, input);
-				// Cadence is template state, set via the separate state route.
-				await api.updateReportTemplateState(draft.editingId, {
-					periodUnit: draft.periodUnit,
-				});
-				return updated;
+				return api.updateReportTemplate(draft.editingId, input);
 			}
 			return api.createReportTemplate({
 				...input,
 				description: input.description ?? undefined,
-				periodUnit: draft.periodUnit,
 			});
 		},
 		onSuccess: async () => {
@@ -186,26 +167,6 @@ function TemplateFormCard({
 								}
 							/>
 						</div>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("templates.periodUnit")}</Label>
-						<Select
-							value={draft.periodUnit}
-							onValueChange={(v) =>
-								onDraftChange({ ...draft, periodUnit: v as PeriodUnit })
-							}
-						>
-							<SelectTrigger className="w-full sm:w-1/2">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{PERIOD_UNITS.map((unit) => (
-									<SelectItem key={unit} value={unit}>
-										{t(`templates.cadence.${unit}`)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="tpl-body">{t("templates.body")}</Label>
@@ -308,7 +269,6 @@ function TemplateListCard({
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("templates.name")}</TableHead>
-								<TableHead>{t("templates.periodUnit")}</TableHead>
 								<TableHead />
 							</TableRow>
 						</TableHeader>
@@ -318,20 +278,12 @@ function TemplateListCard({
 									<TableCell>
 										<span className="flex flex-wrap items-center gap-2">
 											{template.name}
-											{template.builtin && (
-												<Badge variant="secondary">
-													{t("templates.builtin")}
-												</Badge>
-											)}
 											{!template.enabled && (
 												<Badge variant="outline">
 													{t("templates.disabledBadge")}
 												</Badge>
 											)}
 										</span>
-									</TableCell>
-									<TableCell className="text-muted-foreground">
-										{t(`templates.cadence.${template.periodUnit}`)}
 									</TableCell>
 									<TableCell className="text-right">
 										{canManage && (
@@ -351,32 +303,27 @@ function TemplateListCard({
 														? t("templates.disableAction")
 														: t("templates.enableAction")}
 												</Button>
-												{template.builtin ? (
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => onDuplicate(template)}
-													>
-														{t("templates.duplicateAction")}
-													</Button>
-												) : (
-													<>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => onEdit(template)}
-														>
-															{t("templates.editAction")}
-														</Button>
-														<Button
-															variant="ghost"
-															size="sm"
-															onClick={() => deleteMutation.mutate(template.id)}
-														>
-															{t("templates.deleteAction")}
-														</Button>
-													</>
-												)}
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => onDuplicate(template)}
+												>
+													{t("templates.duplicateAction")}
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => onEdit(template)}
+												>
+													{t("templates.editAction")}
+												</Button>
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => deleteMutation.mutate(template.id)}
+												>
+													{t("templates.deleteAction")}
+												</Button>
 											</>
 										)}
 									</TableCell>

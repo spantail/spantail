@@ -1,7 +1,36 @@
 import { expect, it } from "vitest";
 import type { ReportContextInput } from "./report-engine";
 import { buildReportContext, renderReport } from "./report-engine";
-import { builtinReportTemplates, getBuiltinTemplate } from "./report-templates";
+
+// A representative report body (the shipped default template format) used to
+// pin the engine's rendered output. The shipped catalog lives in
+// @spantail/templates; this fixture keeps the engine test self-contained.
+const DEFAULT_BODY = `# {{ report.name }}
+
+**Period:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
+
+{% if totals.entries == 0 -%}
+_No work entries in this period._
+
+{% else -%}
+{% for group in groups.by_project -%}
+## {{ group.name }} — {{ group.total_minutes | format_duration }}
+
+{% for entry in group.entries -%}
+- {{ entry.description }} ({{ entry.duration_minutes | format_duration }}, {{ entry.user_name }}{% if entry.tags.size > 0 %}, tags: {{ entry.tags | join: ", " }}{% endif %})
+{% endfor %}
+{% endfor -%}
+{% endif -%}
+{% if report.note -%}
+## Notes
+
+{{ report.note }}
+
+{% endif -%}
+---
+
+_Generated {{ generated_date }}_
+`;
 
 const fixture: ReportContextInput = {
 	report: {
@@ -71,21 +100,13 @@ function entry(
 	};
 }
 
-it.each([
-	"daily",
-	"weekly",
-	"monthly",
-])("renders the builtin %s template (golden)", async (key) => {
-	const template = getBuiltinTemplate(`builtin:${key}`);
-	if (!template) throw new Error(`missing builtin:${key}`);
-	const rendered = await renderReport(template.body, fixture);
-	await expect(rendered).toMatchFileSnapshot(`./report-golden/${key}.md`);
+it("renders the default template (golden)", async () => {
+	const rendered = await renderReport(DEFAULT_BODY, fixture);
+	await expect(rendered).toMatchFileSnapshot("./report-golden/default.md");
 });
 
 it("omits the notes section when the note is null", async () => {
-	const template = getBuiltinTemplate("builtin:daily");
-	if (!template) throw new Error("missing builtin:daily");
-	const rendered = await renderReport(template.body, {
+	const rendered = await renderReport(DEFAULT_BODY, {
 		...fixture,
 		report: { name: "Daily", note: null },
 	});
@@ -93,14 +114,11 @@ it("omits the notes section when the note is null", async () => {
 });
 
 it("renders an empty-period placeholder", async () => {
-	const template = getBuiltinTemplate("builtin:monthly");
-	if (!template) throw new Error("missing builtin:monthly");
-	const rendered = await renderReport(template.body, {
+	const rendered = await renderReport(DEFAULT_BODY, {
 		...fixture,
 		entries: [],
 	});
 	expect(rendered).toContain("_No work entries in this period._");
-	expect(rendered).not.toContain("| Project |");
 });
 
 it("computes totals and group ordering in the context", () => {
@@ -157,14 +175,6 @@ it("groups entries from a deleted project under a no-project placeholder", () =>
 	expect(context.groups.by_project.map((g) => g.name)).toContain(
 		"(no project)",
 	);
-});
-
-it("exposes all three builtins", () => {
-	expect(builtinReportTemplates.map((t) => t.id)).toEqual([
-		"builtin:daily",
-		"builtin:weekly",
-		"builtin:monthly",
-	]);
 });
 
 it("rejects disabled tags", async () => {

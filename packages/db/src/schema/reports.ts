@@ -8,8 +8,6 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-const PERIOD_UNITS = ["day", "week", "month", "custom"] as const;
-
 import { user } from "./auth";
 import { createdAtMs } from "./domain";
 
@@ -20,8 +18,8 @@ const updatedAtMs = () =>
 		.notNull();
 
 // Templates are instance-scoped presentation formats: a report picks one
-// freely, independent of which workspaces/projects/period it covers. Builtin
-// templates are code-defined in @spantail/core; these rows are the custom ones.
+// freely, independent of which workspaces/projects/period it covers. A fresh
+// instance is seeded with a default template from @spantail/templates.
 export const reportTemplates = sqliteTable("report_templates", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
@@ -30,10 +28,6 @@ export const reportTemplates = sqliteTable("report_templates", {
 	body: text("body").notNull(),
 	// Admin-controlled: disabled templates are hidden from the report tabs.
 	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-	// Cadence used to default a report's period/name and the Duplicate step.
-	periodUnit: text("period_unit", { enum: PERIOD_UNITS })
-		.notNull()
-		.default("custom"),
 	// Nullable + set null on delete: keep the template when its author is
 	// removed (authorship is just dropped).
 	createdBy: text("created_by").references(() => user.id, {
@@ -55,7 +49,8 @@ export const reports = sqliteTable(
 		ownerUserId: text("owner_user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		// Either a "builtin:*" id or a report_templates id; intentionally no FK.
+		// A report_templates id; intentionally no FK so a report survives its
+		// template being deleted (the rendered document is already frozen).
 		templateId: text("template_id").notNull(),
 		// Always absolute: the report is a document for one fixed period.
 		filters: text("filters", { mode: "json" }).$type<ReportFilters>().notNull(),

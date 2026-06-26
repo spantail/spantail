@@ -3,7 +3,13 @@ import { generatePat, hashPat, type TokenScope } from "@spantail/core";
 import { createApiToken, createDb } from "@spantail/db";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	appFetch,
+	defaultTemplateId,
+	signUpUser,
+} from "../../../test/helpers";
 
 async function mintToken(
 	userEmail: string,
@@ -154,7 +160,7 @@ it("enforces the scope matrix", async () => {
 	expect((await bearerGet("/api/v1/reports", readToken)).status).toBe(200);
 	const reportInput = {
 		name: "Daily",
-		templateId: "builtin:daily",
+		templateId: await defaultTemplateId(adminCookie),
 		filters: { workspaceIds: [ws.id], dateRange: "today" },
 	};
 	const reportDenied = await bearerJson(

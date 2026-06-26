@@ -128,8 +128,8 @@ export function registerSpantailTools(
 		{
 			title: "List report templates",
 			description:
-				"List the instance's report templates, including the builtin " +
-				"daily/weekly/monthly templates. Returns ids usable as a report's templateId.",
+				"List the instance's report templates. Returns ids usable as a " +
+				"report's templateId.",
 			inputSchema: {},
 		},
 		() => run(() => client.listReportTemplates()),

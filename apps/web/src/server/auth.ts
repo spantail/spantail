@@ -2,6 +2,7 @@ import { isSelfJoinDomain } from "@spantail/core";
 import {
 	authOptions,
 	countUsers,
+	createReportTemplate,
 	type Database,
 	getInstanceSettings,
 	getPendingInvitationByEmail,
@@ -10,11 +11,13 @@ import {
 	schema,
 	updateUser,
 } from "@spantail/db";
+import { defaultTemplateForLocale } from "@spantail/templates";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { renderPasswordResetEmail } from "./emails/password-reset-email";
 import { getMailer } from "./lib/mail/mailer";
+import { negotiateLocale } from "./lib/share-page";
 
 /**
  * Social login providers to enable for this request, resolved from the instance
@@ -151,6 +154,22 @@ export function createAuth(
 						return { data: user };
 					},
 					after: async (user, hookCtx) => {
+						// Bootstrap: the first registered user is the super-admin (see the
+						// before-hook). Seed their instance with a default report template so
+						// reports can be composed immediately — builtins no longer exist.
+						// Locale comes from Accept-Language (the SPA's language preference is
+						// localStorage-only and never reaches the server); missing → "en".
+						if ((await countUsers(db)) === 1) {
+							const template = defaultTemplateForLocale(
+								negotiateLocale(acceptLanguageOf(hookCtx)),
+							);
+							await createReportTemplate(db, {
+								name: template.name,
+								description: template.description,
+								body: template.body,
+								createdBy: user.id,
+							});
+						}
 						// A social sign-in may consume a standing invitation (Google/GitHub
 						// onboarding). Credential invitation-accept consumes its own
 						// invitation in the route, so skip non-social creations here. Only a
@@ -201,6 +220,16 @@ export function createAuth(
  * callback (`/callback/:id`) and the ID-token flow (`/sign-in/social`, which
  * never hits the callback).
  */
+/** The request's `Accept-Language` header from a better-auth hook context. */
+function acceptLanguageOf(
+	hookCtx:
+		| { headers?: { get(name: string): string | null } }
+		| null
+		| undefined,
+): string | null {
+	return hookCtx?.headers?.get("accept-language") ?? null;
+}
+
 export function socialProviderOf(
 	hookCtx:
 		| {
