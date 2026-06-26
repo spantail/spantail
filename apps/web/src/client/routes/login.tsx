@@ -106,8 +106,6 @@ function LoginPage() {
 					>
 						© {new Date().getFullYear()} {t("app.name")}
 					</a>
-					{" · "}
-					{t("auth.brandFooter")}
 				</div>
 			</section>
 
