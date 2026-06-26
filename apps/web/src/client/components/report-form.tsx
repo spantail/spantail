@@ -169,7 +169,10 @@ export function ReportForm({
 		!templatesReady ||
 		availableTemplates.some((template) => template.id === templateId)
 			? templateId
-			: (availableTemplates[0]?.id ?? "");
+			: // Selection no longer available (e.g. its template was deleted): switch
+				// to the first enabled template, or keep the current id when none exist
+				// rather than blanking it into an invalid request.
+				(availableTemplates[0]?.id ?? templateId);
 
 	const singleWorkspaceId = workspaceIds.length === 1 ? workspaceIds[0] : null;
 	const projects = useQuery({

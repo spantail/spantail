@@ -1,6 +1,7 @@
 import { isSelfJoinDomain } from "@spantail/core";
 import {
 	authOptions,
+	countReportTemplates,
 	countUsers,
 	createReportTemplate,
 	type Database,
@@ -154,12 +155,15 @@ export function createAuth(
 						return { data: user };
 					},
 					after: async (user, hookCtx) => {
-						// Bootstrap: the first registered user is the super-admin (see the
-						// before-hook). Seed their instance with a default report template so
-						// reports can be composed immediately — builtins no longer exist.
-						// Locale comes from Accept-Language (the SPA's language preference is
-						// localStorage-only and never reaches the server); missing → "en".
-						if ((await countUsers(db)) === 1) {
+						// Seed a default report template the first time the instance has
+						// none, so reports can be composed immediately — builtins no longer
+						// exist. Keying on an empty report_templates table (not the user
+						// count) is idempotent and race-safe: two racing first sign-ups can
+						// both miss `countUsers === 1`, but at least one still sees an empty
+						// table and seeds. Locale comes from Accept-Language (the SPA's
+						// language preference is localStorage-only and never reaches the
+						// server); missing → "en".
+						if ((await countReportTemplates(db)) === 0) {
 							const template = defaultTemplateForLocale(
 								negotiateLocale(acceptLanguageOf(hookCtx)),
 							);
