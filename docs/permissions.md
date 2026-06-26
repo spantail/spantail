@@ -4,6 +4,9 @@ This is the single source of truth for **who can read and write each resource** 
 Spantail. It defines the intended model (the spec). Where the current code diverges
 from this spec, it is called out explicitly under [Known gaps](#known-gaps).
 
+For the entities this model governs — what they are and how they relate — see
+[`data-model.md`](./data-model.md).
+
 Business logic lives in `packages/core`/`packages/db`; the REST API at `/api/v1` is the
 only enforcement point. The Web SPA, CLI, and MCP are all clients of that API. The Web UI
 intentionally exposes only a usability-driven subset of what the API allows — **the API and
