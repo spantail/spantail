@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { type CatalogEntry, templateCatalog } from "./manifest";
 
@@ -18,7 +19,7 @@ export const defaultTemplates: CatalogTemplate[] = templateCatalog.map(
 	(entry) => ({
 		...entry,
 		body: readFileSync(
-			`${CATALOG_DIR}${entry.key}.${entry.locale}.liquid`,
+			join(CATALOG_DIR, `${entry.key}.${entry.locale}.liquid`),
 			"utf8",
 		),
 	}),
