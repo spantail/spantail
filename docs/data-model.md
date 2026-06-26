@@ -11,8 +11,9 @@ validation stays in code:
 - **Database tables** — Drizzle schema in `packages/db/src/schema` (one file per domain).
 - **Domain types & request/response shapes** — Zod schemas in `packages/core/src`.
 
-Where this page names a table it uses its SQL name (`work_entries`); where it names a scope or role
-it matches the vocabulary in [`permissions.md`](./permissions.md). All timestamps are UTC; see
+Where this page names a table in prose or catalogs it uses the SQL name (`work_entries`); the
+high-level diagrams group resources informally. Where it names a scope or role it matches the
+vocabulary in [`permissions.md`](./permissions.md). All timestamps are UTC; see
 [Conventions](#conventions) for the date/duration rules.
 
 ## Scope hierarchy
@@ -26,7 +27,7 @@ also a single user's own resource. This is the same five-scope model
 ```mermaid
 flowchart TB
     subgraph INSTANCE["Instance — one per deployment"]
-        instNote["users · instance_settings<br/>user_invitations · report_templates"]
+        instNote["user accounts · instance settings<br/>invitations · report templates"]
         subgraph WORKSPACE["Workspace — tenancy boundary"]
             wsNote["settings · members · projects<br/>unassigned work entries · agent activity"]
             subgraph PROJECT["Project"]
@@ -36,7 +37,7 @@ flowchart TB
     end
 
     subgraph USER["User — instance-wide, self-service"]
-        userNote["sessions · accounts · API tokens · agents<br/>reports · inbox"]
+        userNote["account · sessions · access tokens<br/>agents · reports · inbox"]
     end
 
     subgraph REPORT["Report"]
@@ -172,7 +173,7 @@ erDiagram
 | `agent_tokens` | User | Agent Access Token (AAT): a write-only **ingest** credential bound to one agent; optional `defaultWorkspaceId`. Hashed; one active token per agent in practice. | belongs to `agents` (cascade) |
 | `agent_projects` | Project | Presentation grouping of an agent to projects — no rows means "all projects". Does **not** gate or default ingest. | joins `agents` and `projects` |
 | `agent_entries` | Project / Workspace | One agent **session** rollup: duration and token usage. Idempotent by (agentId, sessionId). Sits on the timeline beside human work. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
-| `agent_events` | Project / Workspace | Raw **per-turn** telemetry — one row per assistant message, native usage stored verbatim. Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
+| `agent_events` | Workspace | Raw **per-turn** telemetry — one row per assistant message, native usage stored verbatim. Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
 
 ## Domain: Reports & distribution
 
