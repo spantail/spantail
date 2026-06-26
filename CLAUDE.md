@@ -69,6 +69,9 @@ pnpm deploy             # wrangler deploy (apps/web)
   [`docs/permissions.md`](docs/permissions.md) for the full role × resource access model (the
   single source of truth), and [`docs/data-model.md`](docs/data-model.md) for the entities and how
   they relate.
+- **Docs stay in sync.** When you change the data model (`packages/db` schema or `packages/core`
+  entities) or the permissions model, update the matching source-of-truth doc — `docs/data-model.md`
+  or `docs/permissions.md` — in the same change, so the docs never drift from the code.
 - **Report templates are instance-scoped formats.** A template is a presentation format,
   independent of any workspace, project, user, or period — a report freely combines any template
   with any scope and date range at run time. Builtins are code-defined; their enabled/cadence
