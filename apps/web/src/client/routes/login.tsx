@@ -98,7 +98,7 @@ function LoginPage() {
 					<a
 						href="https://spantail.com"
 						target="_blank"
-						rel="noreferrer"
+						rel="noopener noreferrer"
 						className="underline-offset-4 hover:text-[#aeb6bf] hover:underline"
 					>
 						© {new Date().getFullYear()} {t("app.name")}
