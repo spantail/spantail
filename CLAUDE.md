@@ -67,7 +67,8 @@ pnpm deploy             # wrangler deploy (apps/web)
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report filters
   must be validated against the union of the user's workspaces. See
   [`docs/permissions.md`](docs/permissions.md) for the full role × resource access model (the
-  single source of truth).
+  single source of truth), and [`docs/data-model.md`](docs/data-model.md) for the entities and how
+  they relate.
 - **Report templates are instance-scoped formats.** A template is a presentation format,
   independent of any workspace, project, user, or period — a report freely combines any template
   with any scope and date range at run time. Builtins are code-defined; their enabled/cadence
