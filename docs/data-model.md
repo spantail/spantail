@@ -97,8 +97,8 @@ The four domains below give the precise relationships within each area.
 
 Accounts, authentication substrate, personal API credentials, and instance configuration.
 
-Schema: `packages/db/src/schema/auth.ts`, `tokens.ts`, `instance.ts` ·
-Core types: `packages/core/src/user.ts`, `token.ts`, `instance.ts`, `invitation.ts`
+Schema: [`packages/db/src/schema/auth.ts`](../packages/db/src/schema/auth.ts), [`tokens.ts`](../packages/db/src/schema/tokens.ts), [`instance.ts`](../packages/db/src/schema/instance.ts) ·
+Core types: [`packages/core/src/user.ts`](../packages/core/src/user.ts), [`token.ts`](../packages/core/src/token.ts), [`instance.ts`](../packages/core/src/instance.ts), [`invitation.ts`](../packages/core/src/invitation.ts)
 
 ```mermaid
 erDiagram
@@ -122,8 +122,8 @@ erDiagram
 
 The tenancy structure and the core human-work unit.
 
-Schema: `packages/db/src/schema/domain.ts` ·
-Core types: `packages/core/src/workspace.ts`, `project.ts`, `work-entry.ts`
+Schema: [`packages/db/src/schema/domain.ts`](../packages/db/src/schema/domain.ts) ·
+Core types: [`packages/core/src/workspace.ts`](../packages/core/src/workspace.ts), [`project.ts`](../packages/core/src/project.ts), [`work-entry.ts`](../packages/core/src/work-entry.ts)
 
 ```mermaid
 erDiagram
@@ -149,8 +149,8 @@ erDiagram
 
 AI coding agents as delegated identities, their ingest credentials, and the activity they stream in.
 
-Schema: `packages/db/src/schema/agents.ts` ·
-Core types: `packages/core/src/agent.ts`, `agent-events.ts`
+Schema: [`packages/db/src/schema/agents.ts`](../packages/db/src/schema/agents.ts) ·
+Core types: [`packages/core/src/agent.ts`](../packages/core/src/agent.ts), [`agent-events.ts`](../packages/core/src/agent-events.ts)
 
 ```mermaid
 erDiagram
@@ -180,8 +180,8 @@ erDiagram
 A report combines a template with freely chosen filters, renders to an immutable snapshot, and is
 distributed by sharing, sending, or discussing.
 
-Schema: `packages/db/src/schema/reports.ts`, `shares.ts`, `deliveries.ts`, `delivery-flags.ts`, `discussions.ts` ·
-Core types: `packages/core/src/report.ts`, `report-templates.ts`, `share.ts`, `delivery.ts`, `discussion.ts`
+Schema: [`packages/db/src/schema/reports.ts`](../packages/db/src/schema/reports.ts), [`shares.ts`](../packages/db/src/schema/shares.ts), [`deliveries.ts`](../packages/db/src/schema/deliveries.ts), [`delivery-flags.ts`](../packages/db/src/schema/delivery-flags.ts), [`discussions.ts`](../packages/db/src/schema/discussions.ts) ·
+Core types: [`packages/core/src/report.ts`](../packages/core/src/report.ts), [`report-templates.ts`](../packages/core/src/report-templates.ts), [`share.ts`](../packages/core/src/share.ts), [`delivery.ts`](../packages/core/src/delivery.ts), [`discussion.ts`](../packages/core/src/discussion.ts)
 
 ```mermaid
 erDiagram
