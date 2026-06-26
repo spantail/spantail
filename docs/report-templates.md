@@ -5,8 +5,9 @@ A report template is an instance-scoped **presentation format**: Markdown with
 carries no workspace, project, user, or period — a report freely combines any template with any
 scope and date range when it is created.
 
-A fresh instance is seeded with a single **default template** (from `@spantail/templates`, in the
-first admin's language) so reports can be composed immediately. Beyond that, instance admins and
+When an instance has no templates — a fresh or an upgraded one — the first time the list is read a
+single **default template** (from `@spantail/templates`, in the request's language) is seeded
+automatically, so reports can always be composed. Beyond that, instance admins and
 [template authors](permissions.md) author their own under **Settings → Reporting → Report
 templates**. The samples below are starting points — copy one in and adapt it.
 

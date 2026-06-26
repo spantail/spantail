@@ -10,12 +10,15 @@ import {
 	getReportTemplateById,
 	listReportTemplates,
 	type ReportTemplateRow,
+	seedDefaultReportTemplate,
 	updateReportTemplate,
 } from "@spantail/db";
+import { defaultTemplateForLocale } from "@spantail/templates";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
 import { requireTemplateManager } from "../lib/permissions";
+import { pickShareLocale } from "../lib/share-page";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
@@ -27,13 +30,27 @@ function toApi(row: ReportTemplateRow) {
 /**
  * Instance-scoped report templates. Templates are presentation formats with no
  * workspace binding: any authenticated user can read them to build a report,
- * while creating/editing/disabling is gated by requireTemplateManager. A fresh
- * instance is seeded with a default template when its first admin is created.
+ * while creating/editing/disabling is gated by requireTemplateManager. Listing
+ * lazily seeds the default template when the instance has none (a fresh or an
+ * upgraded instance that previously relied on the removed builtins), so reports
+ * are always composable.
  */
 export const reportTemplateRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		requireScope(c, "read");
-		const rows = await listReportTemplates(c.var.db);
+		let rows = await listReportTemplates(c.var.db);
+		if (rows.length === 0) {
+			// Seed the default in the request's locale. Idempotent (fixed id +
+			// onConflictDoNothing), so concurrent first reads converge on one row.
+			const template = defaultTemplateForLocale(pickShareLocale(c));
+			await seedDefaultReportTemplate(c.var.db, {
+				name: template.name,
+				description: template.description,
+				body: template.body,
+				createdBy: null,
+			});
+			rows = await listReportTemplates(c.var.db);
+		}
 		return c.json(rows.map(toApi));
 	})
 	.post("/", async (c) => {

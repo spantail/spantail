@@ -1,7 +1,6 @@
 import { isSelfJoinDomain } from "@spantail/core";
 import {
 	authOptions,
-	countReportTemplates,
 	countUsers,
 	type Database,
 	getInstanceSettings,
@@ -9,16 +8,13 @@ import {
 	getUserById,
 	markInvitationAccepted,
 	schema,
-	seedDefaultReportTemplate,
 	updateUser,
 } from "@spantail/db";
-import { defaultTemplateForLocale } from "@spantail/templates";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { renderPasswordResetEmail } from "./emails/password-reset-email";
 import { getMailer } from "./lib/mail/mailer";
-import { negotiateLocale } from "./lib/share-page";
 
 /**
  * Social login providers to enable for this request, resolved from the instance
@@ -155,25 +151,6 @@ export function createAuth(
 						return { data: user };
 					},
 					after: async (user, hookCtx) => {
-						// Seed a default report template the first time the instance has
-						// none, so reports can be composed immediately — builtins no longer
-						// exist. The empty-table check is a cheap fast-path (skips the write
-						// once seeded); seedDefaultReportTemplate is itself idempotent (fixed
-						// id + onConflictDoNothing), so two racing first sign-ups converge on
-						// a single default row rather than inserting duplicates. Locale comes
-						// from Accept-Language (the SPA's language preference is
-						// localStorage-only and never reaches the server); missing → "en".
-						if ((await countReportTemplates(db)) === 0) {
-							const template = defaultTemplateForLocale(
-								negotiateLocale(acceptLanguageOf(hookCtx)),
-							);
-							await seedDefaultReportTemplate(db, {
-								name: template.name,
-								description: template.description,
-								body: template.body,
-								createdBy: user.id,
-							});
-						}
 						// A social sign-in may consume a standing invitation (Google/GitHub
 						// onboarding). Credential invitation-accept consumes its own
 						// invitation in the route, so skip non-social creations here. Only a
@@ -224,16 +201,6 @@ export function createAuth(
  * callback (`/callback/:id`) and the ID-token flow (`/sign-in/social`, which
  * never hits the callback).
  */
-/** The request's `Accept-Language` header from a better-auth hook context. */
-function acceptLanguageOf(
-	hookCtx:
-		| { headers?: { get(name: string): string | null } }
-		| null
-		| undefined,
-): string | null {
-	return hookCtx?.headers?.get("accept-language") ?? null;
-}
-
 export function socialProviderOf(
 	hookCtx:
 		| {

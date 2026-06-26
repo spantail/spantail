@@ -1,6 +1,7 @@
+import { defaultTemplateForLocale } from "@spantail/templates";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, signUpUser } from "../../../test/helpers";
+import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 /** admin is the bootstrap instance admin; member is a regular user. */
 async function setup() {
@@ -53,14 +54,60 @@ it("seeds a default template for the first admin and lists custom ones", async (
 	expect(list.length).toBe(2);
 });
 
+it("lazily seeds the default template in the request locale", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+
+	const res = await appFetch("/api/v1/report-templates", {
+		headers: { cookie: admin, "accept-language": "ja,en;q=0.8" },
+	});
+	expect(res.status).toBe(200);
+	const list = (await res.json()) as Array<{ name: string }>;
+	expect(list.map((t) => t.name)).toEqual([
+		defaultTemplateForLocale("ja").name,
+	]);
+});
+
+it("re-seeds the default when an instance is left with no templates", async () => {
+	// Covers upgraded instances (builtins removed → empty table) and confirms
+	// the lazy seed is idempotent rather than one-shot.
+	const admin = await signUpUser("Admin", "admin@example.com");
+
+	const seeded = (await (
+		await apiGet("/api/v1/report-templates", admin)
+	).json()) as Array<{ id: string }>;
+	expect(seeded.length).toBe(1);
+
+	const id = seeded[0]?.id as string;
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/report-templates/${id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// A later read finds the table empty again and re-seeds the default.
+	const again = (await (
+		await apiGet("/api/v1/report-templates", admin)
+	).json()) as Array<{ id: string }>;
+	expect(again.length).toBe(1);
+});
+
 it("lets any authenticated user read templates but not anonymous callers", async () => {
 	const { admin, member } = await setup();
 	await apiJson("POST", "/api/v1/report-templates", templateInput, admin);
 
-	// Templates are instance-wide formats: every member can read the list.
+	// Templates are instance-wide formats: every member can read the list. The
+	// admin already created a custom template, so the default isn't lazily added
+	// (the table was non-empty); the member still sees the custom one.
 	const memberList = await apiGet("/api/v1/report-templates", member);
 	expect(memberList.status).toBe(200);
-	expect(((await memberList.json()) as unknown[]).length).toBeGreaterThan(1);
+	expect(
+		((await memberList.json()) as unknown[]).length,
+	).toBeGreaterThanOrEqual(1);
 
 	// Anonymous callers are rejected.
 	expect((await apiGet("/api/v1/report-templates")).status).toBe(401);

@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { reportTemplates } from "../schema/reports";
@@ -42,11 +42,6 @@ export async function seedDefaultReportTemplate(
 		.insert(reportTemplates)
 		.values({ id: DEFAULT_REPORT_TEMPLATE_ID, ...values })
 		.onConflictDoNothing();
-}
-
-export async function countReportTemplates(db: Database): Promise<number> {
-	const rows = await db.select({ value: count() }).from(reportTemplates);
-	return rows[0]?.value ?? 0;
 }
 
 export async function getReportTemplateById(
