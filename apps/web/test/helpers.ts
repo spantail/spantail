@@ -128,6 +128,11 @@ export async function apiGet(path: string, cookie?: string): Promise<Response> {
  */
 export async function defaultTemplateId(cookie: string): Promise<string> {
 	const res = await apiGet("/api/v1/report-templates", cookie);
+	if (!res.ok) {
+		throw new Error(
+			`report-templates list failed: ${res.status} ${await res.text()}`,
+		);
+	}
 	const list = (await res.json()) as Array<{ id: string }>;
 	const found = list.find((t) => t.id === DEFAULT_REPORT_TEMPLATE_ID);
 	if (!found) throw new Error("no default report template was seeded");

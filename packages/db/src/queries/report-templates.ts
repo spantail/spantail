@@ -29,9 +29,10 @@ export async function createReportTemplate(
 export const DEFAULT_REPORT_TEMPLATE_ID = "default";
 
 /**
- * Seeds the instance default template idempotently. The fixed id plus
+ * Seeds the instance default template idempotently. Triggered lazily when the
+ * templates list is read and the instance has none. The fixed id plus
  * onConflictDoNothing makes the insert itself race-safe: two concurrent first
- * sign-ups converge on a single default row instead of inserting duplicates.
+ * reads converge on a single default row instead of inserting duplicates.
  * A no-op once the row exists.
  */
 export async function seedDefaultReportTemplate(
