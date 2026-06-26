@@ -28,7 +28,7 @@ also a single user's own resource. This is the same five-scope model
 flowchart TB
     subgraph INSTANCE["Instance — one per deployment"]
         instNote["user accounts · instance settings<br/>invitations · report templates"]
-        subgraph WORKSPACE["Workspace — tenancy boundary"]
+        subgraph WORKSPACE["Workspace — org unit: department / team / client"]
             wsNote["settings · members · projects<br/>unassigned work entries · agent activity"]
             subgraph PROJECT["Project"]
                 projNote["project members<br/>project-assigned work & agent entries"]
@@ -120,7 +120,7 @@ erDiagram
 
 ## Domain: Workspaces & work
 
-The tenancy structure and the core human-work unit.
+The organizational structure and the core human-work unit.
 
 Schema: [`packages/db/src/schema/domain.ts`](../packages/db/src/schema/domain.ts) ·
 Core types: [`packages/core/src/workspace.ts`](../packages/core/src/workspace.ts), [`project.ts`](../packages/core/src/project.ts), [`work-entry.ts`](../packages/core/src/work-entry.ts)
@@ -139,7 +139,7 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `workspaces` | Workspace | Tenancy boundary — one company per deployment. Has timezone, accent color, optional logo. | contains projects, members, entries |
+| `workspaces` | Workspace | Organizational unit (department, team, or client) and the primary membership scope — not an isolated tenant (users can belong to several, and reports can span them). Has timezone, accent color, optional logo. | contains projects, members, entries |
 | `workspace_members` | Workspace | Membership and role: `owner` / `admin` / `member`. PK (workspaceId, userId). | joins `workspaces` and `user` |
 | `projects` | Workspace | A workspace subdivision. Status `active` / `archived`; color hue; slug unique per workspace. | belongs to `workspaces` (cascade) |
 | `project_members` | Project | Binary membership (no per-project role), managed by workspace admins. | joins `projects` and `user` |
