@@ -11,7 +11,7 @@ export default defineConfig({
 	site: "https://docs.spantail.com",
 	integrations: [
 		starlight({
-			title: "Spantail",
+			title: "Spantail docs",
 			customCss: ["./src/styles/custom.css"],
 			locales: {
 				root: { label: "English", lang: "en" },
@@ -25,10 +25,15 @@ export default defineConfig({
 				},
 			],
 			plugins: [
-				// Audiences switch from the top bar. User Guide is reached via the
-				// logo / landing page, so only the other three are listed here.
+				// Audiences switch from the top bar. User Guide is listed first (and
+				// is also where the logo / landing page leads) so the switcher is
+				// obvious and the logo's destination isn't a hidden assumption.
 				starlightThemeNova({
 					nav: [
+						{
+							label: { root: "User Guide", ja: "ユーザーガイド" },
+							href: { root: "/guides/", ja: "/ja/guides/" },
+						},
 						{
 							label: { root: "Admin Guide", ja: "管理者ガイド" },
 							href: { root: "/workspace-admin/", ja: "/ja/workspace-admin/" },
