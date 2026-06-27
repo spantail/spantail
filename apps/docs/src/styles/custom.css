@@ -1,7 +1,234 @@
+/* ============================================================
+   Spantail docs theme — reproduces the "Spantail Docs" mockup
+   (Option A, neutral): Geist typography, a neutral oklch palette
+   (light + dark), a left-aligned home hero, and a classic
+   3-column docs page. Layered on top of starlight-theme-nova by
+   overriding the Starlight design tokens it reads, plus a few
+   targeted component rules. Unlayered rules here intentionally win
+   over Nova's `@layer nova` styles.
+   ============================================================ */
+
 /* Audience switching lives in the top bar (Nova `nav`: User Guide, Admin
    Guide, Setup Guide, API Reference). The starlight-sidebar-topics plugin is
    kept only to drive the per-audience sidebar; hide its in-sidebar switcher so
    the top bar is the single switcher. */
 ul.starlight-sidebar-topics {
 	display: none;
+}
+
+/* ---- Fonts: wire Geist (sans + mono) into the Nova theme ------------ */
+:root {
+	--font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
+}
+
+/* ---- Neutral palette tokens (the mockup's design tokens) ------------ */
+/* `:root` = dark (matches how Nova scopes its default), light overrides
+   below. The Starlight-variable mapping that follows reads these. */
+:root {
+	--sp-bg: oklch(0.165 0.004 260);
+	--sp-fg: oklch(0.97 0.003 260);
+	--sp-fg-soft: oklch(0.86 0.004 260);
+	--sp-muted: oklch(0.68 0.006 260);
+	--sp-faint: oklch(0.55 0.006 260);
+	--sp-border: oklch(1 0 0 / 0.1);
+	--sp-border-strong: oklch(1 0 0 / 0.16);
+	--sp-card: oklch(0.205 0.004 260);
+	--sp-subtle: oklch(0.2 0.004 260);
+	--sp-subtle-2: oklch(0.235 0.005 260);
+	--sp-code-bg: oklch(0.235 0.005 260);
+	--sp-solid: oklch(0.93 0.003 260);
+	--sp-solid-fg: oklch(0.18 0.004 260);
+	--sp-warn-bg: oklch(0.26 0.04 90);
+	--sp-warn-line: oklch(0.42 0.07 90);
+	--sp-warn-text: oklch(0.85 0.09 95);
+	/* brand gradient (mint → teal → blue) — used only by accents/logo */
+	--sp-brand-grad: linear-gradient(
+		122deg,
+		oklch(0.85 0.1 170),
+		oklch(0.74 0.1 205) 45%,
+		oklch(0.6 0.135 248)
+	);
+}
+
+:root[data-theme="light"] {
+	--sp-bg: oklch(1 0 0);
+	--sp-fg: oklch(0.18 0.005 260);
+	--sp-fg-soft: oklch(0.32 0.006 260);
+	--sp-muted: oklch(0.55 0.006 260);
+	--sp-faint: oklch(0.7 0.005 260);
+	--sp-border: oklch(0.92 0.004 260);
+	--sp-border-strong: oklch(0.86 0.004 260);
+	--sp-card: oklch(1 0 0);
+	--sp-subtle: oklch(0.984 0.002 260);
+	--sp-subtle-2: oklch(0.965 0.003 260);
+	--sp-code-bg: oklch(0.968 0.003 260);
+	--sp-solid: oklch(0.2 0.005 260);
+	--sp-solid-fg: oklch(0.99 0 0);
+	--sp-warn-bg: oklch(0.965 0.045 95);
+	--sp-warn-line: oklch(0.85 0.09 90);
+	--sp-warn-text: oklch(0.5 0.1 70);
+}
+
+/* ---- Map Starlight/Nova tokens to the palette ---------------------- */
+/* Listed for both `:root` and the light selector so each ties or beats
+   Nova's own per-mode specificity and wins by load order. The values read
+   `--sp-*`, which are themed per mode above. */
+:root,
+:root[data-theme="light"] {
+	--sl-color-bg: var(--sp-bg);
+	--sl-color-text: var(--sp-fg-soft);
+	--sl-color-white: var(--sp-fg);
+	--sl-color-black: var(--sp-bg);
+	--sl-color-text-accent: var(--sp-fg);
+	--sl-color-hairline: var(--sp-border);
+	--sl-color-hairline-light: var(--sp-border);
+	--sl-color-hairline-shade: var(--sp-border);
+	--sl-color-bg-inline-code: var(--sp-code-bg);
+	--sl-color-border-inline-code: var(--sp-border);
+	--sl-color-bg-nav: color-mix(in oklch, var(--sp-bg) 86%, transparent);
+	--sl-color-bg-sidebar: var(--sp-bg);
+
+	/* neutral ramp aligned to the mockup so derived colors follow */
+	--sl-color-gray-1: var(--sp-fg);
+	--sl-color-gray-2: var(--sp-fg-soft);
+	--sl-color-gray-3: var(--sp-muted);
+	--sl-color-gray-4: var(--sp-faint);
+	--sl-color-gray-5: var(--sp-border-strong);
+	--sl-color-gray-6: var(--sp-border);
+	--sl-color-gray-7: var(--sp-subtle-2);
+
+	/* accent stays neutral ink (links/active states), not blue */
+	--sl-color-accent: var(--sp-solid);
+	--sl-color-accent-high: var(--sp-fg);
+	--sl-color-accent-low: var(--sp-subtle-2);
+
+	--nano-color-highlight: var(--sp-border-strong);
+}
+
+/* ============================================================
+   HOME PAGE — hero (Nova splash `.hero`)
+   ============================================================ */
+.hero h1 {
+	/* scales up to the mockup's 76px */
+	font-size: clamp(2.75rem, calc(1.5rem + 5vw), 4.75rem);
+	line-height: 0.98;
+	letter-spacing: -0.035em;
+	font-weight: 700;
+	color: var(--sp-fg);
+}
+.hero .tagline {
+	font-size: 21px;
+	line-height: 1.5;
+	color: var(--sp-muted);
+	max-width: 30ch;
+}
+/* CTA buttons: match the mockup's 50px height / 11px radius / 15px·600 */
+.hero .actions a {
+	height: 50px;
+	padding-block: 0;
+	padding-inline: 24px;
+	border-radius: 11px;
+	font-size: 15px;
+	font-weight: 600;
+	margin-top: 0;
+}
+
+/* ============================================================
+   DOCS PAGE — typography (Nova/Starlight `.sl-markdown-content`)
+   ============================================================ */
+.sl-markdown-content {
+	font-size: 16px;
+	line-height: 1.68;
+	color: var(--sp-fg-soft);
+}
+.sl-markdown-content h1 {
+	font-size: 40px;
+	font-weight: 700;
+	letter-spacing: -0.03em;
+	line-height: 1.05;
+	color: var(--sp-fg);
+}
+.sl-markdown-content h2 {
+	font-size: 25px;
+	font-weight: 680;
+	letter-spacing: -0.02em;
+	color: var(--sp-fg);
+	margin-top: 46px;
+}
+.sl-markdown-content h3 {
+	font-size: 19px;
+	font-weight: 650;
+	letter-spacing: -0.01em;
+	color: var(--sp-fg);
+}
+.sl-markdown-content p,
+.sl-markdown-content li {
+	font-size: 16px;
+	line-height: 1.66;
+	color: var(--sp-fg-soft);
+}
+/* first paragraph after the page title reads as a lede */
+.sl-markdown-content > h1 + p {
+	font-size: 18px;
+	line-height: 1.6;
+	color: var(--sp-fg-soft);
+}
+.sl-markdown-content strong {
+	color: var(--sp-fg);
+	font-weight: 650;
+}
+/* underline only prose links — not the home cards (whole-card anchors) */
+.sl-markdown-content a:not(.sl-link-card):not(.card):not(.path-card):not(.tool-row) {
+	color: var(--sp-fg);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	text-decoration-thickness: 1px;
+}
+.sl-markdown-content :not(pre) > code {
+	font-family: var(--font-mono);
+	font-size: 14px;
+	background: var(--sp-code-bg);
+	border: 1px solid var(--sp-border);
+	padding: 1px 6px;
+	border-radius: 5px;
+	color: var(--sp-fg);
+}
+
+/* concept tables read as the mockup's `.ctable` */
+.sl-markdown-content table th {
+	font-size: 12px;
+	font-weight: 650;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--sp-muted);
+	border-bottom: 1px solid var(--sp-border-strong);
+}
+.sl-markdown-content table td {
+	color: var(--sp-fg-soft);
+	border-bottom: 1px solid var(--sp-border);
+}
+
+/* ============================================================
+   DOCS PAGE — sidebar, on-this-page, pager
+   ============================================================ */
+/* active sidebar link → dark solid pill */
+.sidebar-content a[aria-current="page"] {
+	background: var(--sp-solid);
+	color: var(--sp-solid-fg);
+	font-weight: 600;
+	border-radius: 8px;
+}
+
+/* on-this-page (table of contents) */
+/* biome-ignore lint/style/noDescendingSpecificity: targets TOC anchors, distinct
+   from the sidebar/markdown anchor rules above */
+starlight-toc nav a {
+	color: var(--sp-muted);
+	border-inline-start: 2px solid var(--sp-border);
+}
+starlight-toc nav a[aria-current="true"] {
+	color: var(--sp-fg);
+	border-inline-start-color: var(--sp-fg);
+	font-weight: 550;
 }

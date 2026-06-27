@@ -14,7 +14,8 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import PathCards from "../../../components/PathCards.astro";
+import ToolRows from "../../../components/ToolRows.astro";
 
 :::caution[作成中]
 このドキュメントはスキャフォールド中です。ほとんどのページはプレースホルダー（🚧 TBC）です。
@@ -22,32 +23,57 @@ import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
 
 ## 目的別ガイド
 
-<CardGrid>
-	<Card title="ユーザーガイド" icon="open-book">
-		Web UI での作業記録、エージェント活動の捕捉、レポートの閲覧。
-		[ユーザーガイドを開く](/ja/guides/)
-	</Card>
-	<Card title="管理者ガイド" icon="setting">
-		ワークスペース・メンバー・プロジェクト・ユーザー・インスタンス全体の設定の管理。
-		[管理者ガイドを開く](/ja/admin/)
-	</Card>
-	<Card title="セットアップガイド" icon="rocket">
-		Cloudflare 上での Spantail のデプロイと運用。
-		[セットアップガイドを開く](/ja/self-hosting/)
-	</Card>
-	<Card title="API リファレンス" icon="seti:json">
-		REST API による Spantail の自動化。
-		[API リファレンスを開く](/ja/api/)
-	</Card>
-</CardGrid>
+<PathCards
+	items={[
+		{
+			icon: "open-book",
+			title: "ユーザーガイド",
+			body: "Web UI での作業記録、エージェント活動の捕捉、レポートの閲覧。",
+			href: "/ja/guides/",
+			more: "ユーザーガイドを開く",
+		},
+		{
+			icon: "setting",
+			title: "管理者ガイド",
+			body: "ワークスペース・メンバー・プロジェクト・ユーザー・インスタンス全体の設定の管理。",
+			href: "/ja/admin/",
+			more: "管理者ガイドを開く",
+		},
+		{
+			icon: "rocket",
+			title: "セットアップガイド",
+			body: "Cloudflare 上での Spantail のデプロイと運用。",
+			href: "/ja/self-hosting/",
+			more: "セットアップガイドを開く",
+		},
+		{
+			icon: "seti:json",
+			title: "API リファレンス",
+			body: "REST API による Spantail の自動化。",
+			href: "/ja/api/",
+			more: "API リファレンスを開く",
+		},
+	]}
+/>
 
 ## ツールと自動化
 
 データの出し入れは好みの方法で — これらのクライアントはすべて同じ API を利用します。
 
-<CardGrid>
-	<LinkCard title="CLI" href="/ja/guides/tools/cli/" description="spantail コマンドラインクライアント。" />
-	<LinkCard title="MCP" href="/ja/guides/tools/mcp/" description="AI クライアント向けのリモート /mcp と stdio サーバー。" />
-	<LinkCard title="Claude プラグイン" href="/ja/guides/tools/claude-plugin/" description="Claude Code の活動を捕捉（近日公開）。" />
-	<LinkCard title="REST API" href="/ja/api/" description="HTTP API の完全なリファレンス。" />
-</CardGrid>
+<ToolRows
+	items={[
+		{ id: "cli", title: "CLI", body: "spantail コマンドラインクライアント。", href: "/ja/guides/tools/cli/" },
+		{
+			id: "mcp",
+			title: "MCP",
+			body: "AI クライアント向けのリモート /mcp と stdio サーバー。",
+			href: "/ja/guides/tools/mcp/",
+		},
+		{
+			id: "claude",
+			title: "Claude プラグイン",
+			body: "Claude Code の活動を捕捉（近日公開）。",
+			href: "/ja/guides/tools/claude-plugin/",
+		},
+	]}
+/>
