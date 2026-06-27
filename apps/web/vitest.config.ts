@@ -20,6 +20,13 @@ export default defineConfig({
 		cloudflareTest(async () => ({
 			wrangler: { configPath: "./wrangler.jsonc" },
 			miniflare: {
+				// Shrink the ingest rate limit so a test can exhaust it in a few
+				// requests; production uses the higher limit from wrangler.jsonc.
+				// Keys are per-credential with fresh ids each test, so no existing
+				// test posts enough to one key to trip this.
+				ratelimits: {
+					INGEST_RATE_LIMITER: { simple: { limit: 10, period: 60 } },
+				},
 				bindings: {
 					TEST_MIGRATIONS: await readD1Migrations(migrationsDir),
 					// Tests must not depend on .dev.vars (absent in CI).

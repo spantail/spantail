@@ -14,6 +14,7 @@ import { requireProjectAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth } from "../middleware/auth";
+import { ingestRateLimit } from "../middleware/rate-limit";
 import type { AppEnv } from "../types";
 
 export const agentEventRoutes = new Hono<AppEnv>()
@@ -24,7 +25,8 @@ export const agentEventRoutes = new Hono<AppEnv>()
 	// `agent_entries` — the same row the client-computed POST /agent-entries
 	// writes, so a session is fed by one path only (Claude Code via events,
 	// Cursor via the summary route) and they never collide.
-	.post("/", async (c) => {
+	// Rate-limited per token: ingestion is the untrusted write path.
+	.post("/", ingestRateLimit, async (c) => {
 		const auth = requireAgentAuth(c);
 		const input = validate(ingestAgentEventsInputSchema, await c.req.json());
 

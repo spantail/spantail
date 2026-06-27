@@ -4,6 +4,7 @@
 interface __BaseEnv_Env {
 	UPLOADS: R2Bucket;
 	DB: D1Database;
+	INGEST_RATE_LIMITER: RateLimit;
 	EMAIL: SendEmail;
 	APP_ENV: "production" | "development";
 	BETTER_AUTH_SECRET: string;
@@ -20,6 +21,7 @@ declare namespace Cloudflare {
 	interface ProductionEnv {
 		UPLOADS: R2Bucket;
 		DB: D1Database;
+		INGEST_RATE_LIMITER: RateLimit;
 		EMAIL: SendEmail;
 		APP_ENV: "production";
 		BETTER_AUTH_SECRET: string;
