@@ -472,13 +472,17 @@ export async function listAgentEntries(
 	db: Database,
 	query: AgentEntryFilter & { limit: number; offset: number },
 ): Promise<AgentEntryRow[]> {
-	return db
-		.select()
-		.from(agentEntries)
-		.where(and(...agentEntryConditions(query)))
-		.orderBy(desc(agentEntries.startedAt))
-		.limit(query.limit)
-		.offset(query.offset);
+	return (
+		db
+			.select()
+			.from(agentEntries)
+			.where(and(...agentEntryConditions(query)))
+			// `id` breaks ties on equal `startedAt` so pagination is stable (no rows
+			// duplicated or skipped across pages).
+			.orderBy(desc(agentEntries.startedAt), desc(agentEntries.id))
+			.limit(query.limit)
+			.offset(query.offset)
+	);
 }
 
 export interface AgentEntryStatsResult {
@@ -507,19 +511,28 @@ export interface AgentEntryStatsResult {
  * Aggregates entries matching the same filters as `listAgentEntries`. Per-day
  * buckets are computed in application code from each session's `startedAt` in
  * the viewer's timezone — SQLite/D1 has no IANA-timezone date functions, and the
- * day is a read-time projection rather than a stored value.
+ * day is a read-time projection rather than a stored value. Token buckets are
+ * extracted in SQL so only a few numbers (not the full `usage` JSON) per row are
+ * materialized, keeping the in-memory footprint small.
  */
 export async function getAgentEntryStats(
 	db: Database,
 	query: AgentEntryFilter,
 ): Promise<AgentEntryStatsResult> {
 	const conditions = agentEntryConditions(query);
+	// Token buckets live inside the usage JSON; entries without usage count as 0.
+	const tokenBucket = (key: string) =>
+		sql<number>`coalesce(json_extract(${agentEntries.usage}, ${`$.${key}`}), 0)`.mapWith(
+			Number,
+		);
 	const rows = await db
 		.select({
 			agentId: agentEntries.agentId,
 			startedAt: agentEntries.startedAt,
 			durationMinutes: agentEntries.durationMinutes,
-			usage: agentEntries.usage,
+			tokens: tokenBucket("totalTokens"),
+			inputTokens: tokenBucket("inputTokens"),
+			outputTokens: tokenBucket("outputTokens"),
 		})
 		.from(agentEntries)
 		.where(and(...conditions));
@@ -535,11 +548,7 @@ export async function getAgentEntryStats(
 
 	for (const row of rows) {
 		const date = todayInTimezone(query.timezone, row.startedAt);
-		const minutes = row.durationMinutes;
-		// Agents that don't expose token buckets contribute 0 to each.
-		const tokens = row.usage?.totalTokens ?? 0;
-		const inputTokens = row.usage?.inputTokens ?? 0;
-		const outputTokens = row.usage?.outputTokens ?? 0;
+		const { durationMinutes: minutes, tokens, inputTokens, outputTokens } = row;
 
 		const day = byDateMap.get(date) ?? {
 			date,
