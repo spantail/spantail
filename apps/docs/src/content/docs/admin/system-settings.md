@@ -1,6 +1,6 @@
 ---
 title: System settings
-description: Configure email delivery, social login, and the AI-agents feature.
+description: Configure email delivery, social login, and the AI agents feature.
 ---
 
 The **System** group in Settings holds the instance-wide switches. Every screen here is **instance

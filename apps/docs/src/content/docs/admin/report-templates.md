@@ -45,8 +45,8 @@ project, date, or member — and produces Markdown. A duration filter formats mi
 Report templates are user input, so rendering runs in a locked-down sandbox you do not need to
 configure but should be aware of:
 
-- Only a template's own data is reachable — no prototype access, and only the safe built-in
-  filters.
+- Only a template's own data is reachable — no prototype access — and only the safe built-in
+  filters are available.
 - Parse, render, and memory limits are enforced.
 - File/include tags are disabled, so a template cannot pull in other files.
 - Rendered Markdown is displayed **without raw-HTML passthrough** — embedded HTML is not executed.
