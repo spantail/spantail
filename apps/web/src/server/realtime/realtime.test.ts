@@ -28,9 +28,8 @@ it("relays a published event to every open connection of a user's hub", async ()
 	const b = (await stub.fetch(new Request("https://hub/"))).body?.getReader();
 	if (!a || !b) throw new Error("no SSE body");
 
-	// Fire-and-forget: each write settles only as its reader drains the stream
-	// below, so awaiting publish here would deadlock before the first read.
-	void stub.publish(JSON.stringify({ type: "project", workspaceId: "w1" }));
+	// publish dispatches writes fire-and-forget, so it resolves without blocking.
+	await stub.publish(JSON.stringify({ type: "project", workspaceId: "w1" }));
 
 	expect(await nextEvent(a)).toEqual({ type: "project", workspaceId: "w1" });
 	expect(await nextEvent(b)).toEqual({ type: "project", workspaceId: "w1" });

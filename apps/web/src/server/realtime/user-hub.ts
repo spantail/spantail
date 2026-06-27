@@ -13,7 +13,7 @@ export class UserHub extends DurableObject<Env> {
 	private readonly encoder = new TextEncoder();
 	private keepAlive: ReturnType<typeof setInterval> | null = null;
 
-	override async fetch(_request: Request): Promise<Response> {
+	override async fetch(request: Request): Promise<Response> {
 		const { readable, writable } = new TransformStream<
 			Uint8Array,
 			Uint8Array
@@ -21,6 +21,9 @@ export class UserHub extends DurableObject<Env> {
 		const writer = writable.getWriter();
 		this.writers.add(writer);
 		this.startKeepAlive();
+		// Drop the connection as soon as the client disconnects (e.g. tab close),
+		// instead of waiting for the next write to fail.
+		request.signal.addEventListener("abort", () => this.drop(writer));
 		// Initial comment so proxies flush the response headers and the client's
 		// EventSource `onopen` fires promptly.
 		void writer.write(this.encoder.encode(": connected\n\n")).catch(() => {
