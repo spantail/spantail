@@ -10,7 +10,8 @@ audience split: [starlight-sidebar-topics](https://starlight-sidebar-topics.netl
 ## Run it locally
 
 All commands are run from the repo root (`pnpm` workspace). Each has a `docs:*` shortcut, or use
-`pnpm --filter docs <script>`.
+`pnpm --filter docs run <script>` (keep `run` — `pnpm --filter docs deploy` would invoke pnpm's
+built-in `deploy` command, not this package's script).
 
 ```bash
 pnpm install                      # once, from the repo root
