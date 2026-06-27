@@ -9,6 +9,12 @@ entries, read reports — from your terminal or scripts.
 
 ## Install
 
+:::caution[Not published yet]
+The `spantail` CLI isn't on npm yet. The command below will work once it's
+released; until then, build it from `packages/cli` in the
+[monorepo](https://github.com/spantail/spantail).
+:::
+
 ```bash
 npm install -g spantail
 ```

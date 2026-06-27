@@ -9,6 +9,12 @@ description: spantail コマンドラインクライアント。
 
 ## インストール
 
+:::caution[まだ未公開]
+`spantail` CLI はまだ npm に公開されていません。下のコマンドは公開後に使えるように
+なります。それまでは[モノレポ](https://github.com/spantail/spantail)の `packages/cli`
+からビルドしてください。
+:::
+
 ```bash
 npm install -g spantail
 ```
