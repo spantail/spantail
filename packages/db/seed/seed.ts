@@ -1,18 +1,41 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ensureTmpDir, wranglerLocal } from "./exec";
+import { ensureTmpDir, seedDataDir, wranglerLocal } from "./exec";
 import { generateDataset, SEED_PASSWORD } from "./generate";
 import { datasetToSql } from "./to-sql";
 
-async function main(): Promise<void> {
-	const dataset = await generateDataset(new Date());
-	const dir = ensureTmpDir();
+const DEFAULT_DATASET = "demo";
 
-	const sqlPath = join(dir, "seed.sql");
+/** Dataset directories under examples/db/seed (for the unknown-dataset hint). */
+function availableDatasets(): string[] {
+	const root = seedDataDir("");
+	if (!existsSync(root)) return [];
+	return readdirSync(root, { withFileTypes: true })
+		.filter((e) => e.isDirectory())
+		.map((e) => e.name)
+		.sort();
+}
+
+async function main(): Promise<void> {
+	// `pnpm db:seed <name>` forwards the name here; default to the demo dataset.
+	const name = process.argv[2] ?? DEFAULT_DATASET;
+	const dataDir = seedDataDir(name);
+	if (!existsSync(dataDir)) {
+		const choices = availableDatasets();
+		const hint = choices.length
+			? `Available datasets: ${choices.join(", ")}`
+			: "No datasets found under examples/db/seed.";
+		throw new Error(`Unknown seed dataset "${name}" (${dataDir}).\n${hint}`);
+	}
+
+	const dataset = await generateDataset(new Date(), dataDir);
+	const tmp = ensureTmpDir();
+
+	const sqlPath = join(tmp, "seed.sql");
 	writeFileSync(sqlPath, datasetToSql(dataset.tables), "utf8");
 
-	console.log("Seeding local D1 (spantail-db)…");
+	console.log(`Seeding local D1 (spantail-db) from dataset "${name}"…`);
 	for (const [table, count] of Object.entries(dataset.summary)) {
 		console.log(`  ${table}: ${count}`);
 	}

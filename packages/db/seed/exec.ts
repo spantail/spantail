@@ -1,9 +1,15 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 /** Monorepo root (…/packages/db/seed/ → up three). */
 export const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
+
+/** Directory holding a named seed dataset's YAML files. */
+export function seedDataDir(name: string): string {
+	return join(repoRoot, "examples/db/seed", name);
+}
 
 /** Scratch dir for generated SQL / share bodies (gitignored). */
 export const tmpDir = fileURLToPath(new URL("./.tmp/", import.meta.url));

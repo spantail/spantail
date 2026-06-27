@@ -1,0 +1,59 @@
+# あづみ野ソフトウェアは受託開発会社: 全員が社内ワークスペースのメンバーで、
+# 1つ以上のクライアントワークスペースに参画する。ワークスペースの管理者
+# (owner/admin) がその日報・月報の受信者になる。
+#
+#   あづみ野 (社内)   — owner: 花子; 5人全員がメンバー。
+#   桜トレーディング   — lead: 一郎; 参画: 一郎, 由美, 美咲(ヘルプ)。
+#   富士メディア       — lead: 美咲; 参画: 美咲, 一郎, 由美。
+#   椿物流             — lead: 健;   参画: 健, 花子(日次リエゾン)。
+#
+# 一郎と由美は2つのクライアント(桜 + 富士)を兼務するので、クロスワークスペース
+# の日報を1通にまとめて提出する (report-routes.yaml)。花子・一郎・美咲は社内の
+# 日次作業を持つため、社内ワークスペースの owner (花子) には日報が大量に届く。
+- workspace: ws-self
+  user: u-admin
+  role: owner
+- workspace: ws-self
+  user: u-author
+  role: member
+- workspace: ws-self
+  user: u-carol
+  role: member
+- workspace: ws-self
+  user: u-dan
+  role: member
+- workspace: ws-self
+  user: u-erin
+  role: member
+
+- workspace: ws-acme
+  user: u-author
+  role: admin
+- workspace: ws-acme
+  user: u-erin
+  role: member
+- workspace: ws-acme
+  user: u-carol
+  role: member
+
+- workspace: ws-globex
+  user: u-carol
+  role: admin
+- workspace: ws-globex
+  user: u-author
+  role: member
+- workspace: ws-globex
+  user: u-erin
+  role: member
+
+- workspace: ws-meridian
+  user: u-dan
+  role: admin
+- workspace: ws-meridian
+  user: u-admin
+  role: member
+
+# 大輔は神田システムズを1人で運営。あづみ野のメンバー(花子も含む)は誰も所属しない。
+- workspace: ws-initech
+  user: u-frank
+  role: owner

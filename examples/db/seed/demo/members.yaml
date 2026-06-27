@@ -3,12 +3,14 @@
 # (owner/admin) of a workspace is the recipient of its daily/monthly reports.
 #
 #   Northwind (internal) — owner: Alice; all five are members.
-#   Acme Robotics  (EN)  — lead: Bilal;  staffed: Bilal, Erin, Carol (help).
-#   Globex Media   (EN)  — lead: Carol;  staffed: Carol, Bilal, Erin.
-#   桜トレーディング (JA)  — lead: Daichi; staffed: Daichi, Alice (JA liaison).
+#   Acme Robotics        — lead: Bilal;  staffed: Bilal, Erin, Carol (help).
+#   Globex Media         — lead: Carol;  staffed: Carol, Bilal, Erin.
+#   Meridian Logistics   — lead: Daichi; staffed: Daichi, Alice (daily liaison).
 #
-# Bilal and Erin are both shared across the two English clients, so they file a
-# combined cross-workspace daily report (see report-routes.yaml).
+# Bilal and Erin are both shared across the two coastal clients (Acme + Globex),
+# so they file a combined cross-workspace daily report (see report-routes.yaml).
+# Alice, Bilal and Carol all do daily internal work, so the internal-workspace
+# owner (Alice) receives a high volume of daily reports.
 - workspace: ws-self
   user: u-admin
   role: owner
@@ -45,10 +47,10 @@
   user: u-erin
   role: member
 
-- workspace: ws-sakura
+- workspace: ws-meridian
   user: u-dan
   role: admin
-- workspace: ws-sakura
+- workspace: ws-meridian
   user: u-admin
   role: member
 

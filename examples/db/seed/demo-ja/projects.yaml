@@ -1,0 +1,153 @@
+# 各ワークスペースのアクティブなプロジェクト。`activities` は作業記録の生成に
+# 使う具体的なタスク文 (ユーザー/日付ごとに決定的にローテーション) で、デモが
+# 「X の機能を実装」の繰り返しではなく実際の作業のように読めるようにする。
+- key: p-self-platform
+  workspace: ws-self
+  slug: platform
+  name: プラットフォーム基盤
+  hue: 240
+  description: コアサービスと API。
+  activities:
+    - ワークスペース招待フローを実装
+    - エントリ API にカーソルページングを追加
+    - レポート権限チェックを強化
+    - D1 クエリ層のリファクタをレビュー
+    - 日次集計のタイムゾーンバグを修正
+- key: p-self-tooling
+  workspace: ws-self
+  slug: tooling
+  name: 社内ツール
+  hue: 160
+  description: 社内開発者向けツール。
+  activities:
+    - ローカルのシードデータ生成器を構築
+    - CLI ログインの UX を改善
+    - マイグレーションリンタを CI に追加
+    - 受領したバグ報告をトリアージ
+- key: p-self-devops
+  workspace: ws-self
+  slug: devops
+  name: DevOps
+  hue: 20
+  description: CI/CD とインフラ。
+  activities:
+    - Workers のデプロイパイプラインを調整
+    - PR のプレビューデプロイを整備
+    - 本番のレイテンシ急増を調査
+    - R2 バケットの認証情報をローテーション
+
+- key: p-acme-warehouse
+  workspace: ws-acme
+  slug: warehouse
+  name: 倉庫アプリ
+  hue: 40
+  description: 倉庫管理アプリケーション。
+  activities:
+    - ピッキング・梱包の画面を実装
+    - 在庫数の照合を修正
+    - バーコードスキャン対応を追加
+    - 在庫移動モジュールをレビュー
+- key: p-acme-mobile
+  workspace: ws-acme
+  slug: mobile
+  name: モバイルクライアント
+  hue: 200
+  description: 顧客向けモバイルクライアント。
+  activities:
+    - オフライン注文キャッシュを実装
+    - オンボーディング画面を改善
+    - iOS のプッシュ通知配信を修正
+- key: p-acme-data
+  workspace: ws-acme
+  slug: data
+  name: データパイプライン
+  hue: 264
+  description: バッチ・ストリーミングのデータパイプライン。
+  activities:
+    - センサーテレメトリのテーブルをバックフィル
+    - 夜間集計ジョブを最適化
+    - 取り込みにスキーマ検証を追加
+
+- key: p-globex-portal
+  workspace: ws-globex
+  slug: portal
+  name: Web ポータル
+  hue: 300
+  description: 公開 Web ポータル。
+  activities:
+    - 記事ランディングページを再構築
+    - トップページの Core Web Vitals を改善
+    - SSR のハイドレーション不整合を修正
+- key: p-globex-analytics
+  workspace: ws-globex
+  slug: analytics
+  name: アナリティクス
+  hue: 120
+  description: プロダクト分析とダッシュボード。
+  activities:
+    - 購読ファネルのダッシュボードを設計
+    - リテンションのコホート図を追加
+    - ポータル全体のイベント計測を検証
+- key: p-globex-cms
+  workspace: ws-globex
+  slug: cms
+  name: CMS 移行
+  hue: 340
+  description: ヘッドレス CMS への移行。
+  activities:
+    - 旧コンテンツ型をヘッドレス CMS にマッピング
+    - メディアライブラリを R2 に移行
+    - アーカイブ URL のリダイレクトを作成
+
+- key: p-meridian-inventory
+  workspace: ws-meridian
+  slug: inventory
+  name: 在庫管理システム
+  hue: 80
+  description: 倉庫の在庫を管理するシステム。
+  activities:
+    - 入庫処理の画面を実装
+    - 在庫数の集計バグを修正
+    - 倉庫間移動のレビュー対応
+    - 在庫僅少アラートを追加
+- key: p-meridian-orders
+  workspace: ws-meridian
+  slug: orders
+  name: 受発注 API
+  hue: 200
+  description: 受発注を処理する API。
+  activities:
+    - 発注エンドポイントを実装
+    - 在庫引当のロジックを修正
+    - API の結合テストを追加
+- key: p-meridian-dashboard
+  workspace: ws-meridian
+  slug: dashboard
+  name: 管理ダッシュボード
+  hue: 264
+  description: 社内向けの管理ダッシュボード。
+  activities:
+    - 売上サマリ画面を作成
+    - 権限まわりの不具合を修正
+    - グラフ表示のパフォーマンスを改善
+
+- key: p-initech-crm
+  workspace: ws-initech
+  slug: crm
+  name: CRM プラットフォーム
+  hue: 60
+  description: 顧客関係管理プラットフォーム。
+  activities:
+    - 連絡先の重複排除ジョブを構築
+    - 商談パイプラインのカンバンを追加
+    - 活動ログのタイムゾーン処理を修正
+- key: p-initech-billing
+  workspace: ws-initech
+  slug: billing
+  name: 請求サービス
+  hue: 320
+  description: サブスクリプションの請求・インボイス。
+  activities:
+    - プラン変更時の日割り計算を実装
+    - 課金失敗時のリトライ処理を追加
+    - 月次インボイスのエクスポートを照合

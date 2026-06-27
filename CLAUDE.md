@@ -23,9 +23,9 @@ pnpm typecheck          # tsc across all packages
 pnpm db:generate        # drizzle-kit generate (after editing packages/db/src/schema)
 pnpm db:migrate:local   # apply migrations to local D1
 pnpm db:migrate:remote  # apply migrations to remote D1
-pnpm db:seed            # seed local D1 with demo data (see packages/db/seed)
+pnpm db:seed [name]     # seed local D1 from examples/db/seed/<name> (default: demo; see packages/db/seed)
 pnpm db:drop            # wipe local D1 state
-pnpm db:reset           # db:drop → db:migrate:local → db:seed (local only)
+pnpm db:reset           # db:drop → db:migrate:local (schema only, no seed; local only)
 pnpm deploy             # wrangler deploy (apps/web)
 ```
 
@@ -41,6 +41,7 @@ pnpm deploy             # wrangler deploy (apps/web)
 | `packages/sdk` | Typed API client (reuses core schemas). |
 | `packages/templates` | Default report-template catalog (`.liquid` files). Worker reads via `?raw`; the seed via `/node` (fs). |
 | `packages/cli` | `spantail` CLI + stdio MCP server. A thin client of the REST API. |
+| `examples/db/seed` | Demo seed datasets (YAML) consumed by `pnpm db:seed <name>` (`demo`, `demo-ja`). |
 
 ## Architecture invariants
 

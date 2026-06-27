@@ -1,6 +1,0 @@
-# The singleton instance settings row. Email stays disabled for a local demo;
-# social login and AI agents are enabled so the demo shows them on by default.
-emailEnabled: false
-googleOAuthEnabled: true
-githubOAuthEnabled: true
-agentsEnabled: true

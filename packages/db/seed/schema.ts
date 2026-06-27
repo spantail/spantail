@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath, URL } from "node:url";
+import { join } from "node:path";
 import {
 	slugSchema,
 	tagSchema,
@@ -110,10 +110,8 @@ export interface SeedConfig {
 	instance: InstanceConfig;
 }
 
-const DATA_DIR = fileURLToPath(new URL("./data/", import.meta.url));
-
-function read<T>(file: string, schema: z.ZodType<T>): T {
-	const raw = parse(readFileSync(`${DATA_DIR}${file}`, "utf8"));
+function read<T>(dataDir: string, file: string, schema: z.ZodType<T>): T {
+	const raw = parse(readFileSync(join(dataDir, file), "utf8"));
 	const result = schema.safeParse(raw);
 	if (!result.success) {
 		throw new Error(
@@ -123,16 +121,32 @@ function read<T>(file: string, schema: z.ZodType<T>): T {
 	return result.data;
 }
 
-/** Loads and validates every YAML data file, then checks cross-references. */
-export function loadConfig(): SeedConfig {
+/**
+ * Loads and validates every YAML data file from `dataDir`, then checks
+ * cross-references. The generation logic lives here in code; `dataDir` selects
+ * which dataset (e.g. examples/db/seed/demo) supplies the data.
+ */
+export function loadConfig(dataDir: string): SeedConfig {
 	const config: SeedConfig = {
-		users: read("users.yaml", z.array(userConfigSchema).min(1)),
-		workspaces: read("workspaces.yaml", z.array(workspaceConfigSchema).min(1)),
-		members: read("members.yaml", z.array(memberConfigSchema).min(1)),
-		projects: read("projects.yaml", z.array(projectConfigSchema).min(1)),
-		workPatterns: read("work-patterns.yaml", workPatternsConfigSchema),
-		reportRoutes: read("report-routes.yaml", z.array(reportRouteSchema)),
-		instance: read("instance.yaml", instanceConfigSchema),
+		users: read(dataDir, "users.yaml", z.array(userConfigSchema).min(1)),
+		workspaces: read(
+			dataDir,
+			"workspaces.yaml",
+			z.array(workspaceConfigSchema).min(1),
+		),
+		members: read(dataDir, "members.yaml", z.array(memberConfigSchema).min(1)),
+		projects: read(
+			dataDir,
+			"projects.yaml",
+			z.array(projectConfigSchema).min(1),
+		),
+		workPatterns: read(dataDir, "work-patterns.yaml", workPatternsConfigSchema),
+		reportRoutes: read(
+			dataDir,
+			"report-routes.yaml",
+			z.array(reportRouteSchema),
+		),
+		instance: read(dataDir, "instance.yaml", instanceConfigSchema),
 	};
 	validateReferences(config);
 	return config;

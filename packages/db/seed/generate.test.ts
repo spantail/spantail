@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { generateDataset } from "./generate";
@@ -5,12 +6,17 @@ import { datasetToSql } from "./to-sql";
 
 type Row = Record<string, unknown>;
 
+// Tests exercise the generator against the shipped English `demo` dataset.
+const DEMO_DIR = fileURLToPath(
+	new URL("../../../examples/db/seed/demo/", import.meta.url),
+);
+
 // Mid-June: the activity window covers all of May, so May is the one completed
 // month and weekday entries land throughout.
 const NOW = new Date("2026-06-18T09:00:00Z");
 
 async function build() {
-	const dataset = await generateDataset(NOW);
+	const dataset = await generateDataset(NOW, DEMO_DIR);
 	const rows = (name: string): Row[] =>
 		dataset.tables.find((t) => t.table === name)?.rows ?? [];
 	return { dataset, rows };
@@ -22,7 +28,7 @@ describe("generateDataset", () => {
 		expect(rows("user")).toHaveLength(6);
 		expect(rows("account")).toHaveLength(6);
 		expect(rows("workspaces")).toHaveLength(5);
-		// 5 internal + Acme 3 + Globex 3 + 桜 2 + Initech 1.
+		// 5 internal + Acme 3 + Globex 3 + Meridian 2 + Initech 1.
 		expect(rows("workspaceMembers")).toHaveLength(14);
 		expect(rows("projects")).toHaveLength(14);
 		// One default template per locale (en + ja).
@@ -90,7 +96,10 @@ describe("generateDataset", () => {
 	it("computes monthly periods in each workspace timezone", async () => {
 		// 2026-07-01T00:00Z: Tokyo is already Jul 1 (June is complete locally),
 		// while Los Angeles is still Jun 30 (June is not complete locally).
-		const dataset = await generateDataset(new Date("2026-07-01T00:00:00Z"));
+		const dataset = await generateDataset(
+			new Date("2026-07-01T00:00:00Z"),
+			DEMO_DIR,
+		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
 		const tzById = new Map(
@@ -116,7 +125,10 @@ describe("generateDataset", () => {
 
 	it("dates entries in the workspace timezone, not the author's home", async () => {
 		// 06:00Z: Tokyo is already Fri 2026-06-19; Los Angeles is still Thu 06-18.
-		const dataset = await generateDataset(new Date("2026-06-19T06:00:00Z"));
+		const dataset = await generateDataset(
+			new Date("2026-06-19T06:00:00Z"),
+			DEMO_DIR,
+		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
 		const tzById = new Map(
@@ -162,10 +174,12 @@ describe("generateDataset", () => {
 			expect(r.totalMinutes as number).toBeGreaterThan(0);
 			expect(r.version).toBe(1);
 		}
-		// Japanese reports (Sakura) render with the translated default template.
-		const ja = reports.find((r) => String(r.name).startsWith("月報"));
-		expect(ja).toBeDefined();
-		expect(contentByReport.get(ja?.id as string)).toContain("合計");
+		// Monthly reports render with the English default template.
+		const monthly = reports.find((r) =>
+			String(r.name).startsWith("Monthly report"),
+		);
+		expect(monthly).toBeDefined();
+		expect(contentByReport.get(monthly?.id as string)).toContain("Total");
 	});
 
 	it("delivers reports to a workspace manager (never the sender)", async () => {
@@ -235,7 +249,7 @@ describe("generateDataset", () => {
 		}
 
 		// Northwind (internal) and Initech (Frank's solo workspace) are the two
-		// non-client workspaces; client workspaces are Acme, Globex, and 桜.
+		// non-client workspaces; client workspaces are Acme, Globex, and Meridian.
 		const nonClientSlugs = new Set(["northwind", "initech"]);
 		const nonClientWsIds = new Set(
 			rows("workspaces")

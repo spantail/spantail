@@ -21,8 +21,10 @@ import {
 	type SeedConfig,
 } from "./schema";
 
-/** Shared password for every seeded user. Documented in seed/README.md. */
-export const SEED_PASSWORD = "password";
+// Shared password for every seeded user. Documented in seed/README.md. Chosen
+// to be long and mixed-class with a random component so browsers (Chrome) and
+// password managers (1Password) don't flag it as breached or weak on sign-in.
+export const SEED_PASSWORD = "Spantail-Demo-7Qx2k!";
 const WINDOW_DAYS = 45;
 
 type Row = Record<string, unknown>;
@@ -157,8 +159,11 @@ function toEngineEntry(e: EntryRecord): ReportContextInput["entries"][number] {
  * Builds the full demo dataset for a given "now". Pure and deterministic apart
  * from the random ids/share tokens, so it is unit-testable with a fixed clock.
  */
-export async function generateDataset(now: Date): Promise<Dataset> {
-	const config = loadConfig();
+export async function generateDataset(
+	now: Date,
+	dataDir: string,
+): Promise<Dataset> {
+	const config = loadConfig(dataDir);
 
 	const password = await hashPassword(SEED_PASSWORD);
 	// Anchor account/workspace creation comfortably before the activity window.
@@ -845,9 +850,11 @@ export async function generateDataset(now: Date): Promise<Dataset> {
 			createdAt: baseCreatedAt,
 		});
 
-		// Two sessions on every weekday in the window (workspace-local dates), so
-		// each agent accrues a long, pageable history (50+ entries).
-		const slots = ["10:00", "15:00"];
+		// Three sessions on every weekday in the window (workspace-local dates), so
+		// each agent accrues a long history that overflows the agent-detail list
+		// (PAGE_SIZE 50) even within a single-month period preset (~22 weekdays ×
+		// 3 ≈ 66 > 50).
+		const slots = ["09:30", "13:00", "16:30"];
 		for (const date of weekdaysFor(ws.timezone)) {
 			for (const startHour of slots) {
 				const project = projects.length

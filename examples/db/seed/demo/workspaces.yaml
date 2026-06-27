@@ -1,6 +1,7 @@
 # The instance owner is a fictional software firm (Northwind Software) plus
 # three client workspaces. `language` drives the language of seeded content
 # (project names, work-entry descriptions) and which report template is used.
+# This is the English demo: every workspace is English.
 - key: ws-self
   slug: northwind
   name: Northwind Software
@@ -18,11 +19,11 @@
   timezone: America/Los_Angeles
   language: en
   client: true
-- key: ws-sakura
-  slug: sakura
-  name: 桜トレーディング
+- key: ws-meridian
+  slug: meridian
+  name: Meridian Logistics
   timezone: Asia/Tokyo
-  language: ja
+  language: en
   client: true
 # A workspace nobody on the core team belongs to. Alice runs the instance but is
 # not a member here, so it only shows up for her via the instance-admin bypass —
