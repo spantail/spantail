@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { createDb, findUserByEmail } from "@spantail/db";
 import { expect, it } from "vitest";
 
-import { socialProviderOf } from "./auth";
+import { assertAuthSecret, socialProviderOf } from "./auth";
 
 const BASE = "https://example.com";
 
@@ -92,4 +92,33 @@ it("detects the social provider behind a user-create hook", () => {
 		socialProviderOf({ path: "/callback/:id", params: { id: "apple" } }),
 	).toBeNull();
 	expect(socialProviderOf(null)).toBeNull();
+});
+
+it("fails closed on a missing or weak BETTER_AUTH_SECRET", () => {
+	// Missing, empty, and whitespace-only all read as "not set".
+	expect(() => assertAuthSecret(undefined)).toThrow(/BETTER_AUTH_SECRET/);
+	expect(() => assertAuthSecret("")).toThrow(/BETTER_AUTH_SECRET/);
+	expect(() => assertAuthSecret(" ".repeat(40))).toThrow(/BETTER_AUTH_SECRET/);
+	// Present but too short to be a real random secret.
+	expect(() => assertAuthSecret("too-short")).toThrow(/at least 32/);
+});
+
+it("never echoes the secret value in the failure message", () => {
+	const secret = "short-but-secret";
+	try {
+		assertAuthSecret(secret);
+		expect.unreachable("should have thrown");
+	} catch (error) {
+		expect((error as Error).message).not.toContain(secret);
+	}
+});
+
+it("accepts a sufficiently long secret and returns it unchanged", () => {
+	const secret = "0123456789abcdefghijklmnopqrstuv"; // exactly 32 chars
+	expect(assertAuthSecret(secret)).toBe(secret);
+});
+
+it("trims surrounding whitespace from the returned secret", () => {
+	const secret = "0123456789abcdefghijklmnopqrstuv"; // 32 chars
+	expect(assertAuthSecret(`  ${secret}\n`)).toBe(secret);
 });

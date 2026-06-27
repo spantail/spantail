@@ -17,6 +17,34 @@ import { renderPasswordResetEmail } from "./emails/password-reset-email";
 import { getMailer } from "./lib/mail/mailer";
 
 /**
+ * Minimum length for the session-signing secret. `openssl rand -base64 32`
+ * yields a 44-char string; 32 is a comfortable floor that still rejects the
+ * obviously-too-weak values (empty, a stray word) without forcing a re-roll of
+ * a slightly shorter but still-random secret.
+ */
+const MIN_AUTH_SECRET_LENGTH = 32;
+
+/**
+ * Fail closed on a missing or weak session-signing secret. Spantail is operated
+ * by self-hosters who are not security specialists, so "forgot to set the
+ * secret" is a realistic deployment state — and an empty/short secret signs
+ * sessions with a forgeable value, compromising every account. Refuse to serve
+ * instead of degrading silently. The secret value itself is never echoed.
+ */
+export function assertAuthSecret(secret: string | undefined): string {
+	const trimmed = secret?.trim() ?? "";
+	if (trimmed.length < MIN_AUTH_SECRET_LENGTH) {
+		throw new Error(
+			`BETTER_AUTH_SECRET is missing or too weak: set it to a random value of at least ${MIN_AUTH_SECRET_LENGTH} characters. Generate one with: openssl rand -base64 32`,
+		);
+	}
+	// Return the trimmed value: validating the trimmed length but signing with
+	// the raw value would let stray whitespace into the effective secret, making
+	// it surprising and hard to reproduce.
+	return trimmed;
+}
+
+/**
  * Social login providers to enable for this request, resolved from the instance
  * settings (admin toggles) and environment credentials by the caller. A
  * provider absent here has no callback route, so it cannot be used to sign in.
@@ -44,6 +72,10 @@ export function createAuth(
 	ctx?: { waitUntil(promise: Promise<unknown>): void },
 	social?: SocialConfig,
 ) {
+	// Fail closed before constructing the auth instance: a missing or weak
+	// session secret must stop the request, not silently sign forgeable sessions.
+	const secret = assertAuthSecret(env.BETTER_AUTH_SECRET);
+
 	const socialProviders: NonNullable<
 		Parameters<typeof betterAuth>[0]["socialProviders"]
 	> = {};
@@ -106,7 +138,7 @@ export function createAuth(
 			},
 		},
 		baseURL: env.BETTER_AUTH_URL,
-		secret: env.BETTER_AUTH_SECRET,
+		secret,
 		database: drizzleAdapter(db, { provider: "sqlite", schema }),
 		databaseHooks: {
 			user: {
