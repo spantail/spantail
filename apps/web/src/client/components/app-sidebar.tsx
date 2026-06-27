@@ -260,26 +260,21 @@ function SettingsMenu() {
 }
 
 export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
-	const { current } = useWorkspace();
-	// An instance admin can pick a workspace they are not a member of (role
-	// `null`). They reach it only to manage it via Settings (footer cog stays),
-	// so the workspace-scoped navigation is blanked rather than shown.
-	const viewingAsNonMember = current != null && current.role == null;
+	// An instance admin can pick a workspace they are not a member of, where the
+	// client state still carries `role: null`. Authorization treats them as an
+	// admin anyway (`requireWorkspaceAccess`), so the workspace-scoped navigation
+	// works and is shown like any other workspace.
 	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader>
 				<WorkspaceSwitcher isAdmin={isAdmin} />
 			</SidebarHeader>
 			<SidebarContent>
-				{!viewingAsNonMember && (
-					<>
-						<SidebarGroup>
-							<NavItems items={MAIN_ITEMS} />
-						</SidebarGroup>
-						<AgentsGroup />
-						<ProjectsGroup />
-					</>
-				)}
+				<SidebarGroup>
+					<NavItems items={MAIN_ITEMS} />
+				</SidebarGroup>
+				<AgentsGroup />
+				<ProjectsGroup />
 			</SidebarContent>
 			<SidebarFooter>
 				<SettingsMenu />
