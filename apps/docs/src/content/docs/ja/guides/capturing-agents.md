@@ -42,7 +42,7 @@ Spantail は、AI エージェントがやったこと — コーディングの
 ## 活動を送信する
 
 エージェントはエージェントトークンを使い、自分のターンを取り込みエンドポイント
-（`POST /api/v1/agent-entries`）に送ります。Spantail はそれをセッションにまとめます。最も簡単な
+（`POST /api/v1/agent-events`）に送ります。Spantail はそれをセッションにまとめます。最も簡単な
 方法は専用の **Claude Code プラグイン**（近日公開 — [Claude プラグイン](/ja/guides/tools/claude-plugin/)
 を参照）で、セッションを自動で取り込みます。提供開始までは、取り込み API を通じてプログラムから
 送信します。
