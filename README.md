@@ -95,10 +95,10 @@ token usage and timing — **not your conversation transcripts or source code**.
 transcript locally and sends only that telemetry, so conversation bodies never leave your
 machine. (What reaches Spantail is only ever what a client sends.)
 
-Whatever short fields do get recorded, though — agent or work `description`s, notes, tags —
-are stored verbatim and can appear in reports, public share links, and Send-to deliveries.
-Treat them as potentially secret-bearing: don't put secrets in them, and don't emit secrets
-into agent logs. See [`docs/security.md`](docs/security.md) (§2).
+Whatever a client does record, though — descriptions, notes, tags, and any event payload it
+sends — is stored verbatim and can appear in reports, public share links, and Send-to
+deliveries. Treat it as potentially secret-bearing: don't put secrets in those fields, and
+don't emit secrets into agent logs. See [`docs/security.md`](docs/security.md) (§2).
 
 ## CLI & MCP
 
@@ -112,8 +112,9 @@ spantail mcp                                         # stdio MCP server for AI c
 
 AI clients that support remote MCP can connect directly to `https://your-instance/mcp` with an API token.
 
-To record an AI coding agent's sessions, register an agent in Spantail and wire its transcript to
-the API — see the reference Stop hook in [`hooks/claude-code`](hooks/claude-code).
+To record an AI coding agent's sessions, register an agent in Spantail and add the reference Stop
+hook, which reads each turn's transcript locally and posts only compact telemetry — see
+[`hooks/claude-code`](hooks/claude-code).
 
 ## Development
 
