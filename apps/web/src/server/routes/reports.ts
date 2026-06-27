@@ -551,27 +551,37 @@ export const reportRoutes = new Hono<AppEnv>()
 		// One id shared by every row of this send so the sender's Sent folder can
 		// group the fan-out back into a single entry.
 		const batchId = crypto.randomUUID();
-		await createReportDeliveries(
-			c.var.db,
-			recipientIds.map((recipientUserId) => ({
-				batchId,
-				reportId: report.id,
-				senderUserId: user.id,
-				recipientUserId,
-				senderName: user.name,
-				senderEmail: user.email,
-				reportName: report.name,
-				dateFrom: report.filters.dateRange.from,
-				dateTo: report.filters.dateRange.to,
-				renderedMarkdown: current.content,
-				message,
-			})),
-		);
+		const base = {
+			batchId,
+			reportId: report.id,
+			senderUserId: user.id,
+			senderName: user.name,
+			senderEmail: user.email,
+			reportName: report.name,
+			dateFrom: report.filters.dateRange.from,
+			dateTo: report.filters.dateRange.to,
+			renderedMarkdown: current.content,
+			message,
+		};
+		const deliveries = recipientIds.map((recipientUserId) => ({
+			...base,
+			recipientUserId,
+		}));
+		// A copy to the sender's own inbox: a self-row (recipient === sender) in the
+		// same batch. It surfaces in the sender's Inbox but is excluded from the Sent
+		// scope, so it never appears in the batch's recipient list (see the
+		// report-deliveries queries).
+		if (input.sendToSelf) {
+			deliveries.push({ ...base, recipientUserId: user.id });
+		}
+		await createReportDeliveries(c.var.db, deliveries);
 		// Notify the recipients (their inbox) and the sender (their Sent folder in
-		// other open tabs) — both are backed by report_deliveries. Dedup in case
-		// the sender listed themselves as a recipient.
+		// other open tabs, plus their own inbox when they sent a self-copy) — both
+		// are backed by report_deliveries.
 		publishToUsers(c, [...new Set([...recipientIds, user.id])], {
 			type: "message",
 		});
+		// Count only the teammate recipients; the self-copy is an inbox convenience,
+		// not a "sent to N people" delivery.
 		return c.json({ delivered: recipientIds.length }, 201);
 	});

@@ -316,12 +316,15 @@
 			"message": "Message",
 			"messageHint": "Optional — add context for the recipient.",
 			"messagePlaceholder": "e.g. Weekly report for your review — let me know if anything looks off.",
+			"sendToSelf": "Also send to my inbox",
+			"sendToSelfHint": "Drop a copy into your own inbox — handy for reviewing everyone's reports together.",
 			"cancel": "Cancel",
 			"submit": "Send",
 			"submitCount_one": "Send to {{count}} person",
 			"submitCount_other": "Send to {{count}} people",
 			"toast_one": "Sent to {{count}} recipient.",
-			"toast_other": "Sent to {{count}} recipients."
+			"toast_other": "Sent to {{count}} recipients.",
+			"toastSelfOnly": "Saved to your inbox."
 		}
 	},
 	"notifications": {

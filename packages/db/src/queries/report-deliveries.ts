@@ -49,6 +49,12 @@ export async function createReportDeliveries(
 // makes such a row behave as a singleton batch instead of a null grouping key.
 const batchKey = sql<string>`coalesce(${reportDeliveries.batchId}, ${reportDeliveries.id})`;
 
+// A self-copy row (recipient === sender) is an inbox-only convenience: it shows
+// in the sender's Inbox but is excluded from the Sent scope, so it never pollutes
+// the batch's recipient list/count and the Sent representative row is always a
+// real recipient (keeping getMailItemDetail's received/sent resolution stable).
+const notSelfCopy = sql`${reportDeliveries.recipientUserId} != ${reportDeliveries.senderUserId}`;
+
 /**
  * The flag predicate for a folder, evaluated against the left-joined
  * delivery_flags columns (null = not flagged). Trash is terminal: it shows
@@ -201,7 +207,11 @@ async function listSent(
 			),
 		)
 		.where(
-			and(eq(reportDeliveries.senderUserId, userId), flagPredicate(folder)),
+			and(
+				eq(reportDeliveries.senderUserId, userId),
+				notSelfCopy,
+				flagPredicate(folder),
+			),
 		)
 		.groupBy(batchKey)
 		// batchKey breaks createdAt ties so offset paging is stable.
@@ -356,7 +366,13 @@ export async function getMailItemDetail(
 			})
 			.from(reportDeliveries)
 			.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
-			.where(and(eq(batchKey, key), eq(reportDeliveries.senderUserId, userId)))
+			.where(
+				and(
+					eq(batchKey, key),
+					eq(reportDeliveries.senderUserId, userId),
+					notSelfCopy,
+				),
+			)
 			.orderBy(user.name);
 		const flags = await getDeliveryFlags(db, userId, "sent", key);
 		return {
@@ -700,7 +716,11 @@ async function countSentBatches(
 			),
 		)
 		.where(
-			and(eq(reportDeliveries.senderUserId, userId), flagPredicate(folder)),
+			and(
+				eq(reportDeliveries.senderUserId, userId),
+				notSelfCopy,
+				flagPredicate(folder),
+			),
 		)
 		.groupBy(batchKey)
 		.as("sent_groups");

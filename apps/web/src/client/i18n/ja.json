@@ -315,12 +315,15 @@
 			"message": "メッセージ",
 			"messageHint": "任意 — 受信者向けの補足を添えられます。",
 			"messagePlaceholder": "例: レビュー用の週次レポートです。気になる点があれば教えてください。",
+			"sendToSelf": "自分のインボックスにも送る",
+			"sendToSelfHint": "自分のインボックスにもコピーを届けます — 全員のレポートをまとめて確認するのに便利です。",
 			"cancel": "キャンセル",
 			"submit": "送信",
 			"submitCount_one": "{{count}} 人に送信",
 			"submitCount_other": "{{count}} 人に送信",
 			"toast_one": "{{count}} 人に送信しました。",
-			"toast_other": "{{count}} 人に送信しました。"
+			"toast_other": "{{count}} 人に送信しました。",
+			"toastSelfOnly": "自分のインボックスに送りました。"
 		}
 	},
 	"notifications": {
