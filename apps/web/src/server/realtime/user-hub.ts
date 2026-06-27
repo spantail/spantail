@@ -30,7 +30,6 @@ export class UserHub extends DurableObject<Env> {
 			headers: {
 				"content-type": "text/event-stream",
 				"cache-control": "no-cache, no-transform",
-				connection: "keep-alive",
 			},
 		});
 	}
