@@ -38,8 +38,9 @@ and **Agent detail** — see each dataset's README for the per-screen breakdown.
 
 ## Sign-in
 
-Every seeded user shares the password **`Spantail-Demo-7Qx2k!`** (long and
-mixed-class so browsers and password managers don't flag it on sign-in). Each
+Each seeded user gets its **own** password (so a password manager won't flag
+them as reused). `pnpm db:seed` prints the email + password pairs when it
+finishes; the passwords are deterministic, so a rerun yields the same pairs. Each
 dataset's users are listed in its own README (linked above).
 
 ## How a dataset is generated

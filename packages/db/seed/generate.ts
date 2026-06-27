@@ -21,10 +21,6 @@ import {
 	type SeedConfig,
 } from "./schema";
 
-// Shared password for every seeded user. Documented in seed/README.md. Chosen
-// to be long and mixed-class with a random component so browsers (Chrome) and
-// password managers (1Password) don't flag it as breached or weak on sign-in.
-export const SEED_PASSWORD = "Spantail-Demo-7Qx2k!";
 const WINDOW_DAYS = 45;
 
 type Row = Record<string, unknown>;
@@ -38,7 +34,7 @@ export interface SeededTable {
 export interface Dataset {
 	/** In dependency order so a single SQL file inserts cleanly. */
 	tables: SeededTable[];
-	credentials: Array<{ name: string; email: string }>;
+	credentials: Array<{ name: string; email: string; password: string }>;
 	summary: Record<string, number>;
 }
 
@@ -88,6 +84,20 @@ function hashString(s: string): number {
 		h = Math.imul(h, 0x01000193);
 	}
 	return h >>> 0;
+}
+
+// A distinct, deterministic sign-in password per user (salted by email, which is
+// unique across datasets). Long and mixed-class so 1Password/Chrome don't flag it
+// as reused or weak; printed by `db:seed` so a tester can copy the pair. Demo
+// data only — these are local credentials, not secrets.
+function passwordForEmail(email: string): string {
+	const local = email.split("@")[0] ?? email;
+	const label = local.charAt(0).toUpperCase() + local.slice(1);
+	const suffix = hashString(`pw:${email}`)
+		.toString(36)
+		.padStart(7, "0")
+		.slice(-6);
+	return `Spantail-${label}-${suffix}`;
 }
 
 /** Rounds minutes to the nearest quarter hour, never below 15. */
@@ -166,7 +176,6 @@ export async function generateDataset(
 ): Promise<Dataset> {
 	const config = loadConfig(dataDir);
 
-	const password = await hashPassword(SEED_PASSWORD);
 	// Anchor account/workspace creation comfortably before the activity window.
 	const baseCreatedAt = new Date(now.getTime() - 90 * 86_400_000);
 
@@ -199,6 +208,8 @@ export async function generateDataset(
 	const usersByKey = new Map<string, ResolvedUser>();
 	const userRows: Row[] = [];
 	const accountRows: Row[] = [];
+	const credentials: Array<{ name: string; email: string; password: string }> =
+		[];
 	for (const u of config.users) {
 		const id = randomUUID();
 		const user: ResolvedUser = {
@@ -219,12 +230,14 @@ export async function generateDataset(
 			createdAt: baseCreatedAt,
 			updatedAt: baseCreatedAt,
 		});
+		const plainPassword = passwordForEmail(u.email);
+		credentials.push({ name: u.name, email: u.email, password: plainPassword });
 		accountRows.push({
 			id: randomUUID(),
 			accountId: id,
 			providerId: "credential",
 			userId: id,
-			password,
+			password: await hashPassword(plainPassword),
 			createdAt: baseCreatedAt,
 			updatedAt: baseCreatedAt,
 		});
@@ -963,7 +976,7 @@ export async function generateDataset(
 
 	return {
 		tables,
-		credentials: config.users.map((u) => ({ name: u.name, email: u.email })),
+		credentials,
 		summary: Object.fromEntries(tables.map((t) => [t.table, t.rows.length])),
 	};
 }

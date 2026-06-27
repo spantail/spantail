@@ -12,8 +12,7 @@ current date, so reruns are reproducible.
 
 ## Sign-in
 
-Every user shares the password documented in
-[`packages/db/seed/README.md`](../../packages/db/seed/README.md).
+Each user has its own password, printed by `pnpm db:seed` when it finishes.
 
 | Email | Role |
 | --- | --- |

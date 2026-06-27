@@ -13,8 +13,7 @@ seed 用 YAML は [`db/seed/`](./db/seed) にあります。**宣言的なデー
 
 ## サインイン
 
-全ユーザーは [`packages/db/seed/README.md`](../../packages/db/seed/README.md) に
-記載の共通パスワードを使います。
+各ユーザーは個別のパスワードを持ち、`pnpm db:seed` の完了時に画面へ表示されます。
 
 | メール | 名前 | ロール |
 | --- | --- | --- |

@@ -7,7 +7,7 @@ import {
 	seedDataDir,
 	wranglerLocal,
 } from "./exec";
-import { generateDataset, SEED_PASSWORD } from "./generate";
+import { generateDataset } from "./generate";
 import type { Language } from "./schema";
 import { datasetToSql } from "./to-sql";
 
@@ -55,11 +55,11 @@ async function main(): Promise<void> {
 	}
 	wranglerLocal(["d1", "execute", "spantail-db", "--local", "--file", sqlPath]);
 
-	console.log("\nSeed complete. Sign in with any user below:");
-	for (const { name, email } of dataset.credentials) {
-		console.log(`  ${email}  (${name})`);
+	console.log("\nSeed complete. Sign in with any email + password below:");
+	const pad = Math.max(...dataset.credentials.map((c) => c.email.length));
+	for (const { name, email, password } of dataset.credentials) {
+		console.log(`  ${email.padEnd(pad)}  ${password}  (${name})`);
 	}
-	console.log(`  password: ${SEED_PASSWORD}`);
 }
 
 main().catch((error) => {
