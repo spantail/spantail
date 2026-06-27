@@ -68,8 +68,12 @@ export function SearchCommand() {
 		enabled: open && debouncedQ.length > 0,
 	});
 
-	const reports = data?.reports ?? [];
-	const workEntries = data?.workEntries ?? [];
+	// Gate on the active query so stale cached data never renders after the
+	// dialog is reopened with an empty term (the query is disabled, but React
+	// Query keeps the previous result in cache).
+	const active = debouncedQ.length > 0;
+	const reports = active ? (data?.reports ?? []) : [];
+	const workEntries = active ? (data?.workEntries ?? []) : [];
 	const hasResults = reports.length > 0 || workEntries.length > 0;
 
 	function close() {
