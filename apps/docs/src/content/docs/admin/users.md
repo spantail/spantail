@@ -61,4 +61,4 @@ When email is enabled, sent-but-not-yet-accepted invitations are listed with the
 expiry. **Revoke** an invitation to invalidate its link before it is accepted.
 
 For how the very first admin account comes to exist on a new instance, see
-[Bootstrap & invitations](/self-hosting/bootstrap-users) in the Setup Guide.
+[Initial setup wizard](/self-hosting/setup-wizard/) in the Setup Guide.
