@@ -473,7 +473,11 @@ function ProviderToggle({
 	onChange: (v: boolean) => void;
 }) {
 	const { t } = useTranslation();
-	if (!configured) {
+	// Hide the toggle only when the provider is both unconfigured and off — there
+	// is nothing to enable. If it is somehow already enabled while unconfigured
+	// (credentials removed after the fact), still show the toggle so it can be
+	// turned off rather than silently resubmitting enabled: true.
+	if (!configured && !checked) {
 		return (
 			<div className="text-sm">
 				<span className="font-medium">{label}</span>
@@ -564,7 +568,11 @@ function InviteStep({
 				onSubmit={(e) => {
 					e.preventDefault();
 					setError(null);
-					if (emailEnabled) invite.mutate();
+					// Branch on the loaded settings, not the `?? false` default: until the
+					// query resolves we cannot tell invite-by-email from direct-create, so
+					// the submit button is disabled and this guard refuses to act early.
+					if (!email.data) return;
+					if (email.data.emailEnabled) invite.mutate();
 					else create.mutate();
 				}}
 			>
@@ -602,7 +610,11 @@ function InviteStep({
 				</label>
 				{error && <p className="text-destructive text-sm">{error}</p>}
 				<div>
-					<Button type="submit" variant="secondary" disabled={submitting}>
+					<Button
+						type="submit"
+						variant="secondary"
+						disabled={submitting || email.isPending}
+					>
 						{emailEnabled
 							? t("settings.users.inviteAction")
 							: t("settings.users.createAction")}
