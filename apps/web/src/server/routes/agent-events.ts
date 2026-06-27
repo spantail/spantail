@@ -25,7 +25,8 @@ export const agentEventRoutes = new Hono<AppEnv>()
 	// `agent_entries` — the same row the client-computed POST /agent-entries
 	// writes, so a session is fed by one path only (Claude Code via events,
 	// Cursor via the summary route) and they never collide.
-	// Rate-limited per token: ingestion is the untrusted write path.
+	// Rate-limited per credential (the agent token): ingestion is the untrusted
+	// write path.
 	.post("/", ingestRateLimit, async (c) => {
 		const auth = requireAgentAuth(c);
 		const input = validate(ingestAgentEventsInputSchema, await c.req.json());

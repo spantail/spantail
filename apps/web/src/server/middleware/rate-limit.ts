@@ -14,8 +14,11 @@ import type { AppEnv } from "../types";
  *
  * The key is the token identity for agent/PAT credentials (so one leaked token
  * can't throttle a principal's other tokens) and the user for cookie sessions
- * (which carry no token id). The `INGEST_RATE_LIMITER` binding is local-only
- * simulated, so this is enforced identically in tests and in production.
+ * (which carry no token id). An unauthenticated request carries no credential
+ * to key on, so it is skipped here (no shared anonymous bucket) and left to the
+ * downstream auth check, which answers the correct 401/403 rather than a masked
+ * 429. The `INGEST_RATE_LIMITER` binding is local-only simulated, so this is
+ * enforced identically in tests and in production.
  */
 export const ingestRateLimit = createMiddleware<AppEnv>(async (c, next) => {
 	const auth = c.var.auth;

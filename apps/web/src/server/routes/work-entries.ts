@@ -98,7 +98,8 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const access = resolveEntryAccess(query.workspaceId, membership, user.id);
 		return c.json(await listWorkEntries(c.var.db, { ...query, access }));
 	})
-	// Rate-limited per user: a write credential must not flood the store.
+	// Rate-limited per credential (token, or user for sessions): a write
+	// credential must not flood the store.
 	.post("/", ingestRateLimit, async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createWorkEntryInputSchema, await c.req.json());
