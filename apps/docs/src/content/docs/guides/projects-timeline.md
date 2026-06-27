@@ -57,7 +57,7 @@ Visibility follows workspace and project membership:
 
 Editing stays with the author — seeing an entry doesn't mean you can change it.
 For the full role-by-resource model, see the
-[Admin Guide](/workspace-admin/).
+[Admin Guide](/admin/).
 
 ## Agent activity
 
