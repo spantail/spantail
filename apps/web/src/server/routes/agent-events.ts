@@ -15,6 +15,7 @@ import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth } from "../middleware/auth";
 import { ingestRateLimit } from "../middleware/rate-limit";
+import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
 
 export const agentEventRoutes = new Hono<AppEnv>()
@@ -104,5 +105,6 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			startedAt: rollup.startedAt,
 			endedAt: rollup.endedAt,
 		});
+		publishToWorkspace(c, { type: "agent-entry", workspaceId });
 		return c.json(entry);
 	});

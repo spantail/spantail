@@ -54,6 +54,7 @@ import {
 import { toApiShare } from "../lib/share-api";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
+import { publishToUsers } from "../realtime/publish";
 import type { AppEnv } from "../types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -566,5 +567,6 @@ export const reportRoutes = new Hono<AppEnv>()
 				message,
 			})),
 		);
+		publishToUsers(c, recipientIds, { type: "message" });
 		return c.json({ delivered: recipientIds.length }, 201);
 	});

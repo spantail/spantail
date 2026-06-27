@@ -30,7 +30,6 @@ export function HomeInbox({ className }: { className?: string }) {
 	const unread = useQuery({
 		queryKey: ["inbox-unread"],
 		queryFn: () => api.getInboxUnreadCount(),
-		refetchInterval: 60_000,
 	});
 	const items = inbox.data ?? [];
 	const unreadCount = unread.data?.count ?? 0;

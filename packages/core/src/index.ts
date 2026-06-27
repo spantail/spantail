@@ -9,6 +9,7 @@ export * from "./instance";
 export * from "./invitation";
 export * from "./pat";
 export * from "./project";
+export * from "./realtime";
 export * from "./report";
 export * from "./report-engine";
 export * from "./report-frontmatter";

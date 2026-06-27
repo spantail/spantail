@@ -59,6 +59,21 @@ export async function listMembers(db: Database, workspaceId: string) {
 	return rows;
 }
 
+/**
+ * The user ids of every member of a workspace. Used to fan out realtime
+ * invalidation signals to each member's UserHub after a workspace-scoped write.
+ */
+export async function listWorkspaceMemberIds(
+	db: Database,
+	workspaceId: string,
+): Promise<string[]> {
+	const rows = await db
+		.select({ userId: workspaceMembers.userId })
+		.from(workspaceMembers)
+		.where(eq(workspaceMembers.workspaceId, workspaceId));
+	return rows.map((r) => r.userId);
+}
+
 export async function addMember(
 	db: Database,
 	input: { workspaceId: string; userId: string; role: "admin" | "member" },

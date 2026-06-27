@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 
 // User-scoped inbox link in the header's top-right corner. The unread badge
-// polls so a delivery from another user surfaces without a manual refresh.
+// updates live: the user's SSE stream invalidates ["inbox-unread"] when a
+// delivery arrives (see useRealtimeSync), so no polling is needed.
 export function NavInbox() {
 	const { t } = useTranslation();
 	const unread = useQuery({
 		queryKey: ["inbox-unread"],
 		queryFn: () => api.getInboxUnreadCount(),
-		refetchInterval: 60_000,
 	});
 	const count = unread.data?.count ?? 0;
 

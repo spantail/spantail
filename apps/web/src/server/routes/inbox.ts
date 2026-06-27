@@ -21,6 +21,7 @@ import { parseOptionalJsonBody } from "../lib/json";
 import { resolveAdminListScope } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
+import { publishToUser } from "../realtime/publish";
 import type { AppEnv } from "../types";
 import { requireReportReadAccess } from "./reports";
 
@@ -79,6 +80,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 	.post("/read-all", async (c) => {
 		const { user } = requireScope(c, "write");
 		await markAllInboxRead(c.var.db, user.id);
+		publishToUser(c, user.id, { type: "message" });
 		return c.body(null, 204);
 	})
 	// Upsert the caller's flags on a received message or a sent batch. The query
@@ -105,6 +107,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 				trashed: input.trashed,
 			},
 		);
+		publishToUser(c, user.id, { type: "message" });
 		return c.body(null, 204);
 	})
 	.get("/:id", async (c) => {
@@ -141,6 +144,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 		const row = await getInboxMessage(c.var.db, c.req.param("id"), user.id);
 		if (!row) throw new AppError("not_found", "Message not found");
 		await markInboxRead(c.var.db, row.id, user.id);
+		publishToUser(c, user.id, { type: "message" });
 		return c.body(null, 204);
 	})
 	.post("/:id/unread", async (c) => {
@@ -148,5 +152,6 @@ export const inboxRoutes = new Hono<AppEnv>()
 		const row = await getInboxMessage(c.var.db, c.req.param("id"), user.id);
 		if (!row) throw new AppError("not_found", "Message not found");
 		await markInboxUnread(c.var.db, row.id, user.id);
+		publishToUser(c, user.id, { type: "message" });
 		return c.body(null, 204);
 	});

@@ -55,6 +55,33 @@ export async function getReportDiscussionAccess(
 }
 
 /**
+ * The user ids of a report's discussion participants: the owner plus every
+ * Send-to recipient. Used to fan out a realtime signal when the discussion
+ * changes. A recipient whose account was deleted has no delivery row, so they
+ * are naturally excluded.
+ */
+export async function listReportParticipantUserIds(
+	db: Database,
+	reportId: string,
+): Promise<string[]> {
+	const report = await db
+		.select({ ownerUserId: reports.ownerUserId })
+		.from(reports)
+		.where(eq(reports.id, reportId))
+		.get();
+	if (!report) return [];
+	const recipients = await db
+		.select({ userId: reportDeliveries.recipientUserId })
+		.from(reportDeliveries)
+		.where(eq(reportDeliveries.reportId, reportId));
+	const ids = new Set<string>([report.ownerUserId]);
+	for (const r of recipients) {
+		if (r.userId) ids.add(r.userId);
+	}
+	return [...ids];
+}
+
+/**
  * Whether a report's discussion exists: ≥1 delivery, comment, or reaction. An
  * existing discussion counts as shared even with no live delivery — when the
  * last recipient's account is deleted their delivery cascades away, but retained

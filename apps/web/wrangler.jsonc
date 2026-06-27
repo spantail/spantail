@@ -38,6 +38,13 @@
 	// sending domain on a Workers Paid plan. Local dev never invokes it: the
 	// mailer routes to an in-memory dev outbox whenever APP_ENV !== "production".
 	"send_email": [{ "name": "EMAIL" }],
+	// Per-user realtime fan-out hub for SSE invalidation signals. SQLite-backed
+	// so it runs on the Workers Free plan; the object itself is a pure in-memory
+	// relay and uses no storage.
+	"durable_objects": {
+		"bindings": [{ "name": "USER_HUB", "class_name": "UserHub" }]
+	},
+	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["UserHub"] }],
 	"vars": {
 		"APP_ENV": "development"
 	},
@@ -69,6 +76,10 @@
 				}
 			],
 			"send_email": [{ "name": "EMAIL" }],
+			"durable_objects": {
+				"bindings": [{ "name": "USER_HUB", "class_name": "UserHub" }]
+			},
+			"migrations": [{ "tag": "v1", "new_sqlite_classes": ["UserHub"] }],
 			"vars": {
 				"APP_ENV": "production"
 			}

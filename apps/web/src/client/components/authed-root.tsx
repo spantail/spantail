@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { api } from "@/lib/api";
+import { useRealtimeSync } from "@/lib/realtime";
 import { WorkspaceProvider } from "@/lib/workspace";
 
 /**
@@ -18,6 +19,9 @@ export function AuthedRoot({
 }) {
 	const { t } = useTranslation();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
+	// One SSE connection for the whole authenticated app; pushes invalidations so
+	// changes from other users, the CLI, MCP, and agent ingest surface live.
+	useRealtimeSync();
 
 	if (me.isPending) {
 		return (

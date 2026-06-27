@@ -25,6 +25,7 @@ import { toApiComment, toReactionSummaries } from "../lib/discussion-api";
 import { AppError } from "../lib/errors";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
+import { publishToReportParticipants } from "../realtime/publish";
 import type { AppEnv } from "../types";
 import { requireReportReadAccess } from "./reports";
 
@@ -132,6 +133,7 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 			emoji,
 		});
 		const reactions = await listReportReactions(c.var.db, reportId);
+		publishToReportParticipants(c, reportId);
 		return c.json(toReactionSummaries(bodyReactions(reactions), user.id));
 	})
 	.post("/:id/comments", async (c) => {
@@ -145,6 +147,7 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 			authorEmail: user.email,
 			body,
 		});
+		publishToReportParticipants(c, reportId);
 		return c.json(toApiComment(comment, [], user.id, user.imageUrl), 201);
 	})
 	.patch("/:id/comments/:commentId", async (c) => {
@@ -161,6 +164,7 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 		);
 		// Missing, wrong report, or not the author — never reveal which.
 		if (!updated) throw new AppError("not_found", "Comment not found");
+		publishToReportParticipants(c, reportId);
 		const reactions = await listReportReactions(c.var.db, reportId);
 		const byComment = reactionsByComment(reactions);
 		return c.json(
@@ -183,6 +187,7 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 			user.id,
 		);
 		if (!deleted) throw new AppError("not_found", "Comment not found");
+		publishToReportParticipants(c, reportId);
 		return c.body(null, 204);
 	})
 	.put("/:id/comments/:commentId/reactions", async (c) => {
@@ -203,5 +208,6 @@ export const reportDiscussionRoutes = new Hono<AppEnv>()
 		});
 		const reactions = await listReportReactions(c.var.db, reportId);
 		const byComment = reactionsByComment(reactions);
+		publishToReportParticipants(c, reportId);
 		return c.json(toReactionSummaries(byComment.get(commentId) ?? [], user.id));
 	});
