@@ -3,9 +3,11 @@ import { expect, it } from "vitest";
 import { ingestAgentEntryInputSchema } from "./agent";
 import { MAX_DURATION_MINUTES } from "./duration";
 
-// Timestamps are validated relative to "now", so build them from the current
-// clock rather than fixed literals.
-const recent = new Date(Date.now() - 60_000).toISOString();
+// Timestamps are validated relative to "now". Build them at test-time off the
+// current clock (not a module-level constant, which Vitest can evaluate long
+// before a test runs and let the values go stale, flipping ordering checks).
+const minutesAgo = (n: number) =>
+	new Date(Date.now() - n * 60_000).toISOString();
 const base = {
 	sessionId: "session-1",
 	durationMinutes: 30,
@@ -36,8 +38,8 @@ it("still accepts a zero agent duration", () => {
 it("accepts an ingest payload with in-range timestamps", () => {
 	const result = ingestAgentEntryInputSchema.safeParse({
 		...base,
-		startedAt: new Date(Date.now() - 120_000).toISOString(),
-		endedAt: recent,
+		startedAt: minutesAgo(2),
+		endedAt: minutesAgo(1),
 	});
 	expect(result.success).toBe(true);
 });
@@ -65,8 +67,8 @@ it("rejects a far-future endedAt", () => {
 it("rejects endedAt before startedAt", () => {
 	const result = ingestAgentEntryInputSchema.safeParse({
 		...base,
-		startedAt: recent,
-		endedAt: new Date(Date.now() - 120_000).toISOString(),
+		startedAt: minutesAgo(1),
+		endedAt: minutesAgo(2),
 	});
 	expect(result.success).toBe(false);
 	if (!result.success) {
