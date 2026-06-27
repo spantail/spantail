@@ -40,7 +40,8 @@ CREATE TABLE `user` (
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	`is_admin` integer DEFAULT false,
 	`can_manage_templates` integer DEFAULT false,
-	`disabled` integer DEFAULT false
+	`disabled` integer DEFAULT false,
+	`timezone` text
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);--> statement-breakpoint

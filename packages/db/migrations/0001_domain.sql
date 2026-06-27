@@ -60,7 +60,6 @@ CREATE TABLE `workspaces` (
 	`id` text PRIMARY KEY NOT NULL,
 	`slug` text NOT NULL,
 	`name` text NOT NULL,
-	`timezone` text NOT NULL,
 	`accent_color` text DEFAULT 'neutral' NOT NULL,
 	`logo_url` text,
 	`settings` text DEFAULT '{}' NOT NULL,

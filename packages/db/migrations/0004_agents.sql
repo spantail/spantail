@@ -5,11 +5,10 @@ CREATE TABLE `agent_entries` (
 	`project_id` text,
 	`agent_id` text NOT NULL,
 	`session_id` text NOT NULL,
-	`entry_date` text NOT NULL,
 	`duration_minutes` integer NOT NULL,
 	`usage` text,
 	`description` text,
-	`started_at` integer,
+	`started_at` integer NOT NULL,
 	`ended_at` integer,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
@@ -20,7 +19,7 @@ CREATE TABLE `agent_entries` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `agent_entries_session_uq` ON `agent_entries` (`agent_id`,`session_id`);--> statement-breakpoint
-CREATE INDEX `agent_entries_workspace_idx` ON `agent_entries` (`workspace_id`,`created_at`);--> statement-breakpoint
+CREATE INDEX `agent_entries_workspace_idx` ON `agent_entries` (`workspace_id`,`started_at`);--> statement-breakpoint
 CREATE INDEX `agent_entries_agent_idx` ON `agent_entries` (`agent_id`);--> statement-breakpoint
 CREATE TABLE `agent_events` (
 	`id` text PRIMARY KEY NOT NULL,
