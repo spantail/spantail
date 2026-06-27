@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as LoginRouteImport } from './routes/login'
@@ -49,6 +50,11 @@ import { Route as AuthedWWsSlugIndexRouteImport } from './routes/_authed/w.$wsSl
 import { Route as AuthedWWsSlugProjectsProjectSlugRouteImport } from './routes/_authed/w.$wsSlug.projects.$projectSlug'
 import { Route as AuthedWWsSlugAgentsAgentIdRouteImport } from './routes/_authed/w.$wsSlug.agents.$agentId'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
   '/reports': typeof ReportsRouteWithChildren
+  '/setup': typeof SetupRoute
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
@@ -293,6 +300,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
   '/templates': typeof AuthedTemplatesRoute
@@ -331,6 +339,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
   '/reports': typeof ReportsRouteWithChildren
+  '/setup': typeof SetupRoute
   '/_authed/account': typeof AuthedAccountRoute
   '/_authed/entries': typeof AuthedEntriesRoute
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/messages'
     | '/reports'
+    | '/setup'
     | '/account'
     | '/entries'
     | '/settings'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
   to:
     | '/forgot-password'
     | '/login'
+    | '/setup'
     | '/account'
     | '/entries'
     | '/templates'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/messages'
     | '/reports'
+    | '/setup'
     | '/_authed/account'
     | '/_authed/entries'
     | '/_authed/settings'
@@ -490,12 +502,20 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRouteWithChildren
   ReportsRoute: typeof ReportsRouteWithChildren
+  SetupRoute: typeof SetupRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ResetPasswordTokenRoute: typeof ResetPasswordTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports': {
       id: '/reports'
       path: '/reports'
@@ -910,6 +930,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRouteWithChildren,
   ReportsRoute: ReportsRouteWithChildren,
+  SetupRoute: SetupRoute,
   InviteTokenRoute: InviteTokenRoute,
   ResetPasswordTokenRoute: ResetPasswordTokenRoute,
 }

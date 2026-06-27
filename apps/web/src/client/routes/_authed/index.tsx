@@ -1,9 +1,6 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
-import { Button } from "@/components/ui/button";
 import { useDocumentTitle } from "@/lib/document-title";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -12,13 +9,13 @@ export const Route = createFileRoute("/_authed/")({
 });
 
 // The home route is a hub: members are sent to their active (or first)
-// workspace dashboard at `/w/{slug}`; only users with no membership stay here
-// to see the onboarding screen.
+// workspace dashboard at `/w/{slug}`; an admin who has not created a workspace
+// yet is sent to the setup wizard; everyone else (a non-admin with no
+// membership) stays here to be told to ask an admin.
 function Home() {
 	const { t } = useTranslation();
 	const { current } = useWorkspace();
 	const { session } = Route.useRouteContext();
-	const [createOpen, setCreateOpen] = useState(false);
 
 	useDocumentTitle(t("nav.home"));
 
@@ -28,26 +25,20 @@ function Home() {
 		);
 	}
 
-	const isAdmin = Boolean(session.user.isAdmin);
+	// A fresh instance's first user is its admin with no workspace yet: hand them
+	// to the onboarding wizard. The wizard owns its own re-entry guard.
+	if (session.user.isAdmin) {
+		return <Navigate to="/setup" replace />;
+	}
+
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
 			<h2 className="font-heading text-xl font-semibold">
 				{t("workspace.empty.title")}
 			</h2>
 			<p className="text-muted-foreground max-w-md text-sm">
-				{isAdmin ? t("workspace.empty.admin") : t("workspace.empty.member")}
+				{t("workspace.empty.member")}
 			</p>
-			{isAdmin && (
-				<>
-					<Button className="mt-2" onClick={() => setCreateOpen(true)}>
-						{t("workspace.createAction")}
-					</Button>
-					<CreateWorkspaceDialog
-						open={createOpen}
-						onOpenChange={setCreateOpen}
-					/>
-				</>
-			)}
 		</div>
 	);
 }
