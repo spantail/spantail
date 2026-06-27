@@ -1,0 +1,92 @@
+---
+title: Initial setup wizard
+description: Bootstrap the first administrator and walk through the in-app setup wizard.
+---
+
+import { Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+
+Once the Worker is [deployed](/self-hosting/deploy/), the instance is empty. The first person to
+sign up becomes the administrator and is guided through a short in-app wizard.
+
+## Bootstrap the first administrator
+
+On a fresh instance, **public sign-up is open until the first account is created**:
+
+- The **first email + password sign-up becomes the instance administrator** and is marked
+  email-verified automatically.
+- Public sign-up then **closes** — by default, everyone else joins by invitation. (If you enable
+  Google login with a self-join domain allowlist, users with a matching Google email can join
+  without one.)
+- **Social login stays unavailable until an administrator exists**, so there is no window to
+  claim admin on a fresh instance.
+
+:::note[Screenshot placeholder]
+📸 _The sign-up screen of a fresh instance, before the first account exists._
+:::
+
+## The setup wizard
+
+On first login the administrator is taken to `/setup`. It has five steps; the optional ones can
+be skipped and configured later from the Settings hub.
+
+<Steps>
+
+1. **Create your first workspace** _(required)._ Give it a name and slug. Workspaces group your
+   projects and work — one deployment serves one organization.
+
+   :::note[Screenshot placeholder]
+   📸 _Wizard step 1 — "Create your first workspace"._
+   :::
+
+2. **Create a project** _(optional)._ Projects group the work you log. You can add more — and
+   pick colors — later.
+
+   :::note[Screenshot placeholder]
+   📸 _Wizard step 2 — "Create a project"._
+   :::
+
+3. **Instance settings** _(optional)._ Turn on the integrations you want now, or skip and set
+   them up later.
+
+   - **Email delivery** — production email needs Cloudflare Email Service (a Workers Paid plan
+     and a verified sending domain). Until then, leave it off and add members directly.
+   - **Social login** — toggle Google and GitHub. A provider appears here only when its client
+     ID and secret are set in the environment (see [Configuration](/self-hosting/configuration/)).
+
+   Each section saves on its own with its **Save** button.
+
+   :::note[Screenshot placeholder]
+   📸 _Wizard step 3 — "Instance settings" with email and social-login sections._
+   :::
+
+4. **Invite your team** _(optional)._ How members join depends on whether email delivery is on.
+
+   <Tabs>
+     <TabItem label="Email on">
+       Send an invitation email. Each person joins with their own password. Tick **Grant
+       instance admin** to make the invitee an administrator.
+     </TabItem>
+     <TabItem label="Email off">
+       The member is created directly with a **generated one-time password** shown once — copy
+       and share it securely. Tick **Grant instance admin** to make them an administrator.
+     </TabItem>
+   </Tabs>
+
+   :::note[Screenshot placeholder]
+   📸 _Wizard step 4 — "Invite your team" (email-on and email-off variants)._
+   :::
+
+5. **You're all set.** Finish to land on your new workspace.
+
+   :::note[Screenshot placeholder]
+   📸 _Wizard step 5 — the "You're all set" completion screen._
+   :::
+
+</Steps>
+
+## After the wizard
+
+The wizard only covers the first run. Ongoing management lives in the Settings hub and is covered
+in the Admin guide: [System settings](/admin/system-settings/) (email and social login),
+[User management](/admin/users/) (accounts and admin grants), and
+[Report templates](/admin/report-templates/).

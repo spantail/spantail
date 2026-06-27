@@ -1,0 +1,63 @@
+---
+title: 概要と要件
+description: Cloudflare で Spantail をセルフホストするための要件。
+---
+
+import { Steps, LinkCard, CardGrid } from "@astrojs/starlight/components";
+
+Spantail は**シングルテナント**です。1 つのデプロイが 1 つの組織に対応し、すべてがあなた自身の
+Cloudflare アカウント上で動作します。本ガイドでは、空のアカウントから、最初の管理者がサインイン
+した稼働中のインスタンスまでを案内します。
+
+## 動作構成
+
+単一の Cloudflare Worker がすべてを配信します — REST API(`/api/v1`)、MCP エンドポイント
+(`/mcp`)、公開共有ビュー(`/share/*`)、そして React SPA。これを少数の Cloudflare リソースが
+支えます。
+
+| リソース | バインディング | 役割 |
+| --- | --- | --- |
+| D1 データベース | `DB` | 主データベース。 |
+| R2 バケット | `UPLOADS` | ユーザーがアップロードしたメディア(アバター、ワークスペースロゴ)。 |
+| Durable Object | `USER_HUB` | SSE によるライブ更新のリアルタイム配信。SQLite ベースのため Free プランで動作。 |
+| Email Service | `EMAIL` | 送信メール。任意。送信ドメインを登録するまでは無効(inert)。 |
+| レートリミッター | `INGEST_RATE_LIMITER` | 信頼できない取り込み経路に対する資格情報単位の上限。 |
+
+バインディングとシークレットの詳細は[設定](/ja/self-hosting/configuration/)を参照してください。
+
+## 要件
+
+- **Node.js 24+**、**pnpm 10+**、**Wrangler v4**
+- **Cloudflare アカウント**
+
+コア機能の実行には **Workers Free プランで十分**です。D1 と SQLite ベースのリアルタイム
+Durable Object はいずれも Free プランで動作します。**有料が必要なのはメール配信のみ**で、
+Cloudflare Email Service には Workers Paid プランと認証済み送信ドメインが必要です。既定では
+オフで、有効化するまではメンバーを生成パスワードで直接追加します。
+
+:::note[Screenshot placeholder]
+📸 _デプロイ直後のインスタンスに表示される初回サインアップ画面。_
+:::
+
+## Spantail をセットアップする
+
+<Steps>
+
+1. **[Cloudflare へデプロイ](/ja/self-hosting/deploy/)** — D1・R2 を用意し、セッション
+   シークレットを設定し、マイグレーションを実行して Worker をデプロイします。
+
+2. **[設定](/ja/self-hosting/configuration/)** — 環境変数・シークレット・バインディングの
+   完全なリファレンス。
+
+3. **[初回セットアップウィザード](/ja/self-hosting/setup-wizard/)** — 最初の管理者として
+   サインアップし、アプリ内ウィザードでワークスペース作成とメンバー招待を行います。
+
+4. **[セキュリティ](/ja/self-hosting/security/)** — 既定で安全な挙動と、実施すべき
+   ハードニング。
+
+</Steps>
+
+<CardGrid>
+	<LinkCard title="Cloudflare へデプロイ" href="/ja/self-hosting/deploy/" description="リソースを用意し Worker をデプロイ。" />
+	<LinkCard title="初回セットアップウィザード" href="/ja/self-hosting/setup-wizard/" description="最初の管理者と最初のワークスペースを作成。" />
+</CardGrid>

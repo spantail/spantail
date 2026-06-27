@@ -1,0 +1,93 @@
+---
+title: Cloudflare へデプロイ
+description: D1・R2 の用意、シークレット設定、マイグレーション、デプロイ。
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Spantail は、あなた自身の Cloudflare アカウントへのデプロイを前提に設計されています。
+[要件](/ja/self-hosting/)を満たしたうえで、以下の手順に従ってください。
+
+## まずローカルで試す
+
+デプロイ前に手元で動かす場合 — ローカルの D1 エミュレーションを使い、Cloudflare リソースは不要です。
+
+```bash
+git clone https://github.com/spantail/spantail.git
+cd spantail
+pnpm install
+
+# ローカル用の環境変数を作成し、BETTER_AUTH_SECRET（32 文字以上）を設定
+cp apps/web/.dev.vars.example apps/web/.dev.vars
+
+pnpm db:migrate:local   # ローカル D1 エミュレーターにマイグレーションを適用
+pnpm dev                # SPA + Worker を http://localhost:5173 で起動
+```
+
+`.dev.vars` の各値については[設定](/ja/self-hosting/configuration/)を参照してください。
+
+## Cloudflare へデプロイ
+
+<Steps>
+
+1. **クローンしてインストール。**
+
+   ```bash
+   git clone https://github.com/spantail/spantail.git
+   cd spantail
+   pnpm install
+   ```
+
+2. **D1 データベースを作成**し、生成された ID を `apps/web/wrangler.jsonc` にコピーします。
+
+   ```bash
+   wrangler d1 create spantail-db
+   ```
+
+   返ってきた `database_id` を、トップレベルの `d1_databases` ブロックと
+   `env.production.d1_databases` ブロックの**両方**に設定してください。いずれもプレースホルダー
+   ID で出荷されています。
+
+3. アップロード用の **R2 バケットを作成**します。
+
+   ```bash
+   wrangler r2 bucket create spantail-uploads
+   ```
+
+4. **セッション署名用シークレットを設定**します。32 文字以上の値を生成してください。
+
+   ```bash
+   wrangler secret put BETTER_AUTH_SECRET   # 例: `openssl rand -base64 32` を貼り付け
+   ```
+
+   :::caution
+   このシークレットがないと Worker は**フェイルクローズ**します。認証・セッションに触れる
+   リクエストは、偽造可能な値で署名する代わりにエラーになります。
+   :::
+
+5. リモートデータベースに**マイグレーションを適用**します。
+
+   ```bash
+   pnpm db:migrate:remote
+   ```
+
+6. Worker を**デプロイ**します。
+
+   ```bash
+   pnpm deploy
+   ```
+
+</Steps>
+
+## デプロイ後
+
+ログインリンクや OAuth コールバックが正しく解決されるよう、**`BETTER_AUTH_URL`** をデプロイ先の
+オリジン(例: カスタムドメイン `https://spantail.example.com`)に設定します。これと、任意の
+ソーシャルログイン・メール用シークレットは[設定](/ja/self-hosting/configuration/)で扱います。
+
+:::note[Screenshot placeholder]
+📸 _Workers の URL で読み込まれたインスタンスのサインアップ画面。_
+:::
+
+Worker が稼働したら、最初にサインアップした人がインスタンス管理者になります。
+[初回セットアップウィザード](/ja/self-hosting/setup-wizard/)へ進んでください。

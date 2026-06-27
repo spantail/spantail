@@ -1,0 +1,63 @@
+---
+title: Overview & requirements
+description: What you need to self-host Spantail on Cloudflare.
+---
+
+import { Steps, LinkCard, CardGrid } from "@astrojs/starlight/components";
+
+Spantail is **single-tenant**: one deployment serves one organization, running entirely on
+your own Cloudflare account. This guide takes you from an empty account to a running instance
+with your first administrator signed in.
+
+## How it runs
+
+A single Cloudflare Worker serves everything — the REST API (`/api/v1`), the MCP endpoint
+(`/mcp`), public share views (`/share/*`), and the React SPA. It is backed by a small set of
+Cloudflare resources:
+
+| Resource | Binding | Role |
+| --- | --- | --- |
+| D1 database | `DB` | Primary database. |
+| R2 bucket | `UPLOADS` | User-uploaded media (avatars, workspace logos). |
+| Durable Object | `USER_HUB` | Realtime fan-out for live updates over SSE. SQLite-backed, so it runs on the Free plan. |
+| Email Service | `EMAIL` | Outbound email. Optional and inert until you onboard a sending domain. |
+| Rate limiter | `INGEST_RATE_LIMITER` | Per-credential cap on the untrusted ingest path. |
+
+See the bindings and secrets in detail on the [Configuration](/self-hosting/configuration/) page.
+
+## Requirements
+
+- **Node.js 24+**, **pnpm 10+**, and **Wrangler v4**
+- A **Cloudflare account**
+
+The **Workers Free plan is enough** to run the core: D1 and the SQLite-backed realtime Durable
+Object both work on it. **Email delivery is the only paid extra** — Cloudflare Email Service
+needs a Workers Paid plan and a verified sending domain. It is off by default; until you enable
+it, you add members directly with generated passwords.
+
+:::note[Screenshot placeholder]
+📸 _A freshly deployed instance showing the first-run sign-up screen._
+:::
+
+## Set up Spantail
+
+<Steps>
+
+1. **[Deploy to Cloudflare](/self-hosting/deploy/)** — provision D1 and R2, set the
+   session secret, run migrations, and deploy the Worker.
+
+2. **[Configuration](/self-hosting/configuration/)** — the full reference for environment
+   variables, secrets, and bindings.
+
+3. **[Initial setup wizard](/self-hosting/setup-wizard/)** — sign up as the first
+   administrator and walk through the in-app wizard to create your workspace and invite your team.
+
+4. **[Security](/self-hosting/security/)** — the secure-by-default behavior to rely on and the
+   hardening steps to take.
+
+</Steps>
+
+<CardGrid>
+	<LinkCard title="Deploy to Cloudflare" href="/self-hosting/deploy/" description="Provision resources and deploy the Worker." />
+	<LinkCard title="Initial setup wizard" href="/self-hosting/setup-wizard/" description="Bootstrap the first admin and your first workspace." />
+</CardGrid>
