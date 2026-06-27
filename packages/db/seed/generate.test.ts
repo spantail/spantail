@@ -31,8 +31,8 @@ describe("generateDataset", () => {
 		// 5 internal + Acme 3 + Globex 3 + Meridian 2 + Initech 1.
 		expect(rows("workspaceMembers")).toHaveLength(14);
 		expect(rows("projects")).toHaveLength(14);
-		// One default template per locale (en + ja).
-		expect(rows("reportTemplates")).toHaveLength(2);
+		// One default template, in the dataset's locale (demo → English).
+		expect(rows("reportTemplates")).toHaveLength(1);
 		expect(rows("instanceSettings")).toHaveLength(1);
 		expect(dataset.credentials).toHaveLength(6);
 	});
@@ -149,8 +149,8 @@ describe("generateDataset", () => {
 	it("seeds the default templates and references them from every report", async () => {
 		const { rows } = await build();
 		const templateRows = rows("reportTemplates");
-		// One default template per locale (en + ja), all enabled.
-		expect(templateRows.length).toBe(2);
+		// One default template, in the dataset's locale (demo → English), enabled.
+		expect(templateRows.length).toBe(1);
 		expect(templateRows.every((t) => t.enabled === true)).toBe(true);
 		const templateIds = new Set(templateRows.map((t) => t.id));
 		for (const report of rows("reports")) {

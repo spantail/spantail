@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { basename } from "node:path";
 import {
 	generateShareToken,
 	hashToken,
@@ -305,17 +306,21 @@ export async function generateDataset(
 		}
 	}
 
-	// --- Templates (the default catalog template, en + ja) -----------------
-	// One instance-scoped template per locale, seeded from @spantail/templates —
-	// the same default a fresh instance gets when its first admin is created.
+	// --- Templates (one default catalog template) --------------------------
+	// A single instance-scoped default template, seeded from @spantail/templates
+	// in the dataset's locale: datasets whose name ends with "-ja" get the
+	// Japanese default, all others the English one. (In production a fresh
+	// instance lazily seeds the default in the first admin's locale.)
+	const seedLocale: Language = basename(dataDir).endsWith("-ja") ? "ja" : "en";
 	const author =
 		[...usersByKey.values()].find((u) => {
 			const cfg = config.users.find((c) => c.key === u.key);
 			return cfg?.canManageTemplates || cfg?.isAdmin;
 		}) ?? [...usersByKey.values()][0];
 	const templateRows: Row[] = [];
-	const templateByLang = new Map<string, { id: string; body: string }>();
+	let seededTemplate: { id: string; body: string } | undefined;
 	for (const t of defaultTemplates) {
+		if (t.locale !== seedLocale) continue;
 		const id = randomUUID();
 		templateRows.push({
 			id,
@@ -327,13 +332,13 @@ export async function generateDataset(
 			createdAt: baseCreatedAt,
 			updatedAt: baseCreatedAt,
 		});
-		templateByLang.set(t.locale, { id, body: t.body });
+		seededTemplate = { id, body: t.body };
 	}
-	const templateFor = (language: Language) => {
-		const t = templateByLang.get(language);
-		if (!t) throw new Error(`no ${language} template`);
-		return t;
-	};
+	if (!seededTemplate)
+		throw new Error(`no ${seedLocale} default template in @spantail/templates`);
+	// One template for the whole dataset (mono-locale), used by every report.
+	const template = seededTemplate;
+	const templateFor = (_language: Language) => template;
 
 	// --- Work entries (last 45 days, weekdays, 8h/day) ---------------------
 	// entry_date is the workspace-local date, so a member's work in a client
