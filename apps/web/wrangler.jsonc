@@ -21,6 +21,19 @@
 	// Local dev uses Miniflare's emulated R2; create the remote bucket with
 	// `wrangler r2 bucket create spantail-uploads` before deploying.
 	"r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "spantail-uploads" }],
+	// Per-credential rate limit for the untrusted write path (ingestion). A
+	// leaked, long-lived Agent Access Token must not be able to flood D1. The
+	// limit is generous for legitimate bursty agent ingest yet caps abuse;
+	// keyed per token/user in the middleware. Rate Limiting is local-only
+	// simulated, so it is exercised in tests and active in production alike.
+	"ratelimits": [
+		{
+			"name": "INGEST_RATE_LIMITER",
+			// Unique integer id within the Cloudflare account (not a secret).
+			"namespace_id": "1001",
+			"simple": { "limit": 120, "period": 60 }
+		}
+	],
 	// Cloudflare Email Service (public beta). Inert until the account onboards a
 	// sending domain on a Workers Paid plan. Local dev never invokes it: the
 	// mailer routes to an in-memory dev outbox whenever APP_ENV !== "production".
@@ -47,6 +60,13 @@
 			],
 			"r2_buckets": [
 				{ "binding": "UPLOADS", "bucket_name": "spantail-uploads" }
+			],
+			"ratelimits": [
+				{
+					"name": "INGEST_RATE_LIMITER",
+					"namespace_id": "1001",
+					"simple": { "limit": 120, "period": 60 }
+				}
 			],
 			"send_email": [{ "name": "EMAIL" }],
 			"vars": {

@@ -30,6 +30,7 @@ import {
 } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
+import { ingestRateLimit } from "../middleware/rate-limit";
 import type { AppEnv } from "../types";
 
 async function requireProjectInWorkspace(
@@ -97,7 +98,9 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const access = resolveEntryAccess(query.workspaceId, membership, user.id);
 		return c.json(await listWorkEntries(c.var.db, { ...query, access }));
 	})
-	.post("/", async (c) => {
+	// Rate-limited per credential (token, or user for sessions): a write
+	// credential must not flood the store.
+	.post("/", ingestRateLimit, async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createWorkEntryInputSchema, await c.req.json());
 		const { workspace, membership } = await requireWorkspaceAccess(
