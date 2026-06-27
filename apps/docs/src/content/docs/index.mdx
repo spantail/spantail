@@ -1,0 +1,53 @@
+---
+title: Spantail
+description: Work observability for humans and AI agents — log work and capture agent activity as spans, then turn them into reports.
+template: splash
+hero:
+  tagline: Log human work and capture AI-agent activity as spans, then turn them into reports.
+  actions:
+    - text: Get started
+      link: /guides/
+      icon: right-arrow
+    - text: Set up Spantail
+      link: /self-hosting/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+:::caution[Work in progress]
+These docs are being scaffolded. Most pages are placeholders (🚧 TBC).
+:::
+
+## Choose your path
+
+<CardGrid>
+	<Card title="User Guide" icon="open-book">
+		Log work in the web UI, capture agent activity, and read reports.
+		[Open the User Guide](/guides/)
+	</Card>
+	<Card title="Admin Guide" icon="setting">
+		Manage projects, members, and workspace settings.
+		[Open the Admin Guide](/workspace-admin/)
+	</Card>
+	<Card title="Setup Guide" icon="rocket">
+		Deploy and operate Spantail on Cloudflare.
+		[Open the Setup Guide](/self-hosting/)
+	</Card>
+	<Card title="API Reference" icon="seti:json">
+		Automate Spantail over the REST API.
+		[Open the API Reference](/api/)
+	</Card>
+</CardGrid>
+
+## Tools & automation
+
+Feed and pull your data however you like — these clients all talk to the same API.
+
+<CardGrid>
+	<LinkCard title="CLI" href="/guides/tools/cli/" description="The spantail command-line client." />
+	<LinkCard title="MCP" href="/guides/tools/mcp/" description="Remote /mcp and stdio servers for AI clients." />
+	<LinkCard title="Claude Plugin" href="/guides/tools/claude-plugin/" description="Capture Claude Code activity (coming soon)." />
+	<LinkCard title="REST API" href="/api/" description="The full HTTP API reference." />
+</CardGrid>

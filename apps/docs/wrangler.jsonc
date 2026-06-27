@@ -1,0 +1,9 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "spantail-docs",
+	"compatibility_date": "2026-06-01",
+	// Static-only deployment: Astro builds to ./dist, served as Workers assets.
+	// There is no Worker entrypoint (`main`). Bind docs.spantail.com to this
+	// Worker via the Cloudflare dashboard / custom domains after the first deploy.
+	"assets": { "directory": "./dist" }
+}

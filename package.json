@@ -19,7 +19,12 @@
 		"db:drop": "tsx packages/db/seed/drop.ts",
 		"db:seed": "tsx packages/db/seed/seed.ts",
 		"db:reset": "pnpm db:drop && pnpm db:migrate:local",
-		"deploy": "pnpm --filter web run deploy"
+		"deploy": "pnpm --filter web run deploy",
+		"docs:dev": "pnpm --filter docs dev",
+		"docs:build": "pnpm --filter docs build",
+		"docs:preview": "pnpm --filter docs preview",
+		"docs:typecheck": "pnpm --filter docs typecheck",
+		"docs:deploy": "pnpm --filter docs run deploy"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.16",

@@ -1,0 +1,53 @@
+---
+title: Spantail
+description: 人と AI エージェントの作業を可観測に。作業を記録し、エージェントの活動を span として捕捉して、レポートに変換します。
+template: splash
+hero:
+  tagline: 人の作業を記録し、AI エージェントの活動を span として捕捉して、レポートに変換します。
+  actions:
+    - text: はじめる
+      link: /ja/guides/
+      icon: right-arrow
+    - text: セットアップ
+      link: /ja/self-hosting/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+:::caution[作成中]
+このドキュメントはスキャフォールド中です。ほとんどのページはプレースホルダー（🚧 TBC）です。
+:::
+
+## 目的別ガイド
+
+<CardGrid>
+	<Card title="ユーザーガイド" icon="open-book">
+		Web UI での作業記録、エージェント活動の捕捉、レポートの閲覧。
+		[ユーザーガイドを開く](/ja/guides/)
+	</Card>
+	<Card title="管理者ガイド" icon="setting">
+		プロジェクト・メンバー・ワークスペース設定の管理。
+		[管理者ガイドを開く](/ja/workspace-admin/)
+	</Card>
+	<Card title="セットアップガイド" icon="rocket">
+		Cloudflare 上での Spantail のデプロイと運用。
+		[セットアップガイドを開く](/ja/self-hosting/)
+	</Card>
+	<Card title="API リファレンス" icon="seti:json">
+		REST API による Spantail の自動化。
+		[API リファレンスを開く](/ja/api/)
+	</Card>
+</CardGrid>
+
+## ツールと自動化
+
+データの出し入れは好みの方法で — これらのクライアントはすべて同じ API を利用します。
+
+<CardGrid>
+	<LinkCard title="CLI" href="/ja/guides/tools/cli/" description="spantail コマンドラインクライアント。" />
+	<LinkCard title="MCP" href="/ja/guides/tools/mcp/" description="AI クライアント向けのリモート /mcp と stdio サーバー。" />
+	<LinkCard title="Claude プラグイン" href="/ja/guides/tools/claude-plugin/" description="Claude Code の活動を捕捉（近日公開）。" />
+	<LinkCard title="REST API" href="/ja/api/" description="HTTP API の完全なリファレンス。" />
+</CardGrid>
