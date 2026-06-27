@@ -135,7 +135,10 @@ it("materializes a session rollup from per-turn events", async () => {
 	expect(list[0]?.projectId).toBe(project.id);
 
 	const stats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
+		await apiGet(
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&from=2020-01-01&to=2030-12-31`,
+			admin,
+		)
 	).json()) as { totalTokens: number; byAgent: Array<{ agentId: string }> };
 	expect(stats.totalTokens).toBe(1880);
 	expect(stats.byAgent[0]?.agentId).toBe(agentId);

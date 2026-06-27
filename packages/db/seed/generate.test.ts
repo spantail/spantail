@@ -16,7 +16,13 @@ function workspaceTimezones(
 		loadConfig(dataDir).workspaces.map((w) => [w.slug, w.timezone]),
 	);
 	return new Map(
-		wsRows.map((w) => [w.id as string, tzBySlug.get(w.slug as string) ?? ""]),
+		wsRows.map((w) => {
+			const slug = w.slug as string;
+			const tz = tzBySlug.get(slug);
+			// A missing timezone would silently bucket workspaces together; fail loud.
+			if (!tz) throw new Error(`no seed timezone for workspace "${slug}"`);
+			return [w.id as string, tz];
+		}),
 	);
 }
 

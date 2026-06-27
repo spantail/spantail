@@ -197,8 +197,9 @@ export const agentEntryStatsSchema = z.object({
 });
 export type AgentEntryStats = z.infer<typeof agentEntryStatsSchema>;
 
-export const agentEntryStatsQuerySchema = listAgentEntriesQuerySchema.omit({
-	limit: true,
-	offset: true,
-});
+// Stats scan every matching row to bucket by day in the viewer's timezone, so
+// the date window is required (unlike the paginated list) — it bounds the scan.
+export const agentEntryStatsQuerySchema = listAgentEntriesQuerySchema
+	.omit({ limit: true, offset: true })
+	.required({ from: true, to: true });
 export type AgentEntryStatsQuery = z.infer<typeof agentEntryStatsQuerySchema>;

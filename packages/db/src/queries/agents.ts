@@ -513,7 +513,8 @@ export interface AgentEntryStatsResult {
  * the viewer's timezone — SQLite/D1 has no IANA-timezone date functions, and the
  * day is a read-time projection rather than a stored value. Token buckets are
  * extracted in SQL so only a few numbers (not the full `usage` JSON) per row are
- * materialized, keeping the in-memory footprint small.
+ * materialized. The caller supplies a bounded `from`/`to` window (required by
+ * `agentEntryStatsQuerySchema`), so the scan is never open-ended.
  */
 export async function getAgentEntryStats(
 	db: Database,

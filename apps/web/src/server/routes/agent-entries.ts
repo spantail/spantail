@@ -83,8 +83,13 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		}
 
 		// Agent sessions are always timestamped; the calendar day is derived from
-		// startedAt at read time. Fall back to ingest time when the source omits it.
-		const startedAt = input.startedAt ? new Date(input.startedAt) : new Date();
+		// startedAt at read time. When the source omits startedAt, fall back to
+		// endedAt (so startedAt never lands after endedAt), else to ingest time.
+		const startedAt = input.startedAt
+			? new Date(input.startedAt)
+			: input.endedAt
+				? new Date(input.endedAt)
+				: new Date();
 		const entry = await upsertAgentEntry(c.var.db, {
 			workspaceId,
 			ownerUserId: auth.ownerUserId,

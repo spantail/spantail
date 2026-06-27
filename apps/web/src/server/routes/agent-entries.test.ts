@@ -110,7 +110,10 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	expect(list[0]?.projectId).toBe(project.id);
 
 	const stats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
+		await apiGet(
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&from=2020-01-01&to=2030-12-31`,
+			admin,
+		)
 	).json()) as {
 		entryCount: number;
 		totalMinutes: number;
@@ -303,7 +306,7 @@ it("does not show a member another member's agents or activity", async () => {
 
 	const otherStats = (await (
 		await apiGet(
-			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&agentId=${a.agentId}`,
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&from=2020-01-01&to=2030-12-31&agentId=${a.agentId}`,
 			member,
 		)
 	).json()) as { entryCount: number; totalTokens: number };
@@ -313,7 +316,10 @@ it("does not show a member another member's agents or activity", async () => {
 	// The admin is the workspace owner, so they read all agent activity in the
 	// workspace (matrix R*): both agents' tokens, not just their own.
 	const adminStats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, admin)
+		await apiGet(
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&from=2020-01-01&to=2030-12-31`,
+			admin,
+		)
 	).json()) as { totalTokens: number };
 	expect(adminStats.totalTokens).toBe(1500);
 });
@@ -361,13 +367,19 @@ it("lets project members see co-members' agent activity in that project", async 
 	// The member is a project member, so they see both agents' project activity
 	// (1000 + 500) but NOT the admin's unassigned, owner-only session (700).
 	const memberStats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, member)
+		await apiGet(
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&from=2020-01-01&to=2030-12-31`,
+			member,
+		)
 	).json()) as { totalTokens: number };
 	expect(memberStats.totalTokens).toBe(1500);
 
 	// Carol is a workspace member but not a project member: she sees nothing.
 	const carolStats = (await (
-		await apiGet(`/api/v1/agent-entries/stats?workspaceId=${ws.id}`, carol)
+		await apiGet(
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&from=2020-01-01&to=2030-12-31`,
+			carol,
+		)
 	).json()) as { totalTokens: number; entryCount: number };
 	expect(carolStats.entryCount).toBe(0);
 });
