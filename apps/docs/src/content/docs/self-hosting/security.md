@@ -10,8 +10,9 @@ truth in the repository.
 
 ## Fail closed by default
 
-- The **session-signing secret is validated at startup**. If `BETTER_AUTH_SECRET` is missing or
-  shorter than 32 characters, the Worker errors rather than signing forgeable sessions.
+- The **session-signing secret is required and checked when auth code runs.** If
+  `BETTER_AUTH_SECRET` is missing or shorter than 32 characters, any request that touches auth or
+  session code errors out rather than signing forgeable sessions.
 - **Optional integrations stay disabled until fully configured.** OAuth providers and email are
   unavailable unless their credentials are set — there is no half-configured surface.
 - **`wrangler.jsonc` carries only non-secret IDs.** Secrets come from `wrangler secret` or
