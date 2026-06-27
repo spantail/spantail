@@ -55,8 +55,10 @@ have none. A date and a timestamp are independent:
 ## Pagination
 
 List endpoints that can return large result sets accept `limit` and `offset` query
-parameters. `limit` defaults to `50` and is capped at `200`. Results are returned as a plain
-JSON array; page by incrementing `offset`.
+parameters. The default when `limit` is omitted is endpoint-dependent — some apply a default
+and cap (for example, work entries default to `50` and cap at `200`), while others treat
+`limit` as optional and return the full set; each endpoint page notes its behavior. Results
+are returned as a plain JSON array; page by incrementing `offset`.
 
 ```bash
 curl "https://<your-instance>/api/v1/work-entries?workspaceId=wrk_demo&limit=50&offset=50" \

@@ -55,8 +55,9 @@ https://<your-instance>/api/v1
 ## ページング
 
 大きな結果セットを返しうる一覧エンドポイントは `limit` と `offset` クエリパラメータを受け付けます。
-`limit` の既定値は `50`、上限は `200` です。結果は素の JSON 配列で返るので、`offset` を増やして
-ページングします。
+`limit` を省略したときの挙動はエンドポイント依存です。既定値と上限を持つもの（例: 作業エントリは
+既定 `50`・上限 `200`）もあれば、`limit` を任意とし全件を返すものもあります。挙動は各エンドポイントの
+ページに記載しています。結果は素の JSON 配列で返るので、`offset` を増やしてページングします。
 
 ```bash
 curl "https://<your-instance>/api/v1/work-entries?workspaceId=wrk_demo&limit=50&offset=50" \
