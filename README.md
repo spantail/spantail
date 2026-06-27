@@ -90,10 +90,10 @@ See the documentation at [spantail.com](https://spantail.com) for the full self-
 
 ### Agent capture sends telemetry, not transcripts
 
-Spantail captures AI-agent work as compact per-turn telemetry — token usage and timing —
-**not your conversation transcripts or source code**. The reference Claude Code hook parses
-the transcript locally and sends only that telemetry; conversation bodies never leave your
-machine.
+Spantail's reference Claude Code hook captures AI-agent work as compact per-turn telemetry —
+token usage and timing — **not your conversation transcripts or source code**. It parses the
+transcript locally and sends only that telemetry, so conversation bodies never leave your
+machine. (What reaches Spantail is only ever what a client sends.)
 
 Whatever short fields do get recorded, though — agent or work `description`s, notes, tags —
 are stored verbatim and can appear in reports, public share links, and Send-to deliveries.
