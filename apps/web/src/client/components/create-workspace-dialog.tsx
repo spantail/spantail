@@ -1,8 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -12,9 +10,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
+import { WorkspaceForm } from "@/components/workspace-form";
 import { useWorkspace } from "@/lib/workspace";
 
 export function CreateWorkspaceDialog({
@@ -28,26 +24,6 @@ export function CreateWorkspaceDialog({
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const { setCurrentId } = useWorkspace();
-	const [slug, setSlug] = useState("");
-	const [name, setName] = useState("");
-	const [error, setError] = useState<string | null>(null);
-
-	const mutation = useMutation({
-		mutationFn: () => api.createWorkspace({ slug, name }),
-		onSuccess: async (workspace) => {
-			await queryClient.invalidateQueries({ queryKey: ["me"] });
-			setCurrentId(workspace.id);
-			setSlug("");
-			setName("");
-			setError(null);
-			onOpenChange(false);
-			// Land on the new workspace. On a `/w/...` route the URL is the source
-			// of truth, so navigating is what actually selects it (a bare
-			// setCurrentId would be overridden by the current slug).
-			navigate({ to: "/w/$wsSlug", params: { wsSlug: workspace.slug } });
-		},
-		onError: (err: Error) => setError(err.message),
-	});
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,48 +34,32 @@ export function CreateWorkspaceDialog({
 						{t("settings.createWorkspace.description")}
 					</DialogDescription>
 				</DialogHeader>
-				<form
-					className="flex flex-col gap-5"
-					onSubmit={(e) => {
-						e.preventDefault();
-						mutation.mutate();
+				<WorkspaceForm
+					idPrefix="create-ws"
+					onCreated={async (workspace) => {
+						await queryClient.invalidateQueries({ queryKey: ["me"] });
+						setCurrentId(workspace.id);
+						onOpenChange(false);
+						// Land on the new workspace. On a `/w/...` route the URL is the
+						// source of truth, so navigating is what actually selects it (a bare
+						// setCurrentId would be overridden by the current slug).
+						navigate({ to: "/w/$wsSlug", params: { wsSlug: workspace.slug } });
 					}}
-				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="create-ws-name">
-							{t("settings.workspaceName")}
-						</Label>
-						<Input
-							id="create-ws-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="create-ws-slug">{t("settings.slug")}</Label>
-						<Input
-							id="create-ws-slug"
-							value={slug}
-							onChange={(e) => setSlug(e.target.value)}
-							pattern="[a-z0-9][a-z0-9-]*"
-							required
-						/>
-					</div>
-					{error && <p className="text-destructive text-sm">{error}</p>}
-					<DialogFooter>
-						<Button
-							type="button"
-							variant="outline"
-							onClick={() => onOpenChange(false)}
-						>
-							{t("settings.cancelAction")}
-						</Button>
-						<Button type="submit" disabled={mutation.isPending}>
-							{t("settings.createAction")}
-						</Button>
-					</DialogFooter>
-				</form>
+					renderFooter={({ pending }) => (
+						<DialogFooter>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => onOpenChange(false)}
+							>
+								{t("settings.cancelAction")}
+							</Button>
+							<Button type="submit" disabled={pending}>
+								{t("settings.createAction")}
+							</Button>
+						</DialogFooter>
+					)}
+				/>
 			</DialogContent>
 		</Dialog>
 	);

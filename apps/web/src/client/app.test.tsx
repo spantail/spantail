@@ -191,6 +191,30 @@ it("redirects the bare home route to the active workspace dashboard", async () =
 	expect(router.state.location.pathname).toBe("/w/acme");
 });
 
+it("redirects an admin with no workspace to the setup wizard", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	// A freshly bootstrapped instance: the first user is an admin but has no
+	// membership yet, so the home hub should hand them to the onboarding wizard.
+	const adminNoWorkspace = { ...mePayload, memberships: [] };
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input instanceof Request ? input.url : input));
+			switch (url.pathname) {
+				case "/api/v1/me":
+					return json(adminNoWorkspace);
+				default:
+					return json([]);
+			}
+		}),
+	);
+
+	const router = await renderApp("/");
+
+	expect(await screen.findByText("Create your first workspace")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/setup");
+});
+
 it("renders a project page addressed by its slug", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
 	const router = await renderApp("/w/acme/projects/website");

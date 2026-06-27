@@ -38,9 +38,7 @@
 		"continueWithGoogle": "Google でログイン",
 		"continueWithGithub": "GitHub でログイン"
 	},
-	"errors": {
-		"generic": "問題が発生しました。もう一度お試しください。"
-	},
+	"errors": { "generic": "問題が発生しました。もう一度お試しください。" },
 	"invite": {
 		"title": "招待を受ける",
 		"description": "{{email}} の Spantail アカウントを設定します。",
@@ -49,9 +47,7 @@
 		"acceptAction": "アカウントを作成",
 		"googleHint": "{{email}} の Google アカウントを使うと、パスワードなしで承諾できます。"
 	},
-	"home": {
-		"subtitle": "{{date}} · あなたの時間をひと目で。"
-	},
+	"home": { "subtitle": "{{date}} · あなたの時間をひと目で。" },
 	"nav": {
 		"home": "ホーム",
 		"logWork": "記録する",
@@ -161,12 +157,7 @@
 		"deleteAction": "削除",
 		"closeAction": "閉じる",
 		"source": "登録元",
-		"sources": {
-			"web": "Web",
-			"cli": "CLI",
-			"mcp": "MCP",
-			"api": "API"
-		},
+		"sources": { "web": "Web", "cli": "CLI", "mcp": "MCP", "api": "API" },
 		"empty": "まだ記録がありません。",
 		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
 		"noProject": "プロジェクトなし",
@@ -228,13 +219,8 @@
 			"title": "{{template}} のレポートはまだありません。",
 			"createAction": "最初の {{template}} レポートを作成"
 		},
-		"tab": {
-			"all": "すべて"
-		},
-		"rail": {
-			"library": "レポート",
-			"templates": "テンプレート"
-		},
+		"tab": { "all": "すべて" },
+		"rail": { "library": "レポート", "templates": "テンプレート" },
 		"filterAction": "フィルター",
 		"moreActions": "その他の操作",
 		"filter": {
@@ -273,9 +259,7 @@
 			"next": "次へ",
 			"position": "{{total}} 件中 {{index}} 件目"
 		},
-		"form": {
-			"presetPreview": "現在の解決結果: {{from}} – {{to}}"
-		},
+		"form": { "presetPreview": "現在の解決結果: {{from}} – {{to}}" },
 		"shares": {
 			"title": "共有: {{name}}",
 			"description": "このレポートへの読み取り専用リンクを作成します。",
@@ -332,10 +316,7 @@
 		"unreadSummary_other": "未読のレポートが {{count}} 件あります。",
 		"allCaughtUp": "すべて確認済みです。",
 		"markAllRead": "すべて既読にする",
-		"tab": {
-			"all": "すべて",
-			"unread": "未読"
-		},
+		"tab": { "all": "すべて", "unread": "未読" },
 		"empty": "通知はまだありません。",
 		"emptyUnread": "未読の通知はありません。",
 		"sentYouAReport": "さんがレポートを送信しました",
@@ -358,10 +339,7 @@
 			"archive": "アーカイブ",
 			"trash": "ゴミ箱"
 		},
-		"list": {
-			"to": "宛先: {{names}}",
-			"noMessage": "メッセージなし"
-		},
+		"list": { "to": "宛先: {{names}}", "noMessage": "メッセージなし" },
 		"toolbar": {
 			"close": "閉じる",
 			"prev": "前へ",
@@ -445,11 +423,7 @@
 		"duplicateAction": "複製",
 		"empty": "テンプレートはまだありません。"
 	},
-	"roles": {
-		"owner": "オーナー",
-		"admin": "管理者",
-		"member": "メンバー"
-	},
+	"roles": { "owner": "オーナー", "admin": "管理者", "member": "メンバー" },
 	"settings": {
 		"title": "設定",
 		"subtitle": "ワークスペース・チーム・個人アクセスを管理します。",
@@ -495,10 +469,7 @@
 			"delete": "削除",
 			"actions": "プロジェクトの操作",
 			"color": "カラー",
-			"status": {
-				"active": "稼働中",
-				"archived": "アーカイブ済み"
-			},
+			"status": { "active": "稼働中", "archived": "アーカイブ済み" },
 			"editTitle": "プロジェクトを編集",
 			"editDescription": "プロジェクトの名前・スラッグ・カラー・説明を更新します。",
 			"descriptionLabel": "説明",
@@ -761,6 +732,43 @@
 				"violet": "バイオレット",
 				"pink": "ピンク"
 			}
+		}
+	},
+	"onboarding": {
+		"title": "インスタンスのセットアップ",
+		"step": "ステップ {{current}} / {{total}}",
+		"back": "戻る",
+		"skip": "後で設定",
+		"continue": "続ける",
+		"finish": "ワークスペースへ",
+		"workspace": {
+			"title": "最初のワークスペースを作成",
+			"subtitle": "あなたはこのインスタンスの管理者です。まずはプロジェクトや作業をまとめるワークスペースを作成しましょう。",
+			"submit": "作成して続ける"
+		},
+		"project": {
+			"title": "プロジェクトを作成",
+			"subtitle": "プロジェクトは記録する作業をまとめる単位です。後から追加や色の変更ができます。",
+			"created": "プロジェクトを作成しました。"
+		},
+		"instance": {
+			"title": "インスタンス設定",
+			"subtitle": "任意です。メールやソーシャルログインを今設定するか、後で設定画面から設定できます。",
+			"emailTitle": "メール配信",
+			"emailHint": "本番のメール配信には Cloudflare Email Service（Workers 有料プランと認証済み送信ドメイン）が必要です。未設定の間はオフのままにし、メンバーを直接追加してください。",
+			"oauthTitle": "ソーシャルログイン",
+			"oauthUnconfigured": "このプロバイダを有効にするには、環境にクライアント ID とシークレットを設定してください。",
+			"saved": "保存しました。"
+		},
+		"invite": {
+			"title": "メンバーを招待",
+			"subtitleEmail": "招待メールを送ります。各メンバーは自分のパスワードで参加します。",
+			"subtitleNoEmail": "メール配信がオフのため、メンバーは直接作成されます。生成されたパスワードを安全に共有してください。",
+			"sent": "招待を送信しました。"
+		},
+		"done": {
+			"title": "セットアップ完了",
+			"subtitle": "ワークスペースの準備ができました。"
 		}
 	}
 }

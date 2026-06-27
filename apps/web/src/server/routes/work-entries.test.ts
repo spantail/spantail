@@ -38,6 +38,11 @@ async function setup() {
 
 it("creates an entry defaulting the date to today in the author timezone", async () => {
 	const { admin, ws, project } = await setup();
+	// signUpUser leaves the timezone null (UTC fallback); pin the author to
+	// Asia/Tokyo so the defaulted entry date and the assertion below both resolve
+	// in the same zone off the same clock — otherwise the dates disagree whenever
+	// the suite runs in the UTC window where Tokyo is already on the next day.
+	await apiJson("PATCH", "/api/v1/me", { timezone: "Asia/Tokyo" }, admin);
 
 	const res = await apiJson(
 		"POST",
