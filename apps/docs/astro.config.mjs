@@ -36,7 +36,7 @@ export default defineConfig({
 						},
 						{
 							label: { root: "Admin Guide", ja: "管理者ガイド" },
-							href: { root: "/workspace-admin/", ja: "/ja/workspace-admin/" },
+							href: { root: "/admin/", ja: "/ja/admin/" },
 						},
 						{
 							label: { root: "Setup Guide", ja: "セットアップガイド" },
@@ -70,13 +70,28 @@ export default defineConfig({
 					},
 					{
 						label: { en: "Admin Guide", ja: "管理者ガイド" },
-						link: "/workspace-admin/",
+						link: "/admin/",
 						icon: "setting",
 						items: [
-							{ slug: "workspace-admin" },
-							{ slug: "workspace-admin/settings" },
-							{ slug: "workspace-admin/projects" },
-							{ slug: "workspace-admin/members" },
+							{ slug: "admin" },
+							{
+								label: "Workspace",
+								translations: { ja: "ワークスペース" },
+								items: [
+									{ slug: "admin/workspace-settings" },
+									{ slug: "admin/projects" },
+									{ slug: "admin/members" },
+								],
+							},
+							{
+								label: "Instance",
+								translations: { ja: "インスタンス" },
+								items: [
+									{ slug: "admin/users" },
+									{ slug: "admin/system-settings" },
+									{ slug: "admin/report-templates" },
+								],
+							},
 						],
 					},
 					{
@@ -88,9 +103,6 @@ export default defineConfig({
 							{ slug: "self-hosting/deploy" },
 							{ slug: "self-hosting/configuration" },
 							{ slug: "self-hosting/bootstrap-users" },
-							{ slug: "self-hosting/system-settings" },
-							{ slug: "self-hosting/user-management" },
-							{ slug: "self-hosting/report-templates" },
 							{ slug: "self-hosting/security" },
 						],
 					},
