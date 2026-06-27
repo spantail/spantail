@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { localDateSchema } from "./common";
+import { isTimestampInRange, localDateSchema } from "./common";
 import { MAX_DURATION_MINUTES } from "./duration";
 
 /** Coding-agent kind. Drives per-type grouping and ingest tooling. */
@@ -113,18 +113,41 @@ export type AgentEntry = z.infer<typeof agentEntrySchema>;
  * and daily batch reconciliation never double-count. workspaceId/projectId
  * default to the token's binding when omitted.
  */
-export const ingestAgentEntryInputSchema = z.object({
-	workspaceId: z.string().optional(),
-	// Reject an empty/whitespace projectId at the boundary: a falsy-but-present
-	// value would otherwise skip the FK check and 500 on insert instead of 400.
-	projectId: z.string().trim().min(1).optional(),
-	sessionId: z.string().min(1).max(200),
-	durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
-	usage: agentUsageSchema.optional(),
-	description: z.string().max(2000).optional(),
-	startedAt: z.iso.datetime().optional(),
-	endedAt: z.iso.datetime().optional(),
-});
+export const ingestAgentEntryInputSchema = z
+	.object({
+		workspaceId: z.string().optional(),
+		// Reject an empty/whitespace projectId at the boundary: a falsy-but-present
+		// value would otherwise skip the FK check and 500 on insert instead of 400.
+		projectId: z.string().trim().min(1).optional(),
+		sessionId: z.string().min(1).max(200),
+		durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
+		usage: agentUsageSchema.optional(),
+		description: z.string().max(2000).optional(),
+		// Format alone is not enough: a leaked write-only token could backdate to
+		// 1970 or forward-date far into the future, silently polluting the
+		// date-bucketed reports `entry_date` is derived from. Bound the range too.
+		startedAt: z.iso
+			.datetime()
+			.refine(isTimestampInRange, "must be a plausible timestamp")
+			.optional(),
+		endedAt: z.iso
+			.datetime()
+			.refine(isTimestampInRange, "must be a plausible timestamp")
+			.optional(),
+	})
+	.superRefine((input, ctx) => {
+		if (
+			input.startedAt &&
+			input.endedAt &&
+			Date.parse(input.endedAt) < Date.parse(input.startedAt)
+		) {
+			ctx.addIssue({
+				code: "custom",
+				message: "endedAt must not be before startedAt",
+				path: ["endedAt"],
+			});
+		}
+	});
 export type IngestAgentEntryInput = z.infer<typeof ingestAgentEntryInputSchema>;
 export type IngestAgentEntryInputData = z.input<
 	typeof ingestAgentEntryInputSchema

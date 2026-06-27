@@ -1,7 +1,10 @@
 import { expect, it } from "vitest";
 
 import {
+	FUTURE_SKEW_MS,
+	isTimestampInRange,
 	localDateSchema,
+	MIN_TIMESTAMP,
 	shiftDays,
 	slugSchema,
 	timezoneSchema,
@@ -133,4 +136,29 @@ it("round-trips zoned time through UTC", () => {
 			).toBe(time);
 		}
 	}
+});
+
+it("bounds timestamps to the plausible ingest window", () => {
+	const now = new Date("2026-06-14T12:00:00.000Z");
+	// In range: the lower bound itself, a recent instant, and "now".
+	expect(isTimestampInRange(MIN_TIMESTAMP, now)).toBe(true);
+	expect(isTimestampInRange("2026-06-14T11:59:00.000Z", now)).toBe(true);
+	expect(isTimestampInRange(now.toISOString(), now)).toBe(true);
+	// Clock-skew margin: just inside vs. just past the future allowance.
+	expect(
+		isTimestampInRange(
+			new Date(now.getTime() + FUTURE_SKEW_MS).toISOString(),
+			now,
+		),
+	).toBe(true);
+	expect(
+		isTimestampInRange(
+			new Date(now.getTime() + FUTURE_SKEW_MS + 1000).toISOString(),
+			now,
+		),
+	).toBe(false);
+	// Out of range: backdated below the floor, and unparseable input.
+	expect(isTimestampInRange("1970-01-01T00:00:00.000Z", now)).toBe(false);
+	expect(isTimestampInRange("2019-12-31T23:59:59.000Z", now)).toBe(false);
+	expect(isTimestampInRange("not-a-date", now)).toBe(false);
 });
