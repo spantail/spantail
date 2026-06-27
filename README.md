@@ -93,7 +93,7 @@ See the documentation at [spantail.com](https://spantail.com) for the full self-
 Spantail stores agent and work content (span/work descriptions, notes, and agent-event
 payloads) **verbatim**, and it can later surface in reports, public share links, and
 Send-to deliveries. Treat it as potentially secret-bearing: do not emit secrets into agent
-logs or span descriptions, and never forward raw captured content to an external sink
+logs, descriptions, or notes, and never forward raw captured content to an external sink
 (application logs, analytics, a third-party LLM). See
 [`docs/security.md`](docs/security.md) (§2) for the full standing rules.
 
