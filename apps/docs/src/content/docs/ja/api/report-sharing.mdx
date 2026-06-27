@@ -1,0 +1,269 @@
+---
+title: 共有とディスカッション
+description: レポートの公開共有リンク、公開ビューア、レポートのディスカッションスレッド。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+[レポート](/ja/api/reports/) は 2 つの方法で公開できます。**公開共有（public share）** は、URL
+（と任意のパスコード）を知っていれば誰でも開ける capability リンクを発行します。レポートの固定コピーが、
+Spantail アカウント不要で公開ビューアから配信されます。**ディスカッション（discussion）** では、レポートの
+参加者（所有者と Send-to 受信者）が本文にリアクションし、スレッド形式のコメントを残せます。
+
+## 公開共有
+
+共有は発行時にレポートの現在のレンダリング本文を共有行に固定するため、後でレポートを編集しても公開ページは
+変わりません。プレーンテキストのトークンが capability そのものなので、URL は秘密として扱ってください。
+
+### 共有オブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `reportId` | string | このリンクが公開するレポート。 |
+| `token` | string | capability トークン（22 文字の base64url 文字列）。公開 URL は `/share/<token>`。 |
+| `hasPasscode` | boolean | 閲覧にパスコードが必要かどうか。パスコード自体はサーバーから出ません。 |
+| `expiresAt` | string \| null | ISO 8601 の有効期限。無期限なら `null`。 |
+| `revokedAt` | string \| null | ISO 8601 の失効時刻。有効なら `null`。 |
+| `viewCount` | integer | ページが閲覧された回数。 |
+| `lastViewedAt` | string \| null | 最後に閲覧された ISO 8601 時刻、または `null`。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+
+### レポートの共有一覧
+
+`GET /api/v1/reports/:id/shares` <Badge text="scope: read" variant="note" />
+
+レポートの共有（プレーンテキストのトークンを含む）を返します。レポートの読み取りアクセスに従います。
+所有者（現在のワークスペースメンバーシップで再チェック）、インスタンス管理者、または単一ワークスペース
+レポートのワークスペース管理者・オーナーです。それ以外は `404` を返します。
+
+```json
+[
+  {
+    "id": "shr_ab12cd",
+    "reportId": "rep_q2",
+    "token": "Hs9Kp2mNv8rT3wYbL6dQx7",
+    "hasPasscode": true,
+    "expiresAt": "2026-07-28T00:00:00.000Z",
+    "revokedAt": null,
+    "viewCount": 4,
+    "lastViewedAt": "2026-06-28T11:00:00.000Z",
+    "createdAt": "2026-06-28T09:45:00.000Z"
+  }
+]
+```
+
+### 共有の作成
+
+`POST /api/v1/reports/:id/shares` <Badge text="scope: write" variant="caution" />
+
+所有者のみ（現在のワークスペースメンバーシップで再チェック）。レポートの現在バージョンの固定コピーに
+裏打ちされたリンクを発行します。両フィールドとも任意で、空ボディはパスコードなし・無期限のリンクを
+発行します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `passcode` | string | いいえ | 閲覧に必要なパスコード（4〜128 文字）。ハッシュ化して保存（PBKDF2）。 |
+| `expiresInDays` | integer | いいえ | 失効までの日数（1〜365）。省略すると無期限。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/shares" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "passcode": "sunflower", "expiresInDays": 30 }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "shr_ab12cd",
+  "reportId": "rep_q2",
+  "token": "Hs9Kp2mNv8rT3wYbL6dQx7",
+  "hasPasscode": true,
+  "expiresAt": "2026-07-28T00:00:00.000Z",
+  "revokedAt": null,
+  "viewCount": 0,
+  "lastViewedAt": null,
+  "createdAt": "2026-06-28T09:45:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。
+
+### 共有の失効
+
+`POST /api/v1/report-shares/:id/revoke` <Badge text="scope: write" variant="caution" />
+
+所有者のみ。失効は露出を減らすだけなので、ワークスペースメンバーシップの再チェックは省略されます。
+冪等で、再失効しても最初の `revokedAt` を保持します。失効したリンクは固定本文の配信を直ちに停止します。
+更新後の共有オブジェクトを返します。
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/report-shares/shr_ab12cd/revoke" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## 公開ビューア
+
+公開ビューアは固定ページを `/share/:token` で HTML として配信します（`/api/v1` プレフィックスなし・認証
+なし）。不正・不明・失効・期限切れのトークンはすべて同じ HTML の `404` を返すため、リンクが過去に存在した
+ことは決して明かされません。ページは `noindex`・`no-store`・厳格な Content-Security-Policy で配信されます。
+
+### 共有レポートの閲覧
+
+`GET /share/:token` <Badge text="public" variant="tip" />
+
+レポートページを HTML で返します。共有にパスコードがある場合は、代わりにパスコード入力ページを返します。
+下の `POST` フォームでパスコードを送信してください。
+
+### パスコードの送信
+
+`POST /share/:token` <Badge text="public" variant="tip" />
+
+フォームエンコードの `passcode` フィールドを受け付けます。正しいパスコードはレポートページを返し、
+誤りはパスコードページを `401` で再表示します。パスコードのない共有はページを直接返します。
+
+```bash
+curl -X POST "https://<your-instance>/share/Hs9Kp2mNv8rT3wYbL6dQx7" \
+  --data-urlencode "passcode=sunflower"
+```
+
+## ディスカッション
+
+レポートのディスカッションは **参加者**（レポート所有者と Send-to 受信者）に限定されます。参加者でない
+インスタンス管理者（または単一ワークスペースレポートのワークスペース管理者・オーナー）は、レポートの
+読み取りアクセスのもとでスレッドを *読む* ことはできますが、書き込みは参加者専用です。コメントと
+リアクションは、レポートが共有された後（配信が 1 件以上ある）にのみ書き込めます。未送信レポートの所有者は、
+空の読み取り専用スレッドを見ます。
+
+### コメントオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `reportId` | string | このコメントが属するレポート。 |
+| `authorUserId` | string \| null | 作成者。アカウント削除後は `null`（固定の `authorName` が単独で残る）。 |
+| `authorName` | string | 作成者の表示名。書き込み時に固定。 |
+| `authorImageUrl` | string \| null | 作成者のライブアバター URL、または `null`。 |
+| `body` | string | Markdown のコメント本文。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `updatedAt` | string | ISO 8601 の最終更新時刻。 |
+| `editable` | boolean | 呼び出し元が作成者のとき `true`（編集/削除メニューを駆動）。 |
+| `reactions` | object[] | このコメントへの集計済みリアクション（下記参照）。 |
+
+**リアクション集計** は 1 つの絵文字を集約します: `{ "emoji": "+1", "count": 2, "reactedByMe": true,
+"userNames": ["Ana", "Bo"] }`。リアクション絵文字はグリフではなく安定したコンテンツキーです: `+1`、`-1`、
+`laugh`、`hooray`、`confused`、`heart`、`rocket`、`eyes`。
+
+### ディスカッションの取得
+
+`GET /api/v1/reports/:id/discussion` <Badge text="scope: read" variant="note" />
+
+レポートの本文レベルのリアクションとコメント（各自のリアクション付き）に加え、`shared` を返します。
+一度も送信されていないレポートでは `shared` は `false`（その場合 UI はパネルを隠します）。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "shared": true,
+  "reactions": [
+    { "emoji": "rocket", "count": 1, "reactedByMe": false, "userNames": ["Bo"] }
+  ],
+  "comments": [
+    {
+      "id": "cmt_7x",
+      "reportId": "rep_q2",
+      "authorUserId": "usr_bo",
+      "authorName": "Bo",
+      "authorImageUrl": null,
+      "body": "Looks great — shipping it.",
+      "createdAt": "2026-06-28T12:00:00.000Z",
+      "updatedAt": "2026-06-28T12:00:00.000Z",
+      "editable": false,
+      "reactions": []
+    }
+  ]
+}
+```
+</TabItem>
+</Tabs>
+
+### コメントの追加
+
+`POST /api/v1/reports/:id/comments` <Badge text="scope: write" variant="caution" />
+
+参加者のみ。レポートが共有済みである必要があります。作成したコメントを `201` で返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `body` | string | はい | Markdown のコメント（1〜10000 文字）。 |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/comments" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "body": "Looks great — shipping it." }'
+```
+
+### コメントの編集
+
+`PATCH /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+
+作成者のみ。作成と同じ `body` フィールド。存在しないコメント・誤ったレポート・非作成者はいずれも `404` を
+返し、区別されません。
+
+### コメントの削除
+
+`DELETE /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+
+作成者のみ。`204 No Content` を返します。
+
+### レポート本文へのリアクション
+
+`PUT /api/v1/reports/:id/reactions` <Badge text="scope: write" variant="caution" />
+
+参加者のみ。レポートが共有済みである必要があります。指定された絵文字での呼び出し元のリアクションを
+レポート本文にトグルします（同じ絵文字で再度呼ぶと解除）。レポート本文の更新後のリアクション集計を
+返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `emoji` | string | はい | リアクションキーのいずれか（`+1`、`-1`、`laugh`、`hooray`、`confused`、`heart`、`rocket`、`eyes`）。 |
+
+```bash
+curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/reactions" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "emoji": "rocket" }'
+```
+
+### コメントへのリアクション
+
+`PUT /api/v1/reports/:id/comments/:commentId/reactions` <Badge text="scope: write" variant="caution" />
+
+参加者のみ。単一コメント（レポートに属することを検証）への呼び出し元のリアクションをトグルします。その
+コメントの更新後のリアクション集計を返します。
+
+```bash
+curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/comments/cmt_7x/reactions" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "emoji": "heart" }'
+```

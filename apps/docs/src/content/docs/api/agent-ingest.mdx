@@ -1,0 +1,282 @@
+---
+title: Agent ingest
+description: Ingest AI coding-agent activity with an Agent Access Token, and read back agent entries and stats.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The ingest endpoints capture AI coding-agent activity as **agent entries** — one work
+session per agent and session. An [agent](/api/agents/) writes them with its **Agent Access
+Token (AAT)**, passed as `Authorization: Bearer spantail_aat_…`.
+
+There are two write paths into the same `agent_entries` row, and a session is fed by exactly
+one of them:
+
+- `POST /agent-entries` — the agent posts a client-computed session summary (e.g. Cursor).
+- `POST /agent-events` — the agent posts raw per-turn telemetry; the server rolls it up into
+  the session entry (e.g. Claude Code via a Stop hook).
+
+Reads go through the regular user credentials (session or PAT) and follow the project ACL.
+
+<Aside type="danger">
+Ingest is the untrusted write path. It is rate-limited per token. The token is write-only:
+it can only ingest, never act as its owner elsewhere. The agent acts **for its owner** — on
+every ingest the owner's workspace membership and (when a project is named) project access
+are re-checked live, so a token bound earlier cannot write where the owner no longer
+belongs. A disabled or archived agent's token is rejected.
+</Aside>
+
+## The agent entry object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `workspaceId` | string | Owning workspace. |
+| `ownerUserId` | string | The user the agent acts for. |
+| `projectId` | string \| null | Project the session was logged against, or `null` (workspace-level work, or the project was deleted). |
+| `agentId` | string | The agent that produced the session. |
+| `sessionId` | string | External session identifier (idempotency key within the agent). |
+| `entryDate` | string | Local date `YYYY-MM-DD`, derived from `startedAt` in the viewer's timezone at read time. |
+| `durationMinutes` | integer | Session duration in minutes. |
+| `usage` | object \| null | Token-usage totals (see below), or `null` when the source can't expose them. |
+| `description` | string \| null | Optional short summary (≤ 2000 chars). |
+| `startedAt` | string \| null | ISO 8601 session start. |
+| `endedAt` | string \| null | ISO 8601 session end. |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `updatedAt` | string | ISO 8601 last-update instant. |
+
+The `usage` object carries session token totals. Agents differ in which buckets they expose,
+so only `totalTokens` is required:
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `totalTokens` | integer | yes | Total tokens for the session. |
+| `inputTokens` | integer | no | Input tokens. |
+| `outputTokens` | integer | no | Output tokens. |
+| `cacheCreationTokens` | integer | no | Cache-creation tokens. |
+| `cacheReadTokens` | integer | no | Cache-read tokens. |
+| `model` | string | no | Model name (≤ 100 chars). |
+| `costUsd` | number | no | Cost in USD, only when the source provides it. |
+
+## Ingest a session summary
+
+`POST /api/v1/agent-entries` <Badge text="agent token" variant="danger" />
+
+Records one agent session. Idempotent on `(agent, sessionId)`: re-sending the same session
+updates the row instead of inserting a duplicate, so retries and batch reconciliation never
+double-count.
+
+`workspaceId` and `projectId` default to the token's binding when omitted; if neither the
+body nor the token supplies a workspace, the request is rejected. `entryDate` is never sent —
+it is derived from `startedAt` at read time. When `startedAt` is omitted it falls back to
+`endedAt`, then to ingest time.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sessionId` | string | yes | External session id (1–200 chars). |
+| `durationMinutes` | integer | yes | Session duration in minutes (≥ 0). |
+| `workspaceId` | string | no | Target workspace. Defaults to the token's bound workspace. |
+| `projectId` | string | no | Target project (must belong to the workspace). Omit for workspace-level work. |
+| `usage` | object | no | Token-usage totals (see above). |
+| `description` | string | no | Short summary (≤ 2000 chars). |
+| `startedAt` | string | no | ISO 8601 session start. |
+| `endedAt` | string | no | ISO 8601 session end (must not precede `startedAt`). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agent-entries" \
+  -H "Authorization: Bearer spantail_aat_youragenttoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "sess_8f21",
+    "durationMinutes": 42,
+    "projectId": "prj_site",
+    "description": "Refactored the auth middleware",
+    "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+    "startedAt": "2026-06-28T09:00:00.000Z",
+    "endedAt": "2026-06-28T09:42:00.000Z"
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "ae_01K2",
+  "workspaceId": "wrk_demo",
+  "ownerUserId": "usr_ana",
+  "projectId": "prj_site",
+  "agentId": "agt_bot",
+  "sessionId": "sess_8f21",
+  "durationMinutes": 42,
+  "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+  "description": "Refactored the auth middleware",
+  "startedAt": "2026-06-28T09:00:00.000Z",
+  "endedAt": "2026-06-28T09:42:00.000Z",
+  "createdAt": "2026-06-28T09:42:05.000Z",
+  "updatedAt": "2026-06-28T09:42:05.000Z",
+  "entryDate": "2026-06-28"
+}
+```
+</TabItem>
+</Tabs>
+
+<Aside type="note">
+The echoed `entryDate` is derived in UTC (ingest has no human viewer). When a user reads the
+entry back, it is recomputed in their own timezone.
+</Aside>
+
+## Ingest per-turn events
+
+`POST /api/v1/agent-events` <Badge text="agent token" variant="danger" />
+
+Posts a session's raw per-turn telemetry: one event per assistant message. The server
+idempotently inserts new events, then recomputes the session's rollup into the same
+`agent_entries` row the summary path writes. Idempotent on `(agent, sourceId)`: re-posting
+the cumulative transcript every turn is safe — seen events are no-ops and the rollup is
+recomputed (not incremented), so totals converge.
+
+`workspaceId` and `projectId` default to the token's binding when omitted, with the same live
+delegation checks as the summary path.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sessionId` | string | yes | External session id (1–200 chars). |
+| `events` | object[] | yes | 1–5000 per-turn events (see below). |
+| `workspaceId` | string | no | Target workspace. Defaults to the token's bound workspace. |
+| `projectId` | string | no | Target project (must belong to the workspace). |
+
+Each **event** is one assistant turn (one API response, one usage block):
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sourceId` | string | yes | Transcript message id (1–200 chars); the idempotency key within the agent. |
+| `timestamp` | string | yes | ISO 8601 (UTC) time of the message. |
+| `usage` | object | yes | The agent's native usage object, stored verbatim. |
+| `model` | string | no | Model name (≤ 100 chars). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agent-events" \
+  -H "Authorization: Bearer spantail_aat_youragenttoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "sess_8f21",
+    "projectId": "prj_site",
+    "events": [
+      {
+        "sourceId": "msg_01a",
+        "timestamp": "2026-06-28T09:00:00.000Z",
+        "model": "claude-opus-4",
+        "usage": { "input_tokens": 8000, "output_tokens": 3200 }
+      },
+      {
+        "sourceId": "msg_01b",
+        "timestamp": "2026-06-28T09:12:00.000Z",
+        "model": "claude-opus-4",
+        "usage": { "input_tokens": 4000, "output_tokens": 3200 }
+      }
+    ]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "ae_01K2",
+  "workspaceId": "wrk_demo",
+  "ownerUserId": "usr_ana",
+  "projectId": "prj_site",
+  "agentId": "agt_bot",
+  "sessionId": "sess_8f21",
+  "durationMinutes": 12,
+  "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+  "description": null,
+  "startedAt": "2026-06-28T09:00:00.000Z",
+  "endedAt": "2026-06-28T09:12:00.000Z",
+  "createdAt": "2026-06-28T09:12:05.000Z",
+  "updatedAt": "2026-06-28T09:12:05.000Z",
+  "entryDate": "2026-06-28"
+}
+```
+</TabItem>
+</Tabs>
+
+## List agent entries
+
+`GET /api/v1/agent-entries` <Badge text="scope: read" variant="note" />
+
+Returns agent entries in a workspace, newest first. The read scope is resolved server-side
+from the caller's membership: a member sees agent activity in the projects they belong to
+plus their own agents' activity (unassigned activity stays owner-only), while a workspace or
+instance admin sees all agent activity in the workspace.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `workspaceId` | string | yes | Workspace to list from. |
+| `agentId` | string | no | Filter to a single agent. |
+| `from` | string | no | Inclusive start date `YYYY-MM-DD`. |
+| `to` | string | no | Inclusive end date `YYYY-MM-DD`. |
+| `limit` | integer | no | Page size, 1–200 (default 50). |
+| `offset` | integer | no | Rows to skip (default 0). |
+
+```bash
+curl "https://<your-instance>/api/v1/agent-entries?workspaceId=wrk_demo&agentId=agt_bot" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## Stats
+
+`GET /api/v1/agent-entries/stats` <Badge text="scope: read" variant="note" />
+
+Returns aggregated totals for the same filter set as listing, under the same ACL. Unlike the
+list, the `from`/`to` date window is **required** — it bounds the scan that buckets rows by
+day in the viewer's timezone. No pagination.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `workspaceId` | string | yes | Workspace to aggregate. |
+| `agentId` | string | no | Filter to a single agent. |
+| `from` | string | yes | Inclusive start date `YYYY-MM-DD`. |
+| `to` | string | yes | Inclusive end date `YYYY-MM-DD`. |
+
+```json
+{
+  "totalMinutes": 540,
+  "totalTokens": 184000,
+  "totalInputTokens": 120000,
+  "totalOutputTokens": 64000,
+  "entryCount": 12,
+  "byDate": [
+    { "date": "2026-06-28", "minutes": 42, "tokens": 18400, "count": 1, "inputTokens": 12000, "outputTokens": 6400 }
+  ],
+  "byAgent": [
+    { "agentId": "agt_bot", "minutes": 540, "tokens": 184000, "count": 12 }
+  ]
+}
+```
+
+Agents that don't expose token buckets contribute `0` to the input/output splits, so their
+sum can be less than `totalTokens`. Only dates that have entries appear in `byDate`.
+
+## List agents in a workspace
+
+`GET /api/v1/agent-entries/agents` <Badge text="scope: read" variant="note" />
+
+Returns the caller's own agents under a workspace — those with activity here plus the ones
+registered to it — for populating a filter. `workspaceId` is required.
+
+```json
+[
+  { "id": "agt_bot", "type": "claude_code", "name": "Build bot" }
+]
+```

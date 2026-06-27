@@ -1,0 +1,218 @@
+---
+title: 認証
+description: セッション cookie、Personal Access Token、Agent Access Token、および /api/auth エンドポイント。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+`/api/v1` 配下のすべてのエンドポイントは（一部の公開エンドポイントを除き）認証が必要です。
+認証方法は 3 つあり、呼び出し元に応じて使い分けます。
+
+| 方法 | 資格情報 | 利用者 | スコープ |
+| --- | --- | --- | --- |
+| Session cookie | サインイン時に発行される Better Auth セッション | Web アプリ（ブラウザ） | 制限なし |
+| Personal Access Token | `spantail_pat_…`（Bearer トークン） | スクリプト、[CLI](/ja/guides/tools/cli/)、[MCP サーバー](/ja/guides/tools/mcp/) | `read` / `write` / `admin` |
+| Agent Access Token | `spantail_aat_…`（Bearer トークン） | AI エージェント、取り込み専用 | なし（取り込み専用） |
+
+サインイン・サインアップ・パスワードリセットのエンドポイント自体は `/api/auth` 配下にあります。
+下の [認証エンドポイント](#認証エンドポイント) を参照してください。
+
+## Session cookie
+
+Web アプリはユーザーのサインイン時に発行される Better Auth のセッション cookie で認証します
+（[サインイン](#サインイン) を参照）。サインアウトで破棄されます。ブラウザから自動送信されるため、
+設定は不要です。セッションはスコープで制限されません。サインイン済みのユーザーは、その権限が許す
+ことはすべて実行できます。
+
+一部のエンドポイントは **セッション専用** で、API トークンを拒否し対話的セッションを要求します。
+これらはプロフィールと資格情報の管理操作（アカウント設定の更新、アバターのアップロード、Personal
+Access Token の管理）です。[アカウントとトークン](/ja/api/account/) を参照してください。
+
+## Personal Access Tokens
+
+Personal Access Token（PAT）は、プログラムからのアクセスのためにあなたとして動作します。
+**Settings → Account → API tokens**（または [tokens API](/ja/api/account/#personal-access-tokens)）
+から作成し、Bearer トークンとして送ります。
+
+```bash
+curl "https://<your-instance>/api/v1/work-entries?workspaceId=wrk_demo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+PAT は接頭辞 `spantail_pat_` に続く 43 文字の URL セーフな base64（32 バイトの乱数）です。保存される
+のは SHA-256 ハッシュのみで、平文は作成時に **一度だけ** 表示され、その後は取得できません。
+
+### スコープ
+
+すべての PAT は 1 つ以上のスコープを持ちます。トークンが持たないスコープを必要とするリクエストは
+`403 insufficient_scope` で失敗します。スコープは累積的で、`write` は `read` を含みません。必要な
+スコープはそれぞれ付与してください。
+
+| スコープ | バッジ | 付与する権限 |
+| --- | --- | --- |
+| `read` | <Badge text="scope: read" variant="note" /> | 読み取り: リソース・統計・レポートの一覧と取得。 |
+| `write` | <Badge text="scope: write" variant="caution" /> | 呼び出し元自身のリソース（作業エントリなど）の作成・更新・削除。 |
+| `admin` | <Badge text="scope: admin" variant="danger" /> | 呼び出し元のロールが許す管理操作（ワークスペース・メンバー管理など）。 |
+
+各エンドポイントのページは、必要なスコープをこれらのバッジで示します。スコープはトークンが試行できる
+範囲を広げるだけで、その背後のユーザーが本来持たない権限を与えることはありません。セッションでの
+呼び出しはスコープを完全に無視します。
+
+<Aside type="note">
+トークン管理自体はセッション専用です。PAT は `admin` スコープを持っていても PAT を作成・削除できません。
+トークンはサインイン済みのブラウザセッションから管理してください。
+</Aside>
+
+## Agent Access Tokens
+
+Agent Access Token（AAT）は、単一のエージェントに紐づく **取り込み専用** の資格情報です。接頭辞
+`spantail_aat_` に続く 43 文字の URL セーフな base64 です。AAT はスコープを持たず（その能力は構造的に
+「このエージェントの活動を取り込む」こと）、エージェントの所有者の代理として動作します。
+
+AAT は通常のユーザールートでは拒否されます。エージェント取り込み以外の `/api/v1` エンドポイントに
+提示すると `403 forbidden`（"Agent tokens can only ingest agent entries"）を返します。
+[エージェント取り込み](/ja/api/agent-ingest/) に記載された取り込みエンドポイントに対してのみ使用して
+ください。
+
+## 無効化されたアカウント
+
+インスタンス管理者がアカウントを無効化すると、ただちに完全にロックアウトされます。
+
+- セッションは無視され、すべての認証ルートが匿名の呼び出し元として `401` を返します。
+- Personal Access Token は `401`（"This account is disabled"）で拒否されます。
+- 所有者が無効化された Agent Access Token も同様に拒否されます。無効化・アーカイブされたエージェントの
+  トークンも拒否されます。
+
+アカウントを再度有効化すると、セッションとトークンは復活します。
+
+## 認証エンドポイント
+
+サインイン・サインアップ・パスワード復旧は、[Better Auth](https://www.better-auth.com/) が
+`/api/v1` ではなく `/api/auth` 配下で処理します。これらはセッション cookie を設定または破棄します。
+以下のフィールドは代表的なものです。Better Auth はここに記載していない追加オプションも受け付けます。
+
+### サインイン
+
+`POST /api/auth/sign-in/email` <Badge text="public" variant="tip" />
+
+メールアドレスとパスワードで認証し、セッション cookie を設定します。無効化されたアカウントは `403` で
+拒否されます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `email` | string | はい | アカウントのメールアドレス。 |
+| `password` | string | はい | アカウントのパスワード。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/auth/sign-in/email" \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{ "email": "ana@example.com", "password": "correct horse battery staple" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "user": {
+    "id": "usr_ana",
+    "name": "Ana",
+    "email": "ana@example.com"
+  },
+  "token": "..."
+}
+```
+</TabItem>
+</Tabs>
+
+### サインアップ
+
+`POST /api/auth/sign-up/email` <Badge text="public" variant="tip" />
+
+新しいメール/パスワードのアカウントを登録します。**インスタンスにユーザーが 1 人でも存在すると、
+公開サインアップは閉じられます。** オンボーディングは管理者主導（招待または直接作成）のため、
+ユーザーが既に存在する場合このエンドポイントは `403 forbidden`（"Public sign-up is disabled; ask an
+instance admin for an invitation"）を返します。
+
+したがって、これは新規インスタンスのブートストラップにのみ使えます。最初に登録されたユーザーが
+インスタンスを取得し、その管理者になります（メールは検証済みとして扱われます）。それ以降の新規
+メンバーは招待または管理者作成のアカウントで参加します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | はい | 表示名。 |
+| `email` | string | はい | アカウントのメールアドレス。 |
+| `password` | string | はい | アカウントのパスワード（8 文字以上）。 |
+
+### サインアウト
+
+`POST /api/auth/sign-out` <Badge text="session only" variant="default" />
+
+現在のセッション cookie を破棄します。ボディはありません。
+
+### パスワードリセットの要求
+
+`POST /api/auth/request-password-reset` <Badge text="public" variant="tip" />
+
+セルフサービスのパスワード復旧を開始します。メールがアカウントに属していれば、リセットリンクが
+送信されます。アカウントの有無にかかわらずレスポンスは同一なので、登録済みのアドレスを明かしません。
+配信はインスタンスのメール設定でゲートされ、メールが無効な場合は何も送信せず、管理者への連絡を案内
+します。（レガシーの別名 `POST /api/auth/forget-password` も同じ動作です。）
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `email` | string | はい | アカウントのメールアドレス。 |
+
+```bash
+curl -X POST "https://<your-instance>/api/auth/request-password-reset" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "ana@example.com" }'
+```
+
+### パスワードのリセット
+
+`POST /api/auth/reset-password` <Badge text="public" variant="tip" />
+
+リセットメールのトークンを使って復旧を完了し、新しいパスワードを設定します。リセットすると、その
+アカウントの他のすべてのアクティブなセッションが無効化されます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `token` | string | はい | リセットリンクのトークン。 |
+| `newPassword` | string | はい | 新しいパスワード（8 文字以上）。 |
+
+### ソーシャルサインイン
+
+`POST /api/auth/sign-in/social` <Badge text="public" variant="tip" />
+
+OAuth サインインを開始し、リダイレクト先となるプロバイダの認可 URL を返します。利用可能な
+プロバイダはインスタンス管理者が設定します。**Google** と **GitHub** がサポートされており、有効化
+されていないプロバイダはルートを持たず、サインインに使えません。
+
+参加要件は引き続き適用されます。新規のソーシャルアカウントは、招待されている場合（プロバイダで検証
+済みのメールが保留中の招待と一致する場合）か、Google で許可された自己参加ドメインに属する場合にのみ
+サインインできます。それ以外は拒否されます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `provider` | string | はい | `google` または `github`。 |
+| `callbackURL` | string | いいえ | サインイン成功後の戻り先。 |
+
+### OAuth コールバック
+
+`GET /api/auth/callback/:provider` <Badge text="public" variant="tip" />
+
+ユーザーが認可した後、プロバイダがリダイレクトする戻り先です。Better Auth が交換を完了し、アカウントを
+作成またはリンクし、セッション cookie を設定します。これを直接呼び出すことはありません。ブラウザが
+ここにリダイレクトされます。

@@ -1,0 +1,116 @@
+---
+title: Members
+description: List, add, and remove workspace members and their roles.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **workspace member** links a user to a workspace with a role. Roles are hierarchical:
+
+- `owner` — the workspace creator. Exactly one per workspace; cannot be removed.
+- `admin` — full management of the workspace, its projects, and its members.
+- `member` — works in the workspace, scoped to the projects they belong to.
+
+Owners and admins manage every project in the workspace; plain members are limited by project
+membership (see [Projects](/api/projects/)). Members are nested under a workspace, so every
+endpoint path begins with `/api/v1/workspaces/:id`.
+
+## The member object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `workspaceId` | string | Owning workspace. |
+| `userId` | string | The member's user id. |
+| `role` | string | `owner`, `admin`, or `member`. |
+| `name` | string | The member's display name. |
+| `email` | string | The member's email address. |
+| `imageUrl` | string \| null | Ready-to-use avatar URL, or `null` when the member has no avatar. |
+| `createdAt` | string | ISO 8601 instant the membership was created. |
+
+## List members
+
+`GET /api/v1/workspaces/:id/members` <Badge text="scope: read" variant="note" />
+
+Returns every member of the workspace. Requires membership.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces/wrk_demo/members" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "workspaceId": "wrk_demo",
+    "userId": "usr_ana",
+    "role": "owner",
+    "name": "Ana Ng",
+    "email": "ana@example.com",
+    "imageUrl": null,
+    "createdAt": "2026-01-04T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Add a member
+
+`POST /api/v1/workspaces/:id/members` <Badge text="scope: admin" variant="danger" />
+
+Adds an existing user to the workspace by email. Workspace admins only. The user must already
+have an account on the instance — there is no registered user with the email returns
+`404 not_found`. Adding someone who is already a member returns `409 conflict`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `email` | string | yes | Email of an existing user to add. |
+| `role` | string | no | `admin` or `member` (default `member`). `owner` is not allowed. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/workspaces/wrk_demo/members" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "ben@example.com", "role": "member" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "workspaceId": "wrk_demo",
+  "userId": "usr_ben",
+  "role": "member",
+  "name": "Ben Lee",
+  "email": "ben@example.com",
+  "imageUrl": null,
+  "createdAt": "2026-06-28T09:30:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created` with the new member object.
+
+## Remove a member
+
+`DELETE /api/v1/workspaces/:id/members/:userId` <Badge text="scope: admin" variant="danger" />
+
+Removes a member from the workspace. Workspace admins only. Their project memberships in this
+workspace are dropped as well. Returns `204 No Content`.
+
+<Aside type="caution">
+The workspace owner cannot be removed (`403 forbidden`). Removing a user who is not a member
+returns `404 not_found`.
+</Aside>
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/workspaces/wrk_demo/members/usr_ben" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```

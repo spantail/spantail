@@ -1,0 +1,209 @@
+---
+title: Work entries
+description: Create, list, update, and aggregate human work entries.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **work entry** records human work: a duration in minutes against a project, on a calendar
+day, with a short description and optional note and tags. Entries are scoped to a workspace
+and authored by the calling user.
+
+`entry_date` is a local date in the author's timezone, frozen at write. When omitted on
+create, it defaults to today in the author's timezone. See
+[Dates and time](/api/#dates-and-time).
+
+## The work entry object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `workspaceId` | string | Owning workspace. |
+| `projectId` | string \| null | Assigned project, or `null` if its project was deleted. |
+| `userId` | string | Author. |
+| `entryDate` | string | Local date `YYYY-MM-DD` in the author's timezone. |
+| `durationMinutes` | integer | Minutes worked (positive). |
+| `startedAt` | string \| null | Optional ISO 8601 start instant. |
+| `endedAt` | string \| null | Optional ISO 8601 end instant. |
+| `description` | string | Short summary (1–2000 chars). |
+| `note` | string \| null | Optional long-form note (≤ 10000 chars). |
+| `tags` | string[] | Up to 20 tags (≤ 50 chars each). |
+| `source` | string | Channel it was created through: `web`, `cli`, `mcp`, or `api`. Server-set. |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `updatedAt` | string | ISO 8601 last-update instant. |
+
+## List work entries
+
+`GET /api/v1/work-entries` <Badge text="scope: read" variant="note" />
+
+Returns entries in a workspace, newest first. Project ACL applies: an entry assigned to a
+project is visible to workspace admins, the author, and members of that project.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `workspaceId` | string | yes | Workspace to list from. |
+| `projectId` | string | no | Filter to a single project. |
+| `userId` | string | no | Filter to a single author. |
+| `tag` | string | no | Filter to entries carrying this tag. |
+| `from` | string | no | Inclusive start date `YYYY-MM-DD`. |
+| `to` | string | no | Inclusive end date `YYYY-MM-DD`. |
+| `limit` | integer | no | Page size, 1–200 (default 50). |
+| `offset` | integer | no | Rows to skip (default 0). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/work-entries?workspaceId=wrk_demo&from=2026-06-01&to=2026-06-30" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "we_01J8",
+    "workspaceId": "wrk_demo",
+    "projectId": "prj_site",
+    "userId": "usr_ana",
+    "entryDate": "2026-06-28",
+    "durationMinutes": 90,
+    "startedAt": null,
+    "endedAt": null,
+    "description": "Reviewed onboarding flow",
+    "note": null,
+    "tags": ["review"],
+    "source": "web",
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "updatedAt": "2026-06-28T09:30:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Create a work entry
+
+`POST /api/v1/work-entries` <Badge text="scope: write" variant="caution" />
+
+Creates an entry authored by the caller. The caller must be a member of the workspace and
+have access to the target project. Rate-limited per credential.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `workspaceId` | string | yes | Target workspace. |
+| `projectId` | string | yes | Target project (must belong to the workspace). |
+| `durationMinutes` | integer | yes | Minutes worked (positive). |
+| `description` | string | yes | Short summary (1–2000 chars). |
+| `entryDate` | string | no | Local date `YYYY-MM-DD`. Defaults to today in the author's timezone. |
+| `startedAt` | string | no | ISO 8601 start instant. |
+| `endedAt` | string | no | ISO 8601 end instant. |
+| `note` | string | no | Long-form note (≤ 10000 chars). |
+| `tags` | string[] | no | Up to 20 tags. Defaults to `[]`. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/work-entries" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspaceId": "wrk_demo",
+    "projectId": "prj_site",
+    "durationMinutes": 90,
+    "description": "Reviewed onboarding flow",
+    "tags": ["review"]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "we_01J8",
+  "workspaceId": "wrk_demo",
+  "projectId": "prj_site",
+  "userId": "usr_ana",
+  "entryDate": "2026-06-28",
+  "durationMinutes": 90,
+  "startedAt": null,
+  "endedAt": null,
+  "description": "Reviewed onboarding flow",
+  "note": null,
+  "tags": ["review"],
+  "source": "api",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "updatedAt": "2026-06-28T09:30:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`. CLI and MCP clients set `X-Spantail-Client: cli|mcp` so the entry's
+`source` reflects the channel; direct callers default to `api`.
+
+## Get a work entry
+
+`GET /api/v1/work-entries/:id` <Badge text="scope: read" variant="note" />
+
+Returns a single entry. Subject to the same project ACL as listing — a hidden entry returns
+`404`.
+
+## Update a work entry
+
+`PATCH /api/v1/work-entries/:id` <Badge text="scope: write" variant="caution" />
+
+Only the author may edit an entry. All body fields are optional; send just what changes.
+Fields accept the same constraints as on create.
+
+<Aside type="caution">
+You cannot unassign a live entry from its project (`projectId: null` is only accepted for an
+entry already orphaned by a deleted project). Assigning a *different* live project requires
+membership of that project.
+</Aside>
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/work-entries/we_01J8" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "durationMinutes": 120, "note": "Extended to cover edge cases" }'
+```
+
+## Delete a work entry
+
+`DELETE /api/v1/work-entries/:id` <Badge text="scope: write" variant="caution" />
+
+Only the author may delete an entry. Returns `204 No Content`.
+
+## Stats
+
+`GET /api/v1/work-entries/stats` <Badge text="scope: read" variant="note" />
+
+Returns aggregated totals for the same filter set as listing (`workspaceId` required; plus
+`projectId`, `userId`, `tag`, `from`, `to`). No pagination.
+
+```json
+{
+  "totalMinutes": 1830,
+  "entryCount": 24,
+  "byDate": [{ "date": "2026-06-28", "minutes": 90, "count": 1 }],
+  "byProject": [{ "projectId": "prj_site", "minutes": 1200, "count": 16 }],
+  "byUser": [{ "userId": "usr_ana", "minutes": 1830, "count": 24 }]
+}
+```
+
+`byProject` may include a `null` `projectId` bucket for entries whose project was deleted.
+Only dates that have entries appear in `byDate`; clients zero-fill gaps.
+
+## Tags
+
+`GET /api/v1/work-entries/tags` <Badge text="scope: read" variant="note" />
+
+Returns the distinct tags in scope, for populating a filter dropdown. Accepts `workspaceId`
+(required) and optional `projectId`.
+
+```json
+["review", "meeting", "bugfix"]
+```

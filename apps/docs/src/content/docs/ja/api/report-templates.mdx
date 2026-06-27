@@ -1,0 +1,171 @@
+---
+title: レポートテンプレート
+description: レポートのレンダリング元となる、インスタンススコープの Liquid テンプレートの管理。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**レポートテンプレート（report template）** は表示フォーマットです。ワークスペース・プロジェクト・ユーザー・
+期間のいずれにも結び付かない Liquid ドキュメントです。[レポート](/ja/api/reports/) は、レンダリング時に
+任意のテンプレートと任意のスコープ・日付範囲を自由に組み合わせます。テンプレートはインスタンススコープで、
+すべての認証済みユーザーがレポート作成のために読み取れますが、作成・編集・無効化・削除は制限されています。
+
+<Aside type="caution">
+テンプレート本文は Liquid であり、ユーザー入力です。厳格な安全設定（自身のプロパティへのアクセスのみ、
+strict filters、parse/render/memory の制限、file タグ無効）でレンダリングされ、レンダリングされた Markdown は
+生 HTML の透過なしで表示されます。
+</Aside>
+
+## 権限
+
+テンプレートの読み取りには `read` スコープと認証済みセッションがあれば十分です。管理操作 — `POST`、`PATCH`、
+`PATCH …/state`、`DELETE` — には、インスタンス管理者 **または** template-author 権限を持つユーザー
+（`user.canManageTemplates`）が必要で、ワークスペースロールではありません。
+
+## テンプレートオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `name` | string | 表示名（1〜100 文字）。 |
+| `description` | string \| null | 任意の説明（1000 文字以下）。 |
+| `body` | string | Liquid のテンプレート本文（1〜50000 文字）。 |
+| `enabled` | boolean | 新規/編集レポートの土台にできるか。無効なテンプレートはレポートのタブから隠されます。 |
+| `createdBy` | string \| null | 作成したユーザー。遅延シードされた既定テンプレートは `null`。 |
+| `createdAt` | string \| null | ISO 8601 の作成時刻。 |
+| `updatedAt` | string \| null | ISO 8601 の最終更新時刻。 |
+
+## テンプレートの一覧
+
+`GET /api/v1/report-templates` <Badge text="scope: read" variant="note" />
+
+すべてのテンプレートを返します。インスタンスにテンプレートが 1 つもない場合（新規またはアップグレード後の
+インスタンス）、単一の既定テンプレート（`@spantail/templates` から、リクエストの `Accept-Language` で）が
+遅延シードされ、レポートを常に構成可能にします。シードは冪等（固定 ID + 不在時のみ挿入）なので、同時の
+初回読み取りは 1 行に収束します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/report-templates" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "tpl_weekly",
+    "name": "Weekly summary",
+    "description": "Totals and per-project breakdown for a week.",
+    "body": "# {{ report.name }}\n\n...",
+    "enabled": true,
+    "createdBy": "usr_ana",
+    "createdAt": "2026-06-01T08:00:00.000Z",
+    "updatedAt": "2026-06-01T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## テンプレートの作成
+
+`POST /api/v1/report-templates` <Badge text="scope: write" variant="caution" />
+
+インスタンス管理者または template-author 権限が必要です。作成されたテンプレートは有効状態です。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | はい | 表示名（1〜100 文字）。 |
+| `body` | string | はい | Liquid のテンプレート本文（1〜50000 文字）。 |
+| `description` | string | いいえ | 任意の説明（1000 文字以下）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/report-templates" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Weekly summary",
+    "description": "Totals and per-project breakdown for a week.",
+    "body": "# {{ report.name }}\n\nTotal: {{ period.from }} – {{ period.to }}"
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "tpl_weekly",
+  "name": "Weekly summary",
+  "description": "Totals and per-project breakdown for a week.",
+  "body": "# {{ report.name }}\n\nTotal: {{ period.from }} – {{ period.to }}",
+  "enabled": true,
+  "createdBy": "usr_ana",
+  "createdAt": "2026-06-01T08:00:00.000Z",
+  "updatedAt": "2026-06-01T08:00:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。
+
+## テンプレートの取得
+
+`GET /api/v1/report-templates/:id` <Badge text="scope: read" variant="note" />
+
+単一のテンプレートを返します。不明な ID は `404` を返します。
+
+## テンプレートの更新
+
+`PATCH /api/v1/report-templates/:id` <Badge text="scope: write" variant="caution" />
+
+インスタンス管理者または template-author 権限が必要です。ボディの各フィールドは任意で、変更分だけを
+送ります。有効/無効の切り替えは代わりに [テンプレート状態の設定](#テンプレート状態の設定) を使います。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | いいえ | 表示名（1〜100 文字）。 |
+| `description` | string \| null | いいえ | 説明（1000 文字以下）。`null` でクリア。 |
+| `body` | string | いいえ | Liquid のテンプレート本文（1〜50000 文字）。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/report-templates/tpl_weekly" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "description": "Weekly totals, per project and per person." }'
+```
+
+## テンプレート状態の設定
+
+`PATCH /api/v1/report-templates/:id/state` <Badge text="scope: write" variant="caution" />
+
+インスタンス管理者または template-author 権限が必要です。本文の編集とは別に、テンプレートを有効/無効に
+します。無効化（アーカイブ）したテンプレートは新規/編集レポートの土台にできなくなりますが、既存の
+レポートは引き続き閲覧・共有できます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `enabled` | boolean | はい | 有効化は `true`、無効化は `false`。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/report-templates/tpl_weekly/state" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "enabled": false }'
+```
+
+## テンプレートの削除
+
+`DELETE /api/v1/report-templates/:id` <Badge text="scope: write" variant="caution" />
+
+インスタンス管理者または template-author 権限が必要です。保存済みレポートから参照されているテンプレートは
+削除できず、`409 conflict` を返します。代わりに無効化してください。成功時は `204 No Content` を返します。

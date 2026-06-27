@@ -1,0 +1,274 @@
+---
+title: Users & invitations
+description: Manage instance users and onboard new ones by direct creation or email invitation.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+These endpoints manage the people on an instance. **Users** is the instance-wide admin
+roster — create, edit, and remove accounts. **Invitations** is the email-based onboarding
+path: an admin invites by email, and the recipient accepts to create their own account.
+
+Onboarding has two mutually exclusive paths, gated by whether the instance can send email:
+
+- **Email delivery off** → admins create users directly (`POST /users`), which returns a
+  one-time generated password to convey out of band.
+- **Email delivery on** → admins send invitations (`POST /invitations`); the invitee sets
+  their own password on accept.
+
+See [Instance settings](/api/instance/) for the email toggle.
+
+## The managed user object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `name` | string | Display name. |
+| `email` | string | Account email. |
+| `isAdmin` | boolean | Instance admin (full system management). |
+| `canManageTemplates` | boolean | Template-author capability (manage instance-wide report templates without being a full admin). |
+| `disabled` | boolean | Disabled accounts cannot sign in, but remain visible to admins. |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `providers` | string[] | Linked social login providers (`google`, `github`); empty for password-only users. |
+
+## List users
+
+`GET /api/v1/users` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Returns every user on the instance, each with its linked social
+providers.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/users" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "usr_ana",
+    "name": "Ana",
+    "email": "ana@example.com",
+    "isAdmin": true,
+    "canManageTemplates": false,
+    "disabled": false,
+    "createdAt": "2026-06-01T08:00:00.000Z",
+    "providers": ["google"]
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Create a user
+
+`POST /api/v1/users` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Creates an account directly. This is the **email-off** path: when email
+delivery is enabled, the endpoint returns `403` and you must invite the user instead. A
+duplicate email returns `409`.
+
+The account is created with a generated temporary password, returned exactly once as
+`generatedPassword` for the admin to convey out of band. Admin-created accounts are marked
+verified so the user can later link a Google account.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `email` | string | yes | Account email (must be unique). |
+| `name` | string | yes | Display name (1–100 chars). |
+| `grantAdmin` | boolean | no | Make the user an instance admin (default `false`). |
+| `grantTemplateAuthor` | boolean | no | Grant the template-author capability (default `false`). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/users" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "bo@example.com", "name": "Bo" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "usr_bo",
+  "name": "Bo",
+  "email": "bo@example.com",
+  "isAdmin": false,
+  "canManageTemplates": false,
+  "disabled": false,
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "providers": [],
+  "generatedPassword": "a1b2c3d4e5"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`.
+
+## Update a user
+
+`PATCH /api/v1/users/:id` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. All fields are optional; send just what changes.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | no | New display name (1–100 chars). |
+| `isAdmin` | boolean | no | Grant or revoke instance admin. |
+| `canManageTemplates` | boolean | no | Grant or revoke the template-author capability. |
+| `disabled` | boolean | no | Disable (blocks sign-in) or re-enable the account. |
+
+<Aside type="caution">
+Guards protect the instance from being locked out: you cannot remove your own admin role,
+remove or disable the **last** instance admin, or disable your own account. Disabling an
+account also drops its active sessions immediately.
+</Aside>
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/users/usr_bo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "canManageTemplates": true }'
+```
+
+## Delete a user
+
+`DELETE /api/v1/users/:id` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Returns `204 No Content`.
+
+<Aside type="caution">
+You cannot delete your own account or the last instance admin. Deleting a user who **owns a
+workspace** is blocked with `409` — reassign or delete the workspace first, so its members
+are not orphaned.
+</Aside>
+
+## The invitation object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `email` | string | Invited email address. |
+| `grantAdmin` | boolean | Whether accepting grants instance admin. |
+| `grantTemplateAuthor` | boolean | Whether accepting grants the template-author capability. |
+| `expiresAt` | string | ISO 8601 expiry (7 days after creation). |
+| `acceptedAt` | string \| null | ISO 8601 accept instant, or `null` if still pending. |
+| `createdAt` | string | ISO 8601 creation instant. |
+
+## List invitations
+
+`GET /api/v1/invitations` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Returns the pending (unaccepted, unexpired) invitations.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/invitations" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "inv_xyz",
+    "email": "cleo@example.com",
+    "grantAdmin": false,
+    "grantTemplateAuthor": false,
+    "expiresAt": "2026-07-05T09:30:00.000Z",
+    "acceptedAt": null,
+    "createdAt": "2026-06-28T09:30:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Create an invitation
+
+`POST /api/v1/invitations` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Sends an invitation email with an accept link. This is the **email-on**
+path: when email delivery is disabled, the endpoint returns `403` and you must create the
+user directly instead. An existing account or an existing pending invitation for the same
+email returns `409`. If the email fails to send, the pending invitation is rolled back.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `email` | string | yes | Address to invite (lowercased on storage). |
+| `grantAdmin` | boolean | no | Make the user an instance admin on accept (default `false`). |
+| `grantTemplateAuthor` | boolean | no | Grant the template-author capability on accept (default `false`). |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/invitations" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "cleo@example.com" }'
+```
+
+Returns `201 Created` with the created invitation.
+
+## Cancel an invitation
+
+`DELETE /api/v1/invitations/:id` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Cancels a pending invitation. A missing invitation returns `404`;
+success returns `204 No Content`.
+
+## Preview an invitation
+
+`GET /api/v1/invitations/accept/:token` <Badge text="public" variant="tip" />
+
+Public — the invitee has no account yet. Resolves a raw invite token and returns the email
+it was issued for, so the accept page can show who it is for. An invalid, accepted, or
+expired token returns `404`.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/invitations/accept/tok_secret"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "email": "cleo@example.com" }
+```
+</TabItem>
+</Tabs>
+
+## Accept an invitation
+
+`POST /api/v1/invitations/accept/:token` <Badge text="public" variant="tip" />
+
+Public. Creates the account from the invitation: the invitee sets their own name and
+password. The account is marked verified (so it can later link a Google account), any
+`grantAdmin` / `grantTemplateAuthor` from the invitation is applied, and the invitation is
+marked accepted. An invalid/expired token, or an email that already has an account, returns
+`404` / `409` respectively.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | Display name (1–100 chars). |
+| `password` | string | yes | Account password (8–128 chars). |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/invitations/accept/tok_secret" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Cleo", "password": "correct horse battery" }'
+```
+
+Returns `201 Created`.

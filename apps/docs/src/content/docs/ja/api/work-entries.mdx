@@ -1,0 +1,207 @@
+---
+title: 作業エントリ
+description: 人の作業エントリの作成・一覧・更新・集計。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**作業エントリ（work entry）** は人の作業を記録します。プロジェクトに対する分単位の時間を、
+カレンダー日とともに、短い説明と任意のノート・タグで残します。エントリはワークスペースにスコープされ、
+呼び出したユーザーが作成者になります。
+
+`entry_date` は作成者のタイムゾーンでのローカル日付で、書き込み時に固定されます。作成時に省略すると、
+作成者のタイムゾーンでの当日が既定値になります。[日付と時刻](/ja/api/#日付と時刻) を参照してください。
+
+## 作業エントリオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `workspaceId` | string | 所属ワークスペース。 |
+| `projectId` | string \| null | 割り当て先プロジェクト。プロジェクトが削除済みの場合は `null`。 |
+| `userId` | string | 作成者。 |
+| `entryDate` | string | 作成者のタイムゾーンでのローカル日付 `YYYY-MM-DD`。 |
+| `durationMinutes` | integer | 作業した分（正の整数）。 |
+| `startedAt` | string \| null | 任意の ISO 8601 開始時刻。 |
+| `endedAt` | string \| null | 任意の ISO 8601 終了時刻。 |
+| `description` | string | 短い要約（1〜2000 文字）。 |
+| `note` | string \| null | 任意の長文ノート（10000 文字以下）。 |
+| `tags` | string[] | 最大 20 件のタグ（各 50 文字以下）。 |
+| `source` | string | 作成チャネル: `web`、`cli`、`mcp`、`api`。サーバーが設定。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `updatedAt` | string | ISO 8601 の最終更新時刻。 |
+
+## 作業エントリの一覧
+
+`GET /api/v1/work-entries` <Badge text="scope: read" variant="note" />
+
+ワークスペース内のエントリを新しい順で返します。プロジェクト ACL が適用されます。プロジェクトに
+割り当てられたエントリは、ワークスペース管理者・作成者・そのプロジェクトのメンバーにのみ見えます。
+
+**クエリパラメータ**
+
+| 名前 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `workspaceId` | string | はい | 一覧対象のワークスペース。 |
+| `projectId` | string | いいえ | 単一プロジェクトに絞り込み。 |
+| `userId` | string | いいえ | 単一の作成者に絞り込み。 |
+| `tag` | string | いいえ | このタグを持つエントリに絞り込み。 |
+| `from` | string | いいえ | 開始日（含む）`YYYY-MM-DD`。 |
+| `to` | string | いいえ | 終了日（含む）`YYYY-MM-DD`。 |
+| `limit` | integer | いいえ | ページサイズ 1〜200（既定 50）。 |
+| `offset` | integer | いいえ | スキップ行数（既定 0）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/work-entries?workspaceId=wrk_demo&from=2026-06-01&to=2026-06-30" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "we_01J8",
+    "workspaceId": "wrk_demo",
+    "projectId": "prj_site",
+    "userId": "usr_ana",
+    "entryDate": "2026-06-28",
+    "durationMinutes": 90,
+    "startedAt": null,
+    "endedAt": null,
+    "description": "Reviewed onboarding flow",
+    "note": null,
+    "tags": ["review"],
+    "source": "web",
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "updatedAt": "2026-06-28T09:30:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## 作業エントリの作成
+
+`POST /api/v1/work-entries` <Badge text="scope: write" variant="caution" />
+
+呼び出し元を作成者とするエントリを作成します。呼び出し元はワークスペースのメンバーであり、対象
+プロジェクトへのアクセス権を持つ必要があります。資格情報単位でレート制限されます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `workspaceId` | string | はい | 対象ワークスペース。 |
+| `projectId` | string | はい | 対象プロジェクト（ワークスペースに属すること）。 |
+| `durationMinutes` | integer | はい | 作業した分（正の整数）。 |
+| `description` | string | はい | 短い要約（1〜2000 文字）。 |
+| `entryDate` | string | いいえ | ローカル日付 `YYYY-MM-DD`。既定は作成者のタイムゾーンの当日。 |
+| `startedAt` | string | いいえ | ISO 8601 開始時刻。 |
+| `endedAt` | string | いいえ | ISO 8601 終了時刻。 |
+| `note` | string | いいえ | 長文ノート（10000 文字以下）。 |
+| `tags` | string[] | いいえ | 最大 20 件のタグ。既定は `[]`。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/work-entries" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspaceId": "wrk_demo",
+    "projectId": "prj_site",
+    "durationMinutes": 90,
+    "description": "Reviewed onboarding flow",
+    "tags": ["review"]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "we_01J8",
+  "workspaceId": "wrk_demo",
+  "projectId": "prj_site",
+  "userId": "usr_ana",
+  "entryDate": "2026-06-28",
+  "durationMinutes": 90,
+  "startedAt": null,
+  "endedAt": null,
+  "description": "Reviewed onboarding flow",
+  "note": null,
+  "tags": ["review"],
+  "source": "api",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "updatedAt": "2026-06-28T09:30:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。CLI・MCP クライアントは `X-Spantail-Client: cli|mcp` を送るため、エントリの
+`source` がチャネルを反映します。直接の呼び出しは `api` が既定です。
+
+## 作業エントリの取得
+
+`GET /api/v1/work-entries/:id` <Badge text="scope: read" variant="note" />
+
+単一のエントリを返します。一覧と同じプロジェクト ACL が適用され、隠されたエントリは `404` を返します。
+
+## 作業エントリの更新
+
+`PATCH /api/v1/work-entries/:id` <Badge text="scope: write" variant="caution" />
+
+エントリを編集できるのは作成者だけです。ボディの各フィールドは任意で、変更分だけを送ります。
+制約は作成時と同じです。
+
+<Aside type="caution">
+稼働中のエントリをプロジェクトから外すことはできません（`projectId: null` は、削除済みプロジェクトに
+よって既に孤立したエントリにのみ許可されます）。*別の* 稼働中プロジェクトへの割り当てには、その
+プロジェクトのメンバーシップが必要です。
+</Aside>
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/work-entries/we_01J8" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "durationMinutes": 120, "note": "Extended to cover edge cases" }'
+```
+
+## 作業エントリの削除
+
+`DELETE /api/v1/work-entries/:id` <Badge text="scope: write" variant="caution" />
+
+削除できるのは作成者だけです。`204 No Content` を返します。
+
+## 統計
+
+`GET /api/v1/work-entries/stats` <Badge text="scope: read" variant="note" />
+
+一覧と同じフィルタ集合（`workspaceId` 必須。加えて `projectId`、`userId`、`tag`、`from`、`to`）で
+集計した合計を返します。ページングはありません。
+
+```json
+{
+  "totalMinutes": 1830,
+  "entryCount": 24,
+  "byDate": [{ "date": "2026-06-28", "minutes": 90, "count": 1 }],
+  "byProject": [{ "projectId": "prj_site", "minutes": 1200, "count": 16 }],
+  "byUser": [{ "userId": "usr_ana", "minutes": 1830, "count": 24 }]
+}
+```
+
+`byProject` には、プロジェクトが削除されたエントリ向けに `projectId` が `null` のバケットが含まれる
+ことがあります。`byDate` にはエントリのある日付だけが現れます（クライアント側でゼロ埋めします）。
+
+## タグ
+
+`GET /api/v1/work-entries/tags` <Badge text="scope: read" variant="note" />
+
+フィルタのドロップダウンを埋めるための、スコープ内の重複なしタグを返します。`workspaceId`（必須）と
+任意の `projectId` を受け付けます。
+
+```json
+["review", "meeting", "bugfix"]
+```

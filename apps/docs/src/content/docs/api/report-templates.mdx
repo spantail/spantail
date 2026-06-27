@@ -1,0 +1,172 @@
+---
+title: Report templates
+description: Manage the instance-scoped Liquid templates that reports are rendered from.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **report template** is a presentation format — a Liquid document with no binding to any
+workspace, project, user, or period. A [report](/api/reports/) freely combines any template with
+any scope and date range at render time. Templates are instance-scoped: every authenticated user
+can read them to compose a report, but creating, editing, disabling, and deleting them is gated.
+
+<Aside type="caution">
+Template bodies are Liquid and are user input. They render with strict safety settings
+(own-property access only, strict filters, parse/render/memory limits, file tags disabled), and the
+rendered Markdown is displayed without raw-HTML passthrough.
+</Aside>
+
+## Permissions
+
+Reading templates requires only `read` scope and any authenticated session. Managing them —
+`POST`, `PATCH`, `PATCH …/state`, and `DELETE` — requires an instance admin **or** a user with the
+template-author capability (`user.canManageTemplates`), not a workspace role.
+
+## The template object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `name` | string | Display name (1–100 chars). |
+| `description` | string \| null | Optional description (≤ 1000 chars). |
+| `body` | string | The Liquid template body (1–50000 chars). |
+| `enabled` | boolean | Whether the template can back new/edited reports. Disabled templates are hidden from the report tabs. |
+| `createdBy` | string \| null | The user who created it, or `null` for the lazily-seeded default. |
+| `createdAt` | string \| null | ISO 8601 creation instant. |
+| `updatedAt` | string \| null | ISO 8601 last-update instant. |
+
+## List templates
+
+`GET /api/v1/report-templates` <Badge text="scope: read" variant="note" />
+
+Returns all templates. When the instance has none — a fresh or an upgraded instance — a single
+default template (from `@spantail/templates`, in the request's `Accept-Language`) is lazily seeded
+so reports are always composable. The seed is idempotent (fixed id + insert-if-absent), so
+concurrent first reads converge on one row.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/report-templates" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "tpl_weekly",
+    "name": "Weekly summary",
+    "description": "Totals and per-project breakdown for a week.",
+    "body": "# {{ report.name }}\n\n...",
+    "enabled": true,
+    "createdBy": "usr_ana",
+    "createdAt": "2026-06-01T08:00:00.000Z",
+    "updatedAt": "2026-06-01T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Create a template
+
+`POST /api/v1/report-templates` <Badge text="scope: write" variant="caution" />
+
+Requires instance admin or the template-author capability. Created templates are enabled.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | Display name (1–100 chars). |
+| `body` | string | yes | Liquid template body (1–50000 chars). |
+| `description` | string | no | Optional description (≤ 1000 chars). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/report-templates" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Weekly summary",
+    "description": "Totals and per-project breakdown for a week.",
+    "body": "# {{ report.name }}\n\nTotal: {{ period.from }} – {{ period.to }}"
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "tpl_weekly",
+  "name": "Weekly summary",
+  "description": "Totals and per-project breakdown for a week.",
+  "body": "# {{ report.name }}\n\nTotal: {{ period.from }} – {{ period.to }}",
+  "enabled": true,
+  "createdBy": "usr_ana",
+  "createdAt": "2026-06-01T08:00:00.000Z",
+  "updatedAt": "2026-06-01T08:00:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`.
+
+## Get a template
+
+`GET /api/v1/report-templates/:id` <Badge text="scope: read" variant="note" />
+
+Returns a single template. Unknown id returns `404`.
+
+## Update a template
+
+`PATCH /api/v1/report-templates/:id` <Badge text="scope: write" variant="caution" />
+
+Requires instance admin or the template-author capability. All body fields are optional; send just
+what changes. Use [Set template state](#set-template-state) to enable or disable instead.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | no | Display name (1–100 chars). |
+| `description` | string \| null | no | Description (≤ 1000 chars), or `null` to clear. |
+| `body` | string | no | Liquid template body (1–50000 chars). |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/report-templates/tpl_weekly" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "description": "Weekly totals, per project and per person." }'
+```
+
+## Set template state
+
+`PATCH /api/v1/report-templates/:id/state` <Badge text="scope: write" variant="caution" />
+
+Requires instance admin or the template-author capability. Enables or disables a template,
+separately from body edits. A disabled (archived) template can no longer back a new or edited
+report, but existing reports stay viewable and shareable.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `enabled` | boolean | yes | `true` to enable, `false` to disable. |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/report-templates/tpl_weekly/state" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "enabled": false }'
+```
+
+## Delete a template
+
+`DELETE /api/v1/report-templates/:id` <Badge text="scope: write" variant="caution" />
+
+Requires instance admin or the template-author capability. A template still referenced by saved
+reports cannot be deleted — that returns `409 conflict`; disable it instead. Returns `204 No
+Content` on success.

@@ -1,0 +1,320 @@
+---
+title: レポート
+description: 作業エントリやエージェント活動から構成するレポートの作成・レンダリング・一覧・送信・管理。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**レポート（report）** は固定されたドキュメントです。[テンプレート](/ja/api/report-templates/) を、
+フィルタ（ワークスペース・プロジェクト・ユーザー・タグ・日付範囲）の集合で、ある固定期間に対して
+レンダリングしたものです。レンダリングはレポートの作成・編集時に同期的に行われ、生成された Markdown は
+不変かつバージョン管理されたスナップショットとして保存されます。そのため、ドキュメントは閲覧者・公開
+[共有](/ja/api/report-sharing/)・配信されたコピーの足元で変化することはありません。
+
+レポートは作成したユーザーが所有します。相対的な日付範囲（`this_week` など）や生成日は、レンダリング時に
+所有者のタイムゾーンで解決されます。[日付と時刻](/ja/api/#日付と時刻) を参照してください。
+
+## レポートオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `name` | string | 表示名（1〜100 文字）。 |
+| `ownerUserId` | string | レポートを作成したユーザー。 |
+| `templateId` | string | このレポートにレンダリングしたテンプレート。外部キーではなく、テンプレートが削除されてもレポートは残ります。 |
+| `filters` | object | 解決済みのフィルタ集合（[filters オブジェクト](#filters-オブジェクト) を参照）。保存される `dateRange` は常に絶対値。 |
+| `note` | string \| null | `{{ report.note }}` でレンダリング本文に追記される自由記述の Markdown（20000 文字以下）。 |
+| `totalMinutes` | integer \| null | 現在バージョンのエントリの合計分。この値の追跡前にレンダリングされたレポートは `null`（再レンダリングまで表示）。 |
+| `snapshotProjectIds` | string[] \| null | 現在のスナップショットにエントリが現れる、重複なしのプロジェクト ID。レンダリング時に取得され、Send-to ACL を駆動します。`null` はスコープ不明（この取得の追加前にレンダリング）を意味します。[レポートの送信](#レポートの送信) を参照。 |
+| `version` | integer | 現在のバージョン。作成時に `1`、編集ごとに +1。 |
+| `renderedMarkdown` | string | 現在バージョンのレンダリング済みドキュメント。システム生成の YAML フロントマター（来歴）に、Liquid でレンダリングした本文が続きます。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `updatedAt` | string | ISO 8601 の最終更新時刻。 |
+
+一覧のペイロードでは `renderedMarkdown` は省略されます。本文は [`GET /reports/:id`](#レポートの取得) で
+オンデマンドに取得してください。
+
+### filters オブジェクト
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `workspaceIds` | string[] | はい | 1〜20 のワークスペース。クロスワークスペースのレポートは呼び出し元のメンバーシップの和集合に限定されます。 |
+| `projectIds` | string[] | いいえ | 絞り込み対象のプロジェクト（最大 50）。 |
+| `userIds` | string[] | いいえ | 絞り込み対象の作成者（最大 50）。 |
+| `tags` | string[] | いいえ | 最大 20 件のタグ。いずれかを持つエントリが一致。 |
+| `dateRange` | object \| string | はい | ワイヤ上はプリセット文字列か絶対範囲。保存済みレポートでは常に絶対値の `{ from, to }`。 |
+
+`dateRange` は **プリセット**（`today`、`yesterday`、`this_week`、`last_week`、`this_month`、
+`last_month` のいずれか。サーバー側で所有者のタイムゾーンで解決。週は月曜始まり）か、**絶対範囲**
+`{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }`（両端含む。`from ≤ to`、最大 366 日）を受け付けます。
+いずれを送っても、保存されるレポートは解決済みの絶対範囲を保持します。
+
+## レポートの一覧
+
+`GET /api/v1/reports` <Badge text="scope: read" variant="note" />
+
+レポートのメタデータ（本文なし）を新しい順で返します。既定では呼び出し元自身のレポートを読みます。
+インスタンス管理者は `ownerUserId` で他ユーザーの集合を、ワークスペースの管理者・オーナーは
+`workspaceId` で単一ワークスペースのレポート（そのワークスペースだけにスコープされたもの）を読めます。
+所有者自身の一覧では、所有者がもはや完全には所属しないワークスペースを持つレポートの `totalMinutes` は
+`null` に伏せられます。
+
+**クエリパラメータ**
+
+| 名前 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `ownerUserId` | string | いいえ | インスタンス管理者専用: このユーザーのレポートを読む。 |
+| `workspaceId` | string | いいえ | ワークスペース管理者・オーナー: このワークスペースの単一ワークスペースレポートを読む。 |
+| `templateId` | string | いいえ | テンプレートで作成したレポートに絞り込み。 |
+| `projectId` | string | いいえ | プロジェクトにスコープされたレポートに絞り込み。 |
+| `from` | string | いいえ | 期間がこの日付以降に重なるレポートを残す `YYYY-MM-DD`。 |
+| `to` | string | いいえ | 期間がこの日付以前に重なるレポートを残す `YYYY-MM-DD`。 |
+| `limit` | integer | いいえ | ページサイズ 1〜200。省略すると絞り込み後の全件。 |
+| `offset` | integer | いいえ | スキップ行数（既定 0）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/reports?templateId=tpl_weekly&limit=50" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "rep_q2",
+    "name": "Website — week of Jun 22",
+    "ownerUserId": "usr_ana",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+    },
+    "note": null,
+    "totalMinutes": 540,
+    "snapshotProjectIds": ["prj_site"],
+    "version": 1,
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "updatedAt": "2026-06-28T09:30:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## 使用中のテンプレート ID 一覧
+
+`GET /api/v1/reports/template-ids` <Badge text="scope: read" variant="note" />
+
+呼び出し元がレポートを持つ、重複なしのテンプレート ID を返します。すべてのレポートを読み込まずに、UI が
+関連するテンプレートのタブを表示できます。
+
+```json
+["tpl_weekly", "tpl_monthly"]
+```
+
+## レポートのプレビュー
+
+`POST /api/v1/reports/preview` <Badge text="scope: read" variant="note" />
+
+レポートを **保存せずに** レンダリングします。作成ダイアログのライブプレビュー用です。作成と同じ
+メンバーシップ・テンプレート検証と同じレンダリングを実行するため、プレビューは保存される内容と一致します。
+書き込みは行われないので read スコープで十分です。
+
+リクエストボディは [レポートの作成](#レポートの作成) と同一です。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/preview" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Website — this week",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": "this_week"
+    }
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "content": "---\nname: Website — this week\n...\n---\n\n# Website — this week\n...",
+  "totalMinutes": 540,
+  "entryCount": 12,
+  "projectCount": 1
+}
+```
+</TabItem>
+</Tabs>
+
+## レポートの作成
+
+`POST /api/v1/reports` <Badge text="scope: write" variant="caution" />
+
+ドキュメントをレンダリングし、バージョン `1` として保存します。呼び出し元は
+`filters.workspaceIds` のすべてのワークスペースに所属している必要があります。テンプレートは存在し、かつ
+有効でなければなりません。無効なテンプレートは `400` を返します。テンプレートのレンダリングエラーも
+`400` を返すため、レンダリング不能な状態でレポートが保存されることはありません。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | はい | 表示名（1〜100 文字）。 |
+| `templateId` | string | はい | レンダリングするテンプレート。 |
+| `filters` | object | はい | フィルタ集合（[filters オブジェクト](#filters-オブジェクト) を参照）。 |
+| `note` | string | いいえ | 本文に追記する自由記述の Markdown（20000 文字以下）。空文字は `null` に丸められます。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Website — week of Jun 22",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+    }
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "rep_q2",
+  "name": "Website — week of Jun 22",
+  "ownerUserId": "usr_ana",
+  "templateId": "tpl_weekly",
+  "filters": {
+    "workspaceIds": ["wrk_demo"],
+    "projectIds": ["prj_site"],
+    "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+  },
+  "note": null,
+  "totalMinutes": 540,
+  "snapshotProjectIds": ["prj_site"],
+  "version": 1,
+  "renderedMarkdown": "---\nname: Website — week of Jun 22\n...\n---\n\n# ...",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "updatedAt": "2026-06-28T09:30:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。
+
+## レポートの取得
+
+`GET /api/v1/reports/:id` <Badge text="scope: read" variant="note" />
+
+`renderedMarkdown` を含む単一のレポートを返します。読み取れるのは、所有者、インスタンス管理者、または
+単一ワークスペースレポートのそのワークスペースの管理者・オーナーです（レポートが厳密に 1 つの
+ワークスペースにスコープされている場合のみ。複数ワークスペースのレポートはインスタンス管理者専用のまま）。
+所有者にとってレンダリング本文はワークスペースデータであり、いずれかのフィルタ対象ワークスペースの
+メンバーシップを失うとアクセスは取り消されます。それ以外は `404` を返します。
+
+## レポートの更新
+
+`PATCH /api/v1/reports/:id` <Badge text="scope: write" variant="caution" />
+
+所有者のみ。編集はレポートのフィールドを変更し、ドキュメントを **再レンダリング** して、新しい不変の
+コンテンツバージョンを追加します。`version` は 1 つ増えます。リクエストボディは作成と同じ形（`name`・
+`templateId`・`filters` をすべて送信）です。`GET /:id` と同じゲートが適用されます。所有者はすべての
+フィルタ対象ワークスペースに所属している必要があり、テンプレートは有効でなければならず、レンダリング
+エラーは `400` を返します。
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/reports/rep_q2" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Website — week of Jun 22 (final)",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+    }
+  }'
+```
+
+<Aside type="note">
+以前の共有や配信は、固定した本文をそのまま保持します。再レンダリングが変えるのはレポートの現在
+バージョンだけです。
+</Aside>
+
+## レポートの削除
+
+`DELETE /api/v1/reports/:id` <Badge text="scope: write" variant="caution" />
+
+所有者のみ。共有と配信（それぞれが固定コピーを保持）はレポート行とともにカスケード削除されます。
+`204 No Content` を返します。
+
+## 受信者
+
+`GET /api/v1/reports/:id/recipients` <Badge text="scope: read" variant="note" />
+
+所有者のみ。[送信](#レポートの送信) の候補受信者を返します。レポートのワークスペース全体のメンバーの
+和集合（すでにそのデータに資格のある人）から送信者を除き、`snapshotProjectIds` に取得された **すべて** の
+プロジェクトを読める人に絞り込みます（ワークスペースの管理者・オーナーは任意のプロジェクトを読め、
+それ以外は各プロジェクトのメンバーである必要があります）。未割り当て/自身のエントリのみのレポートには
+プロジェクト制限はありません。`snapshotProjectIds` が `null`（スコープ不明）の場合、再レンダリングするまで
+誰も対象になりません。
+
+```json
+[
+  { "id": "usr_bo", "name": "Bo", "email": "bo@example.com", "imageUrl": null }
+]
+```
+
+## レポートの送信
+
+`POST /api/v1/reports/:id/send` <Badge text="scope: write" variant="caution" />
+
+所有者のみ。レポートの現在バージョンの **固定スナップショット** を各受信者の受信箱に届けます。各受信者は
+[受信者](#受信者) の候補集合に含まれている必要があり、送信でデータを見られる範囲を広げることはできません。
+対象外の ID は `400` を返します。各配信は本文をコピーするため、後で編集やレポート削除があっても受信者は
+送られた内容を保持します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `recipientUserIds` | string[] | いいえ | 最大 50 の受信者。既定は `[]`。 |
+| `sendToSelf` | boolean | いいえ | 送信者自身の受信箱にもコピーを届ける。既定は `false`。 |
+| `message` | string | いいえ | 受信者向けの短いメッセージ（1000 文字以下）。 |
+
+受信者か `sendToSelf` のいずれかが必須です。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/send" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipientUserIds": ["usr_bo"],
+    "message": "Here is this week'\''s site report."
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "delivered": 1 }
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。`delivered` はチームメイトの受信者のみを数え、自身へのコピーは数えません。

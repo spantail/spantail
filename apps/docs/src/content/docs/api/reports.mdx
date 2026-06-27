@@ -1,0 +1,320 @@
+---
+title: Reports
+description: Compose, render, list, send, and manage reports built from work and agent activity.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **report** is a frozen document: a [template](/api/report-templates/) rendered against a set
+of filters (workspaces, projects, users, tags, and a date range) for one fixed period. Rendering
+happens synchronously when you create or edit a report — the resulting Markdown is stored as an
+immutable, versioned snapshot, so the document never changes underneath a reader, a public
+[share](/api/report-sharing/), or a delivered copy.
+
+A report is owned by the user who created it. Relative date ranges (`this_week`, …) and the
+generation date resolve in the owner's timezone at render time. See
+[Dates and time](/api/#dates-and-time).
+
+## The report object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `name` | string | Display name (1–100 chars). |
+| `ownerUserId` | string | The user who created the report. |
+| `templateId` | string | The template rendered into this report. Not a foreign key — a report survives its template being deleted. |
+| `filters` | object | The resolved filter set (see [The filters object](#the-filters-object)). The stored `dateRange` is always absolute. |
+| `note` | string \| null | Free-form Markdown appended to the rendered body via `{{ report.note }}` (≤ 20000 chars). |
+| `totalMinutes` | integer \| null | Total logged minutes across the current version's entries. `null` for reports rendered before this was tracked (shown until re-rendered). |
+| `snapshotProjectIds` | string[] \| null | Distinct project ids whose entries appear in the current snapshot, captured at render time. Drives the Send-to ACL. `null` means unknown scope (rendered before this was captured) — see [Send a report](#send-a-report). |
+| `version` | integer | Current version: `1` at creation, incremented on each edit. |
+| `renderedMarkdown` | string | The current version's rendered document: a system-generated YAML front-matter header (provenance) followed by the Liquid-rendered body. |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `updatedAt` | string | ISO 8601 last-update instant. |
+
+List payloads omit `renderedMarkdown`; fetch the body on demand with [`GET /reports/:id`](#get-a-report).
+
+### The filters object
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `workspaceIds` | string[] | yes | 1–20 workspaces. A cross-workspace report is limited to the union of the caller's memberships. |
+| `projectIds` | string[] | no | Up to 50 projects to scope to. |
+| `userIds` | string[] | no | Up to 50 authors to scope to. |
+| `tags` | string[] | no | Up to 20 tags; an entry matches if it carries any of them. |
+| `dateRange` | object \| string | yes | On the wire, either a preset string or an absolute range. On a stored report, always an absolute `{ from, to }`. |
+
+`dateRange` accepts either a **preset** — one of `today`, `yesterday`, `this_week`, `last_week`,
+`this_month`, `last_month` (resolved server-side in the owner's timezone; weeks start Monday) — or
+an **absolute range** `{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` (inclusive; `from ≤ to`,
+spanning at most 366 days). Whichever you send, the stored report keeps the resolved absolute range.
+
+## List reports
+
+`GET /api/v1/reports` <Badge text="scope: read" variant="note" />
+
+Returns report metadata (no rendered body), newest first. By default the caller reads their own
+reports. Instance admins can read another user's set with `ownerUserId`; a workspace admin/owner
+can read a single workspace's reports with `workspaceId` (only reports scoped to exactly that one
+workspace). For the owner's own list, `totalMinutes` is redacted to `null` on any report whose
+workspaces the owner no longer fully belongs to.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ownerUserId` | string | no | Instance admin only: read this user's reports. |
+| `workspaceId` | string | no | Workspace admin/owner: read this workspace's single-workspace reports. |
+| `templateId` | string | no | Filter to reports built from a template. |
+| `projectId` | string | no | Filter to reports scoped to a project. |
+| `from` | string | no | Keep reports whose period overlaps on/after this date `YYYY-MM-DD`. |
+| `to` | string | no | Keep reports whose period overlaps on/before this date `YYYY-MM-DD`. |
+| `limit` | integer | no | Page size, 1–200. Omitted returns the full filtered set. |
+| `offset` | integer | no | Rows to skip (default 0). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/reports?templateId=tpl_weekly&limit=50" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "rep_q2",
+    "name": "Website — week of Jun 22",
+    "ownerUserId": "usr_ana",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+    },
+    "note": null,
+    "totalMinutes": 540,
+    "snapshotProjectIds": ["prj_site"],
+    "version": 1,
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "updatedAt": "2026-06-28T09:30:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## List template ids in use
+
+`GET /api/v1/reports/template-ids` <Badge text="scope: read" variant="note" />
+
+Returns the distinct template ids the caller has reports for, so a UI can surface the relevant
+template tabs without loading every report.
+
+```json
+["tpl_weekly", "tpl_monthly"]
+```
+
+## Preview a report
+
+`POST /api/v1/reports/preview` <Badge text="scope: read" variant="note" />
+
+Renders a report **without persisting it** — the compose dialog's live preview. It runs the same
+membership and template validation and the same render as create, so the preview matches what would
+be stored. Read scope is enough because nothing is written.
+
+The request body is identical to [Create a report](#create-a-report).
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/preview" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Website — this week",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": "this_week"
+    }
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "content": "---\nname: Website — this week\n...\n---\n\n# Website — this week\n...",
+  "totalMinutes": 540,
+  "entryCount": 12,
+  "projectCount": 1
+}
+```
+</TabItem>
+</Tabs>
+
+## Create a report
+
+`POST /api/v1/reports` <Badge text="scope: write" variant="caution" />
+
+Renders the document and persists it as version `1`. The caller must belong to every workspace in
+`filters.workspaceIds`. The template must exist and be enabled — a disabled template returns
+`400`. A template rendering error also returns `400`, so a report is never persisted in an
+un-renderable state.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | Display name (1–100 chars). |
+| `templateId` | string | yes | Template to render. |
+| `filters` | object | yes | Filter set (see [The filters object](#the-filters-object)). |
+| `note` | string | no | Free-form Markdown appended to the body (≤ 20000 chars). Blank collapses to `null`. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Website — week of Jun 22",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+    }
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "rep_q2",
+  "name": "Website — week of Jun 22",
+  "ownerUserId": "usr_ana",
+  "templateId": "tpl_weekly",
+  "filters": {
+    "workspaceIds": ["wrk_demo"],
+    "projectIds": ["prj_site"],
+    "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+  },
+  "note": null,
+  "totalMinutes": 540,
+  "snapshotProjectIds": ["prj_site"],
+  "version": 1,
+  "renderedMarkdown": "---\nname: Website — week of Jun 22\n...\n---\n\n# ...",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "updatedAt": "2026-06-28T09:30:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`.
+
+## Get a report
+
+`GET /api/v1/reports/:id` <Badge text="scope: read" variant="note" />
+
+Returns a single report including its `renderedMarkdown`. Readable by the owner, an instance admin,
+or a workspace admin/owner of the report's single workspace (only when the report is scoped to
+exactly one workspace; a multi-workspace report stays instance-admin-only). For the owner, the
+rendered body is workspace data — losing membership in any filtered workspace revokes access.
+Anyone else gets `404`.
+
+## Update a report
+
+`PATCH /api/v1/reports/:id` <Badge text="scope: write" variant="caution" />
+
+Owner only. Editing changes the report's fields, **re-renders** the document, and appends a new
+immutable content version — `version` is bumped by one. The request body is the same shape as
+create (all of `name`, `templateId`, and `filters` are sent). The same gates as `GET /:id` apply:
+the owner must still belong to every filtered workspace, the template must be enabled, and a render
+error returns `400`.
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/reports/rep_q2" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Website — week of Jun 22 (final)",
+    "templateId": "tpl_weekly",
+    "filters": {
+      "workspaceIds": ["wrk_demo"],
+      "projectIds": ["prj_site"],
+      "dateRange": { "from": "2026-06-22", "to": "2026-06-28" }
+    }
+  }'
+```
+
+<Aside type="note">
+Earlier shares and deliveries keep the exact body they froze; re-rendering only changes the
+report's current version.
+</Aside>
+
+## Delete a report
+
+`DELETE /api/v1/reports/:id` <Badge text="scope: write" variant="caution" />
+
+Owner only. Shares and deliveries — each holding its own frozen copy — cascade away with the
+report. Returns `204 No Content`.
+
+## Recipients
+
+`GET /api/v1/reports/:id/recipients` <Badge text="scope: read" variant="note" />
+
+Owner only. Returns the candidate recipients for [Send](#send-a-report): the union of members
+across the report's workspaces (people already entitled to its data), minus the sender, filtered to
+those who can read **every** project captured in `snapshotProjectIds` (a workspace admin/owner reads
+any project; otherwise the recipient must be a member of each). A report with only unassigned/own
+entries imposes no project restriction. If `snapshotProjectIds` is `null` (unknown scope), no one is
+eligible until the report is re-rendered.
+
+```json
+[
+  { "id": "usr_bo", "name": "Bo", "email": "bo@example.com", "imageUrl": null }
+]
+```
+
+## Send a report
+
+`POST /api/v1/reports/:id/send` <Badge text="scope: write" variant="caution" />
+
+Owner only. Drops a **frozen snapshot** of the report's current version into each recipient's
+inbox. Each recipient must be in the [recipients](#recipients) candidate set, so a send can never
+widen who can see the data; an ineligible id returns `400`. Each delivery copies the body, so the
+recipient keeps what was sent even after a later edit or report deletion.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `recipientUserIds` | string[] | no | Up to 50 recipients. Defaults to `[]`. |
+| `sendToSelf` | boolean | no | Also drop a copy into the sender's own inbox. Defaults to `false`. |
+| `message` | string | no | Short note for the recipients (≤ 1000 chars). |
+
+At least one recipient or `sendToSelf` must be present.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/send" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipientUserIds": ["usr_bo"],
+    "message": "Here is this week'\''s site report."
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "delivered": 1 }
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`. `delivered` counts only teammate recipients; a self-copy is not counted.
