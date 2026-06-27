@@ -62,15 +62,9 @@ export default defineConfig({
 							{ slug: "guides/reports" },
 							{ slug: "guides/capturing-agents" },
 							{ slug: "guides/account-preferences" },
-							{
-								label: "Tools & automation",
-								translations: { ja: "ツールと自動化" },
-								items: [
-									{ slug: "guides/tools/cli" },
-									{ slug: "guides/tools/mcp" },
-									{ slug: "guides/tools/claude-plugin" },
-								],
-							},
+							{ slug: "guides/tools/cli" },
+							{ slug: "guides/tools/mcp" },
+							{ slug: "guides/tools/claude-plugin" },
 						],
 					},
 					{
