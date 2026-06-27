@@ -12,6 +12,7 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: "Spantail",
+			customCss: ["./src/styles/custom.css"],
 			locales: {
 				root: { label: "English", lang: "en" },
 				ja: { label: "日本語", lang: "ja" },
@@ -24,7 +25,26 @@ export default defineConfig({
 				},
 			],
 			plugins: [
-				starlightThemeNova(),
+				// Audiences switch from the top bar. User Guide is reached via the
+				// logo / landing page, so only the other three are listed here.
+				starlightThemeNova({
+					nav: [
+						{
+							label: { root: "Workspace Admin", ja: "ワークスペース管理" },
+							href: { root: "/workspace-admin/", ja: "/ja/workspace-admin/" },
+						},
+						{
+							label: { root: "Self-Hosting", ja: "セルフホスティング" },
+							href: { root: "/self-hosting/", ja: "/ja/self-hosting/" },
+						},
+						{
+							label: { root: "API Reference", ja: "API リファレンス" },
+							href: { root: "/api/", ja: "/ja/api/" },
+						},
+					],
+				}),
+				// Kept only to drive per-audience sidebars; its in-sidebar switcher
+				// is hidden via custom.css (the top-bar nav is the single switcher).
 				starlightSidebarTopics([
 					{
 						label: { en: "User Guide", ja: "ユーザーガイド" },
