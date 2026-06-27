@@ -36,6 +36,7 @@ Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and
 
 See [`docs/data-model.md`](docs/data-model.md) for the data model — the resources Spantail stores and how they relate.
 See [`docs/permissions.md`](docs/permissions.md) for the role-based permissions and resource visibility model.
+See [`docs/security.md`](docs/security.md) for the security threat model — the Spantail-specific security properties and standing threats.
 
 ## Monorepo
 

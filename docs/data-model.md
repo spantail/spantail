@@ -283,5 +283,6 @@ summarized here for the data model.
 ## See also
 
 - [`permissions.md`](./permissions.md) — who can read and write each resource (the access model).
+- [`security.md`](./security.md) — the security threat model and Spantail-specific security invariants.
 - `packages/db/src/schema` — Drizzle tables, the source of truth for columns and indexes.
 - `packages/core/src` — Zod schemas, the source of truth for domain types and API shapes.
