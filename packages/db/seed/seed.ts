@@ -20,6 +20,13 @@ function availableDatasets(): string[] {
 async function main(): Promise<void> {
 	// `pnpm db:seed <name>` forwards the name here; default to the demo dataset.
 	const name = process.argv[2] ?? DEFAULT_DATASET;
+	// A dataset name is a single directory under examples/db/seed — reject path
+	// separators / traversal / absolute paths so it can't load YAML elsewhere.
+	if (!/^[a-z0-9][a-z0-9-]*$/i.test(name)) {
+		throw new Error(
+			`Invalid seed dataset name "${name}": use letters, digits and hyphens only.`,
+		);
+	}
 	const dataDir = seedDataDir(name);
 	if (!existsSync(dataDir)) {
 		const choices = availableDatasets();

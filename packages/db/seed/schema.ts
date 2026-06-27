@@ -111,11 +111,12 @@ export interface SeedConfig {
 }
 
 function read<T>(dataDir: string, file: string, schema: z.ZodType<T>): T {
-	const raw = parse(readFileSync(join(dataDir, file), "utf8"));
+	const path = join(dataDir, file);
+	const raw = parse(readFileSync(path, "utf8"));
 	const result = schema.safeParse(raw);
 	if (!result.success) {
 		throw new Error(
-			`Invalid seed data in ${file}:\n${z.prettifyError(result.error)}`,
+			`Invalid seed data in ${path}:\n${z.prettifyError(result.error)}`,
 		);
 	}
 	return result.data;
