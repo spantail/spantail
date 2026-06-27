@@ -1,64 +1,63 @@
-# `demo-ja` dataset (Japanese)
+# `demo-ja` データセット（日本語）
 
-The Japanese counterpart of [`demo`](../demo/README.md): the same structure, but
-every workspace is Japanese (`Asia/Tokyo`) and the cast is a **distinct set of
-users** (different names and emails), so the two datasets never share a login
-identity. Load it with `pnpm db:seed demo-ja`. See
-[`packages/db/seed/README.md`](../../packages/db/seed/README.md) for the seeding
-commands and how datasets are loaded.
+[`demo`](../demo/README.md) の日本語版です。構成は同じですが、すべてのワーク
+スペースが日本語（`Asia/Tokyo`）で、キャストは `demo` と**重複しない別ユーザー**
+（名前もメールも異なる）なので、2 つのデータセットがログイン情報を共有することは
+ありません。`pnpm db:seed demo-ja` で投入します。投入コマンドやデータセットの
+読み込み方法は [`packages/db/seed/README.md`](../../packages/db/seed/README.md)
+を参照してください。
 
-The seed YAML lives in [`db/seed/`](./db/seed). It is **declarative data only**;
-activity is derived at run time by the generator, relative to the current date.
+> このファイルは英語のみのリポジトリ方針の**例外**として、対象データセットに
+> 合わせて日本語で記述しています。
 
-## Sign-in
+seed 用 YAML は [`db/seed/`](./db/seed) にあります。**宣言的なデータのみ**で、
+作業記録・レポート・配信・共有などのアクティビティは、現在日時を基準に生成器が
+実行時に導出します（再実行で再現します）。
 
-Every user shares the password documented in
-[`packages/db/seed/README.md`](../../packages/db/seed/README.md).
+## サインイン
 
-| Email | Name | Role |
+全ユーザーは [`packages/db/seed/README.md`](../../packages/db/seed/README.md) に
+記載の共通パスワードを使います。
+
+| メール | 名前 | ロール |
 | --- | --- | --- |
-| `hanako@azumino.example` | 山田 花子 | instance admin |
-| `ichiro@azumino.example` | 鈴木 一郎 | template author |
-| `misaki@azumino.example` | 田中 美咲 | member |
-| `ken@azumino.example` | 佐藤 健 | member |
-| `yumi@azumino.example` | 高橋 由美 | member |
-| `daisuke@kanda.example` | 渡辺 大輔 | member |
+| `hanako@azumino.example` | 山田 花子 | インスタンス管理者 |
+| `ichiro@azumino.example` | 鈴木 一郎 | テンプレート作成者 |
+| `misaki@azumino.example` | 田中 美咲 | メンバー |
+| `ken@azumino.example` | 佐藤 健 | メンバー |
+| `yumi@azumino.example` | 高橋 由美 | メンバー |
+| `daisuke@kanda.example` | 渡辺 大輔 | メンバー |
 
-## The world
+## 世界観
 
-**あづみ野ソフトウェア** (Azumino Software) is a fictional consultancy (the
-instance owner, internal workspace) staffing engineers onto client workspaces:
+**あづみ野ソフトウェア** は架空の受託開発会社（インスタンスのオーナー＝社内
+ワークスペース）で、エンジニアをクライアントのワークスペースに参画させています。
 
-- **あづみ野ソフトウェア** — internal. Owner: **Hanako**; all five team members
-  belong.
-- **桜トレーディング** (Sakura Trading) — client. Lead: **Ichiro**; staffed:
-  Ichiro, Yumi, Misaki.
-- **富士メディア** (Fuji Media) — client. Lead: **Misaki**; staffed: Misaki,
-  Ichiro, Yumi.
-- **椿物流** (Tsubaki Logistics) — client. Lead: **Ken**; staffed: Ken, Hanako
-  (daily liaison).
-- **神田システムズ** (Kanda Systems) — client, run solo by **Daisuke**. No
-  Azumino member belongs here, so it surfaces for Hanako only through the
-  instance-admin bypass.
+- **あづみ野ソフトウェア** — 社内。オーナー: **花子**。5 人全員がメンバー。
+- **桜トレーディング** — クライアント。リード: **一郎**。参画: 一郎・由美・美咲。
+- **富士メディア** — クライアント。リード: **美咲**。参画: 美咲・一郎・由美。
+- **椿物流** — クライアント。リード: **健**。参画: 健・花子（日次リエゾン）。
+- **神田システムズ** — クライアント。**大輔**が 1 人で運営。あづみ野のメンバーは
+  誰も所属しないため、花子にはインスタンス管理者バイパス経由でのみ見えます。
 
-All workspaces are `Asia/Tokyo`. The shape mirrors `demo`: Hanako keeps a daily
-internal line and a daily client line, and the two engineers shared across Sakura
-+ Fuji file a combined cross-workspace daily report.
+全ワークスペースが `Asia/Tokyo` です。形は `demo` と対応しており、花子は社内の
+日次ラインとクライアントの日次ラインを両方持ち、桜 + 富士を兼務する 2 人の
+エンジニアはクロスワークスペースの日報を 1 通にまとめて提出します。
 
-## Work patterns, reports, pagination
+## 作業パターン・レポート・ページング
 
-These behave exactly as in [`demo`](../demo/README.md) — see that README for the
-cadence definitions, the daily/monthly/cross-workspace report rules, and the
-per-screen pagination breakdown. The only differences here are the localized
-content and the distinct users. One default report template is seeded, in this
-dataset's locale (Japanese).
+これらの挙動は [`demo`](../demo/README.md) とまったく同じです。cadence の定義、
+日報／月報／クロスワークスペースの配信ルール、画面ごとのページングの内訳は
+そちらの README を参照してください。本データセットの違いはローカライズされた
+内容と別ユーザーである点だけです。デフォルトのレポートテンプレートは、本データ
+セットのロケール（日本語）で 1 件のみ登録されます。
 
-`report-routes.yaml` declares only the sender and the workspaces a combined
-report spans (first is the anchor); recipients are derived from membership.
+`report-routes.yaml` は送信者と、まとめる対象のワークスペース（先頭がタイム
+ゾーン・言語のアンカー）だけを宣言します。受信者はメンバーシップから導出されます。
 
-## Files
+## ファイル
 
-`db/seed/` holds one YAML per concern: `users`, `workspaces`, `members`,
-`projects` (with task `activities`), `work-patterns`, `report-routes`, and
-`instance` (feature toggles — all enabled). Each is validated against
-`packages/db/seed/schema.ts` on load.
+`db/seed/` には関心ごとに 1 つずつ YAML があります: `users` / `workspaces` /
+`members` / `projects`（タスクの `activities` を含む）/ `work-patterns` /
+`report-routes` / `instance`（機能トグル。本データセットではすべて有効）。
+いずれも読み込み時に `packages/db/seed/schema.ts` で検証されます。
