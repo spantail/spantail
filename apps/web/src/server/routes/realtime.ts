@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
-import { requireSession } from "../middleware/auth";
+import { AppError } from "../lib/errors";
+import { requireAuth } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 /**
@@ -12,6 +13,12 @@ import type { AppEnv } from "../types";
  * (workspace fan-out is membership-scoped at publish time).
  */
 export const realtimeRoutes = new Hono<AppEnv>().get("/", async (c) => {
-	const { user } = requireSession(c);
-	return c.env.USER_HUB.getByName(user.id).fetch(c.req.raw);
+	const auth = requireAuth(c);
+	if (auth.via !== "session") {
+		throw new AppError(
+			"unauthorized",
+			"Realtime streaming requires a browser session",
+		);
+	}
+	return c.env.USER_HUB.getByName(auth.user.id).fetch(c.req.raw);
 });

@@ -50,6 +50,15 @@ export function useRealtimeSync(): void {
 		// Absent in non-browser environments (SSR, tests); skip rather than throw.
 		if (typeof EventSource === "undefined") return;
 		const source = new EventSource("/api/v1/realtime");
+		// On a reconnect (not the first open), signals may have been missed while
+		// the stream was down, so refetch active queries to catch up. EventSource
+		// reconnects on its own; TanStack's refetch-on-focus default covers the
+		// rarer case of a stream that can never connect at all.
+		let reconnected = false;
+		source.onopen = () => {
+			if (reconnected) qc.invalidateQueries();
+			reconnected = true;
+		};
 		source.onmessage = (e) => {
 			try {
 				applyRealtimeEvent(qc, JSON.parse(e.data) as RealtimeEvent);

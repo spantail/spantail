@@ -37,16 +37,16 @@ export class UserHub extends DurableObject<Env> {
 
 	/** RPC: relay one already-serialized event to every open connection. */
 	async publish(payload: string): Promise<void> {
-		await this.flush(this.encoder.encode(`data: ${payload}\n\n`));
+		this.flush(this.encoder.encode(`data: ${payload}\n\n`));
 	}
 
-	private async flush(frame: Uint8Array): Promise<void> {
-		const dead: WritableStreamDefaultWriter<Uint8Array>[] = [];
-		await Promise.all(
-			[...this.writers].map((w) => w.write(frame).catch(() => dead.push(w))),
-		);
-		// A failed write means the client went away; reap that connection.
-		for (const w of dead) this.drop(w);
+	// Fire-and-forget per writer: a single slow or backpressured client must not
+	// stall delivery to the others or pile up awaited background tasks. A rejected
+	// write means the client went away, so reap that connection.
+	private flush(frame: Uint8Array): void {
+		for (const writer of [...this.writers]) {
+			writer.write(frame).catch(() => this.drop(writer));
+		}
 	}
 
 	private drop(writer: WritableStreamDefaultWriter<Uint8Array>): void {
@@ -60,7 +60,7 @@ export class UserHub extends DurableObject<Env> {
 	private startKeepAlive(): void {
 		if (this.keepAlive) return;
 		this.keepAlive = setInterval(() => {
-			void this.flush(this.encoder.encode(": ping\n\n"));
+			this.flush(this.encoder.encode(": ping\n\n"));
 		}, 30_000);
 	}
 

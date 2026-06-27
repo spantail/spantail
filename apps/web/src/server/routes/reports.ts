@@ -567,6 +567,8 @@ export const reportRoutes = new Hono<AppEnv>()
 				message,
 			})),
 		);
-		publishToUsers(c, recipientIds, { type: "message" });
+		// Notify the recipients (their inbox) and the sender (their Sent folder in
+		// other open tabs) — both are backed by report_deliveries.
+		publishToUsers(c, [...recipientIds, user.id], { type: "message" });
 		return c.json({ delivered: recipientIds.length }, 201);
 	});
