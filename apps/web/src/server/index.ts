@@ -22,6 +22,7 @@ import { reportDiscussionRoutes } from "./routes/report-discussion";
 import { reportShareRoutes } from "./routes/report-shares";
 import { reportTemplateRoutes } from "./routes/report-templates";
 import { reportRoutes } from "./routes/reports";
+import { searchRoutes } from "./routes/search";
 import { shareRoutes } from "./routes/share";
 import { tokenRoutes } from "./routes/tokens";
 import { userRoutes } from "./routes/users";
@@ -82,6 +83,7 @@ v1.route("/reports", reportRoutes);
 // owner + Send-to recipients; mounted after reportRoutes on the same prefix.
 v1.route("/reports", reportDiscussionRoutes);
 v1.route("/work-entries", workEntryRoutes);
+v1.route("/search", searchRoutes);
 v1.route("/agents", agentRoutes);
 v1.route("/agent-entries", agentEntryRoutes);
 v1.route("/agent-events", agentEventRoutes);

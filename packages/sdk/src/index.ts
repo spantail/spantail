@@ -49,6 +49,7 @@ import type {
 	ReportMeta,
 	ReportShare,
 	ReportTemplate,
+	SearchResponse,
 	SendReportInput,
 	SendReportResult,
 	SetMailFlagsInput,
@@ -202,6 +203,11 @@ export class SpantailClient {
 	/** Removes the caller's avatar; returns updated me. */
 	removeAvatar(): Promise<Me> {
 		return this.request("DELETE", "/me/avatar");
+	}
+
+	/** Global top-bar search: work entries (visible) and the caller's reports. */
+	search(q: string): Promise<SearchResponse> {
+		return this.request("GET", "/search", { query: { q } });
 	}
 
 	// --- Instance-wide user management (instance admin only) ---

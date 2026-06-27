@@ -12,6 +12,7 @@ import { AuthedRoot } from "@/components/authed-root";
 import { EntryDialogProvider, useEntryDialog } from "@/components/entry-dialog";
 import { NavInbox } from "@/components/nav-inbox";
 import { NavUser } from "@/components/nav-user";
+import { SearchCommand } from "@/components/search-command";
 import { Button } from "@/components/ui/button";
 import {
 	SidebarInset,
@@ -47,6 +48,7 @@ function AuthedLayout() {
 								{/* Top-right corner is the user-scoped zone: reports span
 								    workspaces, so they live here, not in the sidebar. */}
 								<div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+									<SearchCommand />
 									<LogWorkButton />
 									<Button
 										asChild

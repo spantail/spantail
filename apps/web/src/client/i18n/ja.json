@@ -60,6 +60,18 @@
 		"account": "アカウント",
 		"userMenu": "ユーザーメニュー"
 	},
+	"search": {
+		"open": "検索を開く",
+		"title": "検索",
+		"placeholder": "検索…",
+		"prompt": "レポートや作業ログを検索",
+		"searching": "検索中…",
+		"empty": "該当する結果はありません",
+		"groups": {
+			"reports": "レポート",
+			"workEntries": "作業ログ"
+		}
+	},
 	"projects": {
 		"notFound": "このワークスペースにプロジェクトが見つかりません。",
 		"backHome": "ホームへ戻る",
