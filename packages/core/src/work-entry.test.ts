@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 
+import { MAX_DURATION_MINUTES } from "./duration";
 import {
 	createWorkEntryInputSchema,
 	listWorkEntriesQuerySchema,
@@ -30,6 +31,21 @@ it("rejects non-positive or fractional durations", () => {
 	expect(
 		createWorkEntryInputSchema.safeParse({ ...base, durationMinutes: 1.5 })
 			.success,
+	).toBe(false);
+});
+
+it("accepts a duration at the one-year cap but rejects beyond it", () => {
+	expect(
+		createWorkEntryInputSchema.safeParse({
+			...base,
+			durationMinutes: MAX_DURATION_MINUTES,
+		}).success,
+	).toBe(true);
+	expect(
+		createWorkEntryInputSchema.safeParse({
+			...base,
+			durationMinutes: MAX_DURATION_MINUTES + 1,
+		}).success,
 	).toBe(false);
 });
 

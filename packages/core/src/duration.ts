@@ -1,4 +1,12 @@
 /**
+ * Upper bound for any stored duration, in minutes (one 365-day year). Ingested
+ * durations are untrusted input (see docs/security.md §1): a value with no
+ * plausible ceiling corrupts report totals and risks integer-range issues
+ * downstream. Defined once here so web/CLI/MCP enforce the same cap.
+ */
+export const MAX_DURATION_MINUTES = 525_600;
+
+/**
  * Parses a human duration into integer minutes: `"90"` (minutes), `"45m"`,
  * `"2h"`, `"1h30m"`, `"1h 30m"`. Case-insensitive. Returns null for anything
  * invalid or non-positive; the caller owns the user-facing error message.
