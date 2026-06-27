@@ -2,7 +2,7 @@ import type { SearchResponse } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { FileChartColumnIcon, NotebookPenIcon, SearchIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useEntryDialog } from "@/components/entry-dialog";
@@ -38,8 +38,6 @@ export function SearchCommand() {
 	const [open, setOpen] = useState(false);
 	const [q, setQ] = useState("");
 	const debouncedQ = useDebounced(q.trim(), 200);
-	// Latest open() should land focus in the input even when reopened quickly.
-	const inputRef = useRef<HTMLInputElement>(null);
 
 	// Open/close with ⌘K (Ctrl+K), ignoring presses inside other text fields.
 	useEffect(() => {
@@ -103,7 +101,6 @@ export function SearchCommand() {
 				description={t("search.placeholder")}
 			>
 				<CommandInput
-					ref={inputRef}
 					value={q}
 					onValueChange={setQ}
 					placeholder={t("search.placeholder")}
