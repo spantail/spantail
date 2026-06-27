@@ -68,6 +68,10 @@ const baseReport = (wsId: string) => ({
 
 it("creates, lists, updates, and deletes own reports only", async () => {
 	const { admin, other, ws } = await setup();
+	// Pin the report author to Asia/Tokyo so the "today" range resolves in the
+	// same zone as the assertion below, off the same clock — signUpUser leaves
+	// the timezone null (UTC), which disagrees with Tokyo for part of the day.
+	await apiJson("PATCH", "/api/v1/me", { timezone: "Asia/Tokyo" }, admin);
 
 	const created = await apiJson(
 		"POST",
