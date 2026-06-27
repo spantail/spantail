@@ -149,6 +149,12 @@ default is an insecure deployment. The rule is **fail closed**:
   no half-configured surface is exposed.
 - `wrangler.jsonc` carries only non-secret ids; secrets come from `wrangler secret` /
   `.dev.vars` (gitignored), never the repo.
+- Defense in depth for that last rule on a public/forkable repo: enable **GitHub secret
+  scanning and push protection** (free on public repositories) so a committed credential is
+  blocked before it leaks, and register a custom pattern for Spantail's own token formats —
+  `spantail_(pat|aat)_[A-Za-z0-9_-]{43}` (prefixes in `packages/core/src/pat.ts`) — so a
+  leaked instance token is caught. This guards the *committed repository*, a distinct
+  surface from the *captured runtime content* in §2.
 
 ## Related
 

@@ -8,6 +8,12 @@ machine.
 > This is a copy-and-adapt reference. It will later be packaged as a Claude Code
 > plugin together with the Spantail skills; for now, wire it manually.
 
+> **Sensitive content.** Sending only compact telemetry — not conversation bodies — is
+> the recommended posture for any custom capture wiring. Whatever you do place into an
+> agent-entry or span `description` **is** stored verbatim and may surface in reports,
+> public share links, and Send-to deliveries, so do not put secrets there. See
+> [`docs/security.md`](../../docs/security.md) (§2).
+
 ## Files
 
 | File | Purpose |
