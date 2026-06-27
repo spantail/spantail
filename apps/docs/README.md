@@ -48,5 +48,5 @@ pnpm docs:build && pnpm docs:preview
 
 ## Deploy
 
-Static build deployed as Cloudflare Workers assets (`pnpm --filter docs deploy`, see
-`wrangler.jsonc`). Binding the `docs.spantail.com` custom domain is a one-time dashboard step.
+Static build deployed as Cloudflare Workers assets (`pnpm docs:deploy`, see `wrangler.jsonc`).
+Binding the `docs.spantail.com` custom domain is a one-time dashboard step.

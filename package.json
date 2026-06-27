@@ -22,7 +22,8 @@
 		"docs:dev": "pnpm --filter docs dev",
 		"docs:build": "pnpm --filter docs build",
 		"docs:preview": "pnpm --filter docs preview",
-		"docs:typecheck": "pnpm --filter docs typecheck"
+		"docs:typecheck": "pnpm --filter docs typecheck",
+		"docs:deploy": "pnpm --filter docs run deploy"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.16",
