@@ -1,0 +1,93 @@
+---
+title: Deploy to Cloudflare
+description: Provision D1 and R2, set secrets, run migrations, and deploy.
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Spantail is designed to be deployed to your own Cloudflare account. Make sure you have the
+[requirements](/self-hosting/) in place, then follow the steps below.
+
+## Try it locally first
+
+To run Spantail on your machine before deploying — local D1 emulation, no Cloudflare resources:
+
+```bash
+git clone https://github.com/spantail/spantail.git
+cd spantail
+pnpm install
+
+# create local env vars, then set BETTER_AUTH_SECRET (>= 32 chars)
+cp apps/web/.dev.vars.example apps/web/.dev.vars
+
+pnpm db:migrate:local   # apply migrations to the local D1 emulator
+pnpm dev                # SPA + Worker on http://localhost:5173
+```
+
+See [Configuration](/self-hosting/configuration/) for every value in `.dev.vars`.
+
+## Deploy to Cloudflare
+
+<Steps>
+
+1. **Clone and install.**
+
+   ```bash
+   git clone https://github.com/spantail/spantail.git
+   cd spantail
+   pnpm install
+   ```
+
+2. **Create the D1 database** and copy the generated ID into `apps/web/wrangler.jsonc`.
+
+   ```bash
+   wrangler d1 create spantail-db
+   ```
+
+   Set the returned `database_id` in **both** the top-level `d1_databases` block and the
+   `env.production.d1_databases` block — they ship with placeholder IDs.
+
+3. **Create the R2 bucket** for uploads.
+
+   ```bash
+   wrangler r2 bucket create spantail-uploads
+   ```
+
+4. **Set the session-signing secret.** Generate a value of at least 32 characters.
+
+   ```bash
+   wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
+   ```
+
+   :::caution
+   Without this secret the Worker **fails closed** — any request that touches auth or
+   session code errors out rather than signing sessions with a forgeable value.
+   :::
+
+5. **Apply migrations** to the remote database.
+
+   ```bash
+   pnpm db:migrate:remote
+   ```
+
+6. **Deploy** the Worker.
+
+   ```bash
+   pnpm deploy
+   ```
+
+</Steps>
+
+## After deploying
+
+Set **`BETTER_AUTH_URL`** to your deployed origin (for example your custom domain,
+`https://spantail.example.com`) so login links and OAuth callbacks resolve correctly. This and
+the optional social-login and email secrets are covered on the
+[Configuration](/self-hosting/configuration/) page.
+
+:::note[Screenshot placeholder]
+📸 _The deployed instance loaded at its Workers URL, showing the sign-up screen._
+:::
+
+With the Worker live, the first person to sign up becomes the instance administrator. Continue
+to the [Initial setup wizard](/self-hosting/setup-wizard/).
