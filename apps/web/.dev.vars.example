@@ -1,7 +1,8 @@
 # Copy to .dev.vars (gitignored) and fill in the values.
 
-# Required. Signs session tokens; the app fails to start if it is missing or
-# shorter than 32 characters. Generate with: openssl rand -base64 32
+# Required. Signs session tokens; if it is missing or shorter than 32
+# characters, auth/session requests fail closed (error out) rather than signing
+# with a forgeable value. Generate with: openssl rand -base64 32
 BETTER_AUTH_SECRET=
 
 # Base URL the app is served from during local development.

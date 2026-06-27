@@ -117,3 +117,8 @@ it("accepts a sufficiently long secret and returns it unchanged", () => {
 	const secret = "0123456789abcdefghijklmnopqrstuv"; // exactly 32 chars
 	expect(assertAuthSecret(secret)).toBe(secret);
 });
+
+it("trims surrounding whitespace from the returned secret", () => {
+	const secret = "0123456789abcdefghijklmnopqrstuv"; // 32 chars
+	expect(assertAuthSecret(`  ${secret}\n`)).toBe(secret);
+});

@@ -78,8 +78,9 @@ wrangler d1 create spantail-db
 # set the generated database ID in apps/web/wrangler.jsonc, then:
 pnpm db:migrate:remote
 
-# set the required session-signing secret (>= 32 chars); the app fails to start
-# without it, so sessions can never be signed with an empty value:
+# set the required session-signing secret (>= 32 chars); without it the worker
+# fails closed — any request that touches auth/session code errors out, so
+# sessions can never be signed with an empty value:
 wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
 
 pnpm deploy

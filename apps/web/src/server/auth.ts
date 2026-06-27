@@ -32,12 +32,16 @@ const MIN_AUTH_SECRET_LENGTH = 32;
  * instead of degrading silently. The secret value itself is never echoed.
  */
 export function assertAuthSecret(secret: string | undefined): string {
-	if (!secret || secret.trim().length < MIN_AUTH_SECRET_LENGTH) {
+	const trimmed = secret?.trim() ?? "";
+	if (trimmed.length < MIN_AUTH_SECRET_LENGTH) {
 		throw new Error(
 			`BETTER_AUTH_SECRET is missing or too weak: set it to a random value of at least ${MIN_AUTH_SECRET_LENGTH} characters. Generate one with: openssl rand -base64 32`,
 		);
 	}
-	return secret;
+	// Return the trimmed value: validating the trimmed length but signing with
+	// the raw value would let stray whitespace into the effective secret, making
+	// it surprising and hard to reproduce.
+	return trimmed;
 }
 
 /**
