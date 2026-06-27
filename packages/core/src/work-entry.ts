@@ -32,7 +32,7 @@ export type WorkEntry = z.infer<typeof workEntrySchema>;
 export const createWorkEntryInputSchema = z.object({
 	workspaceId: z.string(),
 	projectId: z.string(),
-	// Defaults to today in the workspace's timezone when omitted.
+	// Defaults to today in the author's timezone when omitted.
 	entryDate: localDateSchema.optional(),
 	durationMinutes: z.number().int().positive().max(MAX_DURATION_MINUTES),
 	startedAt: z.iso.datetime().optional(),

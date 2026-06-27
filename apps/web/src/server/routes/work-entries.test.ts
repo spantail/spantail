@@ -10,7 +10,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
+			{ slug: "acme", name: "Acme" },
 			admin,
 		)
 	).json()) as { id: string };
@@ -36,7 +36,7 @@ async function setup() {
 	return { admin, member, memberId, ws, project };
 }
 
-it("creates an entry defaulting the date to today in the workspace timezone", async () => {
+it("creates an entry defaulting the date to today in the author timezone", async () => {
 	const { admin, ws, project } = await setup();
 
 	const res = await apiJson(
@@ -118,7 +118,7 @@ it("rejects projects from another workspace", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/workspaces",
-			{ slug: "other", name: "Other", timezone: "UTC" },
+			{ slug: "other", name: "Other" },
 			admin,
 		)
 	).json()) as { id: string };

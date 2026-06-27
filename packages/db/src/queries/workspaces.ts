@@ -8,7 +8,7 @@ export type MembershipRow = typeof workspaceMembers.$inferSelect;
 
 export async function createWorkspace(
 	db: Database,
-	input: { slug: string; name: string; timezone: string; ownerUserId: string },
+	input: { slug: string; name: string; ownerUserId: string },
 ): Promise<WorkspaceRow> {
 	const id = crypto.randomUUID();
 	// D1 has no interactive transactions; batch keeps both writes atomic.
@@ -19,7 +19,6 @@ export async function createWorkspace(
 				id,
 				slug: input.slug,
 				name: input.name,
-				timezone: input.timezone,
 			})
 			.returning(),
 		db.insert(workspaceMembers).values({
@@ -94,13 +93,7 @@ export async function updateWorkspace(
 	patch: Partial<
 		Pick<
 			WorkspaceRow,
-			| "slug"
-			| "name"
-			| "timezone"
-			| "accentColor"
-			| "archivedAt"
-			| "settings"
-			| "logoUrl"
+			"slug" | "name" | "accentColor" | "archivedAt" | "settings" | "logoUrl"
 		>
 	>,
 ): Promise<WorkspaceRow | undefined> {

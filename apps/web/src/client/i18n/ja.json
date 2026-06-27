@@ -476,7 +476,6 @@
 		},
 		"systemAdminOnly": "このセクションはインスタンス管理者のみがアクセスできます。",
 		"slug": "スラッグ",
-		"timezone": "タイムゾーン",
 		"workspaceName": "ワークスペース名",
 		"status": "状態",
 		"createAction": "作成",
@@ -649,12 +648,14 @@
 		},
 		"preferences": {
 			"title": "環境設定",
-			"description": "言語と外観を設定します。これらはこのブラウザに適用されます。",
+			"description": "タイムゾーン・言語・外観を設定します。",
 			"language": "言語",
 			"theme": "テーマ",
 			"themeSystem": "システム",
 			"themeLight": "ライト",
-			"themeDark": "ダーク"
+			"themeDark": "ダーク",
+			"timezone": "タイムゾーン",
+			"timezoneHint": "IANA 名（例: Asia/Tokyo）。アプリ全体の日付・時刻がこのTZで表示されます。空欄で UTC を使用します。"
 		},
 		"users": {
 			"title": "ユーザー",
@@ -733,7 +734,7 @@
 		},
 		"adminBannerLead": "インスタンス管理。",
 		"general": {
-			"description": "レポート期間の解決に使うワークスペース名とタイムゾーン。",
+			"description": "ワークスペース名とスラッグ。",
 			"logo": "ワークスペースのロゴ",
 			"logoDescription": "サイドバーのワークスペース切り替えに表示されます。",
 			"logoUpload": "ロゴをアップロード",

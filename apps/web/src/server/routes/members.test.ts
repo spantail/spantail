@@ -8,7 +8,7 @@ async function setup() {
 	const res = await apiJson(
 		"POST",
 		"/api/v1/workspaces",
-		{ slug: "acme", name: "Acme", timezone: "UTC" },
+		{ slug: "acme", name: "Acme" },
 		admin,
 	);
 	const ws = (await res.json()) as { id: string };

@@ -26,6 +26,18 @@ export const timezoneSchema = z
 	.max(64)
 	.refine(isValidTimezone, "must be a valid IANA timezone");
 
+/**
+ * The IANA timezone a person's local dates and clock are resolved in. Timezone
+ * is a per-user concept (there is no workspace timezone); a user who has not set
+ * one falls back to UTC. This is the single source of the fallback rule, shared
+ * by entry_date computation, the home timeline, agent-day bucketing, and reports.
+ */
+export function resolveUserTimezone(
+	timezone: string | null | undefined,
+): string {
+	return timezone ?? "UTC";
+}
+
 /** Local date in `YYYY-MM-DD` form (no timezone). */
 export const localDateSchema = z
 	.string()
@@ -45,20 +57,31 @@ export function shiftDays(date: string, days: number): string {
 		.slice(0, 10);
 }
 
-/**
- * Returns today's local date (`YYYY-MM-DD`) in the given IANA timezone.
- * en-CA formats as YYYY-MM-DD.
- */
+// Intl.DateTimeFormat construction is relatively expensive, so cache one
+// formatter per timezone. `todayInTimezone` is called per-row when bucketing
+// agent activity by day, where the allocation would otherwise dominate.
+const localDateFormatters = new Map<string, Intl.DateTimeFormat>();
+function localDateFormatter(timeZone: string): Intl.DateTimeFormat {
+	let formatter = localDateFormatters.get(timeZone);
+	if (!formatter) {
+		// en-CA formats as YYYY-MM-DD.
+		formatter = new Intl.DateTimeFormat("en-CA", {
+			timeZone,
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		});
+		localDateFormatters.set(timeZone, formatter);
+	}
+	return formatter;
+}
+
+/** Returns today's local date (`YYYY-MM-DD`) in the given IANA timezone. */
 export function todayInTimezone(
 	timeZone: string,
 	now: Date = new Date(),
 ): string {
-	return new Intl.DateTimeFormat("en-CA", {
-		timeZone,
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	}).format(now);
+	return localDateFormatter(timeZone).format(now);
 }
 
 /**

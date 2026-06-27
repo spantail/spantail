@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { useProjects } from "@/hooks/use-projects";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
 import {
@@ -45,7 +46,7 @@ function AgentPage() {
 	const { agentId } = Route.useParams();
 	const { current } = useWorkspace();
 	const workspaceId = current?.id;
-	const timezone = current?.timezone ?? "UTC";
+	const timezone = useUserTimezone();
 
 	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
 	const range = resolveDateRange(period, timezone);
@@ -77,11 +78,14 @@ function AgentPage() {
 		id ? projectById.get(id)?.hue : undefined;
 
 	const entries = useInfiniteQuery({
+		// Each entry's `entryDate` is derived server-side in the viewer's timezone,
+		// so it belongs in the cache key — otherwise changing the timezone keeps
+		// serving rows dated for the old one until the query is remounted.
 		queryKey: [
 			"agent-entries",
 			workspaceId,
 			agentId,
-			{ from: range.from, to: range.to },
+			{ from: range.from, to: range.to, timezone },
 		],
 		queryFn: ({ pageParam }) =>
 			api.listAgentEntries({

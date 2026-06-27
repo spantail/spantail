@@ -1,8 +1,10 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -10,6 +12,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -18,7 +21,72 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+function browserTimezone(): string {
+	return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/**
+ * Timezone is per-user, server-persisted state (unlike language/theme, which are
+ * client-local) because the server computes local dates on ingest. An empty
+ * value clears it back to the UTC fallback.
+ */
+function TimezonePreference() {
+	const { t } = useTranslation();
+	const queryClient = useQueryClient();
+	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
+	const saved = me.data?.user.timezone ?? "";
+	const [value, setValue] = useState(saved);
+	const [error, setError] = useState<string | null>(null);
+	// Adopt the saved value once `me` resolves or changes under us.
+	useEffect(() => setValue(saved), [saved]);
+
+	const mutation = useMutation({
+		mutationFn: (timezone: string | null) =>
+			api.updateAccountPreferences({ timezone }),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: ["me"] });
+			setError(null);
+		},
+		onError: (err: Error) => setError(err.message),
+	});
+
+	const next = value.trim() === "" ? null : value.trim();
+	const dirty = (next ?? "") !== saved;
+
+	return (
+		<form
+			className="flex flex-col gap-2"
+			onSubmit={(e) => {
+				e.preventDefault();
+				mutation.mutate(next);
+			}}
+		>
+			<Label htmlFor="account-tz">{t("settings.preferences.timezone")}</Label>
+			<div className="flex gap-2">
+				<Input
+					id="account-tz"
+					value={value}
+					onChange={(e) => setValue(e.target.value)}
+					placeholder={browserTimezone()}
+				/>
+				<Button
+					type="submit"
+					variant="outline"
+					disabled={!dirty || mutation.isPending}
+				>
+					{t("settings.saveAction")}
+				</Button>
+			</div>
+			<p className="text-muted-foreground text-xs">
+				{t("settings.preferences.timezoneHint")}
+			</p>
+			{error && <p className="text-destructive text-sm">{error}</p>}
+		</form>
+	);
+}
 
 // Language names are shown in their own script regardless of the active locale,
 // so they are constants rather than translated strings.
@@ -163,6 +231,7 @@ export function PreferencesCard() {
 						})}
 					</div>
 				</div>
+				<TimezonePreference />
 			</CardContent>
 		</Card>
 	);

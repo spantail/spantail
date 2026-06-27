@@ -12,6 +12,7 @@ import {
 	type ReportFiltersInput,
 	renderReport,
 	resolveDateRange,
+	resolveUserTimezone,
 	sendReportInputSchema,
 	updateReportInputSchema,
 } from "@spantail/core";
@@ -171,15 +172,19 @@ async function renderReportDocument(
 	const scoped = workspaces.filter((w) => filters.workspaceIds.includes(w.id));
 	const anchor = scoped.find((w) => w.id === filters.workspaceIds[0]);
 	if (!anchor) throw new AppError("internal", "Filter workspace missing");
-	const range: AbsoluteDateRange = resolveDateRange(
-		filters.dateRange,
-		anchor.timezone,
-	);
 
 	// Project ACL: the report owner sees project-assigned entries only for the
 	// projects they belong to (admins see all in their workspaces). Snapshots are
 	// point-in-time — this is enforced at render, not on stored content.
 	const { user } = requireAuth(c);
+	// The report renders in the running user's timezone: relative ranges and the
+	// generation date resolve in it. Entries are already bucketed by their stored
+	// local date, so grouping itself needs no timezone.
+	const timezone = resolveUserTimezone(user.timezone);
+	const range: AbsoluteDateRange = resolveDateRange(
+		filters.dateRange,
+		timezone,
+	);
 	const access = resolveEntryAccessForWorkspaces(scoped, user.id);
 	const rows = await listWorkEntriesForReport(c.var.db, {
 		workspaceIds: filters.workspaceIds,
@@ -206,13 +211,12 @@ async function renderReportDocument(
 		body = await renderReport(templateBody, {
 			report: { name: doc.name, note: doc.note },
 			period: { ...range, preset },
-			timezone: anchor.timezone,
+			timezone,
 			generatedAt,
 			workspaces: scoped.map((w) => ({
 				id: w.id,
 				slug: w.slug,
 				name: w.name,
-				timezone: w.timezone,
 			})),
 			projects,
 			users: users.map((u) => ({ id: u.id, name: u.name })),
@@ -240,7 +244,7 @@ async function renderReportDocument(
 			...(filters.tags?.length ? { tags: filters.tags } : {}),
 		},
 		totalMinutes,
-		timezone: anchor.timezone,
+		timezone,
 		generatedAt: generatedAt.toISOString(),
 	});
 	const content = frontMatter + body;

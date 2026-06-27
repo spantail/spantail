@@ -26,6 +26,11 @@ export const user = sqliteTable("user", {
 	// stop working, but their data is preserved and stays visible to others.
 	// Toggled by an instance admin; never settable by clients.
 	disabled: integer("disabled", { mode: "boolean" }).default(false),
+	// The user's IANA timezone (e.g. "Asia/Tokyo"). Null follows the UTC fallback.
+	// Local dates (entry_date) and the home timeline resolve in it; set by the
+	// user from account preferences. Timezone is a per-user concept — workspaces
+	// and projects do not have one.
+	timezone: text("timezone"),
 });
 
 export const session = sqliteTable(

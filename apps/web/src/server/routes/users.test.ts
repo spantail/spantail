@@ -231,7 +231,7 @@ it("refuses to delete a workspace owner", async () => {
 	const ws = await apiJson(
 		"POST",
 		"/api/v1/workspaces",
-		{ slug: "beta", name: "Beta", timezone: "UTC" },
+		{ slug: "beta", name: "Beta" },
 		ownerCookie,
 	);
 	expect(ws.status).toBe(201);

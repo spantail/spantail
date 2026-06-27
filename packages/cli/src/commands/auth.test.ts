@@ -18,7 +18,6 @@ function membership(
 		id: `id-${slug}`,
 		slug,
 		name,
-		timezone: "Asia/Tokyo",
 		accentColor: "neutral",
 		logoUrl: null,
 		settings: {},

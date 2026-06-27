@@ -17,6 +17,7 @@ import { daysInclusive, isWeekend } from "@/components/dashboard/stats-math";
 import { Sparkline } from "@/components/sparkline";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import {
 	formatCompactNumber,
@@ -24,7 +25,6 @@ import {
 	formatEntryDate,
 } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/lib/workspace";
 
 /** One zero-filled day of agent activity for the selected period. */
 interface AgentDay {
@@ -420,12 +420,11 @@ interface AgentStatsProps {
 /**
  * Period-scoped agent activity: three stat widgets (Sessions, Session time,
  * Tokens) over a daily sparkline window, plus a daily-activity bar chart. The
- * range is resolved in the workspace timezone, matching {@link DashboardStats}.
+ * range is resolved in the viewing user's timezone, matching {@link DashboardStats}.
  */
 export function AgentStats({ workspaceId, agentId, period }: AgentStatsProps) {
 	const { t, i18n } = useTranslation();
-	const { current } = useWorkspace();
-	const timezone = current?.timezone ?? "UTC";
+	const timezone = useUserTimezone();
 	const range = resolveDateRange(period, timezone);
 	const periodLabel =
 		typeof period === "string"
@@ -433,11 +432,14 @@ export function AgentStats({ workspaceId, agentId, period }: AgentStatsProps) {
 			: formatCompactRange(range.from, range.to, i18n.language);
 
 	const stats = useQuery({
+		// The per-day buckets are derived server-side in the viewer's timezone, so
+		// it is part of the cache key — changing it must refetch, not reuse a stale
+		// bucketing computed for the old timezone.
 		queryKey: [
 			"agent-entry-stats",
 			workspaceId,
 			agentId,
-			{ from: range.from, to: range.to },
+			{ from: range.from, to: range.to, timezone },
 		],
 		queryFn: () =>
 			api.getAgentEntryStats({

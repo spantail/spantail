@@ -15,6 +15,7 @@ import { EntryTimeline } from "@/components/entry-timeline";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { Button } from "@/components/ui/button";
 import { useProjects } from "@/hooks/use-projects";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
 import { formatEntryDate } from "@/lib/format";
@@ -47,11 +48,11 @@ function Timeline({
 	userId: string;
 }) {
 	const { t, i18n } = useTranslation();
-	const { current } = useWorkspace();
 	const { openCreate } = useEntryDialog();
 	const navigate = useNavigate();
 	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
-	const today = todayInTimezone(current?.timezone ?? "UTC");
+	const timezone = useUserTimezone();
+	const today = todayInTimezone(timezone);
 	const dateLabel = formatEntryDate(today, i18n.language, {
 		weekday: "long",
 		month: "long",

@@ -37,6 +37,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { invalidateReports } from "@/lib/query";
 import { cn } from "@/lib/utils";
@@ -120,6 +121,7 @@ export function ReportForm({
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const { workspaces, current } = useWorkspace();
+	const timezone = useUserTimezone();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 	const userName = me.data?.user.name ?? "";
 
@@ -181,11 +183,6 @@ export function ReportForm({
 		enabled: Boolean(singleWorkspaceId),
 	});
 
-	const anchorTimezone =
-		workspaces.find((w) => w.id === workspaceIds[0])?.timezone ??
-		current?.timezone ??
-		"UTC";
-
 	const customValid =
 		rangeChoice !== "custom" || (from !== "" && to !== "" && from <= to);
 	const resolvedLabel =
@@ -193,7 +190,7 @@ export function ReportForm({
 			? customValid && from !== "" && to !== ""
 				? formatPeriodLabel({ from, to })
 				: null
-			: formatPeriodLabel(resolveDateRange(rangeChoice, anchorTimezone));
+			: formatPeriodLabel(resolveDateRange(rangeChoice, timezone));
 	const singleWorkspaceName = singleWorkspaceId
 		? (workspaces.find((w) => w.id === singleWorkspaceId)?.name ?? "")
 		: "";
@@ -420,7 +417,7 @@ export function ReportForm({
 								<p className="text-muted-foreground text-xs">
 									{t(
 										"reports.form.presetPreview",
-										resolveDateRange(rangeChoice, anchorTimezone),
+										resolveDateRange(rangeChoice, timezone),
 									)}
 								</p>
 							)}

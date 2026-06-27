@@ -46,7 +46,7 @@ export function registerSpantailTools(
 			title: "List workspaces",
 			description:
 				"List the workspaces the token owner belongs to, including each workspace id, " +
-				"slug, name, and timezone. Call this first to resolve workspace ids.",
+				"slug, and name. Call this first to resolve workspace ids.",
 		},
 		() => run(() => client.listWorkspaces()),
 	);
@@ -72,7 +72,7 @@ export function registerSpantailTools(
 			description:
 				"Create a work entry. Requires a workspace id and project id — resolve them " +
 				"with list_workspaces and list_projects first. When entryDate is omitted the " +
-				"server uses today in the workspace's timezone.",
+				"server uses today in the token owner's timezone.",
 			inputSchema: {
 				workspaceId: z.string().describe("Workspace id"),
 				projectId: z.string().describe("Project id within the workspace"),
@@ -85,7 +85,7 @@ export function registerSpantailTools(
 				entryDate: localDateSchema
 					.optional()
 					.describe(
-						"Local date YYYY-MM-DD; defaults to today in the workspace timezone",
+						"Local date YYYY-MM-DD; defaults to today in the token owner's timezone",
 					),
 				note: z.string().max(10000).optional().describe("Optional longer note"),
 				tags: z.array(tagSchema).max(20).optional().describe("Optional tags"),

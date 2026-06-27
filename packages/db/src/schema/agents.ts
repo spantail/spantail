@@ -99,13 +99,13 @@ export const agentEntries = sqliteTable(
 			.references(() => agents.id, { onDelete: "cascade" }),
 		// External session identifier; (agentId, sessionId) is the idempotency key.
 		sessionId: text("session_id").notNull(),
-		// Local date (YYYY-MM-DD) in the workspace timezone, from startedAt/now.
-		entryDate: text("entry_date").notNull(),
 		durationMinutes: integer("duration_minutes").notNull(),
 		// Null when the source can't expose token usage locally (e.g. Cursor).
 		usage: text("usage", { mode: "json" }).$type<AgentUsage | null>(),
 		description: text("description"),
-		startedAt: integer("started_at", { mode: "timestamp_ms" }),
+		// Agent sessions are always timestamped; the calendar day is derived from
+		// startedAt at read time in the viewing user's timezone (no frozen date).
+		startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
 		endedAt: integer("ended_at", { mode: "timestamp_ms" }),
 		createdAt: createdAtMs(),
 		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
@@ -115,7 +115,8 @@ export const agentEntries = sqliteTable(
 	},
 	(table) => [
 		uniqueIndex("agent_entries_session_uq").on(table.agentId, table.sessionId),
-		index("agent_entries_workspace_idx").on(table.workspaceId, table.createdAt),
+		// Range queries filter by startedAt (the day-bucket key) within a workspace.
+		index("agent_entries_workspace_idx").on(table.workspaceId, table.startedAt),
 		index("agent_entries_agent_idx").on(table.agentId),
 	],
 );

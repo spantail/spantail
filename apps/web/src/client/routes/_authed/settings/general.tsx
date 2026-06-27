@@ -63,13 +63,12 @@ function EditWorkspaceCard() {
 	const { current } = useWorkspace();
 	const [name, setName] = useState(current?.name ?? "");
 	const [slug, setSlug] = useState(current?.slug ?? "");
-	const [timezone, setTimezone] = useState(current?.timezone ?? "");
 	const [error, setError] = useState<string | null>(null);
 
 	const mutation = useMutation({
 		mutationFn: () => {
 			if (!current) throw new Error("no workspace");
-			return api.updateWorkspace(current.id, { name, slug, timezone });
+			return api.updateWorkspace(current.id, { name, slug });
 		},
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["me"] });
@@ -111,15 +110,6 @@ function EditWorkspaceCard() {
 							onChange={(e) => setSlug(e.target.value)}
 							pattern="[a-z0-9](?:[a-z0-9-]*[a-z0-9])?"
 							maxLength={50}
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="edit-ws-tz">{t("settings.timezone")}</Label>
-						<Input
-							id="edit-ws-tz"
-							value={timezone}
-							onChange={(e) => setTimezone(e.target.value)}
 							required
 						/>
 					</div>

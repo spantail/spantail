@@ -16,9 +16,9 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { formatCompactRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/lib/workspace";
 
 /** Dashboard preset window. Each id is a valid `resolveDateRange` preset. */
 export type HomePeriod =
@@ -76,8 +76,7 @@ interface PeriodSelectorProps {
  */
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
 	const { t, i18n } = useTranslation();
-	const { current } = useWorkspace();
-	const timezone = current?.timezone ?? "UTC";
+	const timezone = useUserTimezone();
 	const [open, setOpen] = useState(false);
 
 	// Resolved absolute span for the current value — drives the calendar

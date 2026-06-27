@@ -34,6 +34,15 @@ export const authOptions = {
 				defaultValue: false,
 				input: false,
 			},
+			// The user's IANA timezone (null = UTC fallback). Exposed on the session
+			// user but never settable through Better Auth's own routes (input: false):
+			// updates go solely through PATCH /api/v1/me, which validates the IANA
+			// name, so an unvalidated value can't be persisted via /api/auth/*.
+			timezone: {
+				type: "string",
+				required: false,
+				input: false,
+			},
 		},
 	},
 } satisfies BetterAuthOptions;

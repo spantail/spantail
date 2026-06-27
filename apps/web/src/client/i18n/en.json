@@ -477,7 +477,6 @@
 		},
 		"systemAdminOnly": "Only instance admins can access this section.",
 		"slug": "Slug",
-		"timezone": "Timezone",
 		"workspaceName": "Workspace name",
 		"status": "Status",
 		"createAction": "Create",
@@ -650,12 +649,14 @@
 		},
 		"preferences": {
 			"title": "Preferences",
-			"description": "Set your language and appearance. These apply to this browser.",
+			"description": "Set your timezone, language, and appearance.",
 			"language": "Language",
 			"theme": "Theme",
 			"themeSystem": "System",
 			"themeLight": "Light",
-			"themeDark": "Dark"
+			"themeDark": "Dark",
+			"timezone": "Timezone",
+			"timezoneHint": "IANA name (e.g. Asia/Tokyo). Your dates and times show in it across the app. Leave empty to use UTC."
 		},
 		"users": {
 			"title": "Users",
@@ -734,7 +735,7 @@
 		},
 		"adminBannerLead": "Instance administration.",
 		"general": {
-			"description": "Workspace name and timezone used to resolve report periods.",
+			"description": "Workspace name and slug.",
 			"logo": "Workspace logo",
 			"logoDescription": "Shown on the workspace switcher in the sidebar.",
 			"logoUpload": "Upload logo",

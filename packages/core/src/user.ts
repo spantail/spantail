@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { timezoneSchema } from "./common";
 import { oauthProviderSchema } from "./instance";
 
 /** The authenticated user as exposed by the API (subset of the auth table). */
@@ -14,6 +15,9 @@ export const authUserSchema = z.object({
 	// Ready-to-use avatar URL (own upload served via /avatars/:id, or an external
 	// OAuth picture), or null when the user has no avatar — show initials then.
 	imageUrl: z.string().nullable(),
+	// The user's IANA timezone, or null to follow the UTC fallback. Local dates
+	// (entry_date), the home timeline, and clock display all resolve in it.
+	timezone: timezoneSchema.nullable(),
 });
 export type AuthUser = z.infer<typeof authUserSchema>;
 
@@ -67,3 +71,15 @@ export const updateUserInputSchema = z
 	})
 	.partial();
 export type UpdateUserInput = z.infer<typeof updateUserInputSchema>;
+
+/**
+ * The caller updates their own account preferences. `timezone` is server-side
+ * state (unlike language/theme, which are client-local) because ingest computes
+ * local dates on the server; `null` clears it back to the UTC fallback.
+ */
+export const updateAccountPreferencesInputSchema = z.object({
+	timezone: timezoneSchema.nullable(),
+});
+export type UpdateAccountPreferencesInput = z.infer<
+	typeof updateAccountPreferencesInputSchema
+>;

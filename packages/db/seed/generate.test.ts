@@ -2,7 +2,29 @@ import { fileURLToPath, URL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { generateDataset } from "./generate";
+import { loadConfig } from "./schema";
 import { datasetToSql } from "./to-sql";
+
+// Workspaces no longer store a timezone (it is a per-user concept now), but the
+// seed still uses each workspace's configured timezone to generate realistic
+// local work patterns. Tests read those generation timezones from the config.
+function workspaceTimezones(
+	dataDir: string,
+	wsRows: Array<Record<string, unknown>>,
+): Map<string, string> {
+	const tzBySlug = new Map(
+		loadConfig(dataDir).workspaces.map((w) => [w.slug, w.timezone]),
+	);
+	return new Map(
+		wsRows.map((w) => {
+			const slug = w.slug as string;
+			const tz = tzBySlug.get(slug);
+			// A missing timezone would silently bucket workspaces together; fail loud.
+			if (!tz) throw new Error(`no seed timezone for workspace "${slug}"`);
+			return [w.id as string, tz];
+		}),
+	);
+}
 
 type Row = Record<string, unknown>;
 
@@ -104,9 +126,7 @@ describe("generateDataset", () => {
 		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
-		const tzById = new Map(
-			rows("workspaces").map((w) => [w.id as string, w.timezone as string]),
-		);
+		const tzById = workspaceTimezones(DEMO_DIR, rows("workspaces"));
 		const juneTimezones = new Set<string | undefined>();
 		for (const r of rows("reports")) {
 			const filters = r.filters as {
@@ -134,9 +154,7 @@ describe("generateDataset", () => {
 		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
-		const tzById = new Map(
-			rows("workspaces").map((w) => [w.id as string, w.timezone as string]),
-		);
+		const tzById = workspaceTimezones(DEMO_DIR, rows("workspaces"));
 		const maxByTz = new Map<string, string>();
 		for (const e of rows("workEntries")) {
 			const tz = tzById.get(e.workspaceId as string) ?? "";

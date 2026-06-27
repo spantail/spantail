@@ -30,7 +30,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
+			{ slug: "acme", name: "Acme" },
 			owner,
 		)
 	).json()) as { id: string };

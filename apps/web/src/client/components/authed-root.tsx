@@ -1,5 +1,6 @@
 import type { Me } from "@spantail/sdk";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "@/lib/api";
@@ -18,10 +19,51 @@ export function AuthedRoot({
 	children: (me: Me) => React.ReactNode;
 }) {
 	const { t } = useTranslation();
+	const queryClient = useQueryClient();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 	// One SSE connection for the whole authenticated app; pushes invalidations so
 	// changes from other users, the CLI, MCP, and agent ingest surface live.
 	useRealtimeSync();
+
+	// One-time per user/device: adopt the browser's timezone for a user who has
+	// none set yet, so their local dates aren't silently bucketed in UTC until
+	// they visit settings. A localStorage marker (keyed by user id) makes this
+	// fire only once ever — without it, a user who deliberately clears their
+	// timezone back to the UTC fallback would have the browser zone re-applied on
+	// the next load, making UTC impossible to persist.
+	const detectTimezone = useMutation({
+		mutationFn: (timezone: string) =>
+			api.updateAccountPreferences({ timezone }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+	});
+	const detectAttempted = useRef(false);
+	useEffect(() => {
+		if (detectAttempted.current || !me.data) return;
+		detectAttempted.current = true;
+		if (me.data.user.timezone != null) return;
+		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		if (!tz) return;
+		// Mark before mutating so the adoption is never repeated on this device,
+		// even across the explicit "clear to UTC" flow. localStorage can throw
+		// (privacy mode / disabled storage); since this runs during app boot, skip
+		// auto-adoption rather than let an exception break the authed shell.
+		const adoptedKey = `spantail.tz-adopted.${me.data.user.id}`;
+		try {
+			if (localStorage.getItem(adoptedKey)) return;
+			localStorage.setItem(adoptedKey, "1");
+		} catch {
+			return;
+		}
+		detectTimezone.mutate(tz, {
+			// If the adoption didn't persist (offline/transient), clear the marker so
+			// the next load retries rather than leaving the user stuck on UTC.
+			onError: () => {
+				try {
+					localStorage.removeItem(adoptedKey);
+				} catch {}
+			},
+		});
+	}, [me.data, detectTimezone]);
 
 	if (me.isPending) {
 		return (

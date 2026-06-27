@@ -1,3 +1,4 @@
+import { updateAccountPreferencesInputSchema } from "@spantail/core";
 import { updateUser } from "@spantail/db";
 import { Hono } from "hono";
 
@@ -11,6 +12,7 @@ import {
 } from "../lib/avatar";
 import { AppError } from "../lib/errors";
 import { listVisibleWorkspaces } from "../lib/permissions";
+import { validate } from "../lib/validate";
 import { requireScope, requireSession } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
@@ -19,6 +21,20 @@ export const meRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "read");
 		const memberships = await listVisibleWorkspaces(c.var.db, user);
 		return c.json({ user, memberships });
+	})
+	// Update the caller's own account preferences (currently just timezone).
+	// Interactive sessions only — preferences are a profile concern, not an
+	// API-token operation. `timezone: null` clears it back to the UTC fallback.
+	.patch("/", async (c) => {
+		const { user } = requireSession(c);
+		const input = validate(
+			updateAccountPreferencesInputSchema,
+			await c.req.json(),
+		);
+		await updateUser(c.var.db, user.id, { timezone: input.timezone });
+		const updated = { ...user, timezone: input.timezone };
+		const memberships = await listVisibleWorkspaces(c.var.db, updated);
+		return c.json({ user: updated, memberships });
 	})
 	// Upload (replace) the caller's avatar. Interactive sessions only — avatars
 	// are a profile concern, not an API-token operation.
