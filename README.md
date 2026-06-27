@@ -88,12 +88,12 @@ pnpm deploy
 
 See the documentation at [spantail.com](https://spantail.com) for the full self-hosting guide, including required secrets and cost notes.
 
-### Agent capture sends telemetry, not transcripts
+### The reference Claude Code hook sends telemetry, not transcripts
 
-Spantail's reference Claude Code hook captures AI-agent work as compact per-turn telemetry —
-token usage and timing — **not your conversation transcripts or source code**. It parses the
-transcript locally and sends only that telemetry, so conversation bodies never leave your
-machine. (What reaches Spantail is only ever what a client sends.)
+It captures AI-agent work as compact per-turn telemetry — token usage and timing — **not your
+conversation transcripts or source code**: it parses the transcript locally and sends only that
+telemetry, so conversation bodies never leave your machine. (What reaches Spantail is only ever
+what a client sends, so other integrations are only as bounded as what they send.)
 
 Whatever a client does record, though — descriptions, notes, tags, and any event payload it
 sends — is stored verbatim and can appear in reports, public share links, and Send-to
