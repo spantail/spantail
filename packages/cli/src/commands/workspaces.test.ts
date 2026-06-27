@@ -23,9 +23,9 @@ it("lists workspaces as a table", async () => {
 
 	expect(await runCli(["workspaces", "list"], ctx)).toBe(0);
 	const lines = stdout.text().trimEnd().split("\n");
-	expect(lines[0]).toBe("SLUG  NAME  ROLE    TIMEZONE");
-	expect(lines[1]).toBe("acme  ACME  owner   Asia/Tokyo");
-	expect(lines[2]).toBe("beta  BETA  member  Asia/Tokyo");
+	expect(lines[0]).toBe("SLUG  NAME  ROLE");
+	expect(lines[1]).toBe("acme  ACME  owner");
+	expect(lines[2]).toBe("beta  BETA  member");
 });
 
 it("reports an empty workspace list on stderr", async () => {

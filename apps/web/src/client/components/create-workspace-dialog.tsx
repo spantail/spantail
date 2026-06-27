@@ -17,10 +17,6 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 
-function browserTimezone(): string {
-	return Intl.DateTimeFormat().resolvedOptions().timeZone;
-}
-
 export function CreateWorkspaceDialog({
 	open,
 	onOpenChange,
@@ -34,11 +30,10 @@ export function CreateWorkspaceDialog({
 	const { setCurrentId } = useWorkspace();
 	const [slug, setSlug] = useState("");
 	const [name, setName] = useState("");
-	const [timezone, setTimezone] = useState(browserTimezone);
 	const [error, setError] = useState<string | null>(null);
 
 	const mutation = useMutation({
-		mutationFn: () => api.createWorkspace({ slug, name, timezone }),
+		mutationFn: () => api.createWorkspace({ slug, name }),
 		onSuccess: async (workspace) => {
 			await queryClient.invalidateQueries({ queryKey: ["me"] });
 			setCurrentId(workspace.id);
@@ -88,15 +83,6 @@ export function CreateWorkspaceDialog({
 							value={slug}
 							onChange={(e) => setSlug(e.target.value)}
 							pattern="[a-z0-9][a-z0-9-]*"
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="create-ws-tz">{t("settings.timezone")}</Label>
-						<Input
-							id="create-ws-tz"
-							value={timezone}
-							onChange={(e) => setTimezone(e.target.value)}
 							required
 						/>
 					</div>

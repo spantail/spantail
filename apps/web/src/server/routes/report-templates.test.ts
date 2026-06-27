@@ -235,7 +235,7 @@ it("refuses to delete a template referenced by a report", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
+			{ slug: "acme", name: "Acme" },
 			admin,
 		)
 	).json()) as { id: string };

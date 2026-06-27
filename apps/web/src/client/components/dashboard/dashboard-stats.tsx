@@ -17,10 +17,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProjects } from "@/hooks/use-projects";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatCompactRange } from "@/lib/format";
 import { hueFromString } from "@/lib/hue";
-import { useWorkspace } from "@/lib/workspace";
 
 interface DashboardScope {
 	workspaceId: string;
@@ -44,7 +44,7 @@ interface DashboardStatsProps {
 
 /**
  * Daily focus chart + breakdown donut for a scope and period. Date windows are
- * resolved in the workspace timezone with the same calendar helpers reports
+ * resolved in the viewing user's timezone with the same calendar helpers reports
  * use; the stats endpoint itself is a plain filtered aggregation.
  */
 export function DashboardStats({
@@ -55,8 +55,7 @@ export function DashboardStats({
 	aside,
 }: DashboardStatsProps) {
 	const { t, i18n } = useTranslation();
-	const { current } = useWorkspace();
-	const timezone = current?.timezone ?? "UTC";
+	const timezone = useUserTimezone();
 	const range = resolveDateRange(period, timezone);
 	const periodLabel =
 		typeof period === "string"

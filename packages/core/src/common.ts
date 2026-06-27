@@ -26,6 +26,18 @@ export const timezoneSchema = z
 	.max(64)
 	.refine(isValidTimezone, "must be a valid IANA timezone");
 
+/**
+ * The IANA timezone a person's local dates and clock are resolved in. Timezone
+ * is a per-user concept (there is no workspace timezone); a user who has not set
+ * one falls back to UTC. This is the single source of the fallback rule, shared
+ * by entry_date computation, the home timeline, agent-day bucketing, and reports.
+ */
+export function resolveUserTimezone(
+	timezone: string | null | undefined,
+): string {
+	return timezone ?? "UTC";
+}
+
 /** Local date in `YYYY-MM-DD` form (no timezone). */
 export const localDateSchema = z
 	.string()

@@ -30,10 +30,10 @@ export async function workspacesList(
 	}
 	ctx.stdout.write(
 		`${formatTable(
-			["SLUG", "NAME", "ROLE", "TIMEZONE"],
+			["SLUG", "NAME", "ROLE"],
 			// `role` is null for instance admins listing a workspace they are not a
 			// member of (the admin bypass surfaces every workspace).
-			workspaces.map((ws) => [ws.slug, ws.name, ws.role ?? "-", ws.timezone]),
+			workspaces.map((ws) => [ws.slug, ws.name, ws.role ?? "-"]),
 		)}\n`,
 	);
 	return 0;

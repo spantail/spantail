@@ -19,7 +19,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
+			{ slug: "acme", name: "Acme" },
 			owner,
 		)
 	).json()) as { id: string };
@@ -280,12 +280,7 @@ it("restricts recipients to members of every workspace in the report", async () 
 	const onlyA = await signUpUser("OnlyA", "onlya@example.com");
 	const mkWs = async (slug: string) =>
 		(await (
-			await apiJson(
-				"POST",
-				"/api/v1/workspaces",
-				{ slug, name: slug, timezone: "Asia/Tokyo" },
-				owner,
-			)
+			await apiJson("POST", "/api/v1/workspaces", { slug, name: slug }, owner)
 		).json()) as { id: string };
 	const wsA = await mkWs("alpha");
 	const wsB = await mkWs("beta");

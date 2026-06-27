@@ -23,6 +23,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { useProjects } from "@/hooks/use-projects";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatEntryDate } from "@/lib/format";
 import { isTypingTarget } from "@/lib/keyboard";
@@ -56,6 +57,7 @@ export function EntryDialogProvider({
 	const { t, i18n } = useTranslation();
 	const { current } = useWorkspace();
 	const { session } = useRouteContext({ from: "/_authed" });
+	const timezone = useUserTimezone();
 	const projects = useProjects();
 	const [state, setState] = useState<EntryDialogState | null>(null);
 	// Remount key so the form re-derives its initial state on every open.
@@ -157,8 +159,8 @@ export function EntryDialogProvider({
 			})
 		: "";
 	const viewTimeRange =
-		viewEntry?.startedAt && viewEntry.endedAt && current
-			? `${utcToZonedTime(viewEntry.startedAt, current.timezone)}–${utcToZonedTime(viewEntry.endedAt, current.timezone)}`
+		viewEntry?.startedAt && viewEntry.endedAt
+			? `${utcToZonedTime(viewEntry.startedAt, timezone)}–${utcToZonedTime(viewEntry.endedAt, timezone)}`
 			: null;
 	// Resolve to the member's name only; while members load (or for a user no
 	// longer in the workspace) the byline stays hidden rather than show a raw id.
@@ -230,7 +232,7 @@ export function EntryDialogProvider({
 							<EntryForm
 								key={instanceId}
 								workspaceId={current.id}
-								timezone={current.timezone}
+								timezone={timezone}
 								projects={formProjects}
 								initial={state.mode === "edit" ? state.entry : null}
 								defaultProjectId={

@@ -98,7 +98,6 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			projectId,
 			agentId: auth.agentId,
 			sessionId: input.sessionId,
-			entryDate: todayInTimezone(workspace.timezone, rollup.startedAt),
 			durationMinutes: rollup.durationMinutes,
 			usage: rollup.usage,
 			description: null,
@@ -106,5 +105,10 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			endedAt: rollup.endedAt,
 		});
 		publishToWorkspace(c, { type: "agent-entry", workspaceId });
-		return c.json(entry);
+		// Echo with a UTC-derived entryDate: this is the ingest path (no human
+		// viewer); readers recompute the day in their own timezone.
+		return c.json({
+			...entry,
+			entryDate: todayInTimezone("UTC", entry.startedAt),
+		});
 	});

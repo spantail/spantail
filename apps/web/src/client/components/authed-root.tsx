@@ -1,5 +1,6 @@
 import type { Me } from "@spantail/sdk";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { api } from "@/lib/api";
@@ -18,10 +19,28 @@ export function AuthedRoot({
 	children: (me: Me) => React.ReactNode;
 }) {
 	const { t } = useTranslation();
+	const queryClient = useQueryClient();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 	// One SSE connection for the whole authenticated app; pushes invalidations so
 	// changes from other users, the CLI, MCP, and agent ingest surface live.
 	useRealtimeSync();
+
+	// One-time: adopt the browser's timezone for a user who has none set yet, so
+	// their local dates aren't silently bucketed in UTC until they visit settings.
+	const detectTimezone = useMutation({
+		mutationFn: (timezone: string) =>
+			api.updateAccountPreferences({ timezone }),
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
+	});
+	const detectAttempted = useRef(false);
+	useEffect(() => {
+		if (detectAttempted.current || !me.data) return;
+		if (me.data.user.timezone != null) return;
+		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		if (!tz) return;
+		detectAttempted.current = true;
+		detectTimezone.mutate(tz);
+	}, [me.data, detectTimezone]);
 
 	if (me.isPending) {
 		return (

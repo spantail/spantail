@@ -20,7 +20,6 @@ export const workspaces = sqliteTable("workspaces", {
 	id: text("id").primaryKey(),
 	slug: text("slug").notNull().unique(),
 	name: text("name").notNull(),
-	timezone: text("timezone").notNull(),
 	accentColor: text("accent_color").notNull().default("neutral"),
 	// App-relative URL of the workspace logo served from R2, with a cache-busting
 	// "?v=" version. Null when no logo is set.
@@ -112,7 +111,7 @@ export const workEntries = sqliteTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		// Local date (YYYY-MM-DD) in the workspace's timezone.
+		// Local date (YYYY-MM-DD) in the author's timezone, frozen at write time.
 		entryDate: text("entry_date").notNull(),
 		durationMinutes: integer("duration_minutes").notNull(),
 		startedAt: integer("started_at", { mode: "timestamp_ms" }),

@@ -8,7 +8,7 @@ import {
 	signUpUser,
 } from "../../../test/helpers";
 
-const WS = { slug: "acme", name: "Acme", timezone: "Asia/Tokyo" };
+const WS = { slug: "acme", name: "Acme" };
 
 async function createWs(cookie: string) {
 	const res = await apiJson("POST", "/api/v1/workspaces", WS, cookie);
@@ -42,20 +42,12 @@ it("lets only instance admins create workspaces", async () => {
 	expect(ws.archivedAt).toBeNull();
 });
 
-it("rejects duplicate slugs and invalid timezones", async () => {
+it("rejects duplicate slugs", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	await createWs(admin);
 
 	const dup = await apiJson("POST", "/api/v1/workspaces", WS, admin);
 	expect(dup.status).toBe(409);
-
-	const badTz = await apiJson(
-		"POST",
-		"/api/v1/workspaces",
-		{ ...WS, slug: "other", timezone: "Mars/Olympus" },
-		admin,
-	);
-	expect(badTz.status).toBe(400);
 });
 
 it("scopes workspace reads to members", async () => {

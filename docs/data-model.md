@@ -110,7 +110,7 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `user` | Instance | A person's account. Instance flags: `isAdmin`, `canManageTemplates`, `disabled`. | Root of most ownership edges |
+| `user` | Instance | A person's account. Instance flags: `isAdmin`, `canManageTemplates`, `disabled`. Optional `timezone` (IANA, null → UTC) — the per-user lens for local dates and clock display. | Root of most ownership edges |
 | `session` | User | Better Auth login session. | belongs to `user` (cascade) |
 | `account` | User | OAuth provider link (google, github) or password credential. | belongs to `user` (cascade) |
 | `verification` | Instance | Email-verification and password-reset tokens, keyed by email. No user FK — standalone. | none |
@@ -139,7 +139,7 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `workspaces` | Workspace | Organizational unit (department, team, or client) and the primary membership scope — not an isolated tenant (users can belong to several, and reports can span them). Has timezone, accent color, optional logo. | contains projects, members, entries |
+| `workspaces` | Workspace | Organizational unit (department, team, or client) and the primary membership scope — not an isolated tenant (users can belong to several, and reports can span them). Has accent color, optional logo. Timezone is a per-user concept, not a workspace one. | contains projects, members, entries |
 | `workspace_members` | Workspace | Membership and role: `owner` / `admin` / `member`. PK (workspaceId, userId). | joins `workspaces` and `user` |
 | `projects` | Workspace | A workspace subdivision. Status `active` / `archived`; color hue; slug unique per workspace. | belongs to `workspaces` (cascade) |
 | `project_members` | Project | Binary membership (no per-project role), managed by workspace admins. | joins `projects` and `user` |
@@ -172,7 +172,7 @@ erDiagram
 | `agents` | User | A registered AI coding agent — a delegated identity of one user, not an independent principal. Type `claude_code` / `codex` / `cursor` / `other`. `disabledAt` (reversible) vs `archivedAt`. | belongs to `user` (cascade) |
 | `agent_tokens` | User | Agent Access Token (AAT): a write-only **ingest** credential bound to one agent; optional `defaultWorkspaceId`. Hashed; one active token per agent in practice. | belongs to `agents` (cascade) |
 | `agent_projects` | Project | Presentation grouping of an agent to projects — no rows means "all projects". Does **not** gate or default ingest. | joins `agents` and `projects` |
-| `agent_entries` | Project / Workspace | One agent **session** rollup: duration and token usage. Idempotent by (agentId, sessionId). Sits on the timeline beside human work. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
+| `agent_entries` | Project / Workspace | One agent **session** rollup: duration and token usage. Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entry_date` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
 | `agent_events` | Workspace | Raw **per-turn** telemetry — one row per assistant message, native usage stored verbatim. Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
 
 ## Domain: Reports & distribution
@@ -265,9 +265,17 @@ Cross-cutting rules that shape many tables. The authoritative statements live in
 [`CLAUDE.md`](../CLAUDE.md) (architecture invariants) and [`permissions.md`](./permissions.md);
 summarized here for the data model.
 
-- **Dates vs timestamps.** `entry_date` (on `work_entries` and `agent_entries`) is a **local date**
-  string `YYYY-MM-DD` in the workspace's timezone. Every other time column is a **UTC** millisecond
-  timestamp. Durations are **integer minutes**.
+- **Dates vs timestamps.** A **date** and a **timestamp** are independent concepts, not derivable
+  from each other. `work_entries.entry_date` is a **local date** string `YYYY-MM-DD` in the author's
+  timezone, frozen at write time (a manual entry can have a date with no start/end time). Timestamps
+  (`startedAt`/`endedAt`, and every other time column) are **UTC** millisecond instants. Durations
+  are **integer minutes**. **Timezone is per-user** (`user.timezone`, null → UTC) — there is no
+  workspace or project timezone. **Daily aggregation needs no timezone**: it groups by the stored
+  `entry_date`, so a user's day is the same for everyone. `agent_entries` are the exception — they
+  store **only** timestamps and **no** `entry_date`, so a session that crosses midnight lands on the
+  correct day for whoever is viewing; the day is derived from `startedAt` in the viewer's timezone at
+  read time. Reports resolve relative ranges (`this_month`) and the generation date in the running
+  user's timezone.
 - **Denormalized `workspaceId`.** Copied onto `work_entries`, `agent_entries`, and `agent_events` so
   membership-scoped queries never have to join through a project. The workspace is the cheap filter.
 - **Archival vs deletion.** `archivedAt` / `status = "archived"` hide a workspace, project, or agent

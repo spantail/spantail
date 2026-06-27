@@ -7,13 +7,15 @@ import type { DateRangePreset } from "./report";
 export interface ReportContextInput {
 	report: { name: string; note: string | null };
 	period: { from: string; to: string; preset: DateRangePreset | null };
+	// The timezone the report is rendered in: the running user's timezone. Used
+	// for the generation date and as template context (entries are pre-bucketed
+	// by their stored local date, so grouping itself needs no timezone).
 	timezone: string;
 	generatedAt: Date;
 	workspaces: Array<{
 		id: string;
 		slug: string;
 		name: string;
-		timezone: string;
 	}>;
 	projects: Array<{
 		id: string;
@@ -187,7 +189,6 @@ export function buildReportContext(
 			id: w.id,
 			slug: w.slug,
 			name: w.name,
-			timezone: w.timezone,
 		})),
 		projects: input.projects.map((p) => ({
 			id: p.id,

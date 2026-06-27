@@ -59,13 +59,18 @@ pnpm deploy             # wrangler deploy (apps/web)
   navigation, and a single Settings cog pinned at the bottom that opens the Settings hub
   (`/settings`). Settings is one screen with a left sub-nav grouping every management section —
   Workspace (general, projects, members), Account (API tokens, password, preferences: language +
-  theme), Reporting (report templates — instance-scoped, gated to instance admins and users with
+  theme + timezone), Reporting (report templates — instance-scoped, gated to instance admins and users with
   the template-author capability), and System (instance admin only: user management, email,
   social login) — each a deep-linkable child route (`/settings/<section>`).
   User-scoped surfaces — reports and the user menu (account, logout) — live in the header's
   top-right corner, never in the sidebar. New screens render inside this shell.
-- **Dates and time.** `work_entries.entry_date` is a local date string (`YYYY-MM-DD`) in the
-  workspace's timezone. All timestamps are UTC. Durations are integer minutes.
+- **Dates and time.** Timezone is a per-user concept (`user.timezone`, null → UTC); workspaces and
+  projects have none. A date and a timestamp are independent: `work_entries.entry_date` is a local
+  date string (`YYYY-MM-DD`) in the author's timezone, frozen at write; all timestamps are UTC
+  instants; durations are integer minutes. Daily aggregation groups by the stored `entry_date` (no
+  timezone needed). `agent_entries` store only timestamps (no `entry_date`) — their calendar day is
+  derived from `startedAt` in the viewer's timezone at read time. Reports resolve relative ranges and
+  the generation date in the running user's timezone.
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report filters
   must be validated against the union of the user's workspaces. See
   [`docs/permissions.md`](docs/permissions.md) for the full role × resource access model (the

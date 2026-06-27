@@ -95,6 +95,9 @@ export const agentEntrySchema = z.object({
 	agentId: z.string(),
 	// External session identifier (CC session_id / Codex thread / Cursor convo).
 	sessionId: z.string(),
+	// Derived at read time: the local date of `startedAt` in the requesting
+	// user's timezone. Agent sessions store only timestamps (no frozen date), so
+	// a midnight-spanning session lands on the correct day for whoever is viewing.
 	entryDate: localDateSchema,
 	durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
 	// Null when the source can't expose token usage locally (e.g. Cursor).
@@ -124,8 +127,8 @@ export const ingestAgentEntryInputSchema = z
 		usage: agentUsageSchema.optional(),
 		description: z.string().max(2000).optional(),
 		// Format alone is not enough: a leaked write-only token could backdate to
-		// 1970 or forward-date far into the future, silently polluting the
-		// date-bucketed reports `entry_date` is derived from. Bound the range too.
+		// 1970 or forward-date far into the future. `startedAt` is the instant the
+		// session's day is derived from at read time, so bound the range too.
 		startedAt: z.iso
 			.datetime()
 			.refine(isTimestampInRange, "must be a plausible timestamp")

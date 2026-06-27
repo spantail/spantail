@@ -41,8 +41,8 @@ const fixture: ReportContextInput = {
 	timezone: "Asia/Tokyo",
 	generatedAt: new Date("2026-06-01T09:00:00Z"),
 	workspaces: [
-		{ id: "ws1", slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
-		{ id: "ws2", slug: "labs", name: "Labs", timezone: "UTC" },
+		{ id: "ws1", slug: "acme", name: "Acme" },
+		{ id: "ws2", slug: "labs", name: "Labs" },
 	],
 	projects: [
 		{ id: "p1", slug: "spantail", name: "Spantail", workspaceId: "ws1" },

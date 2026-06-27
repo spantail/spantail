@@ -14,12 +14,7 @@ async function enableAgents(adminCookie: string): Promise<void> {
 
 async function createWorkspace(cookie: string, slug: string): Promise<string> {
 	const ws = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/workspaces",
-			{ slug, name: slug, timezone: "Asia/Tokyo" },
-			cookie,
-		)
+		await apiJson("POST", "/api/v1/workspaces", { slug, name: slug }, cookie)
 	).json()) as { id: string };
 	return ws.id;
 }

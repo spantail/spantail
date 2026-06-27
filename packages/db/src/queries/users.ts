@@ -97,6 +97,7 @@ export async function updateUser(
 			| "emailVerified"
 			| "canManageTemplates"
 			| "disabled"
+			| "timezone"
 			| "image"
 		>
 	>,

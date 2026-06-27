@@ -165,7 +165,7 @@ export function EntryForm({
 
 	const mutation = useMutation({
 		mutationFn: () => {
-			// Start is the entry date at the start clock in the workspace timezone.
+			// Start is the entry date at the start clock in the user timezone.
 			// The end instant is the start plus the (authoritative) duration, so it
 			// stays correct past midnight and for entries of 24h or longer.
 			const minutes = parseMinutes(duration);

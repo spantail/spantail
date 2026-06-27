@@ -16,7 +16,7 @@ async function setup() {
 		await apiJson(
 			"POST",
 			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
+			{ slug: "acme", name: "Acme" },
 			admin,
 		)
 	).json()) as { id: string };
@@ -135,6 +135,35 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 		await apiGet(`/api/v1/agent-entries/agents?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{ id: string }>;
 	expect(active.map((a) => a.id)).toContain(agentId);
+});
+
+it("derives an agent session's day in the viewer's timezone", async () => {
+	const { admin, ws, project } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	// 2026-06-01T15:30Z is still 2026-06-01 in UTC but already 2026-06-02 00:30
+	// in Asia/Tokyo — agent entries store only the instant, so the calendar day
+	// is a read-time projection in the viewer's timezone.
+	await ingest(token, {
+		sessionId: "s1",
+		projectId: project.id,
+		durationMinutes: 30,
+		startedAt: "2026-06-01T15:30:00.000Z",
+	});
+
+	// Default viewer (no timezone set → UTC fallback): lands on 2026-06-01.
+	const utcList = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{ entryDate: string }>;
+	expect(utcList[0]?.entryDate).toBe("2026-06-01");
+
+	// Same session, viewed after setting Asia/Tokyo: rolls into 2026-06-02.
+	await apiJson("PATCH", "/api/v1/me", { timezone: "Asia/Tokyo" }, admin);
+	const jstList = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{ entryDate: string }>;
+	expect(jstList[0]?.entryDate).toBe("2026-06-02");
 });
 
 it("records no project when the ingest omits one", async () => {

@@ -1,6 +1,7 @@
 import {
 	createWorkEntryInputSchema,
 	listWorkEntriesQuerySchema,
+	resolveUserTimezone,
 	todayInTimezone,
 	updateWorkEntryInputSchema,
 	type WorkEntrySource,
@@ -104,10 +105,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	.post("/", ingestRateLimit, async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createWorkEntryInputSchema, await c.req.json());
-		const { workspace, membership } = await requireWorkspaceAccess(
-			c,
-			input.workspaceId,
-		);
+		const { membership } = await requireWorkspaceAccess(c, input.workspaceId);
 		await requireProjectInWorkspace(c, input.projectId, input.workspaceId);
 		await requireProjectAccess(c, input.projectId, membership, user.id);
 
@@ -115,7 +113,8 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			workspaceId: input.workspaceId,
 			projectId: input.projectId,
 			userId: user.id,
-			entryDate: input.entryDate ?? todayInTimezone(workspace.timezone),
+			entryDate:
+				input.entryDate ?? todayInTimezone(resolveUserTimezone(user.timezone)),
 			durationMinutes: input.durationMinutes,
 			startedAt: input.startedAt ? new Date(input.startedAt) : null,
 			endedAt: input.endedAt ? new Date(input.endedAt) : null,

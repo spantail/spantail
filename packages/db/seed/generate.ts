@@ -197,7 +197,6 @@ export async function generateDataset(
 			id: ws.id,
 			slug: ws.slug,
 			name: ws.name,
-			timezone: ws.timezone,
 			settings: {},
 			createdAt: baseCreatedAt,
 			archivedAt: null,
@@ -272,6 +271,15 @@ export async function generateDataset(
 		const list = workspacesByUser.get(user.key) ?? [];
 		list.push(ws);
 		workspacesByUser.set(user.key, list);
+	}
+
+	// Timezone is per-user: give each demo user their primary (first-joined)
+	// workspace's timezone, so their seeded work dates read coherently on the
+	// home timeline. Users with no membership fall back to the UTC default (null).
+	for (const [key, user] of usersByKey) {
+		const home = workspacesByUser.get(key)?.[0];
+		const row = userRows.find((r) => r.id === user.id);
+		if (row) row.timezone = home?.timezone ?? null;
 	}
 
 	// --- Projects -----------------------------------------------------------
@@ -536,9 +544,7 @@ export async function generateDataset(
 					period: { from: date, to: date, preset: null },
 					timezone: ws.timezone,
 					generatedAt: createdAt,
-					workspaces: [
-						{ id: ws.id, slug: ws.slug, name: ws.name, timezone: ws.timezone },
-					],
+					workspaces: [{ id: ws.id, slug: ws.slug, name: ws.name }],
 					projects: scopedProjects.map((p) => ({
 						id: p.id,
 						slug: p.slug,
@@ -632,7 +638,6 @@ export async function generateDataset(
 					id: w.id,
 					slug: w.slug,
 					name: w.name,
-					timezone: w.timezone,
 				})),
 				projects: scopedProjects.map((p) => ({
 					id: p.id,
@@ -739,9 +744,7 @@ export async function generateDataset(
 					period: { from: month.first, to: month.last, preset: null },
 					timezone: ws.timezone,
 					generatedAt: createdAt,
-					workspaces: [
-						{ id: ws.id, slug: ws.slug, name: ws.name, timezone: ws.timezone },
-					],
+					workspaces: [{ id: ws.id, slug: ws.slug, name: ws.name }],
 					projects: scopedProjects.map((p) => ({
 						id: p.id,
 						slug: p.slug,
@@ -934,7 +937,6 @@ export async function generateDataset(
 					projectId: project?.id ?? null,
 					agentId,
 					sessionId,
-					entryDate: todayInTimezone(ws.timezone, new Date(minTs)),
 					durationMinutes: Math.max(0, Math.round((maxTs - minTs) / 60_000)),
 					usage: {
 						inputTokens: input,

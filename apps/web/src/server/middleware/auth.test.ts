@@ -94,7 +94,7 @@ it("enforces the scope matrix", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/workspaces",
-			{ slug: "acme", name: "Acme", timezone: "UTC" },
+			{ slug: "acme", name: "Acme" },
 			adminCookie,
 		)
 	).json()) as { id: string };
@@ -148,7 +148,7 @@ it("enforces the scope matrix", async () => {
 	const wsDenied = await bearerJson(
 		"POST",
 		"/api/v1/workspaces",
-		{ slug: "other", name: "Other", timezone: "UTC" },
+		{ slug: "other", name: "Other" },
 		writeToken,
 	);
 	expect(wsDenied.status).toBe(403);

@@ -1,4 +1,9 @@
-import type { AgentUsage } from "@spantail/core";
+import {
+	type AgentUsage,
+	shiftDays,
+	todayInTimezone,
+	zonedDateTimeToUtc,
+} from "@spantail/core";
 import {
 	and,
 	asc,
@@ -8,7 +13,7 @@ import {
 	inArray,
 	isNotNull,
 	isNull,
-	lte,
+	lt,
 	ne,
 	type SQL,
 	sql,
@@ -394,7 +399,6 @@ export async function upsertAgentEntry(
 				workspaceId: values.workspaceId,
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
-				entryDate: values.entryDate,
 				durationMinutes: values.durationMinutes,
 				usage: values.usage,
 				description: values.description,
@@ -415,8 +419,13 @@ interface AgentEntryFilter {
 	// the requesting user so members see only their own agents' activity.
 	ownerUserId?: string;
 	agentId?: string;
+	// Inclusive local-date range, interpreted in `timezone` and converted to a
+	// `startedAt` instant range. Agent entries carry no stored date.
 	from?: string;
 	to?: string;
+	// The viewing user's timezone: agent days are derived from `startedAt` in it,
+	// both for range filtering and for the per-day buckets returned to callers.
+	timezone: string;
 	// Project ACL: restricts results to agent entries the caller may read.
 	access?: EntryAccessScope;
 }
@@ -427,8 +436,21 @@ function agentEntryConditions(query: AgentEntryFilter) {
 		conditions.push(eq(agentEntries.ownerUserId, query.ownerUserId));
 	}
 	if (query.agentId) conditions.push(eq(agentEntries.agentId, query.agentId));
-	if (query.from) conditions.push(gte(agentEntries.entryDate, query.from));
-	if (query.to) conditions.push(lte(agentEntries.entryDate, query.to));
+	// Convert the local-date window to a half-open [from 00:00, to+1 00:00) instant
+	// range in the viewer's timezone, so a session is in-range on the same day the
+	// per-day buckets place it.
+	if (query.from) {
+		const lo = new Date(
+			zonedDateTimeToUtc(query.from, "00:00", query.timezone),
+		);
+		conditions.push(gte(agentEntries.startedAt, lo));
+	}
+	if (query.to) {
+		const hi = new Date(
+			zonedDateTimeToUtc(shiftDays(query.to, 1), "00:00", query.timezone),
+		);
+		conditions.push(lt(agentEntries.startedAt, hi));
+	}
 	if (query.access) {
 		// Agent activity is private by default: unassigned (no-project) sessions
 		// stay owner-only, unlike work entries which are workspace-wide.
@@ -454,7 +476,7 @@ export async function listAgentEntries(
 		.select()
 		.from(agentEntries)
 		.where(and(...agentEntryConditions(query)))
-		.orderBy(desc(agentEntries.entryDate), desc(agentEntries.createdAt))
+		.orderBy(desc(agentEntries.startedAt))
 		.limit(query.limit)
 		.offset(query.offset);
 }
@@ -481,54 +503,87 @@ export interface AgentEntryStatsResult {
 	}>;
 }
 
-/** Aggregates entries matching the same filters as `listAgentEntries`. */
+/**
+ * Aggregates entries matching the same filters as `listAgentEntries`. Per-day
+ * buckets are computed in application code from each session's `startedAt` in
+ * the viewer's timezone — SQLite/D1 has no IANA-timezone date functions, and the
+ * day is a read-time projection rather than a stored value.
+ */
 export async function getAgentEntryStats(
 	db: Database,
 	query: AgentEntryFilter,
 ): Promise<AgentEntryStatsResult> {
 	const conditions = agentEntryConditions(query);
-	const minutes =
-		sql<number>`coalesce(sum(${agentEntries.durationMinutes}), 0)`.mapWith(
-			Number,
-		);
-	// Token buckets live inside the usage JSON; entries without usage count as 0.
-	const tokenBucket = (key: string) =>
-		sql<number>`coalesce(sum(coalesce(json_extract(${agentEntries.usage}, ${`$.${key}`}), 0)), 0)`.mapWith(
-			Number,
-		);
-	const tokens = tokenBucket("totalTokens");
-	const inputTokens = tokenBucket("inputTokens");
-	const outputTokens = tokenBucket("outputTokens");
-	const count = sql<number>`count(*)`.mapWith(Number);
+	const rows = await db
+		.select({
+			agentId: agentEntries.agentId,
+			startedAt: agentEntries.startedAt,
+			durationMinutes: agentEntries.durationMinutes,
+			usage: agentEntries.usage,
+		})
+		.from(agentEntries)
+		.where(and(...conditions));
 
-	const [byDate, byAgent] = await Promise.all([
-		db
-			.select({
-				date: agentEntries.entryDate,
-				minutes,
-				tokens,
-				inputTokens,
-				outputTokens,
-				count,
-			})
-			.from(agentEntries)
-			.where(and(...conditions))
-			.groupBy(agentEntries.entryDate)
-			.orderBy(asc(agentEntries.entryDate)),
-		db
-			.select({ agentId: agentEntries.agentId, minutes, tokens, count })
-			.from(agentEntries)
-			.where(and(...conditions))
-			.groupBy(agentEntries.agentId)
-			.orderBy(desc(tokens)),
-	]);
+	type DayBucket = AgentEntryStatsResult["byDate"][number];
+	type AgentBucket = AgentEntryStatsResult["byAgent"][number];
+	const byDateMap = new Map<string, DayBucket>();
+	const byAgentMap = new Map<string, AgentBucket>();
+	let totalMinutes = 0;
+	let totalTokens = 0;
+	let totalInputTokens = 0;
+	let totalOutputTokens = 0;
+
+	for (const row of rows) {
+		const date = todayInTimezone(query.timezone, row.startedAt);
+		const minutes = row.durationMinutes;
+		// Agents that don't expose token buckets contribute 0 to each.
+		const tokens = row.usage?.totalTokens ?? 0;
+		const inputTokens = row.usage?.inputTokens ?? 0;
+		const outputTokens = row.usage?.outputTokens ?? 0;
+
+		const day = byDateMap.get(date) ?? {
+			date,
+			minutes: 0,
+			tokens: 0,
+			inputTokens: 0,
+			outputTokens: 0,
+			count: 0,
+		};
+		day.minutes += minutes;
+		day.tokens += tokens;
+		day.inputTokens += inputTokens;
+		day.outputTokens += outputTokens;
+		day.count += 1;
+		byDateMap.set(date, day);
+
+		const agent = byAgentMap.get(row.agentId) ?? {
+			agentId: row.agentId,
+			minutes: 0,
+			tokens: 0,
+			count: 0,
+		};
+		agent.minutes += minutes;
+		agent.tokens += tokens;
+		agent.count += 1;
+		byAgentMap.set(row.agentId, agent);
+
+		totalMinutes += minutes;
+		totalTokens += tokens;
+		totalInputTokens += inputTokens;
+		totalOutputTokens += outputTokens;
+	}
+
+	const byDate = [...byDateMap.values()].sort((a, b) =>
+		a.date.localeCompare(b.date),
+	);
+	const byAgent = [...byAgentMap.values()].sort((a, b) => b.tokens - a.tokens);
 
 	return {
-		totalMinutes: byDate.reduce((acc, row) => acc + row.minutes, 0),
-		totalTokens: byDate.reduce((acc, row) => acc + row.tokens, 0),
-		totalInputTokens: byDate.reduce((acc, row) => acc + row.inputTokens, 0),
-		totalOutputTokens: byDate.reduce((acc, row) => acc + row.outputTokens, 0),
-		entryCount: byDate.reduce((acc, row) => acc + row.count, 0),
+		totalMinutes,
+		totalTokens,
+		totalInputTokens,
+		totalOutputTokens,
+		entryCount: rows.length,
 		byDate,
 		byAgent,
 	};
@@ -671,7 +726,6 @@ export async function materializeAgentSessionRollup(
 				workspaceId: values.workspaceId,
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
-				entryDate: values.entryDate,
 				durationMinutes: values.durationMinutes,
 				usage: values.usage,
 				description: values.description,

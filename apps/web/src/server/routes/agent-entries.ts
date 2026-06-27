@@ -2,9 +2,11 @@ import {
 	agentEntryStatsQuerySchema,
 	ingestAgentEntryInputSchema,
 	listAgentEntriesQuerySchema,
+	resolveUserTimezone,
 	todayInTimezone,
 } from "@spantail/core";
 import {
+	type AgentEntryRow,
 	getAgentEntryStats,
 	getMembership,
 	getProjectById,
@@ -27,6 +29,13 @@ import { requireAgentAuth, requireScope } from "../middleware/auth";
 import { ingestRateLimit } from "../middleware/rate-limit";
 import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
+
+// Agent entries store only timestamps; `entryDate` is a read-time projection of
+// `startedAt` into the viewer's timezone (UTC for the ingest echo, where there
+// is no human viewer — readers recompute it in their own timezone).
+function serializeAgentEntry(row: AgentEntryRow, timezone: string) {
+	return { ...row, entryDate: todayInTimezone(timezone, row.startedAt) };
+}
 
 export const agentEntryRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
@@ -73,15 +82,15 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			await requireProjectAccess(c, projectId, membership, auth.ownerUserId);
 		}
 
-		const startedAt = input.startedAt ? new Date(input.startedAt) : null;
+		// Agent sessions are always timestamped; the calendar day is derived from
+		// startedAt at read time. Fall back to ingest time when the source omits it.
+		const startedAt = input.startedAt ? new Date(input.startedAt) : new Date();
 		const entry = await upsertAgentEntry(c.var.db, {
 			workspaceId,
 			ownerUserId: auth.ownerUserId,
 			projectId: projectId ?? null,
 			agentId: auth.agentId,
 			sessionId: input.sessionId,
-			// The session's local date in the workspace timezone (from its start).
-			entryDate: todayInTimezone(workspace.timezone, startedAt ?? undefined),
 			durationMinutes: input.durationMinutes,
 			usage: input.usage ?? null,
 			description: input.description ?? null,
@@ -89,7 +98,7 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			endedAt: input.endedAt ? new Date(input.endedAt) : null,
 		});
 		publishToWorkspace(c, { type: "agent-entry", workspaceId });
-		return c.json(entry);
+		return c.json(serializeAgentEntry(entry, resolveUserTimezone(null)));
 	})
 	// Reads follow the project ACL: a member sees agent activity in the projects
 	// they belong to plus their own agents' activity (unassigned activity stays
@@ -105,7 +114,13 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			membership,
 			auth.user.id,
 		);
-		return c.json(await listAgentEntries(c.var.db, { ...query, access }));
+		const timezone = resolveUserTimezone(auth.user.timezone);
+		const rows = await listAgentEntries(c.var.db, {
+			...query,
+			timezone,
+			access,
+		});
+		return c.json(rows.map((row) => serializeAgentEntry(row, timezone)));
 	})
 	.get("/stats", async (c) => {
 		const auth = requireScope(c, "read");
@@ -116,7 +131,13 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			membership,
 			auth.user.id,
 		);
-		return c.json(await getAgentEntryStats(c.var.db, { ...query, access }));
+		return c.json(
+			await getAgentEntryStats(c.var.db, {
+				...query,
+				timezone: resolveUserTimezone(auth.user.timezone),
+				access,
+			}),
+		);
 	})
 	// The caller's own agents, shown under a workspace in the sidebar: those with
 	// activity here plus the ones registered to this workspace.

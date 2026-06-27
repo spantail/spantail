@@ -34,6 +34,13 @@ export const authOptions = {
 				defaultValue: false,
 				input: false,
 			},
+			// The user's IANA timezone (null = UTC fallback). Client-settable from
+			// account preferences (input: true), unlike the admin-only flags above.
+			timezone: {
+				type: "string",
+				required: false,
+				input: true,
+			},
 		},
 	},
 } satisfies BetterAuthOptions;

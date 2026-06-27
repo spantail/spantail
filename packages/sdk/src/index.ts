@@ -53,6 +53,7 @@ import type {
 	SendReportResult,
 	SetMailFlagsInput,
 	UnreadCount,
+	UpdateAccountPreferencesInput,
 	UpdateAgentInput,
 	UpdateAgentsEnabledInput,
 	UpdateEmailSettingsInput,
@@ -180,6 +181,11 @@ export class SpantailClient {
 
 	me(): Promise<Me> {
 		return this.request("GET", "/me");
+	}
+
+	/** Updates the caller's own account preferences (timezone); returns updated me. */
+	updateAccountPreferences(input: UpdateAccountPreferencesInput): Promise<Me> {
+		return this.request("PATCH", "/me", { body: input });
 	}
 
 	/** Replaces the caller's avatar with the given image blob; returns updated me. */

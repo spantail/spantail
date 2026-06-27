@@ -54,7 +54,7 @@ export const loadAuth = createMiddleware<AppEnv>(async (c, next) => {
 	// A disabled account is locked out immediately: ignore its still-valid
 	// session so every authenticated route sees an anonymous caller (401).
 	if (session && !session.user.disabled) {
-		const { id, name, email, isAdmin, canManageTemplates, image } =
+		const { id, name, email, isAdmin, canManageTemplates, image, timezone } =
 			session.user;
 		c.set("auth", {
 			user: {
@@ -64,6 +64,7 @@ export const loadAuth = createMiddleware<AppEnv>(async (c, next) => {
 				isAdmin: isAdmin ?? false,
 				canManageTemplates: canManageTemplates ?? false,
 				imageUrl: resolveAvatarUrl(id, image),
+				timezone: timezone ?? null,
 			},
 			via: "session",
 		});
@@ -102,6 +103,7 @@ async function resolvePat(
 			isAdmin: user.isAdmin ?? false,
 			canManageTemplates: user.canManageTemplates ?? false,
 			imageUrl: resolveAvatarUrl(user.id, user.image),
+			timezone: user.timezone ?? null,
 		},
 		via: "pat",
 		scopes: row.scopes,

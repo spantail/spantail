@@ -12,7 +12,7 @@ import {
 // 2026-06-07 is a Sunday; 16:30 UTC is already 2026-06-08 (Monday) in JST.
 const sundayUtcMondayJst = new Date("2026-06-07T16:30:00Z");
 
-it("resolves today and yesterday in the workspace timezone", () => {
+it("resolves today and yesterday in the given timezone", () => {
 	expect(resolveDateRange("today", "UTC", sundayUtcMondayJst)).toEqual({
 		from: "2026-06-07",
 		to: "2026-06-07",

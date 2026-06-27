@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { slugSchema, timezoneSchema } from "./common";
+import { slugSchema } from "./common";
 
 export const workspaceRoleSchema = z.enum(["owner", "admin", "member"]);
 export type WorkspaceRole = z.infer<typeof workspaceRoleSchema>;
@@ -25,7 +25,6 @@ export const workspaceSchema = z.object({
 	id: z.string(),
 	slug: slugSchema,
 	name: z.string().min(1).max(100),
-	timezone: timezoneSchema,
 	accentColor: workspaceAccentColorSchema,
 	logoUrl: z.string().nullable(),
 	settings: z.record(z.string(), z.unknown()),
@@ -55,7 +54,6 @@ export function isWorkspaceLogoMimeType(
 export const createWorkspaceInputSchema = z.object({
 	slug: slugSchema,
 	name: z.string().min(1).max(100),
-	timezone: timezoneSchema,
 });
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 
@@ -63,7 +61,6 @@ export const updateWorkspaceInputSchema = z
 	.object({
 		slug: slugSchema,
 		name: z.string().min(1).max(100),
-		timezone: timezoneSchema,
 		accentColor: workspaceAccentColorSchema,
 		archived: z.boolean(),
 	})
