@@ -25,8 +25,12 @@ export function AuthedRoot({
 	// changes from other users, the CLI, MCP, and agent ingest surface live.
 	useRealtimeSync();
 
-	// One-time: adopt the browser's timezone for a user who has none set yet, so
-	// their local dates aren't silently bucketed in UTC until they visit settings.
+	// One-time per user/device: adopt the browser's timezone for a user who has
+	// none set yet, so their local dates aren't silently bucketed in UTC until
+	// they visit settings. A localStorage marker (keyed by user id) makes this
+	// fire only once ever — without it, a user who deliberately clears their
+	// timezone back to the UTC fallback would have the browser zone re-applied on
+	// the next load, making UTC impossible to persist.
 	const detectTimezone = useMutation({
 		mutationFn: (timezone: string) =>
 			api.updateAccountPreferences({ timezone }),
@@ -35,10 +39,15 @@ export function AuthedRoot({
 	const detectAttempted = useRef(false);
 	useEffect(() => {
 		if (detectAttempted.current || !me.data) return;
+		detectAttempted.current = true;
 		if (me.data.user.timezone != null) return;
+		const adoptedKey = `spantail.tz-adopted.${me.data.user.id}`;
+		if (localStorage.getItem(adoptedKey)) return;
 		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 		if (!tz) return;
-		detectAttempted.current = true;
+		// Mark before mutating so the adoption is never repeated on this device,
+		// even across the explicit "clear to UTC" flow.
+		localStorage.setItem(adoptedKey, "1");
 		detectTimezone.mutate(tz);
 	}, [me.data, detectTimezone]);
 
