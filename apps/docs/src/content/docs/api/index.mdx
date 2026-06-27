@@ -44,7 +44,7 @@ full model, token formats, and scopes.
 Timezone is a per-user concept (`user.timezone`, `null` means UTC). Workspaces and projects
 have none. A date and a timestamp are independent:
 
-- `work_entries.entry_date` is a local date string in the author's timezone, frozen at write.
+- A work entry's `entryDate` is a local date string in the author's timezone, frozen at write.
 - All timestamps are UTC instants; durations are integer minutes.
 - Agent entries store only timestamps; their calendar day is derived from `startedAt` in the
   viewer's timezone at read time.

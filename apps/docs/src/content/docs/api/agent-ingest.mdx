@@ -66,8 +66,9 @@ Records one agent session. Idempotent on `(agent, sessionId)`: re-sending the sa
 updates the row instead of inserting a duplicate, so retries and batch reconciliation never
 double-count.
 
-`workspaceId` and `projectId` default to the token's binding when omitted; if neither the
-body nor the token supplies a workspace, the request is rejected. `entryDate` is never sent —
+`workspaceId` defaults to the token's bound workspace when omitted; if neither the body nor
+the token supplies a workspace, the request is rejected. `projectId` has no token-level
+default — omitting it records the work at the workspace level. `entryDate` is never sent —
 it is derived from `startedAt` at read time. When `startedAt` is omitted it falls back to
 `endedAt`, then to ingest time.
 
@@ -138,8 +139,9 @@ idempotently inserts new events, then recomputes the session's rollup into the s
 the cumulative transcript every turn is safe — seen events are no-ops and the rollup is
 recomputed (not incremented), so totals converge.
 
-`workspaceId` and `projectId` default to the token's binding when omitted, with the same live
-delegation checks as the summary path.
+`workspaceId` defaults to the token's bound workspace when omitted; `projectId` has no
+token-level default (omitting it records workspace-level work). The same live delegation
+checks as the summary path apply.
 
 **Request body**
 
