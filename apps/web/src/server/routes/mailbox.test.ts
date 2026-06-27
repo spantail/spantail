@@ -312,3 +312,64 @@ it("rejects flagging a target the caller doesn't own", async () => {
 		).status,
 	).toBe(400);
 });
+
+it("sendToSelf drops a copy in the sender's inbox, hidden from Sent", async () => {
+	const { owner, report, aliceId, bobId } = await setup();
+	const sent = await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ recipientUserIds: [aliceId, bobId], sendToSelf: true },
+		owner,
+	);
+	// delivered counts teammate recipients only; the self-copy is not counted.
+	expect((await sent.json()) as { delivered: number }).toEqual({
+		delivered: 2,
+	});
+
+	// The self-copy lands in the sender's own inbox.
+	const ownerInbox = await folder(owner, "inbox");
+	expect(ownerInbox).toHaveLength(1);
+	expect(ownerInbox[0]?.scope).toBe("received");
+	expect(ownerInbox[0]?.reportName).toBe("Daily");
+
+	// Sent stays a single batch listing only the two teammates — the self-copy is
+	// excluded from the recipient list and count.
+	const ownerSent = await folder(owner, "sent");
+	expect(ownerSent).toHaveLength(1);
+	expect(ownerSent[0]?.recipientCount).toBe(2);
+	expect([...(ownerSent[0]?.recipientNames ?? [])].sort()).toEqual([
+		"Alice",
+		"Bob",
+	]);
+});
+
+it("sends to self alone with no teammate recipients", async () => {
+	const { owner, report } = await setup();
+	const sent = await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ recipientUserIds: [], sendToSelf: true },
+		owner,
+	);
+	expect((await sent.json()) as { delivered: number }).toEqual({
+		delivered: 0,
+	});
+
+	// A self-only send is inbox-only: one received row, nothing in Sent.
+	expect(await folder(owner, "inbox")).toHaveLength(1);
+	expect(await folder(owner, "sent")).toHaveLength(0);
+});
+
+it("rejects a send with neither recipients nor sendToSelf", async () => {
+	const { owner, report } = await setup();
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/reports/${report.id}/send`,
+				{ recipientUserIds: [] },
+				owner,
+			)
+		).status,
+	).toBe(400);
+});

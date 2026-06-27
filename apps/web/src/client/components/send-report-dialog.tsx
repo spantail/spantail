@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { PersonAvatar } from "@/components/person-avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -36,6 +37,7 @@ export function SendReportDialog({
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
 	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [sendToSelf, setSendToSelf] = useState(false);
 	const [message, setMessage] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
@@ -48,13 +50,20 @@ export function SendReportDialog({
 		mutationFn: () =>
 			api.sendReport(report.id, {
 				recipientUserIds: [...selected],
+				sendToSelf,
 				message: message.trim() === "" ? undefined : message,
 			}),
 		onSuccess: (result) => {
 			// The report is now shared, so a cached {shared:false} discussion
 			// (owner opened it before sending) must refetch.
 			invalidateReportDiscussion(queryClient, report.id);
-			toast.success(t("reports.send.toast", { count: result.delivered }));
+			// `delivered` counts teammate recipients only; a self-only send reports 0,
+			// so confirm the inbox copy instead.
+			toast.success(
+				result.delivered === 0
+					? t("reports.send.toastSelfOnly")
+					: t("reports.send.toast", { count: result.delivered }),
+			);
 			onClose();
 		},
 		onError: (err: Error) => setError(err.message),
@@ -170,6 +179,22 @@ export function SendReportDialog({
 							</>
 						)}
 					</div>
+					<label htmlFor="send-to-self" className="flex items-start gap-3">
+						<Checkbox
+							id="send-to-self"
+							checked={sendToSelf}
+							onCheckedChange={(checked) => setSendToSelf(checked === true)}
+							className="mt-0.5"
+						/>
+						<span className="flex flex-col gap-0.5">
+							<span className="text-sm font-medium">
+								{t("reports.send.sendToSelf")}
+							</span>
+							<span className="text-muted-foreground text-xs">
+								{t("reports.send.sendToSelfHint")}
+							</span>
+						</span>
+					</label>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="send-message">{t("reports.send.message")}</Label>
 						<Textarea
@@ -204,7 +229,7 @@ export function SendReportDialog({
 						</Button>
 						<Button
 							type="submit"
-							disabled={count === 0 || sendMutation.isPending}
+							disabled={(count === 0 && !sendToSelf) || sendMutation.isPending}
 						>
 							<SendIcon />
 							{count === 0

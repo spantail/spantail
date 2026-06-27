@@ -1,10 +1,20 @@
 import { z } from "zod";
 
-/** "Send to" input: one or more recipients and an optional short note. */
-export const sendReportInputSchema = z.object({
-	recipientUserIds: z.array(z.string()).min(1).max(50),
-	message: z.string().max(1000).optional(),
-});
+/**
+ * "Send to" input: recipients and/or a copy to the sender's own inbox, plus an
+ * optional short note. `sendToSelf` is a flag rather than the sender appearing
+ * in `recipientUserIds` (they are excluded from the picker); at least one of a
+ * recipient or `sendToSelf` must be present.
+ */
+export const sendReportInputSchema = z
+	.object({
+		recipientUserIds: z.array(z.string()).max(50).default([]),
+		sendToSelf: z.boolean().default(false),
+		message: z.string().max(1000).optional(),
+	})
+	.refine((v) => v.recipientUserIds.length > 0 || v.sendToSelf, {
+		message: "Select at least one recipient or send to yourself",
+	});
 export type SendReportInput = z.infer<typeof sendReportInputSchema>;
 
 export const sendReportResultSchema = z.object({
