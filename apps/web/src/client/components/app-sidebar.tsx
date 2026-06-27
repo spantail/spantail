@@ -260,9 +260,10 @@ function SettingsMenu() {
 }
 
 export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
-	// An instance admin can pick a workspace they are not a member of (role
-	// `null`). The backend grants them a synthetic admin role, so the
-	// workspace-scoped navigation works and is shown like any other workspace.
+	// An instance admin can pick a workspace they are not a member of, where the
+	// client state still carries `role: null`. Authorization treats them as an
+	// admin anyway (`requireWorkspaceAccess`), so the workspace-scoped navigation
+	// works and is shown like any other workspace.
 	return (
 		<Sidebar collapsible="icon">
 			<SidebarHeader>
