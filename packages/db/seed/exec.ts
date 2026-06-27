@@ -1,14 +1,26 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 
 /** Monorepo root (…/packages/db/seed/ → up three). */
 export const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
-/** Directory holding a named seed dataset's YAML files. */
+/** Root holding the example datasets (one directory per dataset). */
+const examplesRoot = join(repoRoot, "examples");
+
+/** Directory holding a named dataset's seed YAML files. */
 export function seedDataDir(name: string): string {
-	return join(repoRoot, "examples/db/seed", name);
+	return join(examplesRoot, name, "db/seed");
+}
+
+/** Dataset names: examples/<name> directories that hold seed YAML. */
+export function availableDatasets(): string[] {
+	if (!existsSync(examplesRoot)) return [];
+	return readdirSync(examplesRoot, { withFileTypes: true })
+		.filter((e) => e.isDirectory() && existsSync(seedDataDir(e.name)))
+		.map((e) => e.name)
+		.sort();
 }
 
 /** Scratch dir for generated SQL / share bodies (gitignored). */

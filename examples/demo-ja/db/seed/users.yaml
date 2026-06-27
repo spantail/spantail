@@ -1,7 +1,4 @@
-# Demo users (Japanese instance). All share the same password (see seed/README.md).
-# `key` is an internal reference only. These users are intentionally distinct
-# from the English `demo` dataset (different names and email addresses) so the
-# two datasets never share a login identity.
+# demo-ja dataset — see ../../README.md
 - key: u-admin
   name: 山田 花子
   email: hanako@azumino.example
@@ -19,8 +16,6 @@
 - key: u-erin
   name: 高橋 由美
   email: yumi@azumino.example
-# Sole member of the Kanda Systems workspace — none of the Azumino team
-# (including the admin, Hanako) belongs there.
 - key: u-frank
   name: 渡辺 大輔
   email: daisuke@kanda.example

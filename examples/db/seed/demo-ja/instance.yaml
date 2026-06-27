@@ -1,6 +1,0 @@
-# シングルトンのインスタンス設定行。デモが各機能 (メール・ソーシャルログイン・
-# AI エージェント) を「有効」状態で確認できるよう、すべてのトグルを有効にする。
-emailEnabled: true
-googleOAuthEnabled: true
-githubOAuthEnabled: true
-agentsEnabled: true

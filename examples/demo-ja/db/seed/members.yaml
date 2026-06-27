@@ -1,0 +1,47 @@
+# demo-ja dataset — see ../../README.md
+- workspace: ws-self
+  user: u-admin
+  role: owner
+- workspace: ws-self
+  user: u-author
+  role: member
+- workspace: ws-self
+  user: u-carol
+  role: member
+- workspace: ws-self
+  user: u-dan
+  role: member
+- workspace: ws-self
+  user: u-erin
+  role: member
+
+- workspace: ws-acme
+  user: u-author
+  role: admin
+- workspace: ws-acme
+  user: u-erin
+  role: member
+- workspace: ws-acme
+  user: u-carol
+  role: member
+
+- workspace: ws-globex
+  user: u-carol
+  role: admin
+- workspace: ws-globex
+  user: u-author
+  role: member
+- workspace: ws-globex
+  user: u-erin
+  role: member
+
+- workspace: ws-meridian
+  user: u-dan
+  role: admin
+- workspace: ws-meridian
+  user: u-admin
+  role: member
+
+- workspace: ws-initech
+  user: u-frank
+  role: owner

@@ -41,7 +41,7 @@ pnpm deploy             # wrangler deploy (apps/web)
 | `packages/sdk` | Typed API client (reuses core schemas). |
 | `packages/templates` | Default report-template catalog (`.liquid` files). Worker reads via `?raw`; the seed via `/node` (fs). |
 | `packages/cli` | `spantail` CLI + stdio MCP server. A thin client of the REST API. |
-| `examples/db/seed` | Demo seed datasets (YAML) consumed by `pnpm db:seed <name>` (`demo`, `demo-ja`). |
+| `examples/<name>/db/seed` | Demo seed datasets (YAML) consumed by `pnpm db:seed <name>` (`demo`, `demo-ja`). |
 
 ## Architecture invariants
 

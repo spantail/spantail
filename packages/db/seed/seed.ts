@@ -1,26 +1,27 @@
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ensureTmpDir, seedDataDir, wranglerLocal } from "./exec";
+import {
+	availableDatasets,
+	ensureTmpDir,
+	seedDataDir,
+	wranglerLocal,
+} from "./exec";
 import { generateDataset, SEED_PASSWORD } from "./generate";
+import type { Language } from "./schema";
 import { datasetToSql } from "./to-sql";
 
 const DEFAULT_DATASET = "demo";
 
-/** Dataset directories under examples/db/seed (for the unknown-dataset hint). */
-function availableDatasets(): string[] {
-	const root = seedDataDir("");
-	if (!existsSync(root)) return [];
-	return readdirSync(root, { withFileTypes: true })
-		.filter((e) => e.isDirectory())
-		.map((e) => e.name)
-		.sort();
+/** A dataset whose name ends with "-ja" is Japanese; all others English. */
+function localeForDataset(name: string): Language {
+	return name.endsWith("-ja") ? "ja" : "en";
 }
 
 async function main(): Promise<void> {
 	// `pnpm db:seed <name>` forwards the name here; default to the demo dataset.
 	const name = process.argv[2] ?? DEFAULT_DATASET;
-	// A dataset name is a single directory under examples/db/seed — reject path
+	// A dataset name is a single directory under examples/ — reject path
 	// separators / traversal / absolute paths so it can't load YAML elsewhere.
 	if (!/^[a-z0-9][a-z0-9-]*$/i.test(name)) {
 		throw new Error(
@@ -32,11 +33,15 @@ async function main(): Promise<void> {
 		const choices = availableDatasets();
 		const hint = choices.length
 			? `Available datasets: ${choices.join(", ")}`
-			: "No datasets found under examples/db/seed.";
+			: "No datasets found under examples/.";
 		throw new Error(`Unknown seed dataset "${name}" (${dataDir}).\n${hint}`);
 	}
 
-	const dataset = await generateDataset(new Date(), dataDir);
+	const dataset = await generateDataset(
+		new Date(),
+		dataDir,
+		localeForDataset(name),
+	);
 	const tmp = ensureTmpDir();
 
 	const sqlPath = join(tmp, "seed.sql");

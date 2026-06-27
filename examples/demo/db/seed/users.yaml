@@ -1,5 +1,4 @@
-# Demo users. All share the same password (see seed/README.md).
-# `key` is an internal reference only.
+# demo dataset — see ../../README.md
 - key: u-admin
   name: Alice Nakamura
   email: alice@northwind.example
@@ -17,8 +16,6 @@
 - key: u-erin
   name: Erin Walsh
   email: erin@northwind.example
-# Sole member of the Initech workspace — none of the Northwind team (including
-# the admin, Alice) belongs there.
 - key: u-frank
   name: Frank Olsen
   email: frank@initech.example

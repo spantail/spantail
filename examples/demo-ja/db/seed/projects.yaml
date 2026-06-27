@@ -1,6 +1,4 @@
-# 各ワークスペースのアクティブなプロジェクト。`activities` は作業記録の生成に
-# 使う具体的なタスク文 (ユーザー/日付ごとに決定的にローテーション) で、デモが
-# 「X の機能を実装」の繰り返しではなく実際の作業のように読めるようにする。
+# demo-ja dataset — see ../../README.md
 - key: p-self-platform
   workspace: ws-self
   slug: platform

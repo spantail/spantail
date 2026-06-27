@@ -1,7 +1,4 @@
-# Three active projects per workspace. Names and `activities` follow the
-# workspace language. `activities` are concrete task phrases the work-entry
-# generator draws from (rotated deterministically per user/day), so the demo
-# reads like real work instead of "Implemented features for X" on repeat.
+# demo dataset — see ../../README.md
 - key: p-self-platform
   workspace: ws-self
   slug: platform

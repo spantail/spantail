@@ -1,6 +1,0 @@
-# The singleton instance settings row. Every toggle is enabled so the demo
-# exercises each surface (email, social login, AI agents) in the "on" state.
-emailEnabled: true
-googleOAuthEnabled: true
-githubOAuthEnabled: true
-agentsEnabled: true

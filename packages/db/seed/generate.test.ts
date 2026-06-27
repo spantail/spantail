@@ -8,15 +8,16 @@ type Row = Record<string, unknown>;
 
 // Tests exercise the generator against the shipped English `demo` dataset.
 const DEMO_DIR = fileURLToPath(
-	new URL("../../../examples/db/seed/demo/", import.meta.url),
+	new URL("../../../examples/demo/db/seed/", import.meta.url),
 );
+const DEMO_LOCALE = "en" as const;
 
 // Mid-June: the activity window covers all of May, so May is the one completed
 // month and weekday entries land throughout.
 const NOW = new Date("2026-06-18T09:00:00Z");
 
 async function build() {
-	const dataset = await generateDataset(NOW, DEMO_DIR);
+	const dataset = await generateDataset(NOW, DEMO_DIR, DEMO_LOCALE);
 	const rows = (name: string): Row[] =>
 		dataset.tables.find((t) => t.table === name)?.rows ?? [];
 	return { dataset, rows };
@@ -99,6 +100,7 @@ describe("generateDataset", () => {
 		const dataset = await generateDataset(
 			new Date("2026-07-01T00:00:00Z"),
 			DEMO_DIR,
+			DEMO_LOCALE,
 		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
@@ -128,6 +130,7 @@ describe("generateDataset", () => {
 		const dataset = await generateDataset(
 			new Date("2026-06-19T06:00:00Z"),
 			DEMO_DIR,
+			DEMO_LOCALE,
 		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];

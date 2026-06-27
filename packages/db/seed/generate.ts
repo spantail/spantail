@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { basename } from "node:path";
 import {
 	generateShareToken,
 	hashToken,
@@ -163,6 +162,7 @@ function toEngineEntry(e: EntryRecord): ReportContextInput["entries"][number] {
 export async function generateDataset(
 	now: Date,
 	dataDir: string,
+	locale: Language,
 ): Promise<Dataset> {
 	const config = loadConfig(dataDir);
 
@@ -308,10 +308,9 @@ export async function generateDataset(
 
 	// --- Templates (one default catalog template) --------------------------
 	// A single instance-scoped default template, seeded from @spantail/templates
-	// in the dataset's locale: datasets whose name ends with "-ja" get the
-	// Japanese default, all others the English one. (In production a fresh
-	// instance lazily seeds the default in the first admin's locale.)
-	const seedLocale: Language = basename(dataDir).endsWith("-ja") ? "ja" : "en";
+	// in the dataset's `locale`. (In production a fresh instance lazily seeds the
+	// default in the first admin's locale.)
+	const seedLocale = locale;
 	const author =
 		[...usersByKey.values()].find((u) => {
 			const cfg = config.users.find((c) => c.key === u.key);

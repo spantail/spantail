@@ -1,0 +1,5 @@
+# demo-ja dataset — see ../../README.md
+- sender: u-author
+  workspaces: [ws-acme, ws-globex]
+- sender: u-erin
+  workspaces: [ws-acme, ws-globex]
