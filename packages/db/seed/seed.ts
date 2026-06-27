@@ -23,9 +23,11 @@ async function main(): Promise<void> {
 	const name = process.argv[2] ?? DEFAULT_DATASET;
 	// A dataset name is a single directory under examples/ — reject path
 	// separators / traversal / absolute paths so it can't load YAML elsewhere.
-	if (!/^[a-z0-9][a-z0-9-]*$/i.test(name)) {
+	// Lowercase-only: on case-insensitive filesystems an uppercased name could
+	// resolve to a directory yet bypass the `-ja` locale check below.
+	if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
 		throw new Error(
-			`Invalid seed dataset name "${name}": use letters, digits and hyphens only.`,
+			`Invalid seed dataset name "${name}": use lowercase letters, digits and hyphens only.`,
 		);
 	}
 	const dataDir = seedDataDir(name);

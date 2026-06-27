@@ -125,7 +125,7 @@ function read<T>(dataDir: string, file: string, schema: z.ZodType<T>): T {
 /**
  * Loads and validates every YAML data file from `dataDir`, then checks
  * cross-references. The generation logic lives here in code; `dataDir` selects
- * which dataset (e.g. examples/db/seed/demo) supplies the data.
+ * which dataset (e.g. examples/demo/db/seed) supplies the data.
  */
 export function loadConfig(dataDir: string): SeedConfig {
 	const config: SeedConfig = {

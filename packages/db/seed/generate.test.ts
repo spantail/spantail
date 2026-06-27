@@ -352,6 +352,28 @@ describe("generateDataset", () => {
 		}
 	});
 
+	it("seeds the Japanese default template for a -ja dataset", async () => {
+		const demoJaDir = fileURLToPath(
+			new URL("../../../examples/demo-ja/db/seed/", import.meta.url),
+		);
+		const dataset = await generateDataset(NOW, demoJaDir, "ja");
+		const rows = (name: string): Row[] =>
+			dataset.tables.find((t) => t.table === name)?.rows ?? [];
+		// One template, and the rendered Japanese monthly report uses it ("合計").
+		expect(rows("reportTemplates")).toHaveLength(1);
+		const contentByReport = new Map(
+			rows("reportContent").map((c) => [
+				c.reportId as string,
+				c.content as string,
+			]),
+		);
+		const monthly = rows("reports").find((r) =>
+			String(r.name).startsWith("月報"),
+		);
+		expect(monthly).toBeDefined();
+		expect(contentByReport.get(monthly?.id as string)).toContain("合計");
+	});
+
 	it("serializes to non-empty SQL", async () => {
 		const { dataset } = await build();
 		const sql = datasetToSql(dataset.tables);
