@@ -134,3 +134,31 @@ export function utcToZonedTime(instant: string, timeZone: string): string {
 	const hour = String(Number(get("hour")) % 24).padStart(2, "0");
 	return `${hour}:${get("minute")}`;
 }
+
+/**
+ * Lower bound for ingested timestamps. Spantail did not exist before this, so
+ * anything earlier is a backdated/garbage value, not real activity.
+ */
+export const MIN_TIMESTAMP = "2020-01-01T00:00:00.000Z";
+
+/**
+ * How far into the future an ingested timestamp may sit. Real sessions can only
+ * end "now"; this margin just absorbs client/server clock skew (10 minutes).
+ */
+export const FUTURE_SKEW_MS = 10 * 60 * 1000;
+
+/**
+ * Whether an ISO-8601 timestamp falls within the plausible ingest window:
+ * not before {@link MIN_TIMESTAMP} and not more than {@link FUTURE_SKEW_MS}
+ * past `now`. Unparseable input is out of range. ISO *format* is assumed to
+ * have been checked already (e.g. by `z.iso.datetime()`); this is the *range*
+ * check the format check does not perform.
+ */
+export function isTimestampInRange(
+	iso: string,
+	now: Date = new Date(),
+): boolean {
+	const t = Date.parse(iso);
+	if (Number.isNaN(t)) return false;
+	return t >= Date.parse(MIN_TIMESTAMP) && t <= now.getTime() + FUTURE_SKEW_MS;
+}
