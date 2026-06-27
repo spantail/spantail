@@ -4,9 +4,9 @@ import { defineConfig } from "astro/config";
 import starlightSidebarTopics from "starlight-sidebar-topics";
 import starlightThemeNova from "starlight-theme-nova";
 
-// The top bar carries audiences only (User Guide / Workspace Admin /
-// Self-Hosting) plus the API Reference. Content types (CLI, MCP, Claude Plugin,
-// reports, …) live as sidebar sub-topics under the relevant audience.
+// The top bar switches audience: User Guide, Admin Guide, Setup Guide, and the
+// API Reference (the logo/home also lands on User Guide). Content types (CLI,
+// MCP, Claude Plugin, reports, …) are sidebar items under the relevant audience.
 export default defineConfig({
 	site: "https://docs.spantail.com",
 	integrations: [
@@ -62,6 +62,7 @@ export default defineConfig({
 							{ slug: "guides/reports" },
 							{ slug: "guides/capturing-agents" },
 							{ slug: "guides/account-preferences" },
+							{ slug: "guides/keyboard-shortcuts" },
 							{ slug: "guides/tools/cli" },
 							{ slug: "guides/tools/mcp" },
 							{ slug: "guides/tools/claude-plugin" },

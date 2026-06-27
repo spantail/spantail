@@ -1,7 +1,7 @@
-/* Audience switching lives in the top bar (Nova `nav`: Workspace Admin /
-   Self-Hosting / API Reference; User Guide via the logo/home). The
-   starlight-sidebar-topics plugin is kept only to drive the per-audience
-   sidebar; hide its in-sidebar switcher so there is a single switcher. */
+/* Audience switching lives in the top bar (Nova `nav`: User Guide, Admin
+   Guide, Setup Guide, API Reference). The starlight-sidebar-topics plugin is
+   kept only to drive the per-audience sidebar; hide its in-sidebar switcher so
+   the top bar is the single switcher. */
 ul.starlight-sidebar-topics {
 	display: none;
 }
