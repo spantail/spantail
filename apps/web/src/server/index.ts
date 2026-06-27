@@ -17,6 +17,7 @@ import { instanceRoutes } from "./routes/instance";
 import { invitationRoutes } from "./routes/invitations";
 import { meRoutes } from "./routes/me";
 import { projectRoutes } from "./routes/projects";
+import { realtimeRoutes } from "./routes/realtime";
 import { reportDiscussionRoutes } from "./routes/report-discussion";
 import { reportShareRoutes } from "./routes/report-shares";
 import { reportTemplateRoutes } from "./routes/report-templates";
@@ -73,6 +74,7 @@ v1.route("/invitations", invitationRoutes);
 v1.route("/instance", instanceRoutes);
 v1.route("/workspaces", workspaceRoutes);
 v1.route("/projects", projectRoutes);
+v1.route("/realtime", realtimeRoutes);
 v1.route("/report-shares", reportShareRoutes);
 v1.route("/report-templates", reportTemplateRoutes);
 v1.route("/reports", reportRoutes);
@@ -98,3 +100,6 @@ app.route("/share", shareRoutes);
 registerMcpRoute(app);
 
 export default app;
+
+// The realtime fan-out Durable Object; wrangler resolves it from this export.
+export { UserHub } from "./realtime/user-hub";

@@ -25,6 +25,7 @@ import { AppError } from "../lib/errors";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
+import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
 
 /** Maps a member row to the API shape, resolving the avatar URL. */
@@ -101,6 +102,7 @@ export const workspaceProjectRoutes = new Hono<AppEnv>()
 		for (const userId of memberUserIds ?? []) {
 			await addProjectMember(c.var.db, project.id, userId);
 		}
+		publishToWorkspace(c, { type: "project", workspaceId });
 		return c.json(project, 201);
 	});
 
@@ -138,6 +140,10 @@ export const projectRoutes = new Hono<AppEnv>()
 				? {}
 				: { archivedAt: input.status === "archived" ? new Date() : null }),
 		});
+		publishToWorkspace(c, {
+			type: "project",
+			workspaceId: project.workspaceId,
+		});
 		return c.json(updated);
 	})
 	.delete("/:id", async (c) => {
@@ -150,6 +156,10 @@ export const projectRoutes = new Hono<AppEnv>()
 			throw new AppError("conflict", "Archive the project before deleting it");
 		}
 		await deleteProject(c.var.db, project.id);
+		publishToWorkspace(c, {
+			type: "project",
+			workspaceId: project.workspaceId,
+		});
 		return c.body(null, 204);
 	})
 	// --- project members (workspace admins manage; members can view) ---

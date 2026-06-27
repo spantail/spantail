@@ -54,6 +54,7 @@ import {
 import { toApiShare } from "../lib/share-api";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
+import { publishToUsers } from "../realtime/publish";
 import type { AppEnv } from "../types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -566,5 +567,11 @@ export const reportRoutes = new Hono<AppEnv>()
 				message,
 			})),
 		);
+		// Notify the recipients (their inbox) and the sender (their Sent folder in
+		// other open tabs) — both are backed by report_deliveries. Dedup in case
+		// the sender listed themselves as a recipient.
+		publishToUsers(c, [...new Set([...recipientIds, user.id])], {
+			type: "message",
+		});
 		return c.json({ delivered: recipientIds.length }, 201);
 	});

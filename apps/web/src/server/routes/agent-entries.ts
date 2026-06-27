@@ -25,6 +25,7 @@ import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth, requireScope } from "../middleware/auth";
 import { ingestRateLimit } from "../middleware/rate-limit";
+import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
 
 export const agentEntryRoutes = new Hono<AppEnv>()
@@ -87,6 +88,7 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			startedAt,
 			endedAt: input.endedAt ? new Date(input.endedAt) : null,
 		});
+		publishToWorkspace(c, { type: "agent-entry", workspaceId });
 		return c.json(entry);
 	})
 	// Reads follow the project ACL: a member sees agent activity in the projects

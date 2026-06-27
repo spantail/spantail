@@ -31,6 +31,7 @@ import {
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
 import { ingestRateLimit } from "../middleware/rate-limit";
+import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
 
 async function requireProjectInWorkspace(
@@ -123,6 +124,10 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			tags: input.tags,
 			source: resolveSource(c),
 		});
+		publishToWorkspace(c, {
+			type: "work-entry",
+			workspaceId: input.workspaceId,
+		});
 		return c.json(entry, 201);
 	})
 	// Registered before "/:id" so "stats" is not captured as an entry id.
@@ -177,6 +182,10 @@ export const workEntryRoutes = new Hono<AppEnv>()
 				? {}
 				: { endedAt: endedAt ? new Date(endedAt) : null }),
 		});
+		publishToWorkspace(c, {
+			type: "work-entry",
+			workspaceId: entry.workspaceId,
+		});
 		return c.json(updated);
 	})
 	.delete("/:id", async (c) => {
@@ -184,5 +193,9 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const entry = await requireEntryAccess(c, c.req.param("id"));
 		requireAuthor(c, entry);
 		await deleteWorkEntry(c.var.db, entry.id);
+		publishToWorkspace(c, {
+			type: "work-entry",
+			workspaceId: entry.workspaceId,
+		});
 		return c.body(null, 204);
 	});

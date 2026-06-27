@@ -44,7 +44,6 @@ export function MailSidebar() {
 	const counts = useQuery({
 		queryKey: ["mail-counts"],
 		queryFn: () => api.getMailboxCounts(),
-		refetchInterval: 60_000,
 	});
 
 	const dismiss = () => setOpenMobile(false);
