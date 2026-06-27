@@ -60,6 +60,18 @@
 		"account": "Account",
 		"userMenu": "User menu"
 	},
+	"search": {
+		"open": "Open search",
+		"title": "Search",
+		"placeholder": "Search…",
+		"prompt": "Type to search reports and work entries",
+		"searching": "Searching…",
+		"empty": "No results found",
+		"groups": {
+			"reports": "Reports",
+			"workEntries": "Work entries"
+		}
+	},
 	"projects": {
 		"notFound": "Project not found in this workspace.",
 		"backHome": "Back to home",

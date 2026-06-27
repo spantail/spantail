@@ -21,6 +21,7 @@ export * from "./queries/report-deliveries";
 export * from "./queries/report-shares";
 export * from "./queries/report-templates";
 export * from "./queries/reports";
+export * from "./queries/search";
 export * from "./queries/tokens";
 export * from "./queries/users";
 export * from "./queries/work-entries";

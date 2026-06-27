@@ -14,6 +14,7 @@ export * from "./report";
 export * from "./report-engine";
 export * from "./report-frontmatter";
 export * from "./report-period";
+export * from "./search";
 export * from "./share";
 export * from "./token";
 export * from "./user";
