@@ -4,7 +4,7 @@ description: Remote /mcp and stdio MCP servers for AI clients.
 ---
 
 Spantail speaks the **Model Context Protocol (MCP)**, so AI clients can log work,
-list entries, and run reports against your instance through their own tools. MCP
+list entries, and read reports against your instance through their own tools. MCP
 is a client of the same REST API, so it respects the same permissions as your
 token.
 
@@ -18,12 +18,13 @@ token.
 
 ## Authenticate
 
-MCP uses a **Bearer token**:
+MCP authenticates with a **personal API token** (from
+[Settings → API tokens](/guides/account-preferences/)), passed as a Bearer
+token. The token acts as you, with your permissions.
 
-- A **personal API token** (from [Settings → API tokens](/guides/account-preferences/))
-  acts as you.
-- An **agent access token** is used when an AI agent reports its own activity —
-  see [Capturing agent activity](/guides/capturing-agents/).
+Agent access tokens are **not** accepted here — they are ingest-only and can
+only send agent activity, not call MCP tools. See
+[Capturing agent activity](/guides/capturing-agents/).
 
 ## Set up with Claude Code
 

@@ -4,7 +4,7 @@ description: spantail コマンドラインクライアント。
 ---
 
 `spantail` はコマンドラインクライアントです。稼働中の Spantail インスタンスの REST API と
-通信するので、Web アプリと同じこと — 作業の記録、記録の一覧、レポートの実行 — をターミナルや
+通信するので、Web アプリと同じこと — 作業の記録、記録の一覧、レポートの閲覧 — をターミナルや
 スクリプトから行えます。
 
 ## インストール
@@ -34,7 +34,7 @@ spantail auth login
 ```bash
 spantail log "Fixed the build" --project website --duration 1h30m --tag ci
 spantail entries list --from 2026-06-01 --to 2026-06-30
-spantail report run <report-id> > weekly.md
+spantail report view <report-id> > weekly.md
 ```
 
 | コマンド | 説明 |
@@ -47,7 +47,7 @@ spantail report run <report-id> > weekly.md
 | `spantail log <description>` | 作業記録を作成（`--project`、`--duration`、`--date`、`--note`、`--tag`）。 |
 | `spantail entries list` | 最近の作業記録を一覧（`--project`、`--from`、`--to`、`--limit`）。 |
 | `spantail report list` | 保存済みレポートを ID 付きで一覧。 |
-| `spantail report run <id>` | レポートを実行。Markdown は標準出力、状態は標準エラーへ。 |
+| `spantail report view <id>` | レポートの描画済み Markdown を標準出力に表示（状態は標準エラーへ）。 |
 | `spantail mcp` | AI クライアント向けの stdio [MCP](/ja/guides/tools/mcp/) サーバーを実行。 |
 
 各オプションの詳細は `spantail <command> --help` を実行してください。所要時間は分、または

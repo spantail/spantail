@@ -31,15 +31,21 @@ enable/disable toggle.
 
 ## Get the agent token
 
-Each agent has one **agent access token** — a write-only credential used only to
-send activity. Copy it when you register the agent and store it securely; it is
+Each agent has one **agent access token** — a write-only, **ingest-only**
+credential. It can only send agent activity; it is **not** accepted for the
+[CLI](/guides/tools/cli/), [MCP](/guides/tools/mcp/), or the rest of the API
+(those use a [personal API token](/guides/account-preferences/) and act as you).
+Copy the agent token when you register the agent and store it securely; it is
 scoped to your workspace membership and is checked on every ingest.
 
-## Connect the agent
+## Send activity
 
-Point your agent at your instance over [MCP](/guides/tools/mcp/) or the
-[CLI](/guides/tools/cli/), authenticating with the agent token. Once connected,
-the agent streams its turns to Spantail, which rolls them up into sessions.
+Using the agent token, your agent posts its turns to the ingest endpoint
+(`POST /api/v1/agent-entries`), and Spantail rolls them up into sessions. The
+easiest path is the dedicated **Claude Code plugin** (coming soon — see
+[Claude Plugin](/guides/tools/claude-plugin/)), which captures sessions
+automatically. Until it ships, activity is sent programmatically through the
+ingest API.
 
 :::note[Screenshot]
 The dashboard timeline with agent sessions interleaved with human entries.

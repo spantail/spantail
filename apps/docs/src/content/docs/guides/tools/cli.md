@@ -5,7 +5,7 @@ description: The spantail command-line client.
 
 `spantail` is the command-line client. It talks to the REST API of a running
 Spantail instance, so it does the same things the web app does — log work, list
-entries, run reports — from your terminal or scripts.
+entries, read reports — from your terminal or scripts.
 
 ## Install
 
@@ -34,7 +34,7 @@ Credentials are saved to `~/.config/spantail/config.json` (mode `0600`).
 ```bash
 spantail log "Fixed the build" --project website --duration 1h30m --tag ci
 spantail entries list --from 2026-06-01 --to 2026-06-30
-spantail report run <report-id> > weekly.md
+spantail report view <report-id> > weekly.md
 ```
 
 | Command | Description |
@@ -47,7 +47,7 @@ spantail report run <report-id> > weekly.md
 | `spantail log <description>` | Log a work entry (`--project`, `--duration`, `--date`, `--note`, `--tag`). |
 | `spantail entries list` | List recent work entries (`--project`, `--from`, `--to`, `--limit`). |
 | `spantail report list` | List your saved reports with their ids. |
-| `spantail report run <id>` | Run a report; the Markdown goes to stdout, status to stderr. |
+| `spantail report view <id>` | Print a report's rendered Markdown to stdout (status to stderr). |
 | `spantail mcp` | Run a stdio [MCP](/guides/tools/mcp/) server for AI clients. |
 
 Run `spantail <command> --help` for the full options. Durations accept minutes
