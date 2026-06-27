@@ -41,13 +41,19 @@ export function AuthedRoot({
 		if (detectAttempted.current || !me.data) return;
 		detectAttempted.current = true;
 		if (me.data.user.timezone != null) return;
-		const adoptedKey = `spantail.tz-adopted.${me.data.user.id}`;
-		if (localStorage.getItem(adoptedKey)) return;
 		const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 		if (!tz) return;
 		// Mark before mutating so the adoption is never repeated on this device,
-		// even across the explicit "clear to UTC" flow.
-		localStorage.setItem(adoptedKey, "1");
+		// even across the explicit "clear to UTC" flow. localStorage can throw
+		// (privacy mode / disabled storage); since this runs during app boot, skip
+		// auto-adoption rather than let an exception break the authed shell.
+		const adoptedKey = `spantail.tz-adopted.${me.data.user.id}`;
+		try {
+			if (localStorage.getItem(adoptedKey)) return;
+			localStorage.setItem(adoptedKey, "1");
+		} catch {
+			return;
+		}
 		detectTimezone.mutate(tz);
 	}, [me.data, detectTimezone]);
 
