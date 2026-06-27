@@ -105,6 +105,7 @@ async function resolvePat(
 		},
 		via: "pat",
 		scopes: row.scopes,
+		tokenId: row.id,
 	};
 }
 
@@ -150,6 +151,7 @@ async function resolveAat(
 		agentId: agent.id,
 		ownerUserId: owner.id,
 		defaultWorkspaceId: row.defaultWorkspaceId,
+		tokenId: row.id,
 	};
 }
 

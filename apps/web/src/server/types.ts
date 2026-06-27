@@ -3,7 +3,9 @@ import type { Database } from "@spantail/db";
 
 export type AuthContext =
 	| { user: AuthUser; via: "session" }
-	| { user: AuthUser; via: "pat"; scopes: TokenScope[] }
+	// `tokenId` is the token row id, used to rate-limit per credential rather
+	// than per principal (one leaked token must not throttle a user's others).
+	| { user: AuthUser; via: "pat"; scopes: TokenScope[]; tokenId: string }
 	// Agent access token: a delegated, write-only ingest credential. Carries no
 	// AuthUser — it can only ingest agent entries for the bound agent, on behalf
 	// of its owner. Consumed solely by requireAgentAuth.
@@ -12,6 +14,8 @@ export type AuthContext =
 			agentId: string;
 			ownerUserId: string;
 			defaultWorkspaceId: string | null;
+			// Token row id; see the pat note above.
+			tokenId: string;
 	  };
 
 /** Interactive/PAT auth that carries a user; excludes agent tokens. */

@@ -12,19 +12,26 @@ import type { AppEnv } from "../types";
  * credential so one principal can't exhaust the operator's storage/cost while
  * leaving legitimate, separately-keyed callers unaffected.
  *
- * The key is the agent (for agent tokens), the user (for session/PAT), or the
- * client IP as a last resort for an unauthenticated request that somehow
- * reaches here. The `INGEST_RATE_LIMITER` binding is local-only simulated, so
- * this is enforced identically in tests and in production.
+ * The key is the token identity for agent/PAT credentials (so one leaked token
+ * can't throttle a principal's other tokens) and the user for cookie sessions
+ * (which carry no token id). The `INGEST_RATE_LIMITER` binding is local-only
+ * simulated, so this is enforced identically in tests and in production.
  */
 export const ingestRateLimit = createMiddleware<AppEnv>(async (c, next) => {
 	const auth = c.var.auth;
+	// No credential: don't consume a shared anonymous bucket (which would mask
+	// the real 401/403 as a 429). These routes require auth, so let the
+	// downstream auth check produce the correct status.
+	if (!auth) {
+		await next();
+		return;
+	}
 	const key =
-		auth?.via === "agent"
-			? `agent:${auth.agentId}`
-			: auth
-				? `user:${auth.user.id}`
-				: `ip:${c.req.header("CF-Connecting-IP") ?? "unknown"}`;
+		auth.via === "agent"
+			? `aat:${auth.tokenId}`
+			: auth.via === "pat"
+				? `pat:${auth.tokenId}`
+				: `user:${auth.user.id}`;
 
 	const { success } = await c.env.INGEST_RATE_LIMITER.limit({ key });
 	if (!success) {
