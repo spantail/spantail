@@ -54,7 +54,15 @@ export function AuthedRoot({
 		} catch {
 			return;
 		}
-		detectTimezone.mutate(tz);
+		detectTimezone.mutate(tz, {
+			// If the adoption didn't persist (offline/transient), clear the marker so
+			// the next load retries rather than leaving the user stuck on UTC.
+			onError: () => {
+				try {
+					localStorage.removeItem(adoptedKey);
+				} catch {}
+			},
+		});
 	}, [me.data, detectTimezone]);
 
 	if (me.isPending) {
