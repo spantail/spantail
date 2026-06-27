@@ -88,14 +88,17 @@ pnpm deploy
 
 See the documentation at [spantail.com](https://spantail.com) for the full self-hosting guide, including required secrets and cost notes.
 
-### Security: captured content is potentially secret-bearing
+### Agent capture sends telemetry, not transcripts
 
-Spantail stores agent and work content (span/work descriptions, notes, and agent-event
-payloads) **verbatim**, and it can later surface in reports, public share links, and
-Send-to deliveries. Treat it as potentially secret-bearing: do not emit secrets into agent
-logs, descriptions, or notes, and never forward raw captured content to an external sink
-(application logs, analytics, a third-party LLM). See
-[`docs/security.md`](docs/security.md) (§2) for the full standing rules.
+Spantail captures AI-agent work as compact per-turn telemetry — token usage and timing —
+**not your conversation transcripts or source code**. The reference Claude Code hook parses
+the transcript locally and sends only that telemetry; conversation bodies never leave your
+machine.
+
+Whatever short fields do get recorded, though — agent or work `description`s, notes, tags —
+are stored verbatim and can appear in reports, public share links, and Send-to deliveries.
+Treat them as potentially secret-bearing: don't put secrets in them, and don't emit secrets
+into agent logs. See [`docs/security.md`](docs/security.md) (§2).
 
 ## CLI & MCP
 
