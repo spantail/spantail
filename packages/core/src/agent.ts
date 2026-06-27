@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { localDateSchema } from "./common";
+import { MAX_DURATION_MINUTES } from "./duration";
 
 /** Coding-agent kind. Drives per-type grouping and ingest tooling. */
 export const agentTypes = ["claude_code", "codex", "cursor", "other"] as const;
@@ -95,7 +96,7 @@ export const agentEntrySchema = z.object({
 	// External session identifier (CC session_id / Codex thread / Cursor convo).
 	sessionId: z.string(),
 	entryDate: localDateSchema,
-	durationMinutes: z.number().int().min(0),
+	durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
 	// Null when the source can't expose token usage locally (e.g. Cursor).
 	usage: agentUsageSchema.nullable(),
 	description: z.string().max(2000).nullable(),
@@ -118,7 +119,7 @@ export const ingestAgentEntryInputSchema = z.object({
 	// value would otherwise skip the FK check and 500 on insert instead of 400.
 	projectId: z.string().trim().min(1).optional(),
 	sessionId: z.string().min(1).max(200),
-	durationMinutes: z.number().int().min(0),
+	durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
 	usage: agentUsageSchema.optional(),
 	description: z.string().max(2000).optional(),
 	startedAt: z.iso.datetime().optional(),

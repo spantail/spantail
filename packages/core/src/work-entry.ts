@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { localDateSchema } from "./common";
+import { MAX_DURATION_MINUTES } from "./duration";
 
 export const tagSchema = z.string().min(1).max(50);
 
@@ -16,7 +17,7 @@ export const workEntrySchema = z.object({
 	projectId: z.string().nullable(),
 	userId: z.string(),
 	entryDate: localDateSchema,
-	durationMinutes: z.number().int().positive(),
+	durationMinutes: z.number().int().positive().max(MAX_DURATION_MINUTES),
 	startedAt: z.string().nullable(),
 	endedAt: z.string().nullable(),
 	description: z.string().min(1).max(2000),
@@ -33,7 +34,7 @@ export const createWorkEntryInputSchema = z.object({
 	projectId: z.string(),
 	// Defaults to today in the workspace's timezone when omitted.
 	entryDate: localDateSchema.optional(),
-	durationMinutes: z.number().int().positive(),
+	durationMinutes: z.number().int().positive().max(MAX_DURATION_MINUTES),
 	startedAt: z.iso.datetime().optional(),
 	endedAt: z.iso.datetime().optional(),
 	description: z.string().min(1).max(2000),
@@ -51,7 +52,7 @@ export const updateWorkEntryInputSchema = z
 		// without being forced to reassign a project.
 		projectId: z.string().nullable(),
 		entryDate: localDateSchema,
-		durationMinutes: z.number().int().positive(),
+		durationMinutes: z.number().int().positive().max(MAX_DURATION_MINUTES),
 		startedAt: z.iso.datetime().nullable(),
 		endedAt: z.iso.datetime().nullable(),
 		description: z.string().min(1).max(2000),
