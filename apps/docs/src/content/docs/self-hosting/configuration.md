@@ -40,7 +40,8 @@ When you set a provider's credentials, register its callback URL with the provid
 - GitHub — `${BETTER_AUTH_URL}/api/auth/callback/github`
 
 Enabling a configured provider is an in-app admin action — during the
-[setup wizard](/self-hosting/setup-wizard/) or later from the Admin guide.
+[setup wizard](/self-hosting/setup-wizard/) or later from
+[System settings](/admin/system-settings/) in the Admin guide.
 
 ## Bindings
 

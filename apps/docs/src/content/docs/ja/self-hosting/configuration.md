@@ -40,7 +40,7 @@ description: 環境変数・シークレット・バインディング。
 - GitHub — `${BETTER_AUTH_URL}/api/auth/callback/github`
 
 設定済みプロバイダの有効化はアプリ内の管理者操作です。[セットアップウィザード](/ja/self-hosting/setup-wizard/)
-の途中、または後から管理者ガイドで行います。
+の途中、または後から管理者ガイドの[システム設定](/ja/admin/system-settings/)で行います。
 
 ## バインディング
 
