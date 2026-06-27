@@ -57,20 +57,31 @@ export function shiftDays(date: string, days: number): string {
 		.slice(0, 10);
 }
 
-/**
- * Returns today's local date (`YYYY-MM-DD`) in the given IANA timezone.
- * en-CA formats as YYYY-MM-DD.
- */
+// Intl.DateTimeFormat construction is relatively expensive, so cache one
+// formatter per timezone. `todayInTimezone` is called per-row when bucketing
+// agent activity by day, where the allocation would otherwise dominate.
+const localDateFormatters = new Map<string, Intl.DateTimeFormat>();
+function localDateFormatter(timeZone: string): Intl.DateTimeFormat {
+	let formatter = localDateFormatters.get(timeZone);
+	if (!formatter) {
+		// en-CA formats as YYYY-MM-DD.
+		formatter = new Intl.DateTimeFormat("en-CA", {
+			timeZone,
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+		});
+		localDateFormatters.set(timeZone, formatter);
+	}
+	return formatter;
+}
+
+/** Returns today's local date (`YYYY-MM-DD`) in the given IANA timezone. */
 export function todayInTimezone(
 	timeZone: string,
 	now: Date = new Date(),
 ): string {
-	return new Intl.DateTimeFormat("en-CA", {
-		timeZone,
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	}).format(now);
+	return localDateFormatter(timeZone).format(now);
 }
 
 /**
