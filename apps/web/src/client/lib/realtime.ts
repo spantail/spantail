@@ -16,11 +16,17 @@ function applyRealtimeEvent(qc: QueryClient, ev: RealtimeEvent): void {
 			return;
 		case "agent-entry":
 			if (ev.workspaceId) {
+				// The agent detail screen reads sessions under ["agent-entries", ws,
+				// agentId, …] and stats under ["agent-entry-stats", ws, …]; the roster
+				// (names) lives under ["workspace-agents", ws]. Invalidate all three by
+				// prefix so a new session, its stats, and a newly-seen agent refresh.
+				qc.invalidateQueries({ queryKey: ["agent-entries", ev.workspaceId] });
+				qc.invalidateQueries({
+					queryKey: ["agent-entry-stats", ev.workspaceId],
+				});
 				qc.invalidateQueries({
 					queryKey: ["workspace-agents", ev.workspaceId],
 				});
-				// Agent activity also feeds the entry timelines and stats.
-				invalidateWorkEntryData(qc, ev.workspaceId);
 			}
 			return;
 		case "project":
