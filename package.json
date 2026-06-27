@@ -17,7 +17,7 @@
 		"db:migrate:remote": "pnpm --filter web exec wrangler d1 migrations apply spantail-db --remote",
 		"db:drop": "tsx packages/db/seed/drop.ts",
 		"db:seed": "tsx packages/db/seed/seed.ts",
-		"db:reset": "pnpm db:drop && pnpm db:migrate:local && pnpm db:seed",
+		"db:reset": "pnpm db:drop && pnpm db:migrate:local",
 		"deploy": "pnpm --filter web run deploy"
 	},
 	"devDependencies": {

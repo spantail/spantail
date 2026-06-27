@@ -1,7 +1,4 @@
-# Three active projects per workspace. Names and `activities` follow the
-# workspace language. `activities` are concrete task phrases the work-entry
-# generator draws from (rotated deterministically per user/day), so the demo
-# reads like real work instead of "Implemented features for X" on repeat.
+# demo dataset — see ../../README.md
 - key: p-self-platform
   workspace: ws-self
   slug: platform
@@ -100,36 +97,37 @@
     - Migrated the media library to R2
     - Wrote redirects for archived URLs
 
-- key: p-sakura-inventory
-  workspace: ws-sakura
+- key: p-meridian-inventory
+  workspace: ws-meridian
   slug: inventory
-  name: 在庫管理システム
+  name: Inventory System
   hue: 80
-  description: 倉庫の在庫を管理するシステム。
+  description: Warehouse inventory management system.
   activities:
-    - 入庫処理の画面を実装
-    - 在庫数の集計バグを修正
-    - 倉庫間移動のレビュー対応
-- key: p-sakura-orders
-  workspace: ws-sakura
+    - Implemented the goods-receipt screen
+    - Fixed a stock-count aggregation bug
+    - Reviewed the inter-warehouse transfer flow
+    - Added low-stock alerting
+- key: p-meridian-orders
+  workspace: ws-meridian
   slug: orders
-  name: 受発注API
+  name: Ordering API
   hue: 200
-  description: 受発注を処理するAPI。
+  description: Order and procurement API.
   activities:
-    - 発注エンドポイントを実装
-    - 在庫引当のロジックを修正
-    - APIの結合テストを追加
-- key: p-sakura-dashboard
-  workspace: ws-sakura
+    - Implemented the purchase-order endpoint
+    - Fixed the stock-allocation logic
+    - Added integration tests for the API
+- key: p-meridian-dashboard
+  workspace: ws-meridian
   slug: dashboard
-  name: 管理ダッシュボード
+  name: Admin Dashboard
   hue: 264
-  description: 社内向けの管理ダッシュボード。
+  description: Internal admin dashboard.
   activities:
-    - 売上サマリ画面を作成
-    - 権限まわりの不具合を修正
-    - グラフ表示のパフォーマンスを改善
+    - Built the sales-summary screen
+    - Fixed a permissions glitch
+    - Improved chart rendering performance
 
 - key: p-initech-crm
   workspace: ws-initech

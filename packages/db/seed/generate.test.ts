@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { generateDataset } from "./generate";
@@ -5,12 +6,18 @@ import { datasetToSql } from "./to-sql";
 
 type Row = Record<string, unknown>;
 
+// Tests exercise the generator against the shipped English `demo` dataset.
+const DEMO_DIR = fileURLToPath(
+	new URL("../../../examples/demo/db/seed/", import.meta.url),
+);
+const DEMO_LOCALE = "en" as const;
+
 // Mid-June: the activity window covers all of May, so May is the one completed
 // month and weekday entries land throughout.
 const NOW = new Date("2026-06-18T09:00:00Z");
 
 async function build() {
-	const dataset = await generateDataset(NOW);
+	const dataset = await generateDataset(NOW, DEMO_DIR, DEMO_LOCALE);
 	const rows = (name: string): Row[] =>
 		dataset.tables.find((t) => t.table === name)?.rows ?? [];
 	return { dataset, rows };
@@ -22,11 +29,11 @@ describe("generateDataset", () => {
 		expect(rows("user")).toHaveLength(6);
 		expect(rows("account")).toHaveLength(6);
 		expect(rows("workspaces")).toHaveLength(5);
-		// 5 internal + Acme 3 + Globex 3 + 桜 2 + Initech 1.
+		// 5 internal + Acme 3 + Globex 3 + Meridian 2 + Initech 1.
 		expect(rows("workspaceMembers")).toHaveLength(14);
 		expect(rows("projects")).toHaveLength(14);
-		// One default template per locale (en + ja).
-		expect(rows("reportTemplates")).toHaveLength(2);
+		// One default template, in the dataset's locale (demo → English).
+		expect(rows("reportTemplates")).toHaveLength(1);
 		expect(rows("instanceSettings")).toHaveLength(1);
 		expect(dataset.credentials).toHaveLength(6);
 	});
@@ -90,7 +97,11 @@ describe("generateDataset", () => {
 	it("computes monthly periods in each workspace timezone", async () => {
 		// 2026-07-01T00:00Z: Tokyo is already Jul 1 (June is complete locally),
 		// while Los Angeles is still Jun 30 (June is not complete locally).
-		const dataset = await generateDataset(new Date("2026-07-01T00:00:00Z"));
+		const dataset = await generateDataset(
+			new Date("2026-07-01T00:00:00Z"),
+			DEMO_DIR,
+			DEMO_LOCALE,
+		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
 		const tzById = new Map(
@@ -116,7 +127,11 @@ describe("generateDataset", () => {
 
 	it("dates entries in the workspace timezone, not the author's home", async () => {
 		// 06:00Z: Tokyo is already Fri 2026-06-19; Los Angeles is still Thu 06-18.
-		const dataset = await generateDataset(new Date("2026-06-19T06:00:00Z"));
+		const dataset = await generateDataset(
+			new Date("2026-06-19T06:00:00Z"),
+			DEMO_DIR,
+			DEMO_LOCALE,
+		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
 		const tzById = new Map(
@@ -137,8 +152,8 @@ describe("generateDataset", () => {
 	it("seeds the default templates and references them from every report", async () => {
 		const { rows } = await build();
 		const templateRows = rows("reportTemplates");
-		// One default template per locale (en + ja), all enabled.
-		expect(templateRows.length).toBe(2);
+		// One default template, in the dataset's locale (demo → English), enabled.
+		expect(templateRows.length).toBe(1);
 		expect(templateRows.every((t) => t.enabled === true)).toBe(true);
 		const templateIds = new Set(templateRows.map((t) => t.id));
 		for (const report of rows("reports")) {
@@ -162,10 +177,12 @@ describe("generateDataset", () => {
 			expect(r.totalMinutes as number).toBeGreaterThan(0);
 			expect(r.version).toBe(1);
 		}
-		// Japanese reports (Sakura) render with the translated default template.
-		const ja = reports.find((r) => String(r.name).startsWith("月報"));
-		expect(ja).toBeDefined();
-		expect(contentByReport.get(ja?.id as string)).toContain("合計");
+		// Monthly reports render with the English default template.
+		const monthly = reports.find((r) =>
+			String(r.name).startsWith("Monthly report"),
+		);
+		expect(monthly).toBeDefined();
+		expect(contentByReport.get(monthly?.id as string)).toContain("Total");
 	});
 
 	it("delivers reports to a workspace manager (never the sender)", async () => {
@@ -235,7 +252,7 @@ describe("generateDataset", () => {
 		}
 
 		// Northwind (internal) and Initech (Frank's solo workspace) are the two
-		// non-client workspaces; client workspaces are Acme, Globex, and 桜.
+		// non-client workspaces; client workspaces are Acme, Globex, and Meridian.
 		const nonClientSlugs = new Set(["northwind", "initech"]);
 		const nonClientWsIds = new Set(
 			rows("workspaces")
@@ -333,6 +350,28 @@ describe("generateDataset", () => {
 			);
 			expect(entry.durationMinutes).toBe(expectedDuration);
 		}
+	});
+
+	it("seeds the Japanese default template for a -ja dataset", async () => {
+		const demoJaDir = fileURLToPath(
+			new URL("../../../examples/demo-ja/db/seed/", import.meta.url),
+		);
+		const dataset = await generateDataset(NOW, demoJaDir, "ja");
+		const rows = (name: string): Row[] =>
+			dataset.tables.find((t) => t.table === name)?.rows ?? [];
+		// One template, and the rendered Japanese monthly report uses it ("合計").
+		expect(rows("reportTemplates")).toHaveLength(1);
+		const contentByReport = new Map(
+			rows("reportContent").map((c) => [
+				c.reportId as string,
+				c.content as string,
+			]),
+		);
+		const monthly = rows("reports").find((r) =>
+			String(r.name).startsWith("月報"),
+		);
+		expect(monthly).toBeDefined();
+		expect(contentByReport.get(monthly?.id as string)).toContain("合計");
 	});
 
 	it("serializes to non-empty SQL", async () => {

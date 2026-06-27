@@ -1,0 +1,21 @@
+# demo-ja dataset — see ../../README.md
+- key: u-admin
+  name: 山田 花子
+  email: hanako@azumino.example
+  isAdmin: true
+- key: u-author
+  name: 鈴木 一郎
+  email: ichiro@azumino.example
+  canManageTemplates: true
+- key: u-carol
+  name: 田中 美咲
+  email: misaki@azumino.example
+- key: u-dan
+  name: 佐藤 健
+  email: ken@azumino.example
+- key: u-erin
+  name: 高橋 由美
+  email: yumi@azumino.example
+- key: u-frank
+  name: 渡辺 大輔
+  email: daisuke@kanda.example

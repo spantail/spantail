@@ -1,0 +1,31 @@
+# demo-ja dataset — see ../../README.md
+allocations:
+  u-admin:
+    - { project: p-self-platform, minutes: 210, cadence: daily }
+    - { project: p-self-tooling, minutes: 120, cadence: daily }
+    - { project: p-meridian-inventory, minutes: 150, cadence: daily }
+  u-author:
+    - { project: p-acme-warehouse, minutes: 180, cadence: daily }
+    - { project: p-globex-portal, minutes: 150, cadence: daily }
+    - { project: p-self-tooling, minutes: 120, cadence: daily }
+  u-carol:
+    - { project: p-globex-analytics, minutes: 210, cadence: daily }
+    - { project: p-self-platform, minutes: 120, cadence: daily }
+    - { project: p-globex-cms, minutes: 150, cadence: often }
+    - { project: p-acme-mobile, minutes: 90, cadence: occasional }
+  u-dan:
+    - { project: p-meridian-orders, minutes: 240, cadence: daily }
+    - { project: p-meridian-inventory, minutes: 150, cadence: daily }
+    - { project: p-meridian-dashboard, minutes: 90, cadence: often }
+    - { project: p-self-tooling, minutes: 90, cadence: weekly }
+  u-erin:
+    - { project: p-acme-mobile, minutes: 195, cadence: daily }
+    - { project: p-globex-portal, minutes: 195, cadence: daily }
+    - { project: p-self-devops, minutes: 120, cadence: often }
+  u-frank:
+    - { project: p-initech-crm, minutes: 270, cadence: daily }
+    - { project: p-initech-billing, minutes: 180, cadence: daily }
+
+tags:
+  en: [feature, review, bugfix, test, refactor, docs]
+  ja: [feature, review, bugfix, test, refactor, docs]

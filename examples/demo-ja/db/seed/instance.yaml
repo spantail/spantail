@@ -1,0 +1,5 @@
+# demo-ja dataset — see ../../README.md
+emailEnabled: true
+googleOAuthEnabled: true
+githubOAuthEnabled: true
+agentsEnabled: true
