@@ -1,6 +1,6 @@
-# `@spantail/docs`
+# Spantail documentation site
 
-The public documentation site for **docs.spantail.com**, built with
+The `docs` workspace package — the public documentation site for **docs.spantail.com**, built with
 [Astro](https://astro.build) + [Starlight](https://starlight.astro.build)
 (theme: [Nova](https://starlight-theme-nova.pages.dev),
 audience split: [starlight-sidebar-topics](https://starlight-sidebar-topics.netlify.app)).
