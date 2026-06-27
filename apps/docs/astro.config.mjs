@@ -30,11 +30,11 @@ export default defineConfig({
 				starlightThemeNova({
 					nav: [
 						{
-							label: { root: "Workspace Admin", ja: "ワークスペース管理" },
+							label: { root: "Admin Guide", ja: "管理者ガイド" },
 							href: { root: "/workspace-admin/", ja: "/ja/workspace-admin/" },
 						},
 						{
-							label: { root: "Self-Hosting", ja: "セルフホスティング" },
+							label: { root: "Setup Guide", ja: "セットアップガイド" },
 							href: { root: "/self-hosting/", ja: "/ja/self-hosting/" },
 						},
 						{
@@ -69,7 +69,7 @@ export default defineConfig({
 						],
 					},
 					{
-						label: { en: "Workspace Admin", ja: "ワークスペース管理" },
+						label: { en: "Admin Guide", ja: "管理者ガイド" },
 						link: "/workspace-admin/",
 						icon: "setting",
 						items: [
@@ -80,7 +80,7 @@ export default defineConfig({
 						],
 					},
 					{
-						label: { en: "Self-Hosting", ja: "セルフホスティング" },
+						label: { en: "Setup Guide", ja: "セットアップガイド" },
 						link: "/self-hosting/",
 						icon: "rocket",
 						items: [
