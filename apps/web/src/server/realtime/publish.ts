@@ -21,7 +21,9 @@ function fanOut(
 	userIds: string[],
 	payload: string,
 ): Promise<unknown> {
-	return Promise.all(
+	// allSettled, not all: one hub rejecting must not cut short delivery to the
+	// rest, so every publish attempt runs to completion under the waitUntil task.
+	return Promise.allSettled(
 		userIds.map((id) => c.env.USER_HUB.getByName(id).publish(payload)),
 	);
 }
