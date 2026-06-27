@@ -608,12 +608,15 @@ function InviteStep({
 					/>
 					{t("settings.users.grantAdmin")}
 				</label>
+				{email.isError && (
+					<p className="text-destructive text-sm">{t("errors.generic")}</p>
+				)}
 				{error && <p className="text-destructive text-sm">{error}</p>}
 				<div>
 					<Button
 						type="submit"
 						variant="secondary"
-						disabled={submitting || email.isPending}
+						disabled={submitting || !email.data}
 					>
 						{emailEnabled
 							? t("settings.users.inviteAction")
