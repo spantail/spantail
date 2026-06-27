@@ -432,11 +432,14 @@ export function AgentStats({ workspaceId, agentId, period }: AgentStatsProps) {
 			: formatCompactRange(range.from, range.to, i18n.language);
 
 	const stats = useQuery({
+		// The per-day buckets are derived server-side in the viewer's timezone, so
+		// it is part of the cache key — changing it must refetch, not reuse a stale
+		// bucketing computed for the old timezone.
 		queryKey: [
 			"agent-entry-stats",
 			workspaceId,
 			agentId,
-			{ from: range.from, to: range.to },
+			{ from: range.from, to: range.to, timezone },
 		],
 		queryFn: () =>
 			api.getAgentEntryStats({

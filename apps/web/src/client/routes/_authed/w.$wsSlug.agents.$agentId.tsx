@@ -78,11 +78,14 @@ function AgentPage() {
 		id ? projectById.get(id)?.hue : undefined;
 
 	const entries = useInfiniteQuery({
+		// Each entry's `entryDate` is derived server-side in the viewer's timezone,
+		// so it belongs in the cache key — otherwise changing the timezone keeps
+		// serving rows dated for the old one until the query is remounted.
 		queryKey: [
 			"agent-entries",
 			workspaceId,
 			agentId,
-			{ from: range.from, to: range.to },
+			{ from: range.from, to: range.to, timezone },
 		],
 		queryFn: ({ pageParam }) =>
 			api.listAgentEntries({
