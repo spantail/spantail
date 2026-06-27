@@ -13,8 +13,8 @@ Token (AAT)**, the write-only credential the agent uses to ingest activity. See
 
 Managing agents is an interactive surface: the mutating endpoints below require a logged-in
 **session** and operate only on the caller's own agents. The plaintext token secret
-(`aat_…`) is returned exactly once — at creation and on rotation — and is never retrievable
-afterwards.
+(`spantail_aat_…`) is returned exactly once — at creation and on rotation — and is never
+retrievable afterwards.
 
 ## The agent object
 
@@ -39,14 +39,16 @@ The token summary never exposes the secret or its hash:
 
 ## List agents
 
-`GET /api/v1/agents` <Badge text="scope: read" variant="note" />
+`GET /api/v1/agents`
 
-With no query parameters, returns the caller's own agents (newest first) — this variant
-requires an interactive session. Two admin read variants are available to API clients with
-the `read` scope:
+The required auth depends on the query:
 
-- `?ownerUserId=<id>` — an **instance admin** reads another user's agents.
-- `?workspaceId=<id>` — a **workspace admin** reads the agents bound to that workspace.
+- **No query** <Badge text="session only" variant="default" /> — returns the caller's own
+  agents (newest first). An interactive session is required.
+- `?ownerUserId=<id>` <Badge text="scope: admin" variant="danger" /> — an **instance admin**
+  reads another user's agents.
+- `?workspaceId=<id>` <Badge text="scope: read" variant="note" /> — a **workspace admin**
+  reads the agents bound to that workspace.
 
 The owning `userId` and the token hash are never returned.
 
@@ -61,7 +63,7 @@ The owning `userId` and the token hash are never returned.
 <TabItem label="curl">
 ```bash
 curl "https://<your-instance>/api/v1/agents" \
-  -H "Authorization: Bearer spantail_pat_yourtoken"
+  -H "Cookie: <your session cookie>"
 ```
 </TabItem>
 <TabItem label="Response">
@@ -109,7 +111,7 @@ in this response.
 <TabItem label="curl">
 ```bash
 curl -X POST "https://<your-instance>/api/v1/agents" \
-  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Cookie: <your session cookie>" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "claude_code",
@@ -163,7 +165,7 @@ the agent object.
 
 ```bash
 curl -X PATCH "https://<your-instance>/api/v1/agents/agt_bot" \
-  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Cookie: <your session cookie>" \
   -H "Content-Type: application/json" \
   -d '{ "disabled": true }'
 ```
@@ -191,7 +193,7 @@ old secret stops working immediately. The new plaintext `secret` is returned onc
 <TabItem label="curl">
 ```bash
 curl -X POST "https://<your-instance>/api/v1/agents/agt_bot/token/rotate" \
-  -H "Authorization: Bearer spantail_pat_yourtoken"
+  -H "Cookie: <your session cookie>"
 ```
 </TabItem>
 <TabItem label="Response">
