@@ -1,0 +1,231 @@
+---
+title: Account & tokens
+description: Read the current user, update preferences and avatar, and manage Personal Access Tokens.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+These endpoints cover the calling user's own account: who they are, the workspaces they can
+see, their preferences and avatar, and the Personal Access Tokens that authenticate
+programmatic access. For how those tokens are presented and scoped, see
+[Authentication](/api/authentication/).
+
+## Get the current user
+
+`GET /api/v1/me` <Badge text="scope: read" variant="note" />
+
+Returns the authenticated user together with the workspaces they can see (each with the
+caller's role in it). This is the canonical "who am I" call for any client.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/me" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "user": {
+    "id": "usr_ana",
+    "name": "Ana",
+    "email": "ana@example.com",
+    "isAdmin": false,
+    "canManageTemplates": false,
+    "imageUrl": "https://<your-instance>/api/v1/avatars/usr_ana",
+    "timezone": "Asia/Tokyo"
+  },
+  "memberships": [
+    {
+      "id": "wrk_demo",
+      "slug": "demo",
+      "name": "Demo",
+      "accentColor": "neutral",
+      "role": "admin"
+    }
+  ]
+}
+```
+</TabItem>
+</Tabs>
+
+**User fields**
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | User identifier. |
+| `name` | string | Display name. |
+| `email` | string | Account email address. |
+| `isAdmin` | boolean | Whether the user is an instance admin. |
+| `canManageTemplates` | boolean | May manage instance-wide report templates without full admin. |
+| `imageUrl` | string \| null | Ready-to-use avatar URL, or `null` (show initials). |
+| `timezone` | string \| null | IANA timezone, or `null` to follow the UTC fallback. |
+
+**Membership fields**
+
+Each entry is the workspace plus a `role` field — `owner`, `admin`, `member`, or `null` when
+an instance admin can see a workspace they do not belong to.
+
+## Update preferences
+
+`PATCH /api/v1/me` <Badge text="session only" variant="default" />
+
+Updates the caller's own account preferences. Currently this is just `timezone`: the IANA
+zone in which local dates are computed at ingest and timestamps are displayed. Send `null` to
+clear it back to the UTC fallback. Returns the updated `{ user, memberships }` shape, like
+`GET /api/v1/me`.
+
+Session-only: preferences are a profile concern, not an API-token operation.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `timezone` | string \| null | yes | IANA timezone (e.g. `Asia/Tokyo`), or `null` for UTC. |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/me" \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{ "timezone": "Asia/Tokyo" }'
+```
+
+## Upload an avatar
+
+`POST /api/v1/me/avatar` <Badge text="session only" variant="default" />
+
+Uploads (replaces) the caller's avatar. The request body is the raw image bytes; set
+`Content-Type` to the image type. Accepted types are PNG, JPEG, WebP, and GIF; oversized or
+empty uploads are rejected with `400`. Returns the updated `{ user, memberships }` with the
+new `imageUrl`.
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/me/avatar" \
+  -H "Content-Type: image/png" \
+  -b cookies.txt \
+  --data-binary @avatar.png
+```
+
+## Remove an avatar
+
+`DELETE /api/v1/me/avatar` <Badge text="session only" variant="default" />
+
+Removes the caller's avatar; `imageUrl` falls back to `null` (initials are shown everywhere).
+Returns the updated `{ user, memberships }`.
+
+## Personal Access Tokens
+
+Personal Access Tokens (PATs) authenticate programmatic access as you. See
+[Authentication](/api/authentication/#personal-access-tokens) for how they are sent and how
+scopes work. Managing tokens is **session-only** — a token cannot manage tokens.
+
+### The token object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Token identifier (used to delete it). |
+| `name` | string | Human-readable label. |
+| `scopes` | string[] | One or more of `read`, `write`, `admin`. |
+| `lastUsedAt` | string \| null | ISO 8601 instant the token was last used, or `null`. |
+| `expiresAt` | string \| null | ISO 8601 expiry instant, or `null` if it never expires. |
+| `createdAt` | string | ISO 8601 creation instant. |
+
+The secret value is **never** part of this object — only metadata leaves the server.
+
+### List tokens
+
+`GET /api/v1/tokens` <Badge text="session only" variant="default" />
+
+Lists the caller's own tokens (metadata only). An instance admin may instead read another
+user's token metadata by passing `?ownerUserId=` <Badge text="scope: admin" variant="danger" />.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ownerUserId` | string | no | Instance admin only: read this user's token metadata instead of your own. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/tokens" \
+  -b cookies.txt
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "tok_42",
+    "name": "CI pipeline",
+    "scopes": ["read", "write"],
+    "lastUsedAt": "2026-06-28T09:30:00.000Z",
+    "expiresAt": null,
+    "createdAt": "2026-06-01T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+### Create a token
+
+`POST /api/v1/tokens` <Badge text="session only" variant="default" />
+
+Creates a token owned by the caller and returns it with the secret included.
+
+<Aside type="caution">
+The plaintext `token` is returned **exactly once**, here, and is never recoverable
+afterwards. Store it securely; if it is lost, delete the token and create a new one.
+</Aside>
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | Label (1–100 chars). |
+| `scopes` | string[] | yes | One or more of `read`, `write`, `admin` (at least one). |
+| `expiresInDays` | integer | no | Lifetime in days (1–3650). Omit for a token that never expires. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/tokens" \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "name": "CI pipeline",
+    "scopes": ["read", "write"],
+    "expiresInDays": 90
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "tok_42",
+  "name": "CI pipeline",
+  "scopes": ["read", "write"],
+  "lastUsedAt": null,
+  "expiresAt": "2026-09-26T08:00:00.000Z",
+  "createdAt": "2026-06-28T08:00:00.000Z",
+  "token": "spantail_pat_AbC123…"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`.
+
+### Delete a token
+
+`DELETE /api/v1/tokens/:id` <Badge text="session only" variant="default" />
+
+Revokes one of the caller's own tokens. Returns `204 No Content`, or `404` if no such token
+belongs to the caller. Revocation is immediate.
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/tokens/tok_42" \
+  -b cookies.txt
+```

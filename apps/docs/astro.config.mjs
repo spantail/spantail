@@ -132,13 +132,55 @@ export default defineConfig({
 						link: "/api/",
 						icon: "seti:json",
 						items: [
-							{ slug: "api" },
-							{ slug: "api/workspaces-members" },
-							{ slug: "api/work-entries" },
-							{ slug: "api/agents-ingest" },
-							{ slug: "api/reports" },
-							{ slug: "api/inbox-realtime" },
-							{ slug: "api/instance" },
+							{
+								label: "Getting started",
+								translations: { ja: "はじめに" },
+								items: [
+									{ slug: "api" },
+									{ slug: "api/authentication" },
+									{ slug: "api/account" },
+								],
+							},
+							{
+								label: "Workspaces",
+								translations: { ja: "ワークスペース" },
+								items: [
+									{ slug: "api/workspaces" },
+									{ slug: "api/members" },
+									{ slug: "api/projects" },
+								],
+							},
+							{
+								label: "Activity",
+								translations: { ja: "アクティビティ" },
+								items: [
+									{ slug: "api/work-entries" },
+									{ slug: "api/agents" },
+									{ slug: "api/agent-ingest" },
+								],
+							},
+							{
+								label: "Reports",
+								translations: { ja: "レポート" },
+								items: [
+									{ slug: "api/reports" },
+									{ slug: "api/report-sharing" },
+									{ slug: "api/report-templates" },
+								],
+							},
+							{
+								label: "Notifications",
+								translations: { ja: "通知" },
+								items: [{ slug: "api/inbox-realtime" }],
+							},
+							{
+								label: "Administration",
+								translations: { ja: "管理" },
+								items: [
+									{ slug: "api/users-invitations" },
+									{ slug: "api/instance" },
+								],
+							},
 						],
 					},
 				]),

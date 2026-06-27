@@ -1,0 +1,206 @@
+---
+title: Agents
+description: Register AI coding agents, issue and rotate their access tokens, and disable or archive them.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+An **agent** is a registered AI coding agent — a delegated identity of one user, not an
+independent principal. Its captured sessions are attributed to its owner and inherit the
+owner's workspace visibility. Registering an agent also issues its single **Agent Access
+Token (AAT)**, the write-only credential the agent uses to ingest activity. See
+[Agent ingest](/api/agent-ingest/) for the endpoints that consume that token.
+
+Managing agents is an interactive surface: the mutating endpoints below require a logged-in
+**session** and operate only on the caller's own agents. The plaintext token secret
+(`spantail_aat_…`) is returned exactly once — at creation and on rotation — and is never
+retrievable afterwards.
+
+## The agent object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `type` | string | Agent kind: `claude_code`, `codex`, `cursor`, or `other`. |
+| `name` | string | Display name (1–100 chars). |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `disabledAt` | string \| null | When set, the agent is paused and its token is rejected at ingest. |
+| `archivedAt` | string \| null | When set, the agent is archived (irreversible). |
+| `token` | object \| null | Summary of the bound access token (see below). |
+| `projectIds` | string[] | Projects the agent is associated with. Empty means all projects in the bound workspace. |
+
+The token summary never exposes the secret or its hash:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `defaultWorkspaceId` | string \| null | Workspace the token logs to when an ingest omits `workspaceId`. Fixed at registration. |
+| `lastUsedAt` | string \| null | ISO 8601 instant the token was last used to ingest. |
+| `expiresAt` | string \| null | ISO 8601 expiry, or `null` if the token never expires. |
+
+## List agents
+
+`GET /api/v1/agents`
+
+The required auth depends on the query:
+
+- **No query** <Badge text="session only" variant="default" /> — returns the caller's own
+  agents (newest first). An interactive session is required.
+- `?ownerUserId=<id>` <Badge text="scope: admin" variant="danger" /> — an **instance admin**
+  reads another user's agents.
+- `?workspaceId=<id>` <Badge text="scope: read" variant="note" /> — a **workspace admin**
+  reads the agents bound to that workspace.
+
+The owning `userId` and the token hash are never returned.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ownerUserId` | string | no | Instance admin only: list a specific user's agents. |
+| `workspaceId` | string | no | Workspace admin only: list agents bound to this workspace. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/agents" \
+  -H "Cookie: <your session cookie>"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "agt_bot",
+    "type": "claude_code",
+    "name": "Build bot",
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "disabledAt": null,
+    "archivedAt": null,
+    "token": {
+      "defaultWorkspaceId": "wrk_demo",
+      "lastUsedAt": "2026-06-28T10:15:00.000Z",
+      "expiresAt": null
+    },
+    "projectIds": ["prj_site"]
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Register an agent
+
+`POST /api/v1/agents` <Badge text="session only" variant="default" />
+
+Registers an agent owned by the caller and issues its single access token (agent and token
+are 1:1). The `defaultWorkspaceId` must be a workspace the caller belongs to; every
+`projectIds` entry must live in that workspace. The plaintext `secret` is returned **once**
+in this response.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | string | yes | Agent kind: `claude_code`, `codex`, `cursor`, or `other`. |
+| `name` | string | yes | Display name (1–100 chars). |
+| `defaultWorkspaceId` | string | yes | Workspace the token logs to by default. The caller must be a member. |
+| `projectIds` | string[] | no | Projects to associate, all in the default workspace. Omit or `[]` for all projects. |
+| `expiresInDays` | integer | no | Token lifetime in days (1–3650). Omit for a token that never expires. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agents" \
+  -H "Cookie: <your session cookie>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "claude_code",
+    "name": "Build bot",
+    "defaultWorkspaceId": "wrk_demo",
+    "projectIds": ["prj_site"]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "agt_bot",
+  "type": "claude_code",
+  "name": "Build bot",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "disabledAt": null,
+  "archivedAt": null,
+  "token": {
+    "defaultWorkspaceId": "wrk_demo",
+    "lastUsedAt": null,
+    "expiresAt": null
+  },
+  "projectIds": ["prj_site"],
+  "secret": "spantail_aat_9f8c2b1a4d6e0f3c5a7b9d1e2f4a6c8e"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`.
+
+<Aside type="caution">
+`secret` is shown only here. Store it where the agent runs; if you lose it, rotate the token
+to issue a new one.
+</Aside>
+
+## Disable or enable an agent
+
+`PATCH /api/v1/agents/:id` <Badge text="session only" variant="default" />
+
+Pauses or resumes the agent by toggling `disabled`. While disabled, the agent's token is
+rejected at ingest; re-enabling restores it. This is reversible (unlike archiving). Returns
+the agent object.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `disabled` | boolean | yes | `true` to pause the agent, `false` to resume it. |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/agents/agt_bot" \
+  -H "Cookie: <your session cookie>" \
+  -H "Content-Type: application/json" \
+  -d '{ "disabled": true }'
+```
+
+## Archive an agent
+
+`DELETE /api/v1/agents/:id` <Badge text="session only" variant="default" />
+
+Archives the agent and kills its token immediately. Returns `204 No Content`.
+
+<Aside type="caution">
+Archiving is irreversible: an archived agent cannot be un-archived, and its token is dead
+for good. The activity it already captured is retained. To pause an agent temporarily, use
+`PATCH` with `disabled: true` instead.
+</Aside>
+
+## Rotate the access token
+
+`POST /api/v1/agents/:id/token/rotate` <Badge text="session only" variant="default" />
+
+Regenerates the agent's token secret in place, keeping its workspace binding and expiry. The
+old secret stops working immediately. The new plaintext `secret` is returned once.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agents/agt_bot/token/rotate" \
+  -H "Cookie: <your session cookie>"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "secret": "spantail_aat_1d3f5a7c9e0b2d4f6a8c0e2b4d6f8a0c"
+}
+```
+</TabItem>
+</Tabs>

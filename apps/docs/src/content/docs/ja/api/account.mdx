@@ -1,0 +1,228 @@
+---
+title: アカウントとトークン
+description: 現在のユーザーの取得、設定とアバターの更新、Personal Access Token の管理。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+これらのエンドポイントは、呼び出し元自身のアカウントを扱います。すなわち、本人が誰か、見える
+ワークスペース、設定とアバター、そしてプログラムからのアクセスを認証する Personal Access Token です。
+これらのトークンの提示方法とスコープについては [認証](/ja/api/authentication/) を参照してください。
+
+## 現在のユーザーの取得
+
+`GET /api/v1/me` <Badge text="scope: read" variant="note" />
+
+認証済みのユーザーと、その人が見えるワークスペース（それぞれに呼び出し元のロールを添えて）を返します。
+あらゆるクライアントにとって「自分は誰か」を知るための正規の呼び出しです。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/me" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "user": {
+    "id": "usr_ana",
+    "name": "Ana",
+    "email": "ana@example.com",
+    "isAdmin": false,
+    "canManageTemplates": false,
+    "imageUrl": "https://<your-instance>/api/v1/avatars/usr_ana",
+    "timezone": "Asia/Tokyo"
+  },
+  "memberships": [
+    {
+      "id": "wrk_demo",
+      "slug": "demo",
+      "name": "Demo",
+      "accentColor": "neutral",
+      "role": "admin"
+    }
+  ]
+}
+```
+</TabItem>
+</Tabs>
+
+**user のフィールド**
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | ユーザー識別子。 |
+| `name` | string | 表示名。 |
+| `email` | string | アカウントのメールアドレス。 |
+| `isAdmin` | boolean | インスタンス管理者かどうか。 |
+| `canManageTemplates` | boolean | 完全な管理者でなくてもインスタンス全体のレポートテンプレートを管理できるか。 |
+| `imageUrl` | string \| null | そのまま使えるアバター URL。`null` のときはイニシャルを表示。 |
+| `timezone` | string \| null | IANA タイムゾーン。`null` のときは UTC フォールバックに従う。 |
+
+**memberships のフィールド**
+
+各要素はワークスペースに `role` フィールドを加えたものです。`role` は `owner`、`admin`、`member`、
+またはインスタンス管理者が所属していないワークスペースを見られる場合は `null` です。
+
+## 設定の更新
+
+`PATCH /api/v1/me` <Badge text="session only" variant="default" />
+
+呼び出し元自身のアカウント設定を更新します。現在は `timezone` のみで、取り込み時にローカル日付を
+計算し、タイムスタンプを表示する際の IANA ゾーンです。`null` を送ると UTC フォールバックに戻ります。
+`GET /api/v1/me` と同じ `{ user, memberships }` の形を返します。
+
+設定はプロフィールの関心事であり API トークンの操作ではないため、セッション専用です。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `timezone` | string \| null | はい | IANA タイムゾーン（例: `Asia/Tokyo`）、または UTC の場合は `null`。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/me" \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{ "timezone": "Asia/Tokyo" }'
+```
+
+## アバターのアップロード
+
+`POST /api/v1/me/avatar` <Badge text="session only" variant="default" />
+
+呼び出し元のアバターをアップロード（置換）します。リクエストボディは画像の生バイトで、`Content-Type`
+に画像の種類を設定します。対応形式は PNG、JPEG、WebP、GIF です。サイズ超過または空のアップロードは
+`400` で拒否されます。新しい `imageUrl` を含む `{ user, memberships }` を返します。
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/me/avatar" \
+  -H "Content-Type: image/png" \
+  -b cookies.txt \
+  --data-binary @avatar.png
+```
+
+## アバターの削除
+
+`DELETE /api/v1/me/avatar` <Badge text="session only" variant="default" />
+
+呼び出し元のアバターを削除します。`imageUrl` は `null` に戻り、どこでもイニシャルが表示されます。
+更新後の `{ user, memberships }` を返します。
+
+## Personal Access Tokens
+
+Personal Access Token（PAT）は、あなたとしてプログラムからのアクセスを認証します。送信方法とスコープの
+仕組みは [認証](/ja/api/authentication/#personal-access-tokens) を参照してください。トークンの管理は
+**セッション専用** です。トークンでトークンを管理することはできません。
+
+### トークンオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | トークン識別子（削除に使用）。 |
+| `name` | string | 人間が読めるラベル。 |
+| `scopes` | string[] | `read`、`write`、`admin` のうち 1 つ以上。 |
+| `lastUsedAt` | string \| null | トークンが最後に使われた ISO 8601 時刻、または `null`。 |
+| `expiresAt` | string \| null | ISO 8601 の有効期限、または無期限なら `null`。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+
+シークレットの値はこのオブジェクトに **含まれません**。サーバーから出るのはメタデータのみです。
+
+### トークンの一覧
+
+`GET /api/v1/tokens` <Badge text="session only" variant="default" />
+
+呼び出し元自身のトークン（メタデータのみ）を一覧します。インスタンス管理者は `?ownerUserId=` を
+指定することで、別のユーザーのトークンメタデータを読めます <Badge text="scope: admin" variant="danger" />。
+
+**クエリパラメータ**
+
+| 名前 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `ownerUserId` | string | いいえ | インスタンス管理者専用。自分の代わりにこのユーザーのトークンメタデータを読む。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/tokens" \
+  -b cookies.txt
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "tok_42",
+    "name": "CI pipeline",
+    "scopes": ["read", "write"],
+    "lastUsedAt": "2026-06-28T09:30:00.000Z",
+    "expiresAt": null,
+    "createdAt": "2026-06-01T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+### トークンの作成
+
+`POST /api/v1/tokens` <Badge text="session only" variant="default" />
+
+呼び出し元が所有するトークンを作成し、シークレットを含めて返します。
+
+<Aside type="caution">
+平文の `token` はここで **一度だけ** 返され、その後は取得できません。安全に保管してください。
+紛失した場合はトークンを削除して新しく作り直してください。
+</Aside>
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | はい | ラベル（1〜100 文字）。 |
+| `scopes` | string[] | はい | `read`、`write`、`admin` のうち 1 つ以上（最低 1 つ）。 |
+| `expiresInDays` | integer | いいえ | 有効日数（1〜3650）。無期限のトークンにする場合は省略。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/tokens" \
+  -H "Content-Type: application/json" \
+  -b cookies.txt \
+  -d '{
+    "name": "CI pipeline",
+    "scopes": ["read", "write"],
+    "expiresInDays": 90
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "tok_42",
+  "name": "CI pipeline",
+  "scopes": ["read", "write"],
+  "lastUsedAt": null,
+  "expiresAt": "2026-09-26T08:00:00.000Z",
+  "createdAt": "2026-06-28T08:00:00.000Z",
+  "token": "spantail_pat_AbC123…"
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。
+
+### トークンの削除
+
+`DELETE /api/v1/tokens/:id` <Badge text="session only" variant="default" />
+
+呼び出し元自身のトークンを 1 つ失効させます。`204 No Content` を返します。呼び出し元に属するトークンが
+ない場合は `404` です。失効はただちに反映されます。
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/tokens/tok_42" \
+  -b cookies.txt
+```

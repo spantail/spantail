@@ -1,0 +1,271 @@
+---
+title: ユーザーと招待
+description: インスタンスのユーザー管理と、直接作成またはメール招待による新規ユーザーのオンボーディング。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+これらのエンドポイントはインスタンスの人を管理します。**Users** はインスタンス全体の管理者用
+名簿で、アカウントの作成・編集・削除を行います。**Invitations** はメールベースのオンボーディング
+経路で、管理者がメールで招待し、受信者が受諾して自分のアカウントを作成します。
+
+オンボーディングには、インスタンスがメールを送信できるかで分かれる、相互排他な 2 つの経路があります。
+
+- **メール配信オフ** → 管理者がユーザーを直接作成する（`POST /users`）。一度きりの生成パスワードが
+  返るので、別経路で本人へ伝える。
+- **メール配信オン** → 管理者が招待を送る（`POST /invitations`）。受諾時に本人がパスワードを設定する。
+
+メールの切り替えは [Instance settings](/ja/api/instance/) を参照してください。
+
+## マネージドユーザーオブジェクト
+
+| Field | Type | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `name` | string | 表示名。 |
+| `email` | string | アカウントのメールアドレス。 |
+| `isAdmin` | boolean | インスタンス管理者（システム管理の全権限）。 |
+| `canManageTemplates` | boolean | テンプレート作成者権限（フル管理者でなくてもインスタンス全体のレポートテンプレートを管理できる）。 |
+| `disabled` | boolean | 無効化アカウントはサインインできないが、管理者には引き続き表示される。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `providers` | string[] | 連携済みのソーシャルログインプロバイダ（`google`、`github`）。パスワードのみのユーザーは空。 |
+
+## ユーザーの一覧
+
+`GET /api/v1/users` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。インスタンスの全ユーザーを、連携済みのソーシャルプロバイダ付きで返します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/users" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "usr_ana",
+    "name": "Ana",
+    "email": "ana@example.com",
+    "isAdmin": true,
+    "canManageTemplates": false,
+    "disabled": false,
+    "createdAt": "2026-06-01T08:00:00.000Z",
+    "providers": ["google"]
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## ユーザーの作成
+
+`POST /api/v1/users` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。アカウントを直接作成します。これは **メールオフ** の経路です。メール配信が
+有効な場合、このエンドポイントは `403` を返すので、代わりにユーザーを招待してください。メールの重複は
+`409` を返します。
+
+アカウントは生成された一時パスワード付きで作成され、それは `generatedPassword` として一度だけ返ります。
+管理者が別経路で本人へ伝えます。管理者が作成したアカウントは検証済みとしてマークされるため、ユーザーは
+後で Google アカウントを連携できます。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `email` | string | はい | アカウントのメールアドレス（一意であること）。 |
+| `name` | string | はい | 表示名（1〜100 文字）。 |
+| `grantAdmin` | boolean | いいえ | ユーザーをインスタンス管理者にする（既定 `false`）。 |
+| `grantTemplateAuthor` | boolean | いいえ | テンプレート作成者権限を付与する（既定 `false`）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/users" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "bo@example.com", "name": "Bo" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "usr_bo",
+  "name": "Bo",
+  "email": "bo@example.com",
+  "isAdmin": false,
+  "canManageTemplates": false,
+  "disabled": false,
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "providers": [],
+  "generatedPassword": "a1b2c3d4e5"
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。
+
+## ユーザーの更新
+
+`PATCH /api/v1/users/:id` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。各フィールドは任意で、変更分だけを送ります。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | いいえ | 新しい表示名（1〜100 文字）。 |
+| `isAdmin` | boolean | いいえ | インスタンス管理者を付与・剥奪。 |
+| `canManageTemplates` | boolean | いいえ | テンプレート作成者権限を付与・剥奪。 |
+| `disabled` | boolean | いいえ | アカウントを無効化（サインイン不可）または再有効化。 |
+
+<Aside type="caution">
+インスタンスがロックアウトされないようガードがあります。自分の管理者ロールを外すこと、**最後の**
+インスタンス管理者を外す・無効化すること、自分のアカウントを無効化することはできません。アカウントを
+無効化すると、そのアクティブセッションも直ちに破棄されます。
+</Aside>
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/users/usr_bo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "canManageTemplates": true }'
+```
+
+## ユーザーの削除
+
+`DELETE /api/v1/users/:id` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。`204 No Content` を返します。
+
+<Aside type="caution">
+自分のアカウントや最後のインスタンス管理者は削除できません。**ワークスペースを所有する** ユーザーの
+削除は `409` でブロックされます。メンバーが孤立しないよう、先にワークスペースを再割り当てまたは削除して
+ください。
+</Aside>
+
+## 招待オブジェクト
+
+| Field | Type | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `email` | string | 招待先のメールアドレス。 |
+| `grantAdmin` | boolean | 受諾時にインスタンス管理者を付与するか。 |
+| `grantTemplateAuthor` | boolean | 受諾時にテンプレート作成者権限を付与するか。 |
+| `expiresAt` | string | ISO 8601 の有効期限（作成から 7 日後）。 |
+| `acceptedAt` | string \| null | ISO 8601 の受諾時刻。未受諾なら `null`。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+
+## 招待の一覧
+
+`GET /api/v1/invitations` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。保留中（未受諾・未期限切れ）の招待を返します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/invitations" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "inv_xyz",
+    "email": "cleo@example.com",
+    "grantAdmin": false,
+    "grantTemplateAuthor": false,
+    "expiresAt": "2026-07-05T09:30:00.000Z",
+    "acceptedAt": null,
+    "createdAt": "2026-06-28T09:30:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## 招待の作成
+
+`POST /api/v1/invitations` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。受諾リンク付きの招待メールを送信します。これは **メールオン** の経路です。
+メール配信が無効な場合、このエンドポイントは `403` を返すので、代わりにユーザーを直接作成してください。
+同じメールの既存アカウントや保留中の招待がある場合は `409` を返します。メール送信に失敗した場合、
+保留中の招待はロールバックされます。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `email` | string | はい | 招待するアドレス（保存時に小文字化）。 |
+| `grantAdmin` | boolean | いいえ | 受諾時にインスタンス管理者にする（既定 `false`）。 |
+| `grantTemplateAuthor` | boolean | いいえ | 受諾時にテンプレート作成者権限を付与する（既定 `false`）。 |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/invitations" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "cleo@example.com" }'
+```
+
+作成された招待とともに `201 Created` を返します。
+
+## 招待のキャンセル
+
+`DELETE /api/v1/invitations/:id` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。保留中の招待をキャンセルします。招待が見つからない場合は `404`、成功時は
+`204 No Content` を返します。
+
+## 招待のプレビュー
+
+`GET /api/v1/invitations/accept/:token` <Badge text="public" variant="tip" />
+
+公開 — 招待された人はまだアカウントを持っていません。生の招待トークンを解決し、発行先のメール
+アドレスを返すので、受諾ページで誰宛てかを表示できます。無効・受諾済み・期限切れのトークンは `404`
+を返します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/invitations/accept/tok_secret"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "email": "cleo@example.com" }
+```
+</TabItem>
+</Tabs>
+
+## 招待の受諾
+
+`POST /api/v1/invitations/accept/:token` <Badge text="public" variant="tip" />
+
+公開。招待からアカウントを作成します。招待された人は自分の名前とパスワードを設定します。アカウントは
+検証済みとしてマークされ（後で Google アカウントを連携できる）、招待が持つ `grantAdmin` /
+`grantTemplateAuthor` が適用され、招待は受諾済みになります。無効・期限切れのトークンや、すでに
+アカウントのあるメールは、それぞれ `404` / `409` を返します。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | はい | 表示名（1〜100 文字）。 |
+| `password` | string | はい | アカウントのパスワード（8〜128 文字）。 |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/invitations/accept/tok_secret" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Cleo", "password": "correct horse battery" }'
+```
+
+`201 Created` を返します。

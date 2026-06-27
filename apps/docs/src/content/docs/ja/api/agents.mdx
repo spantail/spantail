@@ -1,0 +1,205 @@
+---
+title: エージェント
+description: AI コーディングエージェントの登録、アクセストークンの発行・ローテーション、無効化・アーカイブ。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**エージェント（agent）** は登録された AI コーディングエージェントで、独立した主体ではなく、ある
+ユーザーの委任された identity です。キャプチャされたセッションは所有者に帰属し、所有者のワークスペース
+可視性を継承します。エージェントを登録すると、その単一の **Agent Access Token（AAT）** も発行されます。
+これは、エージェントが活動を取り込む際に使う書き込み専用の資格情報です。そのトークンを消費する
+エンドポイントは [Agent ingest](/ja/api/agent-ingest/) を参照してください。
+
+エージェントの管理は対話的なサーフェスです。以下の変更系エンドポイントはログイン済みの **session**
+を必要とし、呼び出し元自身のエージェントにのみ作用します。平文のトークンシークレット
+（`spantail_aat_…`）は作成時とローテーション時に **一度だけ** 返され、その後は取得できません。
+
+## エージェントオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `type` | string | エージェントの種別: `claude_code`、`codex`、`cursor`、`other`。 |
+| `name` | string | 表示名（1〜100 文字）。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `disabledAt` | string \| null | 設定されている間、エージェントは一時停止され、トークンは ingest で拒否されます。 |
+| `archivedAt` | string \| null | 設定されているとアーカイブ済み（取り消し不可）。 |
+| `token` | object \| null | バインドされたアクセストークンの概要（下記）。 |
+| `projectIds` | string[] | エージェントに関連付けられたプロジェクト。空の場合はバインド先ワークスペースの全プロジェクト。 |
+
+トークン概要はシークレットやそのハッシュを一切公開しません。
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `defaultWorkspaceId` | string \| null | ingest が `workspaceId` を省略したときにログするワークスペース。登録時に固定。 |
+| `lastUsedAt` | string \| null | トークンが最後に ingest に使われた ISO 8601 時刻。 |
+| `expiresAt` | string \| null | ISO 8601 の有効期限。期限なしの場合は `null`。 |
+
+## エージェントの一覧
+
+`GET /api/v1/agents`
+
+必要な認証はクエリによって異なります。
+
+- **クエリなし** <Badge text="session only" variant="default" /> — 呼び出し元自身のエージェントを
+  新しい順で返します。対話的なセッションが必要です。
+- `?ownerUserId=<id>` <Badge text="scope: admin" variant="danger" /> — **インスタンス管理者** が
+  他ユーザーのエージェントを読み取ります。
+- `?workspaceId=<id>` <Badge text="scope: read" variant="note" /> — **ワークスペース管理者** が
+  そのワークスペースにバインドされたエージェントを読み取ります。
+
+所有者の `userId` とトークンハッシュは決して返されません。
+
+**クエリパラメータ**
+
+| 名前 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `ownerUserId` | string | いいえ | インスタンス管理者のみ: 特定ユーザーのエージェントを一覧。 |
+| `workspaceId` | string | いいえ | ワークスペース管理者のみ: このワークスペースにバインドされたエージェントを一覧。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/agents" \
+  -H "Cookie: <your session cookie>"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "agt_bot",
+    "type": "claude_code",
+    "name": "Build bot",
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "disabledAt": null,
+    "archivedAt": null,
+    "token": {
+      "defaultWorkspaceId": "wrk_demo",
+      "lastUsedAt": "2026-06-28T10:15:00.000Z",
+      "expiresAt": null
+    },
+    "projectIds": ["prj_site"]
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## エージェントの登録
+
+`POST /api/v1/agents` <Badge text="session only" variant="default" />
+
+呼び出し元が所有するエージェントを登録し、その単一のアクセストークンを発行します（エージェントと
+トークンは 1:1）。`defaultWorkspaceId` は呼び出し元が所属するワークスペースである必要があり、
+`projectIds` の各要素はそのワークスペースに属している必要があります。平文の `secret` はこの
+レスポンスで **一度だけ** 返されます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `type` | string | はい | エージェントの種別: `claude_code`、`codex`、`cursor`、`other`。 |
+| `name` | string | はい | 表示名（1〜100 文字）。 |
+| `defaultWorkspaceId` | string | はい | トークンが既定でログするワークスペース。呼び出し元はメンバーである必要があります。 |
+| `projectIds` | string[] | いいえ | 関連付けるプロジェクト（すべて既定ワークスペース内）。省略または `[]` で全プロジェクト。 |
+| `expiresInDays` | integer | いいえ | トークンの有効日数（1〜3650）。省略すると期限なし。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agents" \
+  -H "Cookie: <your session cookie>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "claude_code",
+    "name": "Build bot",
+    "defaultWorkspaceId": "wrk_demo",
+    "projectIds": ["prj_site"]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "agt_bot",
+  "type": "claude_code",
+  "name": "Build bot",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "disabledAt": null,
+  "archivedAt": null,
+  "token": {
+    "defaultWorkspaceId": "wrk_demo",
+    "lastUsedAt": null,
+    "expiresAt": null
+  },
+  "projectIds": ["prj_site"],
+  "secret": "spantail_aat_9f8c2b1a4d6e0f3c5a7b9d1e2f4a6c8e"
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。
+
+<Aside type="caution">
+`secret` はここでしか表示されません。エージェントが動作する場所に保管してください。紛失した場合は
+トークンをローテーションして新しいものを発行します。
+</Aside>
+
+## エージェントの無効化・有効化
+
+`PATCH /api/v1/agents/:id` <Badge text="session only" variant="default" />
+
+`disabled` を切り替えてエージェントを一時停止・再開します。無効の間、エージェントのトークンは
+ingest で拒否され、再有効化すると元に戻ります。これは（アーカイブと違い）取り消し可能です。
+エージェントオブジェクトを返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `disabled` | boolean | はい | `true` で一時停止、`false` で再開。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/agents/agt_bot" \
+  -H "Cookie: <your session cookie>" \
+  -H "Content-Type: application/json" \
+  -d '{ "disabled": true }'
+```
+
+## エージェントのアーカイブ
+
+`DELETE /api/v1/agents/:id` <Badge text="session only" variant="default" />
+
+エージェントをアーカイブし、そのトークンを直ちに無効化します。`204 No Content` を返します。
+
+<Aside type="caution">
+アーカイブは取り消せません。アーカイブされたエージェントは元に戻せず、トークンは恒久的に無効です。
+既にキャプチャされた活動は保持されます。一時的に停止したい場合は、代わりに `PATCH` で
+`disabled: true` を使ってください。
+</Aside>
+
+## アクセストークンのローテーション
+
+`POST /api/v1/agents/:id/token/rotate` <Badge text="session only" variant="default" />
+
+ワークスペースのバインドと有効期限を保ったまま、エージェントのトークンシークレットをその場で
+再生成します。古いシークレットは直ちに使えなくなります。新しい平文の `secret` は一度だけ返されます。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agents/agt_bot/token/rotate" \
+  -H "Cookie: <your session cookie>"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "secret": "spantail_aat_1d3f5a7c9e0b2d4f6a8c0e2b4d6f8a0c"
+}
+```
+</TabItem>
+</Tabs>

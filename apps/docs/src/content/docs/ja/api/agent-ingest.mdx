@@ -1,0 +1,284 @@
+---
+title: エージェントの取り込み
+description: Agent Access Token で AI コーディングエージェントの活動を取り込み、エージェントエントリと統計を読み出す。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+ingest エンドポイントは、AI コーディングエージェントの活動を **エージェントエントリ（agent
+entry）** としてキャプチャします。エージェントとセッションごとに 1 つの作業セッションです。
+[エージェント](/ja/api/agents/) は、`Authorization: Bearer spantail_aat_…` として渡す **Agent Access
+Token（AAT）** でこれらを書き込みます。
+
+同じ `agent_entries` 行への書き込み経路は 2 つあり、1 つのセッションはちょうど一方からのみ供給されます。
+
+- `POST /agent-entries` — エージェントがクライアント側で計算したセッションサマリを投稿（例: Cursor）。
+- `POST /agent-events` — エージェントが生のターンごとのテレメトリを投稿し、サーバーがセッション
+  エントリへロールアップ（例: Claude Code の Stop hook 経由）。
+
+読み取りは通常のユーザー資格情報（session または PAT）で行い、プロジェクト ACL に従います。
+
+<Aside type="danger">
+ingest は信頼できない書き込み経路です。トークン単位でレート制限されます。トークンは書き込み専用で、
+ingest しかできず、他の場所で所有者として振る舞うことはできません。エージェントは **所有者の代わりに**
+振る舞います。ingest のたびに所有者のワークスペースメンバーシップと（プロジェクトが指定された場合は）
+プロジェクトアクセスがライブで再チェックされるため、以前にバインドされたトークンでも、所有者がもはや
+所属しない場所には書き込めません。無効化またはアーカイブされたエージェントのトークンは拒否されます。
+</Aside>
+
+## エージェントエントリオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `workspaceId` | string | 所属ワークスペース。 |
+| `ownerUserId` | string | エージェントが代わりに振る舞うユーザー。 |
+| `projectId` | string \| null | セッションが記録されたプロジェクト。`null` はワークスペースレベルの作業、またはプロジェクト削除済み。 |
+| `agentId` | string | セッションを生成したエージェント。 |
+| `sessionId` | string | 外部セッション識別子（エージェント内での冪等キー）。 |
+| `entryDate` | string | ローカル日付 `YYYY-MM-DD`。読み取り時に閲覧者のタイムゾーンで `startedAt` から導出。 |
+| `durationMinutes` | integer | セッションの時間（分）。 |
+| `usage` | object \| null | トークン使用量の合計（下記）。ソースが公開できない場合は `null`。 |
+| `description` | string \| null | 任意の短い要約（2000 文字以下）。 |
+| `startedAt` | string \| null | ISO 8601 のセッション開始。 |
+| `endedAt` | string \| null | ISO 8601 のセッション終了。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `updatedAt` | string | ISO 8601 の最終更新時刻。 |
+
+`usage` オブジェクトはセッションのトークン合計を保持します。エージェントによって公開するバケットが
+異なるため、必須は `totalTokens` のみです。
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `totalTokens` | integer | はい | セッションの総トークン数。 |
+| `inputTokens` | integer | いいえ | 入力トークン。 |
+| `outputTokens` | integer | いいえ | 出力トークン。 |
+| `cacheCreationTokens` | integer | いいえ | キャッシュ作成トークン。 |
+| `cacheReadTokens` | integer | いいえ | キャッシュ読み取りトークン。 |
+| `model` | string | いいえ | モデル名（100 文字以下）。 |
+| `costUsd` | number | いいえ | USD でのコスト。ソースが提供する場合のみ。 |
+
+## セッションサマリの取り込み
+
+`POST /api/v1/agent-entries` <Badge text="agent token" variant="danger" />
+
+1 つのエージェントセッションを記録します。`(agent, sessionId)` で冪等です。同じセッションを
+再送すると、重複を挿入せず行を更新するため、リトライやバッチ再集計で二重計上されません。
+
+`workspaceId` は省略時にトークンにバインドされたワークスペースが既定値になります。ボディと
+トークンのどちらもワークスペースを与えない場合、リクエストは拒否されます。`projectId` には
+トークンレベルの既定値はなく、省略するとワークスペースレベルの作業として記録されます。
+`entryDate` は送りません。
+読み取り時に `startedAt` から導出されます。`startedAt` を省略すると `endedAt`、次に ingest 時刻に
+フォールバックします。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `sessionId` | string | はい | 外部セッション id（1〜200 文字）。 |
+| `durationMinutes` | integer | はい | セッションの時間（分、0 以上）。 |
+| `workspaceId` | string | いいえ | 対象ワークスペース。既定はトークンのバインド先ワークスペース。 |
+| `projectId` | string | いいえ | 対象プロジェクト（ワークスペースに属すること）。ワークスペースレベルの作業では省略。 |
+| `usage` | object | いいえ | トークン使用量の合計（上記）。 |
+| `description` | string | いいえ | 短い要約（2000 文字以下）。 |
+| `startedAt` | string | いいえ | ISO 8601 のセッション開始。 |
+| `endedAt` | string | いいえ | ISO 8601 のセッション終了（`startedAt` より前であってはならない）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agent-entries" \
+  -H "Authorization: Bearer spantail_aat_youragenttoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "sess_8f21",
+    "durationMinutes": 42,
+    "projectId": "prj_site",
+    "description": "Refactored the auth middleware",
+    "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+    "startedAt": "2026-06-28T09:00:00.000Z",
+    "endedAt": "2026-06-28T09:42:00.000Z"
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "ae_01K2",
+  "workspaceId": "wrk_demo",
+  "ownerUserId": "usr_ana",
+  "projectId": "prj_site",
+  "agentId": "agt_bot",
+  "sessionId": "sess_8f21",
+  "durationMinutes": 42,
+  "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+  "description": "Refactored the auth middleware",
+  "startedAt": "2026-06-28T09:00:00.000Z",
+  "endedAt": "2026-06-28T09:42:00.000Z",
+  "createdAt": "2026-06-28T09:42:05.000Z",
+  "updatedAt": "2026-06-28T09:42:05.000Z",
+  "entryDate": "2026-06-28"
+}
+```
+</TabItem>
+</Tabs>
+
+<Aside type="note">
+エコーされる `entryDate` は UTC で導出されます（ingest には人の閲覧者がいません）。ユーザーが
+エントリを読み戻すと、そのユーザー自身のタイムゾーンで再計算されます。
+</Aside>
+
+## ターンごとのイベントの取り込み
+
+`POST /api/v1/agent-events` <Badge text="agent token" variant="danger" />
+
+セッションの生のターンごとテレメトリを投稿します。アシスタントメッセージごとに 1 イベントです。
+サーバーは新しいイベントを冪等に挿入し、サマリ経路が書き込むのと同じ `agent_entries` 行へ
+セッションのロールアップを再計算します。`(agent, sourceId)` で冪等です。累積トランスクリプトを
+毎ターン再投稿しても安全で、既知のイベントは no-op となり、ロールアップは（加算ではなく）
+再計算されるため、合計は収束します。
+
+`workspaceId` は省略時にトークンにバインドされたワークスペースが既定値になります。`projectId` には
+トークンレベルの既定値はありません（省略するとワークスペースレベルの作業として記録されます）。
+サマリ経路と同じライブの委任チェックが適用されます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `sessionId` | string | はい | 外部セッション id（1〜200 文字）。 |
+| `events` | object[] | はい | ターンごとイベント 1〜5000 件（下記）。 |
+| `workspaceId` | string | いいえ | 対象ワークスペース。既定はトークンのバインド先ワークスペース。 |
+| `projectId` | string | いいえ | 対象プロジェクト（ワークスペースに属すること）。 |
+
+各 **event** は 1 つのアシスタントターン（1 API レスポンス、1 usage ブロック）です。
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `sourceId` | string | はい | トランスクリプトのメッセージ id（1〜200 文字）。エージェント内での冪等キー。 |
+| `timestamp` | string | はい | ISO 8601（UTC）のメッセージ時刻。 |
+| `usage` | object | はい | エージェントのネイティブ usage オブジェクト。そのまま保存される。 |
+| `model` | string | いいえ | モデル名（100 文字以下）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agent-events" \
+  -H "Authorization: Bearer spantail_aat_youragenttoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "sess_8f21",
+    "projectId": "prj_site",
+    "events": [
+      {
+        "sourceId": "msg_01a",
+        "timestamp": "2026-06-28T09:00:00.000Z",
+        "model": "claude-opus-4",
+        "usage": { "input_tokens": 8000, "output_tokens": 3200 }
+      },
+      {
+        "sourceId": "msg_01b",
+        "timestamp": "2026-06-28T09:12:00.000Z",
+        "model": "claude-opus-4",
+        "usage": { "input_tokens": 4000, "output_tokens": 3200 }
+      }
+    ]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "ae_01K2",
+  "workspaceId": "wrk_demo",
+  "ownerUserId": "usr_ana",
+  "projectId": "prj_site",
+  "agentId": "agt_bot",
+  "sessionId": "sess_8f21",
+  "durationMinutes": 12,
+  "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+  "description": null,
+  "startedAt": "2026-06-28T09:00:00.000Z",
+  "endedAt": "2026-06-28T09:12:00.000Z",
+  "createdAt": "2026-06-28T09:12:05.000Z",
+  "updatedAt": "2026-06-28T09:12:05.000Z",
+  "entryDate": "2026-06-28"
+}
+```
+</TabItem>
+</Tabs>
+
+## エージェントエントリの一覧
+
+`GET /api/v1/agent-entries` <Badge text="scope: read" variant="note" />
+
+ワークスペース内のエージェントエントリを新しい順で返します。読み取りスコープは呼び出し元の
+メンバーシップからサーバー側で解決されます。メンバーは自分が所属するプロジェクトのエージェント活動と、
+自分のエージェントの活動を見られます（未割り当ての活動は所有者のみ）。一方、ワークスペース管理者・
+インスタンス管理者はワークスペース内のすべてのエージェント活動を見られます。
+
+**クエリパラメータ**
+
+| 名前 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `workspaceId` | string | はい | 一覧対象のワークスペース。 |
+| `agentId` | string | いいえ | 単一エージェントに絞り込み。 |
+| `from` | string | いいえ | 開始日（含む）`YYYY-MM-DD`。 |
+| `to` | string | いいえ | 終了日（含む）`YYYY-MM-DD`。 |
+| `limit` | integer | いいえ | ページサイズ 1〜200（既定 50）。 |
+| `offset` | integer | いいえ | スキップ行数（既定 0）。 |
+
+```bash
+curl "https://<your-instance>/api/v1/agent-entries?workspaceId=wrk_demo&agentId=agt_bot" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## 統計
+
+`GET /api/v1/agent-entries/stats` <Badge text="scope: read" variant="note" />
+
+一覧と同じフィルタ集合・同じ ACL で集計した合計を返します。一覧と違い、`from`/`to` の日付範囲は
+**必須** です。これは、行を閲覧者のタイムゾーンで日別にバケットするスキャンを限定します。
+ページングはありません。
+
+**クエリパラメータ**
+
+| 名前 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `workspaceId` | string | はい | 集計対象のワークスペース。 |
+| `agentId` | string | いいえ | 単一エージェントに絞り込み。 |
+| `from` | string | はい | 開始日（含む）`YYYY-MM-DD`。 |
+| `to` | string | はい | 終了日（含む）`YYYY-MM-DD`。 |
+
+```json
+{
+  "totalMinutes": 540,
+  "totalTokens": 184000,
+  "totalInputTokens": 120000,
+  "totalOutputTokens": 64000,
+  "entryCount": 12,
+  "byDate": [
+    { "date": "2026-06-28", "minutes": 42, "tokens": 18400, "count": 1, "inputTokens": 12000, "outputTokens": 6400 }
+  ],
+  "byAgent": [
+    { "agentId": "agt_bot", "minutes": 540, "tokens": 184000, "count": 12 }
+  ]
+}
+```
+
+トークンバケットを公開しないエージェントは入力/出力の内訳に `0` を寄与するため、その合計は
+`totalTokens` より小さくなることがあります。`byDate` にはエントリのある日付だけが現れます。
+
+## ワークスペース内のエージェント一覧
+
+`GET /api/v1/agent-entries/agents` <Badge text="scope: read" variant="note" />
+
+ワークスペース配下の呼び出し元自身のエージェント（ここで活動があるものと、ここに登録されたもの）を
+フィルタ用に返します。`workspaceId` は必須です。
+
+```json
+[
+  { "id": "agt_bot", "type": "claude_code", "name": "Build bot" }
+]
+```

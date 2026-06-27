@@ -1,0 +1,282 @@
+---
+title: Inbox & realtime
+description: Read and manage the report-delivery mailbox, and subscribe to realtime invalidation signals.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+The **inbox** is the caller's mailbox of report deliveries — the "Send to" target. When a
+report is sent, each recipient gets a frozen, rendered copy in their inbox, and the sender
+keeps a record in their **Sent** folder. Folders are server-side filters over the caller's
+own deliveries; every route is scoped to the caller, so no one can read or mutate another
+mailbox (except admins, through the explicit read variants below).
+
+## Folders
+
+A folder selects a view over the caller's deliveries. Pass it as the `folder` query
+parameter on listing and counts.
+
+| Folder | Meaning |
+| --- | --- |
+| `inbox` | Received messages, not archived or trashed. The default. |
+| `starred` | Received messages flagged `starred`. |
+| `sent` | Batches the caller sent (grouped per send). |
+| `archive` | Received messages flagged `archived`. |
+| `trash` | Received messages flagged `trashed`. |
+
+## The mail item object
+
+A mail item serves both a received message and a sent batch; the `scope` field says which.
+Per-scope fields are simply empty for the other scope (received: `recipientNames` `[]`,
+`recipientCount` `0`; sent: `readAt` `null`).
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Delivery id. For a sent item, a representative row in the batch. |
+| `scope` | string | `received` or `sent`. Picks which id flags target. |
+| `batchId` | string | The send batch this delivery belongs to. |
+| `reportId` | string \| null | Source report, or `null` once it has been deleted (the snapshot stands alone). |
+| `senderName` | string | Display name of the sender. |
+| `senderEmail` | string | Email of the sender. |
+| `reportName` | string | Name of the delivered report. |
+| `dateFrom` | string | Report range start `YYYY-MM-DD`. |
+| `dateTo` | string | Report range end `YYYY-MM-DD`. |
+| `message` | string \| null | Optional note the sender attached. |
+| `readAt` | string \| null | Received: ISO 8601 read instant, or `null` if unread. Sent: always `null`. |
+| `createdAt` | string | ISO 8601 delivery instant. |
+| `starred` | boolean | The caller's star flag. |
+| `archived` | boolean | The caller's archive flag. |
+| `trashed` | boolean | The caller's trash flag. |
+| `recipientNames` | string[] | Sent only: recipient names for the "To: …" summary. |
+| `recipientCount` | integer | Sent only: number of recipients. |
+
+Opening a single item (`GET /inbox/:id`) returns the same fields plus `renderedMarkdown`
+(the frozen rendered body); a sent item also carries `recipients` (the full recipient list,
+each with `id`, `name`, `email`, `imageUrl`).
+
+## List the mailbox
+
+`GET /api/v1/inbox` <Badge text="scope: read" variant="note" />
+
+Returns the caller's deliveries for the given folder, newest first.
+
+**Query parameters**
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `folder` | string | no | One of `inbox`, `starred`, `sent`, `archive`, `trash` (default `inbox`). |
+| `limit` | integer | no | Page size, 1–200. Omit to return the full folder. |
+| `offset` | integer | no | Rows to skip (default 0). |
+| `ownerUserId` | string | no | Instance admin only: read another user's mailbox. |
+| `workspaceId` | string | no | Workspace admin: read deliveries of the workspace's single-workspace reports across recipients. |
+
+Admin reads are addressed by `?ownerUserId` (instance admin reads a user's mailbox) or
+`?workspaceId` (workspace admin reads a cross-recipient delivery view); otherwise the caller
+reads their own mailbox.
+
+<Aside type="note">
+Folders are per-recipient mailbox state, so they do not apply to the workspace-scoped view.
+Passing a non-default `folder` together with `workspaceId` returns `400`.
+</Aside>
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/inbox?folder=inbox&limit=50" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "msg_01",
+    "scope": "received",
+    "batchId": "bat_7k",
+    "reportId": "rep_weekly",
+    "senderName": "Ana",
+    "senderEmail": "ana@example.com",
+    "reportName": "Weekly summary",
+    "dateFrom": "2026-06-22",
+    "dateTo": "2026-06-28",
+    "message": "Here's this week's recap",
+    "readAt": null,
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "starred": false,
+    "archived": false,
+    "trashed": false,
+    "recipientNames": [],
+    "recipientCount": 0
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Folder counts
+
+`GET /api/v1/inbox/counts` <Badge text="scope: read" variant="note" />
+
+Returns per-folder counts for the mailbox sidebar. `unread` is the Inbox badge count.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/inbox/counts" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "inbox": 12,
+  "unread": 3,
+  "starred": 2,
+  "sent": 8,
+  "archive": 5,
+  "trash": 1
+}
+```
+</TabItem>
+</Tabs>
+
+## Unread count
+
+`GET /api/v1/inbox/unread-count` <Badge text="scope: read" variant="note" />
+
+Returns just the caller's unread Inbox count — a cheap poll for a header badge.
+
+```json
+{ "count": 3 }
+```
+
+## Mark all read
+
+`POST /api/v1/inbox/read-all` <Badge text="scope: write" variant="caution" />
+
+Marks every message in the caller's Inbox as read. Returns `204 No Content`.
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/inbox/read-all" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## Set flags
+
+`PATCH /api/v1/inbox/flags` <Badge text="scope: write" variant="caution" />
+
+Toggles one or more flags on a mailbox target — a received delivery or a sent batch. At
+least one flag must be provided. A target the caller does not own returns `404`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `scope` | string | yes | `received` (target a delivery `id`) or `sent` (target a `batchId`). |
+| `targetId` | string | yes | The delivery id or batch id to flag. |
+| `starred` | boolean | no | Set the star flag. |
+| `archived` | boolean | no | Set the archive flag. |
+| `trashed` | boolean | no | Set the trash flag. |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/inbox/flags" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "scope": "received", "targetId": "msg_01", "starred": true }'
+```
+
+Returns `204 No Content`.
+
+## Get a message
+
+`GET /api/v1/inbox/:id` <Badge text="scope: read" variant="note" />
+
+Returns one mailbox item with its frozen `renderedMarkdown`. The caller's relationship to
+the delivery picks the variant: a recipient gets the received detail, the sender gets the
+sent batch detail (with the full recipient list). Instance admins may read any delivery, and
+a workspace admin may read it through the source report's read access (single-workspace
+reports only). A message hidden from the caller returns `404`.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/inbox/msg_01" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "msg_01",
+  "scope": "received",
+  "batchId": "bat_7k",
+  "reportId": "rep_weekly",
+  "senderName": "Ana",
+  "senderEmail": "ana@example.com",
+  "reportName": "Weekly summary",
+  "dateFrom": "2026-06-22",
+  "dateTo": "2026-06-28",
+  "message": "Here's this week's recap",
+  "readAt": "2026-06-28T10:00:00.000Z",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "starred": false,
+  "archived": false,
+  "trashed": false,
+  "recipientNames": [],
+  "recipientCount": 0,
+  "renderedMarkdown": "# Weekly summary\n\n..."
+}
+```
+</TabItem>
+</Tabs>
+
+## Mark one read / unread
+
+`POST /api/v1/inbox/:id/read` <Badge text="scope: write" variant="caution" />
+
+`POST /api/v1/inbox/:id/unread` <Badge text="scope: write" variant="caution" />
+
+Set or clear the read state of a single received message. A message not in the caller's
+mailbox returns `404`. Both return `204 No Content`.
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/inbox/msg_01/read" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## Realtime
+
+`GET /api/v1/realtime` <Badge text="session only" variant="default" />
+
+A [Server-Sent Events](https://developer.mozilla.org/docs/Web/API/Server-sent_events)
+stream of lightweight cache-invalidation signals for the authenticated user. The web app
+consumes it with the browser's `EventSource`, which sends the session cookie automatically.
+
+<Aside type="note">
+Session only. `EventSource` cannot set an `Authorization` header, so Personal Access Token
+and Agent Access Token callers are not supported here. A non-session credential returns
+`401`.
+</Aside>
+
+A signal names *what* changed (and *where*) — never the changed data itself. On receiving
+one, the client re-fetches the affected queries through the typed API, so authorization and
+shaping stay on the existing REST path. Each event is a JSON object:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `type` | string | What changed: `work-entry`, `agent-entry`, `project`, `report-discussion`, or `message`. |
+| `workspaceId` | string | Set for workspace-scoped signals; absent for user-scoped ones (`message` spans a user's workspaces). |
+| `id` | string | The affected entity id when invalidation is per-id (e.g. `report-discussion` keyed by report id). |
+
+Each event arrives as an SSE `data:` line:
+
+```
+data: {"type":"work-entry","workspaceId":"wrk_demo"}
+
+data: {"type":"message"}
+
+data: {"type":"report-discussion","id":"rep_weekly"}
+```
+
+The connection is routed to the caller's own hub; workspace fan-out is membership-scoped at
+publish time, so a client only ever receives events addressed to it.

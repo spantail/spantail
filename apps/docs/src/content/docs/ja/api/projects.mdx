@@ -1,0 +1,237 @@
+---
+title: プロジェクト
+description: プロジェクトの作成・一覧・更新・アーカイブ・削除、およびメンバーの管理。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**プロジェクト（project）** は、ワークスペース内の作業をまとめる単位です。作業エントリと
+エージェント活動はプロジェクトに対して記録され、プロジェクトメンバーシップが、一般メンバーの
+閲覧範囲と記録先を制限します。ワークスペース管理者とオーナーはすべてのプロジェクトを管理し、
+一般メンバーは所属するプロジェクトに限定されます。
+
+プロジェクトは `active` か `archived` のいずれかです。アーカイブすると、レポート用に残しつつ
+日常のピッカーからは隠されます。プロジェクトは削除する前にアーカイブする必要があります。
+
+コレクションのエンドポイントはワークスペース配下にネストされ（`/api/v1/workspaces/:id/projects`）、
+項目のエンドポイントはフラットです（`/api/v1/projects/:id`）。
+
+## プロジェクトオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `workspaceId` | string | 所属ワークスペース。 |
+| `slug` | string | URL に使える短い名前。ワークスペース内で一意。 |
+| `name` | string | 表示名（1〜100 文字）。 |
+| `description` | string \| null | 任意の説明（1000 文字以下）。 |
+| `hue` | integer | OKLCH 色相（0〜359）で表す色マーカー。 |
+| `status` | string | `active` または `archived`。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `archivedAt` | string \| null | アーカイブされた ISO 8601 時刻。アクティブな場合は `null`。 |
+
+## プロジェクトの一覧
+
+`GET /api/v1/workspaces/:id/projects` <Badge text="scope: read" variant="note" />
+
+ワークスペース内のすべてのプロジェクトを返します。メンバーシップが必要です。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces/wrk_demo/projects" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "prj_site",
+    "workspaceId": "wrk_demo",
+    "slug": "site",
+    "name": "Website",
+    "description": "Marketing site and docs",
+    "hue": 210,
+    "status": "active",
+    "createdAt": "2026-01-05T08:00:00.000Z",
+    "archivedAt": null
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## プロジェクトの作成
+
+`POST /api/v1/workspaces/:id/projects` <Badge text="scope: write" variant="caution" />
+
+ワークスペースにプロジェクトを作成します。ワークスペース管理者のみ。`slug` はワークスペース内で
+一意である必要があり、重複すると `409 conflict` を返します。`memberUserIds` の各 ID は、既に
+ワークスペースのメンバーである必要があります。そうでない場合は `400 bad_request` を返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `slug` | string | はい | URL に使える短い名前。ワークスペース内で一意。 |
+| `name` | string | はい | 表示名（1〜100 文字）。 |
+| `description` | string | いいえ | 説明（1000 文字以下）。 |
+| `hue` | integer | いいえ | 色マーカー、OKLCH 色相（0〜359）。省略時は既定値。 |
+| `memberUserIds` | string[] | いいえ | 初期プロジェクトメンバー（ワークスペースメンバーの ID）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/workspaces/wrk_demo/projects" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "site",
+    "name": "Website",
+    "description": "Marketing site and docs",
+    "hue": 210,
+    "memberUserIds": ["usr_ana"]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "prj_site",
+  "workspaceId": "wrk_demo",
+  "slug": "site",
+  "name": "Website",
+  "description": "Marketing site and docs",
+  "hue": 210,
+  "status": "active",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "archivedAt": null
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。
+
+## 自分のプロジェクト ID 一覧
+
+`GET /api/v1/workspaces/:id/projects/mine` <Badge text="scope: read" variant="note" />
+
+このワークスペースで呼び出し元が所属するプロジェクトの ID を、素の文字列配列で返します。
+「記録できるプロジェクト」のピッカーを駆動します。メンバーシップが必要です。
+
+```json
+["prj_site", "prj_app"]
+```
+
+## プロジェクト横断のメンバー一覧
+
+`GET /api/v1/workspaces/:id/projects/members` <Badge text="scope: read" variant="note" />
+
+ワークスペース内のすべてのプロジェクトのメンバーを 1 回の呼び出しで返します。プロジェクトテーブルの
+アバタースタックの描画に使います。メンバーシップが必要です。
+
+```json
+[
+  {
+    "projectId": "prj_site",
+    "userId": "usr_ana",
+    "name": "Ana Ng",
+    "imageUrl": null
+  }
+]
+```
+
+## プロジェクトの取得
+
+`GET /api/v1/projects/:id` <Badge text="scope: read" variant="note" />
+
+単一のプロジェクトを返します。プロジェクトのワークスペースのメンバーシップが必要です。そうでない
+場合は `404`。
+
+## プロジェクトの更新
+
+`PATCH /api/v1/projects/:id` <Badge text="scope: write" variant="caution" />
+
+プロジェクトのフィールドを更新します。ワークスペース管理者のみ。ボディの各フィールドは任意で、
+変更分だけを送ります。`slug` をワークスペース内で既に使われているものに変更すると `409 conflict` を
+返します。`status` を `archived` にすると `archivedAt` が刻まれ、`active` にすると解除されます。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `name` | string | いいえ | 表示名（1〜100 文字）。 |
+| `slug` | string | いいえ | URL に使える短い名前。ワークスペース内で一意。 |
+| `description` | string \| null | いいえ | 説明（1000 文字以下）。クリアするには `null`。 |
+| `hue` | integer | いいえ | 色マーカー、OKLCH 色相（0〜359）。 |
+| `status` | string | いいえ | `active` または `archived`。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/projects/prj_site" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "archived" }'
+```
+
+更新後のプロジェクトオブジェクトを返します。
+
+## プロジェクトの削除
+
+`DELETE /api/v1/projects/:id` <Badge text="scope: write" variant="caution" />
+
+プロジェクトを完全に削除します。ワークスペース管理者のみ。`204 No Content` を返します。
+
+<Aside type="caution">
+削除できるのはアーカイブ済みのプロジェクトだけです。`active` のプロジェクトを削除しようとすると
+`409 conflict` を返します。先にアーカイブしてください。
+</Aside>
+
+## プロジェクトメンバーの一覧
+
+`GET /api/v1/projects/:id/members` <Badge text="scope: read" variant="note" />
+
+プロジェクトのメンバーを返します。プロジェクトのワークスペースのメンバーシップが必要です。
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `projectId` | string | 所属プロジェクト。 |
+| `userId` | string | メンバーのユーザー ID。 |
+| `name` | string | メンバーの表示名。 |
+| `email` | string | メンバーのメールアドレス。 |
+| `imageUrl` | string \| null | そのまま使えるアバター URL。ない場合は `null`。 |
+| `createdAt` | string | メンバーシップ作成の ISO 8601 時刻。 |
+
+## プロジェクトメンバーの追加
+
+`POST /api/v1/projects/:id/members` <Badge text="scope: write" variant="caution" />
+
+ユーザーをプロジェクトに追加します。ワークスペース管理者のみ。対象ユーザーは、プロジェクトの
+ワークスペースのメンバーである必要があります。そうでない場合は `400 bad_request` を返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `userId` | string | はい | 追加するワークスペースメンバーのユーザー ID。 |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/projects/prj_site/members" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "userId": "usr_ana" }'
+```
+
+新しいプロジェクトメンバーオブジェクトとともに `201 Created` を返します。
+
+## プロジェクトメンバーの削除
+
+`DELETE /api/v1/projects/:id/members/:userId` <Badge text="scope: write" variant="caution" />
+
+ユーザーをプロジェクトから削除します。ワークスペース管理者のみ。`204 No Content` を返します。
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/projects/prj_site/members/usr_ana" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```

@@ -1,0 +1,271 @@
+---
+title: Sharing & discussion
+description: Public share links for reports, the public viewer, and the report discussion thread.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A [report](/api/reports/) can be exposed two ways. A **public share** mints a capability link
+that anyone with the URL (and optional passcode) can open — a frozen copy of the report, served by
+the public viewer with no Spantail account. A **discussion** lets the report's participants
+(the owner and Send-to recipients) react to the body and leave threaded comments.
+
+## Public shares
+
+A share freezes the report's current rendered body onto the share row at mint time, so a later
+report edit never changes a published page. The plaintext token is the capability — treat the URL
+as a secret.
+
+### The share object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `reportId` | string | The report this link exposes. |
+| `token` | string | The capability token (a 22-char base64url string). The public URL is `/share/<token>`. |
+| `hasPasscode` | boolean | Whether a passcode is required to view. The passcode itself never leaves the server. |
+| `expiresAt` | string \| null | ISO 8601 expiry, or `null` for no expiry. |
+| `revokedAt` | string \| null | ISO 8601 revocation instant, or `null` if active. |
+| `viewCount` | integer | Number of times the page has been viewed. |
+| `lastViewedAt` | string \| null | ISO 8601 instant of the last view, or `null`. |
+| `createdAt` | string | ISO 8601 creation instant. |
+
+### List a report's shares
+
+`GET /api/v1/reports/:id/shares` <Badge text="scope: read" variant="note" />
+
+Returns the report's shares (including plaintext tokens). Follows the report's read access: the
+owner (re-checked against current workspace membership), an instance admin, or a workspace
+admin/owner of a single-workspace report. Anyone else gets `404`.
+
+```json
+[
+  {
+    "id": "shr_ab12cd",
+    "reportId": "rep_q2",
+    "token": "Hs9Kp2mNv8rT3wYbL6dQx7",
+    "hasPasscode": true,
+    "expiresAt": "2026-07-28T00:00:00.000Z",
+    "revokedAt": null,
+    "viewCount": 4,
+    "lastViewedAt": "2026-06-28T11:00:00.000Z",
+    "createdAt": "2026-06-28T09:45:00.000Z"
+  }
+]
+```
+
+### Create a share
+
+`POST /api/v1/reports/:id/shares` <Badge text="scope: write" variant="caution" />
+
+Owner only (re-checked against current workspace membership). Mints a link backed by a frozen copy
+of the report's current version. Both fields are optional; an empty body mints a no-passcode,
+no-expiry link.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `passcode` | string | no | Passcode required to view (4–128 chars). Stored hashed (PBKDF2). |
+| `expiresInDays` | integer | no | Days until the link expires (1–365). Omitted means no expiry. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/shares" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "passcode": "sunflower", "expiresInDays": 30 }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "shr_ab12cd",
+  "reportId": "rep_q2",
+  "token": "Hs9Kp2mNv8rT3wYbL6dQx7",
+  "hasPasscode": true,
+  "expiresAt": "2026-07-28T00:00:00.000Z",
+  "revokedAt": null,
+  "viewCount": 0,
+  "lastViewedAt": null,
+  "createdAt": "2026-06-28T09:45:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`.
+
+### Revoke a share
+
+`POST /api/v1/report-shares/:id/revoke` <Badge text="scope: write" variant="caution" />
+
+Owner only. Revocation only reduces exposure, so it skips the workspace membership re-check.
+Idempotent — re-revoking keeps the first `revokedAt`. A revoked link immediately stops serving its
+frozen body. Returns the updated share object.
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/report-shares/shr_ab12cd/revoke" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## The public viewer
+
+The public viewer serves the frozen page as HTML at `/share/:token` — no `/api/v1` prefix, no
+authentication. Malformed, unknown, revoked, and expired tokens all return the same HTML `404`, so
+a link's past existence is never revealed. The page is served `noindex`, `no-store`, with a strict
+Content-Security-Policy.
+
+### View a shared report
+
+`GET /share/:token` <Badge text="public" variant="tip" />
+
+Returns the report page as HTML. If the share has a passcode, returns a passcode prompt page
+instead; submit the passcode with the `POST` form below.
+
+### Submit a passcode
+
+`POST /share/:token` <Badge text="public" variant="tip" />
+
+Accepts a form-encoded `passcode` field. A correct passcode returns the report page; an incorrect
+one returns the passcode page again with `401`. Shares without a passcode return the page directly.
+
+```bash
+curl -X POST "https://<your-instance>/share/Hs9Kp2mNv8rT3wYbL6dQx7" \
+  --data-urlencode "passcode=sunflower"
+```
+
+## Discussion
+
+A report's discussion is restricted to **participants** — the report owner and Send-to recipients.
+An instance admin (or a workspace admin/owner of a single-workspace report) who is not a participant
+can still *read* the thread under the report's read access, but writing stays participant-only.
+Comments and reactions are only writable once the report has been shared (it has at least one
+delivery); the owner of an unsent report sees an empty, read-only thread.
+
+### The comment object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `reportId` | string | The report this comment belongs to. |
+| `authorUserId` | string \| null | Author, or `null` once their account is deleted (the frozen `authorName` stands alone). |
+| `authorName` | string | Author display name, frozen at write. |
+| `authorImageUrl` | string \| null | Author's live avatar URL, or `null`. |
+| `body` | string | Markdown comment body. |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `updatedAt` | string | ISO 8601 last-update instant. |
+| `editable` | boolean | `true` when the caller authored it (drives the edit/delete menu). |
+| `reactions` | object[] | Aggregated reactions on this comment (see below). |
+
+A **reaction summary** aggregates one emoji: `{ "emoji": "+1", "count": 2, "reactedByMe": true,
+"userNames": ["Ana", "Bo"] }`. Reaction emoji are stable content keys, not glyphs: `+1`, `-1`,
+`laugh`, `hooray`, `confused`, `heart`, `rocket`, `eyes`.
+
+### Get the discussion
+
+`GET /api/v1/reports/:id/discussion` <Badge text="scope: read" variant="note" />
+
+Returns the report's body-level reactions and its comments (each with their own reactions), plus
+`shared` — `false` for a report that has never been sent (the UI hides the panel then).
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "shared": true,
+  "reactions": [
+    { "emoji": "rocket", "count": 1, "reactedByMe": false, "userNames": ["Bo"] }
+  ],
+  "comments": [
+    {
+      "id": "cmt_7x",
+      "reportId": "rep_q2",
+      "authorUserId": "usr_bo",
+      "authorName": "Bo",
+      "authorImageUrl": null,
+      "body": "Looks great — shipping it.",
+      "createdAt": "2026-06-28T12:00:00.000Z",
+      "updatedAt": "2026-06-28T12:00:00.000Z",
+      "editable": false,
+      "reactions": []
+    }
+  ]
+}
+```
+</TabItem>
+</Tabs>
+
+### Add a comment
+
+`POST /api/v1/reports/:id/comments` <Badge text="scope: write" variant="caution" />
+
+Participant only; the report must have been shared. Returns the created comment with `201`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `body` | string | yes | Markdown comment (1–10000 chars). |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/comments" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "body": "Looks great — shipping it." }'
+```
+
+### Edit a comment
+
+`PATCH /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+
+Author only. Same `body` field as create. A missing comment, a wrong report, or a non-author all
+return `404` — which is never distinguished.
+
+### Delete a comment
+
+`DELETE /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+
+Author only. Returns `204 No Content`.
+
+### React to the report body
+
+`PUT /api/v1/reports/:id/reactions` <Badge text="scope: write" variant="caution" />
+
+Participant only; the report must have been shared. Toggles the caller's reaction for the given
+emoji on the report body (a second call with the same emoji removes it). Returns the report body's
+updated reaction summaries.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `emoji` | string | yes | One of the reaction keys (`+1`, `-1`, `laugh`, `hooray`, `confused`, `heart`, `rocket`, `eyes`). |
+
+```bash
+curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/reactions" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "emoji": "rocket" }'
+```
+
+### React to a comment
+
+`PUT /api/v1/reports/:id/comments/:commentId/reactions` <Badge text="scope: write" variant="caution" />
+
+Participant only. Toggles the caller's reaction on a single comment (validated to belong to the
+report). Returns that comment's updated reaction summaries.
+
+```bash
+curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/comments/cmt_7x/reactions" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "emoji": "heart" }'
+```

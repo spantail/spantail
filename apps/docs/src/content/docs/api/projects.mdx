@@ -1,0 +1,236 @@
+---
+title: Projects
+description: Create, list, update, archive, and delete projects, and manage their members.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **project** groups work within a workspace. Work entries and agent activity are logged
+against a project, and project membership scopes what plain members can see and log to.
+Workspace admins and owners manage every project; plain members are limited to the projects
+they belong to.
+
+A project is `active` or `archived`. Archiving keeps it for reporting while hiding it from
+day-to-day pickers; a project must be archived before it can be deleted.
+
+Collection endpoints are nested under a workspace (`/api/v1/workspaces/:id/projects`); item
+endpoints are flat (`/api/v1/projects/:id`).
+
+## The project object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `workspaceId` | string | Owning workspace. |
+| `slug` | string | URL-safe short name, unique within the workspace. |
+| `name` | string | Display name (1–100 chars). |
+| `description` | string \| null | Optional description (≤ 1000 chars). |
+| `hue` | integer | Color marker as an OKLCH hue (0–359). |
+| `status` | string | `active` or `archived`. |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `archivedAt` | string \| null | ISO 8601 instant the project was archived, or `null` when active. |
+
+## List projects
+
+`GET /api/v1/workspaces/:id/projects` <Badge text="scope: read" variant="note" />
+
+Returns every project in the workspace. Requires membership.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces/wrk_demo/projects" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "prj_site",
+    "workspaceId": "wrk_demo",
+    "slug": "site",
+    "name": "Website",
+    "description": "Marketing site and docs",
+    "hue": 210,
+    "status": "active",
+    "createdAt": "2026-01-05T08:00:00.000Z",
+    "archivedAt": null
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Create a project
+
+`POST /api/v1/workspaces/:id/projects` <Badge text="scope: write" variant="caution" />
+
+Creates a project in the workspace. Workspace admins only. The `slug` must be unique within
+the workspace; a duplicate returns `409 conflict`. Each id in `memberUserIds` must already be a
+member of the workspace, otherwise the request returns `400 bad_request`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `slug` | string | yes | URL-safe short name, unique within the workspace. |
+| `name` | string | yes | Display name (1–100 chars). |
+| `description` | string | no | Description (≤ 1000 chars). |
+| `hue` | integer | no | Color marker, OKLCH hue (0–359). Defaults when omitted. |
+| `memberUserIds` | string[] | no | Initial project members (workspace member ids). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/workspaces/wrk_demo/projects" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "site",
+    "name": "Website",
+    "description": "Marketing site and docs",
+    "hue": 210,
+    "memberUserIds": ["usr_ana"]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "prj_site",
+  "workspaceId": "wrk_demo",
+  "slug": "site",
+  "name": "Website",
+  "description": "Marketing site and docs",
+  "hue": 210,
+  "status": "active",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "archivedAt": null
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`.
+
+## List my project ids
+
+`GET /api/v1/workspaces/:id/projects/mine` <Badge text="scope: read" variant="note" />
+
+Returns the ids of the projects the caller belongs to in this workspace, as a plain string
+array. Drives the "projects I can log to" picker. Requires membership.
+
+```json
+["prj_site", "prj_app"]
+```
+
+## List members across projects
+
+`GET /api/v1/workspaces/:id/projects/members` <Badge text="scope: read" variant="note" />
+
+Returns project members across every project in the workspace, in one call — for rendering the
+projects table's avatar stacks. Requires membership.
+
+```json
+[
+  {
+    "projectId": "prj_site",
+    "userId": "usr_ana",
+    "name": "Ana Ng",
+    "imageUrl": null
+  }
+]
+```
+
+## Get a project
+
+`GET /api/v1/projects/:id` <Badge text="scope: read" variant="note" />
+
+Returns a single project. Requires membership of the project's workspace; otherwise `404`.
+
+## Update a project
+
+`PATCH /api/v1/projects/:id` <Badge text="scope: write" variant="caution" />
+
+Updates project fields. Workspace admins only. All body fields are optional; send just what
+changes. Changing `slug` to one already taken in the workspace returns `409 conflict`. Setting
+`status` to `archived` stamps `archivedAt`; setting it to `active` clears it.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | no | Display name (1–100 chars). |
+| `slug` | string | no | URL-safe short name, unique within the workspace. |
+| `description` | string \| null | no | Description (≤ 1000 chars), or `null` to clear it. |
+| `hue` | integer | no | Color marker, OKLCH hue (0–359). |
+| `status` | string | no | `active` or `archived`. |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/projects/prj_site" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "status": "archived" }'
+```
+
+Returns the updated project object.
+
+## Delete a project
+
+`DELETE /api/v1/projects/:id` <Badge text="scope: write" variant="caution" />
+
+Permanently deletes a project. Workspace admins only. Returns `204 No Content`.
+
+<Aside type="caution">
+Only an archived project can be deleted. Deleting an `active` project returns `409 conflict` —
+archive it first.
+</Aside>
+
+## List project members
+
+`GET /api/v1/projects/:id/members` <Badge text="scope: read" variant="note" />
+
+Returns the members of a project. Requires membership of the project's workspace.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `projectId` | string | Owning project. |
+| `userId` | string | The member's user id. |
+| `name` | string | The member's display name. |
+| `email` | string | The member's email address. |
+| `imageUrl` | string \| null | Ready-to-use avatar URL, or `null` when none. |
+| `createdAt` | string | ISO 8601 instant the membership was created. |
+
+## Add a project member
+
+`POST /api/v1/projects/:id/members` <Badge text="scope: write" variant="caution" />
+
+Adds a user to the project. Workspace admins only. The user must already be a member of the
+project's workspace, otherwise the request returns `400 bad_request`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `userId` | string | yes | User id of a workspace member to add. |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/projects/prj_site/members" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "userId": "usr_ana" }'
+```
+
+Returns `201 Created` with the new project member object.
+
+## Remove a project member
+
+`DELETE /api/v1/projects/:id/members/:userId` <Badge text="scope: write" variant="caution" />
+
+Removes a user from the project. Workspace admins only. Returns `204 No Content`.
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/projects/prj_site/members/usr_ana" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```

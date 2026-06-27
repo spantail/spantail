@@ -1,0 +1,201 @@
+---
+title: Instance settings
+description: Read and manage instance-wide settings — email delivery, AI agent activity, and social login.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+These endpoints read and manage instance-wide configuration. Most are **instance admin
+only**; a few public projections expose just enough for unauthenticated screens (the login
+and forgot-password pages) to branch correctly. Secrets — OAuth client credentials — live in
+the environment and never leave it; these endpoints report only toggles and whether the
+runtime has credentials.
+
+## Email
+
+Email delivery powers invitations and report-to-inbox notifications. It is off by default;
+turning it on requires a from address (otherwise every send would fail).
+
+### Email enabled
+
+`GET /api/v1/instance/email-enabled` <Badge text="public" variant="tip" />
+
+Public. Returns only the boolean — never the from address — so the forgot-password screen
+can choose between offering self-service recovery and telling the user to contact an admin.
+
+```json
+{ "enabled": true }
+```
+
+### Get email settings
+
+`GET /api/v1/instance/email` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Returns the full email configuration.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/email" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "emailEnabled": true,
+  "emailFromAddress": "noreply@example.com",
+  "emailFromName": "Spantail"
+}
+```
+</TabItem>
+</Tabs>
+
+### Update email settings
+
+`PATCH /api/v1/instance/email` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Omitted `from*` fields keep their current values. Enabling delivery
+without a from address (current or supplied) returns `400`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `emailEnabled` | boolean | yes | Turn delivery on or off. |
+| `emailFromAddress` | string \| null | no | Sender address. Required (current or supplied) when enabling. |
+| `emailFromName` | string \| null | no | Sender display name (≤ 100 chars). |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/email" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "emailEnabled": true, "emailFromAddress": "noreply@example.com", "emailFromName": "Spantail" }'
+```
+
+## Agents
+
+Whether the AI agent activity feature is on. Off by default because it can grow data volume.
+
+### Agents enabled
+
+`GET /api/v1/instance/agents-enabled` <Badge text="public" variant="tip" />
+
+Read by any caller to gate the agents UI; reports only the boolean.
+
+```json
+{ "enabled": false }
+```
+
+### Update agents
+
+`PATCH /api/v1/instance/agents` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Toggles the feature.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agentsEnabled` | boolean | yes | Turn the AI agent activity feature on or off. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/agents" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "agentsEnabled": true }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "enabled": true }
+```
+</TabItem>
+</Tabs>
+
+## Social login
+
+Google and GitHub sign-in. A provider can only be enabled when its client id and secret are
+configured in the environment; enabling an unconfigured provider returns `400`.
+
+### Auth providers
+
+`GET /api/v1/instance/auth-providers` <Badge text="public" variant="tip" />
+
+Public. Tells the login screen which social buttons to show. A provider is `true` only when
+an admin enabled it **and** the runtime has its credentials. `selfSignupAvailable` is `true`
+only before the instance is claimed (no users yet), when the login screen offers a one-time
+sign-up form to bootstrap the first super-admin.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/auth-providers"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "google": true,
+  "github": false,
+  "selfSignupAvailable": false
+}
+```
+</TabItem>
+</Tabs>
+
+### Get OAuth settings
+
+`GET /api/v1/instance/oauth` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Reports each provider's enabled toggle and whether the runtime has its
+credentials (`configured`), plus the Google domain allowlist. Secrets never leave the
+environment.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/oauth" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "google": { "enabled": true, "configured": true },
+  "github": { "enabled": false, "configured": false },
+  "googleAllowedDomains": ["example.com"]
+}
+```
+</TabItem>
+</Tabs>
+
+### Update OAuth settings
+
+`PATCH /api/v1/instance/oauth` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Omitted fields keep their current values. Enabling a provider whose
+credentials are not configured returns `400`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `googleOAuthEnabled` | boolean | no | Enable or disable Google sign-in. |
+| `githubOAuthEnabled` | boolean | no | Enable or disable GitHub sign-in. |
+| `googleAllowedDomains` | string[] | no | Google Workspace domains whose users may self-join via Google sign-in without an invitation (≤ 100 entries). Empty = invitation required for everyone. |
+
+<Aside type="note">
+A domain in `googleAllowedDomains` lets matching Google users self-join (auto-provision)
+without an invitation. Matching is exact on the part after `@`; subdomains are not implicitly
+allowed. Out-of-domain Google users can still join by invitation.
+</Aside>
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/oauth" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "googleOAuthEnabled": true, "googleAllowedDomains": ["example.com"] }'
+```

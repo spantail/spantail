@@ -1,0 +1,171 @@
+---
+title: ワークスペース
+description: ワークスペースの取得・作成・更新、およびロゴの管理。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**ワークスペース（workspace）** は、プロジェクト・メンバー・作業エントリ・エージェント活動を
+所有する最上位のコンテナです。あらゆるリソースはワークスペースにスコープされ、すべてのクエリは
+呼び出し元のメンバーシップに対して検証されます。ワークスペースには（作成時に設定される）オーナーと、
+任意の数の管理者・メンバーがいます。[メンバー](/ja/api/members/) を参照してください。
+
+ワークスペースにタイムゾーンはありません。タイムゾーンはユーザー単位の概念です。
+[日付と時刻](/ja/api/#日付と時刻) を参照してください。
+
+## ワークスペースオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `id` | string | 一意の識別子。 |
+| `slug` | string | URL に使える短い名前。インスタンス内で一意。 |
+| `name` | string | 表示名（1〜100 文字）。 |
+| `accentColor` | string | アクセントテーマ: `neutral`、`red`、`orange`、`amber`、`green`、`teal`、`blue`、`violet`、`pink`。 |
+| `logoUrl` | string \| null | ワークスペースロゴの URL。未設定の場合は `null`。 |
+| `settings` | object | 自由形式のワークスペース設定マップ。 |
+| `createdAt` | string | ISO 8601 の作成時刻。 |
+| `archivedAt` | string \| null | アーカイブされた ISO 8601 時刻。アクティブな場合は `null`。 |
+
+## ワークスペースの一覧
+
+`GET /api/v1/workspaces` <Badge text="scope: read" variant="note" />
+
+呼び出し元が所属するワークスペースを返します。インスタンス管理者にはインスタンス上のすべての
+ワークスペースが返り、メンバーでないワークスペースについては `role` が `null` になります。各項目は
+ワークスペースオブジェクトに呼び出し元の `role`（`owner`、`admin`、`member`、または `null`）を
+加えたものです。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "wrk_demo",
+    "slug": "demo",
+    "name": "Demo",
+    "accentColor": "blue",
+    "logoUrl": "/api/v1/workspaces/wrk_demo/logo?v=3f2a1c9d",
+    "settings": {},
+    "createdAt": "2026-01-04T08:00:00.000Z",
+    "archivedAt": null,
+    "role": "owner"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## ワークスペースの作成
+
+`POST /api/v1/workspaces` <Badge text="scope: admin" variant="danger" />
+
+呼び出し元をオーナーとするワークスペースを作成します。インスタンス管理者のみ。`slug` はインスタンス内で
+一意である必要があり、重複すると `409 conflict` を返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `slug` | string | はい | URL に使える短い名前。インスタンス内で一意。 |
+| `name` | string | はい | 表示名（1〜100 文字）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/workspaces" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "slug": "demo", "name": "Demo" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "wrk_demo",
+  "slug": "demo",
+  "name": "Demo",
+  "accentColor": "neutral",
+  "logoUrl": null,
+  "settings": {},
+  "createdAt": "2026-01-04T08:00:00.000Z",
+  "archivedAt": null
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。呼び出し元がワークスペースのオーナーになります。
+
+## ワークスペースの取得
+
+`GET /api/v1/workspaces/:id` <Badge text="scope: read" variant="note" />
+
+単一のワークスペースを返します。メンバーシップが必要です。呼び出し元から見えないワークスペースは
+`404` を返します。
+
+## ワークスペースの更新
+
+`PATCH /api/v1/workspaces/:id` <Badge text="scope: admin" variant="danger" />
+
+ワークスペースのフィールドを更新します。ワークスペース管理者のみ。ボディの各フィールドは任意で、
+変更分だけを送ります。`slug` を既に使われているものに変更すると `409 conflict` を返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `slug` | string | いいえ | URL に使える短い名前。インスタンス内で一意。 |
+| `name` | string | いいえ | 表示名（1〜100 文字）。 |
+| `accentColor` | string | いいえ | アクセントテーマ（ワークスペースオブジェクト参照）。 |
+| `archived` | boolean | いいえ | `true` でアーカイブ、`false` で復元（`archivedAt` を設定/解除）。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/workspaces/wrk_demo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Demo workspace", "accentColor": "teal" }'
+```
+
+更新後のワークスペースオブジェクトを返します。
+
+## ワークスペースロゴの取得
+
+`GET /api/v1/workspaces/:id/logo` <Badge text="scope: read" variant="note" />
+
+ロゴ画像の生バイト（JSON ではない）を返します。Worker 経由で配信されるため、読み込みのたびに
+メンバーシップが検証されます。メンバーシップが必要です。ロゴが未設定の場合は `404` を返します。
+レスポンスには `ETag` が付き、一致する `If-None-Match` の場合は `304 Not Modified` を返します。
+
+## ワークスペースロゴのアップロード
+
+`PUT /api/v1/workspaces/:id/logo` <Badge text="scope: admin" variant="danger" />
+
+ロゴをアップロードします。ワークスペース管理者のみ。リクエストボディは画像の生バイトで、`Content-Type`
+に画像の種別を設定します。
+
+<Aside type="note">
+許可される種別は `image/png`、`image/jpeg`、`image/webp` です。SVG は意図的に除外されています。
+最大サイズは 1 MB です。種別の誤り・空ファイル・サイズ超過は `400 bad_request` を返します。
+</Aside>
+
+```bash
+curl -X PUT "https://<your-instance>/api/v1/workspaces/wrk_demo/logo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: image/png" \
+  --data-binary @logo.png
+```
+
+更新後のワークスペースオブジェクトを返します。`logoUrl` は新しいロゴを指します。
+
+## ワークスペースロゴの削除
+
+`DELETE /api/v1/workspaces/:id/logo` <Badge text="scope: admin" variant="danger" />
+
+ロゴを削除します。ワークスペース管理者のみ。`logoUrl` を `null` にした更新後のワークスペース
+オブジェクトを返します。

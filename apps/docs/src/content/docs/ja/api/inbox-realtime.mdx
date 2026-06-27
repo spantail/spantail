@@ -1,0 +1,282 @@
+---
+title: 受信トレイとリアルタイム
+description: レポート配信の受信箱の読み取りと管理、およびリアルタイムの無効化シグナルの購読。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**受信箱（inbox）** は呼び出し元のレポート配信のメールボックスです（「Send to」の宛先）。
+レポートが送信されると、各受信者は凍結・レンダリング済みのコピーを受信箱に受け取り、送信者は
+**Sent** フォルダに記録を残します。フォルダは呼び出し元自身の配信に対するサーバー側のフィルタで、
+各ルートは呼び出し元にスコープされるため、他人のメールボックスを読み書きすることはできません
+（管理者は後述の明示的な読み取りバリアントを通じてのみ可能）。
+
+## フォルダ
+
+フォルダは呼び出し元の配信に対するビューを選びます。一覧・カウントでは `folder` クエリ
+パラメータとして渡します。
+
+| Folder | 意味 |
+| --- | --- |
+| `inbox` | 受信メッセージのうち、archive・trash でないもの。既定。 |
+| `starred` | `starred` フラグの付いた受信メッセージ。 |
+| `sent` | 呼び出し元が送信したバッチ（送信ごとにグループ化）。 |
+| `archive` | `archived` フラグの付いた受信メッセージ。 |
+| `trash` | `trashed` フラグの付いた受信メッセージ。 |
+
+## メールアイテムオブジェクト
+
+メールアイテムは受信メッセージと送信バッチの両方を表し、`scope` フィールドでどちらかを示します。
+スコープ固有のフィールドは、反対側のスコープでは単に空になります（received: `recipientNames` `[]`、
+`recipientCount` `0`、sent: `readAt` `null`）。
+
+| Field | Type | 説明 |
+| --- | --- | --- |
+| `id` | string | 配信 ID。送信アイテムではバッチ内の代表行。 |
+| `scope` | string | `received` または `sent`。フラグの対象 ID を決める。 |
+| `batchId` | string | この配信が属する送信バッチ。 |
+| `reportId` | string \| null | 元レポート。削除済みの場合は `null`（スナップショットは単独で残る）。 |
+| `senderName` | string | 送信者の表示名。 |
+| `senderEmail` | string | 送信者のメールアドレス。 |
+| `reportName` | string | 配信されたレポート名。 |
+| `dateFrom` | string | レポート範囲の開始 `YYYY-MM-DD`。 |
+| `dateTo` | string | レポート範囲の終了 `YYYY-MM-DD`。 |
+| `message` | string \| null | 送信者が添えた任意のメモ。 |
+| `readAt` | string \| null | received: 既読の ISO 8601 時刻、未読は `null`。sent: 常に `null`。 |
+| `createdAt` | string | ISO 8601 の配信時刻。 |
+| `starred` | boolean | 呼び出し元のスターフラグ。 |
+| `archived` | boolean | 呼び出し元のアーカイブフラグ。 |
+| `trashed` | boolean | 呼び出し元のゴミ箱フラグ。 |
+| `recipientNames` | string[] | sent のみ: 「To: …」要約用の受信者名。 |
+| `recipientCount` | integer | sent のみ: 受信者数。 |
+
+単一アイテムを開く（`GET /inbox/:id`）と、同じフィールドに加えて `renderedMarkdown`（凍結された
+レンダリング済み本文）が返ります。送信アイテムにはさらに `recipients`（受信者の全リスト。各要素は
+`id`、`name`、`email`、`imageUrl`）が含まれます。
+
+## メールボックスの一覧
+
+`GET /api/v1/inbox` <Badge text="scope: read" variant="note" />
+
+指定フォルダの呼び出し元の配信を、新しい順で返します。
+
+**クエリパラメータ**
+
+| 名前 | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `folder` | string | いいえ | `inbox`、`starred`、`sent`、`archive`、`trash` のいずれか（既定 `inbox`）。 |
+| `limit` | integer | いいえ | ページサイズ 1〜200。省略するとフォルダ全件を返す。 |
+| `offset` | integer | いいえ | スキップ行数（既定 0）。 |
+| `ownerUserId` | string | いいえ | インスタンス管理者のみ: 他ユーザーのメールボックスを読む。 |
+| `workspaceId` | string | いいえ | ワークスペース管理者: そのワークスペースの単一ワークスペースレポートの配信を、受信者横断で読む。 |
+
+管理者の読み取りは `?ownerUserId`（インスタンス管理者がユーザーのメールボックスを読む）または
+`?workspaceId`（ワークスペース管理者が受信者横断の配信ビューを読む）で指定します。それ以外の場合は
+呼び出し元が自分のメールボックスを読みます。
+
+<Aside type="note">
+フォルダは受信者ごとのメールボックス状態なので、ワークスペーススコープのビューには適用されません。
+`workspaceId` と既定以外の `folder` を併せて渡すと `400` を返します。
+</Aside>
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/inbox?folder=inbox&limit=50" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "msg_01",
+    "scope": "received",
+    "batchId": "bat_7k",
+    "reportId": "rep_weekly",
+    "senderName": "Ana",
+    "senderEmail": "ana@example.com",
+    "reportName": "Weekly summary",
+    "dateFrom": "2026-06-22",
+    "dateTo": "2026-06-28",
+    "message": "Here's this week's recap",
+    "readAt": null,
+    "createdAt": "2026-06-28T09:30:00.000Z",
+    "starred": false,
+    "archived": false,
+    "trashed": false,
+    "recipientNames": [],
+    "recipientCount": 0
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## フォルダのカウント
+
+`GET /api/v1/inbox/counts` <Badge text="scope: read" variant="note" />
+
+メールボックスのサイドバー用に、フォルダごとのカウントを返します。`unread` は Inbox バッジの件数です。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/inbox/counts" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "inbox": 12,
+  "unread": 3,
+  "starred": 2,
+  "sent": 8,
+  "archive": 5,
+  "trash": 1
+}
+```
+</TabItem>
+</Tabs>
+
+## 未読数
+
+`GET /api/v1/inbox/unread-count` <Badge text="scope: read" variant="note" />
+
+呼び出し元の Inbox 未読数だけを返します。ヘッダーバッジ用の軽量なポーリングに使えます。
+
+```json
+{ "count": 3 }
+```
+
+## すべて既読にする
+
+`POST /api/v1/inbox/read-all` <Badge text="scope: write" variant="caution" />
+
+呼び出し元の Inbox のすべてのメッセージを既読にします。`204 No Content` を返します。
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/inbox/read-all" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## フラグの設定
+
+`PATCH /api/v1/inbox/flags` <Badge text="scope: write" variant="caution" />
+
+メールボックスのターゲット（受信した配信、または送信バッチ）に対し、1 つ以上のフラグを切り替えます。
+フラグは最低 1 つ指定する必要があります。呼び出し元が所有しないターゲットは `404` を返します。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `scope` | string | はい | `received`（配信 `id` を対象）または `sent`（`batchId` を対象）。 |
+| `targetId` | string | はい | フラグを立てる配信 ID またはバッチ ID。 |
+| `starred` | boolean | いいえ | スターフラグを設定。 |
+| `archived` | boolean | いいえ | アーカイブフラグを設定。 |
+| `trashed` | boolean | いいえ | ゴミ箱フラグを設定。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/inbox/flags" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "scope": "received", "targetId": "msg_01", "starred": true }'
+```
+
+`204 No Content` を返します。
+
+## メッセージの取得
+
+`GET /api/v1/inbox/:id` <Badge text="scope: read" variant="note" />
+
+凍結済みの `renderedMarkdown` を含むメールボックスアイテムを 1 件返します。配信に対する呼び出し元の
+関係でバリアントが決まります。受信者には received 詳細が、送信者には sent バッチ詳細（受信者の全
+リスト付き）が返ります。インスタンス管理者は任意の配信を読め、ワークスペース管理者は元レポートの
+読み取りアクセス（単一ワークスペースレポートのみ）を通じて読めます。呼び出し元から隠されたメッセージは
+`404` を返します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/inbox/msg_01" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "msg_01",
+  "scope": "received",
+  "batchId": "bat_7k",
+  "reportId": "rep_weekly",
+  "senderName": "Ana",
+  "senderEmail": "ana@example.com",
+  "reportName": "Weekly summary",
+  "dateFrom": "2026-06-22",
+  "dateTo": "2026-06-28",
+  "message": "Here's this week's recap",
+  "readAt": "2026-06-28T10:00:00.000Z",
+  "createdAt": "2026-06-28T09:30:00.000Z",
+  "starred": false,
+  "archived": false,
+  "trashed": false,
+  "recipientNames": [],
+  "recipientCount": 0,
+  "renderedMarkdown": "# Weekly summary\n\n..."
+}
+```
+</TabItem>
+</Tabs>
+
+## 1 件を既読／未読にする
+
+`POST /api/v1/inbox/:id/read` <Badge text="scope: write" variant="caution" />
+
+`POST /api/v1/inbox/:id/unread` <Badge text="scope: write" variant="caution" />
+
+単一の受信メッセージの既読状態を設定・解除します。呼び出し元のメールボックスにないメッセージは
+`404` を返します。いずれも `204 No Content` を返します。
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/inbox/msg_01/read" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+## Realtime
+
+`GET /api/v1/realtime` <Badge text="session only" variant="default" />
+
+認証済みユーザー向けの、軽量なキャッシュ無効化シグナルの
+[Server-Sent Events](https://developer.mozilla.org/docs/Web/API/Server-sent_events) ストリーム
+です。Web アプリはブラウザの `EventSource` で購読し、セッション cookie が自動的に送られます。
+
+<Aside type="note">
+セッション専用です。`EventSource` は `Authorization` ヘッダーを設定できないため、Personal Access
+Token や Agent Access Token の呼び出し元はここでは利用できません。セッション以外の資格情報は `401`
+を返します。
+</Aside>
+
+シグナルは *何が*（そして *どこで*）変わったかを伝えるだけで、変更されたデータ自体は決して含みません。
+受信したクライアントは、影響を受けたクエリを型付き API で再取得するため、認可と整形は既存の REST
+経路に留まります。各イベントは JSON オブジェクトです。
+
+| Field | Type | 説明 |
+| --- | --- | --- |
+| `type` | string | 変更内容: `work-entry`、`agent-entry`、`project`、`report-discussion`、`message`。 |
+| `workspaceId` | string | ワークスペーススコープのシグナルで設定。ユーザースコープでは省略（`message` はユーザーのワークスペース横断）。 |
+| `id` | string | ID 単位で無効化する際の対象エンティティ ID（例: `report-discussion` はレポート ID をキーにする）。 |
+
+各イベントは SSE の `data:` 行として届きます。
+
+```
+data: {"type":"work-entry","workspaceId":"wrk_demo"}
+
+data: {"type":"message"}
+
+data: {"type":"report-discussion","id":"rep_weekly"}
+```
+
+接続は呼び出し元自身のハブにルーティングされます。ワークスペースのファンアウトは publish 時に
+メンバーシップでスコープされるため、クライアントは自分宛てのイベントのみを受け取ります。

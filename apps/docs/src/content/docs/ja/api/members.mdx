@@ -1,0 +1,118 @@
+---
+title: メンバー
+description: ワークスペースメンバーとそのロールの一覧・追加・削除。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**ワークスペースメンバー（workspace member）** は、ユーザーをワークスペースにロール付きで
+結びつけます。ロールには階層があります。
+
+- `owner` — ワークスペースの作成者。ワークスペースごとにちょうど 1 人で、削除できません。
+- `admin` — ワークスペース・そのプロジェクト・そのメンバーを完全に管理できます。
+- `member` — ワークスペースで作業しますが、所属するプロジェクトにスコープされます。
+
+オーナーと管理者はワークスペース内のすべてのプロジェクトを管理し、一般メンバーはプロジェクト
+メンバーシップによって制限されます（[プロジェクト](/ja/api/projects/) を参照）。メンバーは
+ワークスペース配下にネストされるため、すべてのエンドポイントのパスは `/api/v1/workspaces/:id` で
+始まります。
+
+## メンバーオブジェクト
+
+| フィールド | 型 | 説明 |
+| --- | --- | --- |
+| `workspaceId` | string | 所属ワークスペース。 |
+| `userId` | string | メンバーのユーザー ID。 |
+| `role` | string | `owner`、`admin`、または `member`。 |
+| `name` | string | メンバーの表示名。 |
+| `email` | string | メンバーのメールアドレス。 |
+| `imageUrl` | string \| null | そのまま使えるアバター URL。アバターがない場合は `null`。 |
+| `createdAt` | string | メンバーシップ作成の ISO 8601 時刻。 |
+
+## メンバーの一覧
+
+`GET /api/v1/workspaces/:id/members` <Badge text="scope: read" variant="note" />
+
+ワークスペースのすべてのメンバーを返します。メンバーシップが必要です。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces/wrk_demo/members" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "workspaceId": "wrk_demo",
+    "userId": "usr_ana",
+    "role": "owner",
+    "name": "Ana Ng",
+    "email": "ana@example.com",
+    "imageUrl": null,
+    "createdAt": "2026-01-04T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## メンバーの追加
+
+`POST /api/v1/workspaces/:id/members` <Badge text="scope: admin" variant="danger" />
+
+既存ユーザーをメールアドレスでワークスペースに追加します。ワークスペース管理者のみ。対象ユーザーは
+インスタンスに既にアカウントを持っている必要があります。該当するメールのユーザーがいない場合は
+`404 not_found` を返します。既にメンバーであるユーザーを追加すると `409 conflict` を返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `email` | string | はい | 追加する既存ユーザーのメール。 |
+| `role` | string | いいえ | `admin` または `member`（既定 `member`）。`owner` は指定できません。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/workspaces/wrk_demo/members" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "ben@example.com", "role": "member" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "workspaceId": "wrk_demo",
+  "userId": "usr_ben",
+  "role": "member",
+  "name": "Ben Lee",
+  "email": "ben@example.com",
+  "imageUrl": null,
+  "createdAt": "2026-06-28T09:30:00.000Z"
+}
+```
+</TabItem>
+</Tabs>
+
+新しいメンバーオブジェクトとともに `201 Created` を返します。
+
+## メンバーの削除
+
+`DELETE /api/v1/workspaces/:id/members/:userId` <Badge text="scope: admin" variant="danger" />
+
+メンバーをワークスペースから削除します。ワークスペース管理者のみ。このワークスペース内での
+プロジェクトメンバーシップも合わせて削除されます。`204 No Content` を返します。
+
+<Aside type="caution">
+ワークスペースのオーナーは削除できません（`403 forbidden`）。メンバーでないユーザーを削除しようと
+すると `404 not_found` を返します。
+</Aside>
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/workspaces/wrk_demo/members/usr_ben" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```

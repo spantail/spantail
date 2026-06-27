@@ -1,0 +1,222 @@
+---
+title: Authentication
+description: Session cookies, Personal Access Tokens, Agent Access Tokens, and the /api/auth endpoints.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Every endpoint under `/api/v1` (except a handful of public ones) requires authentication.
+There are three ways to authenticate, and the right one depends on who is calling:
+
+| Method | Credential | Used by | Scopes |
+| --- | --- | --- | --- |
+| Session cookie | Better Auth session set at sign-in | The web app (browser) | Not restricted |
+| Personal Access Token | `spantail_pat_…` as a Bearer token | Scripts, the [CLI](/guides/tools/cli/), the [MCP server](/guides/tools/mcp/) | `read` / `write` / `admin` |
+| Agent Access Token | `spantail_aat_…` as a Bearer token | AI agents, ingest only | None (ingest-only) |
+
+The sign-in, sign-up, and password-reset endpoints themselves live under `/api/auth` — see
+[Auth endpoints](#auth-endpoints) below.
+
+## Session cookie
+
+The web app authenticates with a Better Auth session cookie, set when the user signs in
+(see [Sign in](#sign-in)) and cleared on sign-out. Send it automatically from the browser;
+there is nothing to configure. Sessions are **not** scope-restricted — a signed-in user can
+do anything their role allows.
+
+A few endpoints are **session-only**: they reject API tokens and require an interactive
+session. These are profile and credential-management operations — updating account
+preferences, uploading an avatar, and managing Personal Access Tokens. See
+[Account & tokens](/api/account/).
+
+## Personal Access Tokens
+
+A Personal Access Token (PAT) acts as you, for programmatic access. Create one from
+**Settings → Account → API tokens** (or via the [tokens API](/api/account/#personal-access-tokens)),
+then send it as a Bearer token:
+
+```bash
+curl "https://<your-instance>/api/v1/work-entries?workspaceId=wrk_demo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+A PAT is the literal prefix `spantail_pat_` followed by 43 URL-safe base64 characters
+(32 random bytes). Only a SHA-256 hash is stored; the plaintext is shown **once**, at
+creation, and can never be retrieved again.
+
+### Scopes
+
+Every PAT carries one or more scopes. A request that needs a scope the token lacks fails
+with `403 insufficient_scope`. Scopes are cumulative — `write` does not imply `read`; grant
+each scope you need.
+
+| Scope | Badge | Grants |
+| --- | --- | --- |
+| `read` | <Badge text="scope: read" variant="note" /> | Read access: list and fetch resources, stats, reports. |
+| `write` | <Badge text="scope: write" variant="caution" /> | Create, update, and delete the caller's own resources (e.g. work entries). |
+| `admin` | <Badge text="scope: admin" variant="danger" /> | Administrative actions (e.g. workspace and member management) the caller's role permits. |
+
+Each endpoint page marks the scope it requires with one of these badges. A scope only widens
+what a token may attempt; it never grants a permission the underlying user does not already
+have. Session callers ignore scopes entirely.
+
+<Aside type="note">
+Token management itself is session-only: a PAT cannot create or delete PATs, even with the
+`admin` scope. Manage tokens from a signed-in browser session.
+</Aside>
+
+## Agent Access Tokens
+
+An Agent Access Token (AAT) is an **ingest-only** credential bound to a single agent. It is
+the literal prefix `spantail_aat_` followed by 43 URL-safe base64 characters. An AAT carries
+no scopes — its capability is structurally "ingest activity for this agent" — and it acts on
+behalf of the agent's owner.
+
+AATs are rejected on normal user routes: presenting one to any `/api/v1` endpoint other than
+agent ingest returns `403 forbidden` ("Agent tokens can only ingest agent entries"). Use one
+only against the ingest endpoints documented under [Agent ingest](/api/agent-ingest/).
+
+## Disabled accounts
+
+When an instance admin disables an account, it is locked out immediately and completely:
+
+- Its session is ignored — every authenticated route sees an anonymous caller and returns
+  `401`.
+- Its Personal Access Tokens are rejected with `401` ("This account is disabled").
+- Agent Access Tokens whose owner is disabled are rejected the same way; a disabled or
+  archived agent's tokens are also rejected.
+
+Re-enabling the account restores its sessions and tokens.
+
+## Auth endpoints
+
+Sign-in, sign-up, and password recovery are handled by [Better Auth](https://www.better-auth.com/)
+under `/api/auth`, **not** `/api/v1`. They set or clear the session cookie. The fields below
+are the common ones; Better Auth accepts additional options not documented here.
+
+### Sign in
+
+`POST /api/auth/sign-in/email` <Badge text="public" variant="tip" />
+
+Authenticates with email and password and sets the session cookie. A disabled account is
+refused with `403`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `email` | string | yes | Account email address. |
+| `password` | string | yes | Account password. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/auth/sign-in/email" \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{ "email": "ana@example.com", "password": "correct horse battery staple" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "user": {
+    "id": "usr_ana",
+    "name": "Ana",
+    "email": "ana@example.com"
+  },
+  "token": "..."
+}
+```
+</TabItem>
+</Tabs>
+
+### Sign up
+
+`POST /api/auth/sign-up/email` <Badge text="public" variant="tip" />
+
+Registers a new email/password account. **Public sign-up is closed once the instance has at
+least one user**: onboarding is admin-driven (invitations or direct create), so this endpoint
+returns `403 forbidden` ("Public sign-up is disabled; ask an instance admin for an
+invitation") whenever a user already exists.
+
+It is therefore only usable to bootstrap a fresh instance: the very first registered user
+claims the instance and becomes its admin (email pre-verified). After that, new members join
+through invitations or admin-created accounts.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `name` | string | yes | Display name. |
+| `email` | string | yes | Account email address. |
+| `password` | string | yes | Account password (minimum 8 characters). |
+
+### Sign out
+
+`POST /api/auth/sign-out` <Badge text="session only" variant="default" />
+
+Clears the current session cookie. No body.
+
+### Request a password reset
+
+`POST /api/auth/request-password-reset` <Badge text="public" variant="tip" />
+
+Starts self-service password recovery: if the email belongs to an account, a reset link is
+emailed. The response is identical whether or not the account exists, so it never reveals
+which addresses are registered. Delivery is gated by the instance email setting — when email
+is disabled, nothing is sent and the user is told to contact an admin. (The legacy alias
+`POST /api/auth/forget-password` behaves the same.)
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `email` | string | yes | Account email address. |
+
+```bash
+curl -X POST "https://<your-instance>/api/auth/request-password-reset" \
+  -H "Content-Type: application/json" \
+  -d '{ "email": "ana@example.com" }'
+```
+
+### Reset a password
+
+`POST /api/auth/reset-password` <Badge text="public" variant="tip" />
+
+Completes recovery using the token from the reset email and sets a new password. Resetting
+revokes every other active session on the account.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `token` | string | yes | The token from the reset link. |
+| `newPassword` | string | yes | The new password (minimum 8 characters). |
+
+### Social sign-in
+
+`POST /api/auth/sign-in/social` <Badge text="public" variant="tip" />
+
+Begins an OAuth sign-in and returns the provider authorization URL to redirect to. The
+available providers are configured by the instance admin — **Google** and **GitHub** are
+supported, and a provider that is not enabled has no route and cannot be used.
+
+Admission still applies: a brand-new social account may only sign in if it is invited (the
+provider-verified email matches a pending invitation) or, for Google, if its email is in an
+allowed self-join domain. Otherwise sign-in is refused.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `provider` | string | yes | `google` or `github`. |
+| `callbackURL` | string | no | Where to return after a successful sign-in. |
+
+### OAuth callback
+
+`GET /api/auth/callback/:provider` <Badge text="public" variant="tip" />
+
+The redirect target the provider returns to after the user authorizes. Better Auth completes
+the exchange, creates or links the account, and sets the session cookie. You do not call this
+directly — the browser is redirected here.

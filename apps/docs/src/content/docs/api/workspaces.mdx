@@ -1,0 +1,171 @@
+---
+title: Workspaces
+description: Read, create, and update workspaces, and manage their logo.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A **workspace** is the top-level container that owns projects, members, work entries, and
+agent activity. Every resource is scoped to a workspace, and every query is checked against
+the caller's membership. A workspace has an owner (set at creation) and any number of admins
+and members — see [Members](/api/members/).
+
+Workspaces have no timezone; timezone is a per-user concept. See
+[Dates and time](/api/#dates-and-time).
+
+## The workspace object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | string | Unique identifier. |
+| `slug` | string | URL-safe short name, unique across the instance. |
+| `name` | string | Display name (1–100 chars). |
+| `accentColor` | string | Accent theme: `neutral`, `red`, `orange`, `amber`, `green`, `teal`, `blue`, `violet`, or `pink`. |
+| `logoUrl` | string \| null | URL of the workspace logo, or `null` when none is set. |
+| `settings` | object | Free-form workspace settings map. |
+| `createdAt` | string | ISO 8601 creation instant. |
+| `archivedAt` | string \| null | ISO 8601 instant the workspace was archived, or `null` when active. |
+
+## List workspaces
+
+`GET /api/v1/workspaces` <Badge text="scope: read" variant="note" />
+
+Returns the workspaces the caller belongs to. Instance admins receive every workspace on the
+instance; for a workspace they are not a member of, `role` is `null`. Each item is a workspace
+object with the caller's `role` (`owner`, `admin`, `member`, or `null`) added.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "wrk_demo",
+    "slug": "demo",
+    "name": "Demo",
+    "accentColor": "blue",
+    "logoUrl": "/api/v1/workspaces/wrk_demo/logo?v=3f2a1c9d",
+    "settings": {},
+    "createdAt": "2026-01-04T08:00:00.000Z",
+    "archivedAt": null,
+    "role": "owner"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+## Create a workspace
+
+`POST /api/v1/workspaces` <Badge text="scope: admin" variant="danger" />
+
+Creates a workspace owned by the caller. Instance admin only. The `slug` must be unique across
+the instance; a duplicate returns `409 conflict`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `slug` | string | yes | URL-safe short name, unique across the instance. |
+| `name` | string | yes | Display name (1–100 chars). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/workspaces" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "slug": "demo", "name": "Demo" }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "id": "wrk_demo",
+  "slug": "demo",
+  "name": "Demo",
+  "accentColor": "neutral",
+  "logoUrl": null,
+  "settings": {},
+  "createdAt": "2026-01-04T08:00:00.000Z",
+  "archivedAt": null
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`. The caller becomes the workspace owner.
+
+## Get a workspace
+
+`GET /api/v1/workspaces/:id` <Badge text="scope: read" variant="note" />
+
+Returns a single workspace. Requires membership; a workspace the caller cannot see returns
+`404`.
+
+## Update a workspace
+
+`PATCH /api/v1/workspaces/:id` <Badge text="scope: admin" variant="danger" />
+
+Updates workspace fields. Workspace admins only. All body fields are optional; send just what
+changes. Changing `slug` to one already taken returns `409 conflict`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `slug` | string | no | URL-safe short name, unique across the instance. |
+| `name` | string | no | Display name (1–100 chars). |
+| `accentColor` | string | no | Accent theme (see the workspace object). |
+| `archived` | boolean | no | `true` archives the workspace, `false` restores it (sets/clears `archivedAt`). |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/workspaces/wrk_demo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Demo workspace", "accentColor": "teal" }'
+```
+
+Returns the updated workspace object.
+
+## Get the workspace logo
+
+`GET /api/v1/workspaces/:id/logo` <Badge text="scope: read" variant="note" />
+
+Returns the raw logo image bytes (not JSON), served through the Worker so membership is
+checked on every load. Requires membership. Returns `404` when no logo is set. The response
+carries an `ETag`; a matching `If-None-Match` yields `304 Not Modified`.
+
+## Upload the workspace logo
+
+`PUT /api/v1/workspaces/:id/logo` <Badge text="scope: admin" variant="danger" />
+
+Uploads the logo. Workspace admins only. The request body is the raw image bytes, with the
+`Content-Type` set to the image type.
+
+<Aside type="note">
+Allowed types are `image/png`, `image/jpeg`, and `image/webp`. SVG is intentionally excluded.
+The maximum size is 1 MB. A wrong type, an empty file, or an oversized upload returns
+`400 bad_request`.
+</Aside>
+
+```bash
+curl -X PUT "https://<your-instance>/api/v1/workspaces/wrk_demo/logo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: image/png" \
+  --data-binary @logo.png
+```
+
+Returns the updated workspace object, with `logoUrl` pointing at the new logo.
+
+## Delete the workspace logo
+
+`DELETE /api/v1/workspaces/:id/logo` <Badge text="scope: admin" variant="danger" />
+
+Removes the logo. Workspace admins only. Returns the updated workspace object with `logoUrl`
+set to `null`.

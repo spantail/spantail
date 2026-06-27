@@ -1,0 +1,200 @@
+---
+title: インスタンス設定
+description: インスタンス全体の設定（メール配信、AI エージェント活動、ソーシャルログイン）の読み取りと管理。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+これらのエンドポイントはインスタンス全体の設定を読み取り・管理します。ほとんどは **インスタンス
+管理者のみ** です。いくつかの公開プロジェクションは、未認証の画面（ログイン・パスワード再設定の
+ページ）が正しく分岐するのに必要な最小限だけを公開します。シークレット（OAuth クライアント資格情報）
+は環境に置かれ、環境外へ出ることはありません。これらのエンドポイントは、トグルとランタイムが資格情報を
+持つかどうかだけを報告します。
+
+## Email
+
+メール配信は招待とレポートの受信箱通知を支えます。既定はオフで、有効化には from アドレスが必要です
+（そうでないと送信がすべて失敗するため）。
+
+### メール有効状態
+
+`GET /api/v1/instance/email-enabled` <Badge text="public" variant="tip" />
+
+公開。from アドレスは決して返さず、ブール値のみを返します。パスワード再設定の画面が、セルフサービスの
+復旧を提供するか、管理者に連絡するよう伝えるかを選べるようにするためです。
+
+```json
+{ "enabled": true }
+```
+
+### メール設定の取得
+
+`GET /api/v1/instance/email` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。メール設定の全体を返します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/email" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "emailEnabled": true,
+  "emailFromAddress": "noreply@example.com",
+  "emailFromName": "Spantail"
+}
+```
+</TabItem>
+</Tabs>
+
+### メール設定の更新
+
+`PATCH /api/v1/instance/email` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。省略された `from*` フィールドは現在の値を保持します。from アドレス（現在値
+または指定値）なしで配信を有効化すると `400` を返します。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `emailEnabled` | boolean | はい | 配信のオン／オフを切り替える。 |
+| `emailFromAddress` | string \| null | いいえ | 送信元アドレス。有効化時は（現在値または指定値が）必須。 |
+| `emailFromName` | string \| null | いいえ | 送信元の表示名（100 文字以下）。 |
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/email" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "emailEnabled": true, "emailFromAddress": "noreply@example.com", "emailFromName": "Spantail" }'
+```
+
+## Agents
+
+AI エージェント活動機能がオンかどうか。データ量が増えうるため、既定はオフです。
+
+### エージェント有効状態
+
+`GET /api/v1/instance/agents-enabled` <Badge text="public" variant="tip" />
+
+エージェント UI をゲートするために任意の呼び出し元が読みます。ブール値のみを報告します。
+
+```json
+{ "enabled": false }
+```
+
+### エージェントの更新
+
+`PATCH /api/v1/instance/agents` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。機能を切り替えます。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `agentsEnabled` | boolean | はい | AI エージェント活動機能のオン／オフを切り替える。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/agents" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "agentsEnabled": true }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "enabled": true }
+```
+</TabItem>
+</Tabs>
+
+## Social login
+
+Google と GitHub のサインイン。プロバイダは、そのクライアント ID とシークレットが環境に設定されて
+いるときのみ有効化できます。未設定のプロバイダを有効化すると `400` を返します。
+
+### 認証プロバイダ
+
+`GET /api/v1/instance/auth-providers` <Badge text="public" variant="tip" />
+
+公開。ログイン画面にどのソーシャルボタンを表示するかを伝えます。プロバイダが `true` になるのは、
+管理者が有効化し **かつ** ランタイムが資格情報を持つときだけです。`selfSignupAvailable` が `true` に
+なるのは、インスタンスがまだクレームされていない（ユーザーが 0 人）ときだけで、ログイン画面が最初の
+スーパー管理者をブートストラップする一度きりのサインアップフォームを提供します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/auth-providers"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "google": true,
+  "github": false,
+  "selfSignupAvailable": false
+}
+```
+</TabItem>
+</Tabs>
+
+### OAuth 設定の取得
+
+`GET /api/v1/instance/oauth` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。各プロバイダの有効トグルと、ランタイムが資格情報を持つか（`configured`）、
+さらに Google のドメイン許可リストを報告します。シークレットは環境外へ出ません。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/oauth" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "google": { "enabled": true, "configured": true },
+  "github": { "enabled": false, "configured": false },
+  "googleAllowedDomains": ["example.com"]
+}
+```
+</TabItem>
+</Tabs>
+
+### OAuth 設定の更新
+
+`PATCH /api/v1/instance/oauth` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。省略されたフィールドは現在の値を保持します。資格情報が設定されていない
+プロバイダを有効化すると `400` を返します。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `googleOAuthEnabled` | boolean | いいえ | Google サインインを有効化・無効化。 |
+| `githubOAuthEnabled` | boolean | いいえ | GitHub サインインを有効化・無効化。 |
+| `googleAllowedDomains` | string[] | いいえ | 招待なしで Google サインインから自己参加できる Google Workspace ドメイン（100 件以下）。空 = 全員に招待が必要。 |
+
+<Aside type="note">
+`googleAllowedDomains` のドメインは、一致する Google ユーザーが招待なしで自己参加（自動プロビジョニング）
+できるようにします。一致は `@` の後ろの完全一致で、サブドメインは暗黙には許可されません。ドメイン外の
+Google ユーザーも招待で参加できます。
+</Aside>
+
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/oauth" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "googleOAuthEnabled": true, "googleAllowedDomains": ["example.com"] }'
+```
