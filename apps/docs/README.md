@@ -9,14 +9,15 @@ audience split: [starlight-sidebar-topics](https://starlight-sidebar-topics.netl
 
 ## Run it locally
 
-All commands are run from the repo root (`pnpm` workspace), or pass `--filter docs`.
+All commands are run from the repo root (`pnpm` workspace). Each has a `docs:*` shortcut, or use
+`pnpm --filter docs <script>`.
 
 ```bash
 pnpm install                      # once, from the repo root
-pnpm --filter docs dev            # dev server with hot reload → http://localhost:4321
-pnpm --filter docs build          # production build into apps/docs/dist
-pnpm --filter docs preview        # serve the production build locally
-pnpm --filter docs typecheck      # astro check (content + config types)
+pnpm docs:dev                     # dev server with hot reload → http://localhost:4321
+pnpm docs:build                   # production build into apps/docs/dist
+pnpm docs:preview                 # serve the production build locally
+pnpm docs:typecheck               # astro check (content + config types)
 ```
 
 ### Checking search
@@ -25,7 +26,7 @@ Pagefind (Starlight's built-in search) only indexes during a **production build*
 To try search locally:
 
 ```bash
-pnpm --filter docs build && pnpm --filter docs preview
+pnpm docs:build && pnpm docs:preview
 ```
 
 ## Authoring content
