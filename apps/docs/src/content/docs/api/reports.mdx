@@ -26,7 +26,7 @@ generation date resolve in the owner's timezone at render time. See
 | `filters` | object | The resolved filter set (see [The filters object](#the-filters-object)). The stored `dateRange` is always absolute. |
 | `note` | string \| null | Free-form Markdown appended to the rendered body via `{{ report.note }}` (≤ 20000 chars). |
 | `totalMinutes` | integer \| null | Total logged minutes across the current version's entries. `null` for reports rendered before this was tracked (shown until re-rendered). |
-| `snapshotProjectIds` | string[] \| null | Distinct project ids whose entries appear in the current snapshot, captured at render time. Drives the Send-to ACL. `null` means unknown scope (rendered before this was captured) — see [Send a report](#send-a-report). |
+| `snapshotProjectIds` | string[] \| null | Distinct project ids whose entries appear in the current snapshot, captured at render time. Drives the Send-to ACL. `null` means unknown scope (rendered before this was captured) — see [Send a report](#send-a-report). Serialized on the wire but not part of the typed `reportSchema` in `@spantail/core`, so treat it as an extra wire-only field. |
 | `version` | integer | Current version: `1` at creation, incremented on each edit. |
 | `renderedMarkdown` | string | The current version's rendered document: a system-generated YAML front-matter header (provenance) followed by the Liquid-rendered body. |
 | `createdAt` | string | ISO 8601 creation instant. |

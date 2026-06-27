@@ -11,20 +11,22 @@ they can do, you can do directly over HTTP.
 
 ## Base URL
 
-All endpoints live under `/api/v1` on your instance:
+The REST API lives under `/api/v1` on your instance:
 
 ```
 https://<your-instance>/api/v1
 ```
 
 The hosted service is at `https://app.spantail.com/api/v1`. For a self-hosted instance,
-use your own Worker domain. Authentication endpoints (sign-in, password reset) live under
-`/api/auth` — see [Authentication](/api/authentication/).
+use your own Worker domain. A few endpoints sit outside `/api/v1`: authentication under
+`/api/auth` (see [Authentication](/api/authentication/)), the [health check](#health-check)
+at `/api/health`, and the public share views under `/share`.
 
 ## Conventions
 
-- **JSON only.** Request and response bodies are `application/json; charset=utf-8`. Send
-  `Content-Type: application/json` on every request with a body.
+- **JSON by default.** Request and response bodies are `application/json; charset=utf-8`;
+  send `Content-Type: application/json` on every request with a body. A few endpoints return
+  binary instead (e.g. avatar and workspace-logo image bytes), as noted on their pages.
 - **Timestamps** are ISO 8601 strings in UTC (e.g. `2026-06-28T09:30:00.000Z`).
 - **Dates** are calendar-day strings `YYYY-MM-DD`, interpreted in the relevant user's
   timezone (see [Dates and time](#dates-and-time)).

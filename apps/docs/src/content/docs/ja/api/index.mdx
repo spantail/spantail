@@ -11,20 +11,22 @@ Spantail は単一の REST API を中心に構築されています。Web アプ
 
 ## ベース URL
 
-すべてのエンドポイントはインスタンスの `/api/v1` 配下にあります。
+REST API はインスタンスの `/api/v1` 配下にあります。
 
 ```
 https://<your-instance>/api/v1
 ```
 
 ホスティング版は `https://app.spantail.com/api/v1` です。セルフホストの場合は自分の Worker
-ドメインを使います。認証エンドポイント（サインイン、パスワードリセット）は `/api/auth` 配下に
-あります。[認証](/ja/api/authentication/) を参照してください。
+ドメインを使います。一部のエンドポイントは `/api/v1` の外にあります。認証は `/api/auth`
+（[認証](/ja/api/authentication/) を参照）、[ヘルスチェック](#ヘルスチェック)は `/api/health`、
+公開共有ビューは `/share` 配下です。
 
 ## 規約
 
-- **JSON のみ。** リクエスト/レスポンスボディは `application/json; charset=utf-8` です。ボディを
-  伴うリクエストには必ず `Content-Type: application/json` を付けてください。
+- **原則 JSON。** リクエスト/レスポンスボディは `application/json; charset=utf-8` です。ボディを
+  伴うリクエストには必ず `Content-Type: application/json` を付けてください。一部のエンドポイントは
+  代わりにバイナリを返します（例: アバターやワークスペースロゴの画像バイト）。詳細は各ページに記載します。
 - **タイムスタンプ** は UTC の ISO 8601 文字列です（例: `2026-06-28T09:30:00.000Z`）。
 - **日付** は `YYYY-MM-DD` 形式のカレンダー日で、対象ユーザーのタイムゾーンで解釈されます
   （[日付と時刻](#日付と時刻) を参照）。
