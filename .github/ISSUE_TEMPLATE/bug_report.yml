@@ -6,7 +6,7 @@ body:
     attributes:
       value: >-
         For questions or help, please use
-        [Q&A Discussions](https://github.com/toxildev/toxil/discussions/categories/q-a)
+        [Q&A Discussions](https://github.com/spantail/spantail/discussions/categories/q-a)
         instead.
   - type: textarea
     id: what-happened
@@ -38,7 +38,7 @@ body:
     attributes:
       label: Environment
       description: >-
-        How are you running Toxil (self-hosted vs hosted), version / commit, browser
+        How are you running Spantail (self-hosted vs hosted), version / commit, browser
         or CLI version if relevant.
     validations:
       required: false

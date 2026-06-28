@@ -1,0 +1,37 @@
+# Cuts a GitHub Release when a `vX.Y.Z` tag is pushed. Re-runs the checks against the
+# tagged commit, then creates the Release with auto-generated notes (see ../release.yml).
+# See docs/releasing.md for the versioning policy and the release runbook.
+name: Release
+
+on:
+  push:
+    tags:
+      # Strict vX.Y.Z (matches the SemVer policy in docs/releasing.md); avoids
+      # accidental releases from tags like `vnext`, `v1`, or `v1.2`.
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      # Mirror CI: catch CLI bundling regressions before cutting a release.
+      - run: pnpm --filter spantail pack
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag

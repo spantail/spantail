@@ -1,0 +1,23 @@
+# Configures GitHub's auto-generated release notes (`gh release create --generate-notes`).
+# Notes are grouped from merged PRs by label, so label PRs (bug, enhancement, …) for good
+# categorization. Docs have a separate lifecycle, so `documentation` is excluded from
+# product release notes.
+changelog:
+  exclude:
+    labels:
+      - dependencies
+      - chore
+      - ci
+      - documentation
+  categories:
+    - title: Features
+      labels:
+        - enhancement
+        - feature
+    - title: Bug Fixes
+      labels:
+        - bug
+        - fix
+    - title: Other Changes
+      labels:
+        - "*"
