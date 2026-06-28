@@ -163,7 +163,64 @@ ul.starlight-sidebar-topics {
 	font-size: 21px;
 	line-height: 1.5;
 	color: var(--sp-muted);
-	max-width: 30ch;
+	max-width: 34ch;
+}
+/* Hero is two columns on desktop: copy left, the video slot (passed as the
+   Starlight hero `image.html`, rendered by Nova into `.hero-html`) on the
+   right, balanced rather than Nova's narrow 7fr/4fr image column. */
+@media (min-width: 50rem) {
+	.hero {
+		grid-template-columns: 1fr 0.92fr;
+		gap: 56px;
+	}
+	.hero > .hero-html {
+		order: 2;
+		width: 100%;
+		max-width: 100%;
+	}
+}
+/* YouTube embed placeholder — swap the markup for an <iframe> later */
+.video-slot {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 14px;
+	overflow: hidden;
+	border: 1px solid var(--sp-border-strong);
+	border-radius: 14px;
+	background: repeating-linear-gradient(
+		135deg,
+		var(--sp-subtle) 0 11px,
+		var(--sp-subtle-2) 11px 22px
+	);
+}
+.video-slot .vs-play {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 64px;
+	height: 64px;
+	border-radius: 50%;
+	border: 1px solid var(--sp-border-strong);
+	background: var(--sp-bg);
+	box-shadow: 0 6px 22px oklch(0 0 0 / 0.1);
+}
+.video-slot .vs-play svg {
+	width: 22px;
+	height: 22px;
+	margin-left: 3px;
+	color: var(--sp-fg);
+}
+.video-slot .vs-label {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+	color: var(--sp-muted);
 }
 /* CTA buttons: match the mockup's 50px height / 11px radius / 15px·600 */
 .hero .actions a {

@@ -4,6 +4,8 @@ description: 人と AI エージェントの作業を可観測に。作業を記
 template: splash
 hero:
   tagline: 人の作業を記録し、AI エージェントの活動を span として捕捉して、レポートに変換します。
+  image:
+    html: '<div class="video-slot" role="img" aria-label="製品紹介動画（近日公開）"><span class="vs-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="vs-label">YouTube embed · 16:9</span></div>'
   actions:
     - text: はじめる
       link: /ja/guides/
@@ -17,6 +19,7 @@ hero:
 import PathCards from "../../../components/PathCards.astro";
 import ToolRows from "../../../components/ToolRows.astro";
 import SupportCta from "../../../components/SupportCta.astro";
+import SiteFooter from "../../../components/SiteFooter.astro";
 
 <SupportCta
 	title="専門的なサポートが必要ですか？"
@@ -80,3 +83,5 @@ import SupportCta from "../../../components/SupportCta.astro";
 		},
 	]}
 />
+
+<SiteFooter copyright="© 2026 Spantail. All rights reserved." />
