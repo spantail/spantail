@@ -1,0 +1,103 @@
+---
+// Home support CTA banner: a neutral card pointing readers to the Spantail
+// team at spantail.com. Replaces the earlier "work in progress" notice.
+// Localized strings come from index.mdx; the link is the same for every locale.
+interface Props {
+	title: string;
+	body: string;
+	cta: string;
+}
+
+const { title, body, cta } = Astro.props as Props;
+---
+
+<div class="support-cta not-content">
+	<div class="left">
+		<span class="bi">
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="12" cy="12" r="10" />
+				<line x1="12" y1="16" x2="12" y2="12" />
+				<line x1="12" y1="8" x2="12.01" y2="8" />
+			</svg>
+		</span>
+		<div class="tx">
+			<b>{title}</b>
+			<p>{body}</p>
+		</div>
+	</div>
+	<a class="cta" href="https://spantail.com" target="_blank" rel="noopener">
+		{cta}
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M15 3h6v6" />
+			<path d="M10 14 21 3" />
+			<path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+		</svg>
+	</a>
+</div>
+
+<style>
+	.support-cta {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 24px;
+		margin: 1.5rem 0;
+		padding: 18px 20px;
+		border: 1px solid var(--sp-border);
+		border-radius: 13px;
+		background: var(--sp-subtle);
+	}
+	.left {
+		display: flex;
+		align-items: flex-start;
+		gap: 14px;
+	}
+	.bi {
+		flex: 0 0 auto;
+		margin-top: 1px;
+		color: var(--sp-muted);
+	}
+	.bi svg {
+		width: 18px;
+		height: 18px;
+	}
+	.tx b {
+		display: block;
+		margin-bottom: 3px;
+		font-size: 14.5px;
+		font-weight: 650;
+		color: var(--sp-fg);
+	}
+	.tx p {
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.5;
+		color: var(--sp-fg-soft);
+	}
+	.cta {
+		flex: 0 0 auto;
+		display: inline-flex;
+		align-items: center;
+		gap: 9px;
+		height: 50px;
+		padding: 0 24px;
+		border-radius: 11px;
+		font-size: 15px;
+		font-weight: 600;
+		text-decoration: none;
+		white-space: nowrap;
+		background: var(--sp-solid);
+		color: var(--sp-solid-fg);
+	}
+	.cta svg {
+		width: 17px;
+		height: 17px;
+	}
+	@media (max-width: 50rem) {
+		.support-cta {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 16px;
+		}
+	}
+</style>
