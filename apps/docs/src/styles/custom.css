@@ -227,6 +227,44 @@ a:not(.sl-link-card):not(.card):not(.path-card):not(.tool-row) {
 /* ============================================================
    DOCS PAGE — sidebar, on-this-page, pager
    ============================================================ */
+/* Sidebar nav: smaller, lighter, airier than Starlight's default — match the
+   mockup (13.5px muted links, 13px ink group labels, more vertical padding). */
+/* biome-ignore lint/style/noDescendingSpecificity: base link rule precedes the
+   more specific .large / active rules by design (normal cascade order) */
+.sidebar-content a {
+	font-size: 13.5px;
+	font-weight: 400;
+	color: var(--sp-muted);
+	padding: 7px 12px;
+}
+.sidebar-content a:hover {
+	color: var(--sp-fg);
+}
+/* standalone top-level links (CLI, MCP, Claude Plugin, …) are not bold/ink */
+.sidebar-content a.large {
+	font-size: 13.5px;
+	font-weight: 400;
+	color: var(--sp-muted);
+}
+/* group labels (Core features, Your account) stay ink, slightly bold + small */
+.sidebar-content .group-label .large {
+	font-size: 13px;
+	font-weight: 650;
+	letter-spacing: -0.005em;
+	color: var(--sp-fg);
+}
+.sidebar-content summary {
+	padding: 6px 12px;
+}
+.sidebar-content .group-label .large + svg,
+.sidebar-content summary .caret {
+	color: var(--sp-faint);
+}
+/* breathing room between top-level groups/items */
+.sidebar-content ul.top-level > li + li {
+	margin-top: 8px;
+}
+
 /* active sidebar link → dark solid pill */
 .sidebar-content a[aria-current="page"] {
 	background: var(--sp-solid);
