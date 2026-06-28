@@ -107,8 +107,22 @@ ul.starlight-sidebar-topics {
 }
 
 /* ============================================================
+   HEADER — brand logo sized to the mockup (~27px mark)
+   ============================================================ */
+.site-title img {
+	height: 1.75rem;
+	width: auto;
+}
+
+/* ============================================================
    HOME PAGE — hero (Nova splash `.hero`)
    ============================================================ */
+/* Nova pads the hero up to 10rem top+bottom, which buries the path cards
+   below the fold. Tighten it to the mockup's compact spacing so the banner
+   and cards sit in the first view. */
+.hero {
+	padding-block: 3.5rem 1.5rem;
+}
 .hero h1 {
 	/* scales up to the mockup's 76px */
 	font-size: clamp(2.75rem, calc(1.5rem + 5vw), 4.75rem);
@@ -179,7 +193,8 @@ ul.starlight-sidebar-topics {
 	font-weight: 650;
 }
 /* underline only prose links — not the home cards (whole-card anchors) */
-.sl-markdown-content a:not(.sl-link-card):not(.card):not(.path-card):not(.tool-row) {
+.sl-markdown-content
+a:not(.sl-link-card):not(.card):not(.path-card):not(.tool-row) {
 	color: var(--sp-fg);
 	text-decoration: underline;
 	text-underline-offset: 2px;
