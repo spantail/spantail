@@ -97,6 +97,8 @@ pnpm deploy             # wrangler deploy (apps/web)
 
 - TypeScript strict mode everywhere. No `any` without a comment justifying it.
 - Conventional Commits (`feat:`, `fix:`, `refactor:`, ...).
+- Versioning and the release runbook live in [`docs/releasing.md`](docs/releasing.md) (SemVer,
+  `vX.Y.Z` tags → GitHub Releases). Docs (`apps/docs`) deploy on a separate lifecycle.
 - YAGNI: prefer the simplest implementation; do not add dependencies, abstractions, or config
   options that current features don't need. DRY across packages — if web and CLI need the same
   logic, it belongs in `core` or `sdk`.
