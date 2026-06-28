@@ -20,4 +20,4 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       # Builds the cli bundle via prepack, catching bundling regressions.
-      - run: pnpm --filter toxil pack
+      - run: pnpm --filter spantail pack

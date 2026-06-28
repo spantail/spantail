@@ -6,9 +6,9 @@ body:
     attributes:
       value: >-
         For big-picture or uncertain ideas, please start a
-        [Discussion](https://github.com/toxildev/toxil/discussions/categories/ideas)
+        [Discussion](https://github.com/spantail/spantail/discussions/categories/ideas)
         first — open this issue once the approach is agreed. See
-        [CONTRIBUTING.md](https://github.com/toxildev/toxil/blob/main/CONTRIBUTING.md).
+        [CONTRIBUTING.md](https://github.com/spantail/spantail/blob/main/CONTRIBUTING.md).
   - type: textarea
     id: summary
     attributes:
