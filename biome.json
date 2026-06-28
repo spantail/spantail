@@ -13,6 +13,7 @@
 			"!**/worker-configuration.d.ts",
 			"!apps/web/src/client/components/ui",
 			"!apps/docs/src/content",
+			"!**/*.astro",
 			"!packages/db/migrations"
 		]
 	},

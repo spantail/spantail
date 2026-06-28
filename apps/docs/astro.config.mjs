@@ -12,7 +12,15 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: "Spantail docs",
-			customCss: ["./src/styles/custom.css"],
+			logo: { src: "./src/assets/spantail-mark.svg", alt: "Spantail" },
+			// Geist (sans + mono) — self-hosted via fontsource, wired into the Nova
+			// theme through --font-sans / --font-mono in custom.css. The font CSS is
+			// listed before custom.css so the @font-face rules load first.
+			customCss: [
+				"@fontsource-variable/geist",
+				"@fontsource-variable/geist-mono",
+				"./src/styles/custom.css",
+			],
 			locales: {
 				root: { label: "English", lang: "en" },
 				ja: { label: "日本語", lang: "ja" },

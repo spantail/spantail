@@ -4,6 +4,8 @@ description: Work observability for humans and AI agents — log work and captur
 template: splash
 hero:
   tagline: Log human work and capture AI-agent activity as spans, then turn them into reports.
+  image:
+    html: '<div class="video-slot" role="img" aria-label="Product overview video (coming soon)"><span class="vs-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="vs-label">YouTube embed · 16:9</span></div>'
   actions:
     - text: Get started
       link: /guides/
@@ -14,40 +16,67 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import PathCards from "../../components/PathCards.astro";
+import ToolRows from "../../components/ToolRows.astro";
+import SupportCta from "../../components/SupportCta.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
 
-:::caution[Work in progress]
-These docs are being scaffolded. Most pages are placeholders (🚧 TBC).
-:::
+<SupportCta
+	title="Need professional support?"
+	body="Get hands-on help with setup, deployment, and your reporting workflow from the Spantail team."
+	cta="Talk to us"
+/>
 
 ## Choose your path
 
-<CardGrid>
-	<Card title="User Guide" icon="open-book">
-		Log work in the web UI, capture agent activity, and read reports.
-		[Open the User Guide](/guides/)
-	</Card>
-	<Card title="Admin Guide" icon="setting">
-		Manage workspaces, members, projects, users, and instance-wide settings.
-		[Open the Admin Guide](/admin/)
-	</Card>
-	<Card title="Setup Guide" icon="rocket">
-		Deploy and operate Spantail on Cloudflare.
-		[Open the Setup Guide](/self-hosting/)
-	</Card>
-	<Card title="API Reference" icon="seti:json">
-		Automate Spantail over the REST API.
-		[Open the API Reference](/api/)
-	</Card>
-</CardGrid>
+<PathCards
+	items={[
+		{
+			icon: "open-book",
+			title: "User Guide",
+			body: "Log work in the web UI, capture agent activity, and read reports.",
+			href: "/guides/",
+			more: "Open the User Guide",
+		},
+		{
+			icon: "setting",
+			title: "Admin Guide",
+			body: "Manage workspaces, members, projects, users, and instance-wide settings.",
+			href: "/admin/",
+			more: "Open the Admin Guide",
+		},
+		{
+			icon: "rocket",
+			title: "Setup Guide",
+			body: "Deploy and operate Spantail on Cloudflare.",
+			href: "/self-hosting/",
+			more: "Open the Setup Guide",
+		},
+		{
+			icon: "seti:json",
+			title: "API Reference",
+			body: "Automate Spantail over the REST API.",
+			href: "/api/",
+			more: "Open the API Reference",
+		},
+	]}
+/>
 
 ## Tools & automation
 
 Feed and pull your data however you like — these clients all talk to the same API.
 
-<CardGrid>
-	<LinkCard title="CLI" href="/guides/tools/cli/" description="The spantail command-line client." />
-	<LinkCard title="MCP" href="/guides/tools/mcp/" description="Remote /mcp and stdio servers for AI clients." />
-	<LinkCard title="Claude Plugin" href="/guides/tools/claude-plugin/" description="Capture Claude Code activity (coming soon)." />
-	<LinkCard title="REST API" href="/api/" description="The full HTTP API reference." />
-</CardGrid>
+<ToolRows
+	items={[
+		{ id: "cli", title: "CLI", body: "The spantail command-line client.", href: "/guides/tools/cli/" },
+		{ id: "mcp", title: "MCP", body: "Remote /mcp and stdio servers for AI clients.", href: "/guides/tools/mcp/" },
+		{
+			id: "claude",
+			title: "Claude Plugin",
+			body: "Capture Claude Code activity (coming soon).",
+			href: "/guides/tools/claude-plugin/",
+		},
+	]}
+/>
+
+<SiteFooter copyright="© 2026 Spantail. All rights reserved." />
