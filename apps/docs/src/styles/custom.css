@@ -115,6 +115,34 @@ ul.starlight-sidebar-topics {
 }
 
 /* ============================================================
+   HEADER — search box styled to the mockup (subtle fill, soft
+   border, 9px radius, outlined ⌘K badge)
+   ============================================================ */
+@media (min-width: 50rem) {
+	site-search button[data-open-modal] {
+		max-width: 17.5rem;
+		background-color: var(--sp-subtle);
+		border-color: var(--sp-border);
+		border-radius: 9px;
+		color: var(--sp-muted);
+	}
+	site-search button[data-open-modal] svg {
+		color: var(--sp-faint);
+	}
+	/* the ⌘K hint: outlined chip on the page background, not a gray fill */
+	site-search button[data-open-modal] > kbd {
+		gap: 0.1em;
+		padding: 3px 5px;
+		border: 1px solid var(--sp-border-strong);
+		border-radius: 5px;
+		background-color: var(--sp-bg);
+		color: var(--sp-muted);
+		font-family: var(--font-mono);
+		font-size: 11px;
+	}
+}
+
+/* ============================================================
    HOME PAGE — hero (Nova splash `.hero`)
    ============================================================ */
 /* Nova pads the hero up to 10rem top+bottom, which buries the path cards
