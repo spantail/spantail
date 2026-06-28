@@ -6,7 +6,9 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      # Strict vX.Y.Z (matches the SemVer policy in docs/releasing.md); avoids
+      # accidental releases from tags like `vnext`, `v1`, or `v1.2`.
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: write
@@ -27,6 +29,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      # Mirror CI: catch CLI bundling regressions before cutting a release.
+      - run: pnpm --filter spantail pack
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
