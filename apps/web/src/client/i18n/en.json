@@ -200,7 +200,7 @@
 		"name": "Report name",
 		"template": "Template",
 		"workspace": "Workspace",
-		"allWorkspaces": "All workspaces",
+		"noWorkspace": "No workspace",
 		"dateRange": "Date range",
 		"projects": "Projects",
 		"allProjects": "Leave all unchecked to include every project.",

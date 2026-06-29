@@ -395,7 +395,7 @@ export function ReportForm({
 									</SelectTrigger>
 									<SelectContent>
 										<SelectItem value={INSTANCE_SCOPE}>
-											{t("reports.allWorkspaces")}
+											{t("reports.noWorkspace")}
 										</SelectItem>
 										{memberWorkspaces.map((workspace) => (
 											<SelectItem key={workspace.id} value={workspace.id}>

@@ -203,7 +203,7 @@
 		"name": "レポート名",
 		"template": "テンプレート",
 		"workspace": "ワークスペース",
-		"allWorkspaces": "すべてのワークスペース",
+		"noWorkspace": "指定なし",
 		"dateRange": "期間",
 		"projects": "プロジェクト",
 		"allProjects": "すべて未選択の場合は全プロジェクトが対象になります。",
