@@ -15,6 +15,16 @@ it("parses h/m forms", () => {
 	expect(parseDuration("1H 30M")).toBe(90);
 	expect(parseDuration("0h30m")).toBe(30);
 	expect(parseDuration("2h90m")).toBe(210);
+	expect(parseDuration("8760h")).toBe(525_600); // exactly the cap
+});
+
+it("parses fractional hours", () => {
+	expect(parseDuration("3.5h")).toBe(210);
+	expect(parseDuration("1.5h")).toBe(90);
+	expect(parseDuration("0.5h")).toBe(30);
+	expect(parseDuration("4h 10m")).toBe(250);
+	expect(parseDuration("1.1h")).toBe(66); // 66.0 rounds to 66
+	expect(parseDuration("1.25h 30m")).toBe(105);
 });
 
 it("rejects invalid or non-positive durations", () => {
@@ -22,12 +32,14 @@ it("rejects invalid or non-positive durations", () => {
 	expect(parseDuration("0")).toBeNull();
 	expect(parseDuration("0m")).toBeNull();
 	expect(parseDuration("-5")).toBeNull();
-	expect(parseDuration("1.5h")).toBeNull();
+	expect(parseDuration("3.5")).toBeNull(); // bare decimal is ambiguous
+	expect(parseDuration("1.5m")).toBeNull(); // fractional minutes not allowed
 	expect(parseDuration("h")).toBeNull();
 	expect(parseDuration("m")).toBeNull();
 	expect(parseDuration("30m1h")).toBeNull();
 	expect(parseDuration("1h30")).toBeNull();
 	expect(parseDuration("two hours")).toBeNull();
+	expect(parseDuration("8761h")).toBeNull(); // above MAX_DURATION_MINUTES
 	expect(parseDuration("999999999999999999h")).toBeNull();
 });
 
