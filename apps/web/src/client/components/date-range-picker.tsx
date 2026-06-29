@@ -132,24 +132,29 @@ export function DateRangePicker({
 
 	return (
 		<Popover open={open} onOpenChange={onOpenChange}>
-			<PopoverTrigger
-				aria-label={ariaLabel}
-				className={cn(
-					"inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border bg-card py-1.5 pr-2 pl-3 text-[13px] font-medium transition-colors hover:bg-muted/50",
-					open && "bg-muted/50",
-					triggerClassName,
-				)}
-			>
-				<CalendarIcon className="size-3.5 text-muted-foreground" />
-				{label}
-				{/* ml-auto pins the chevron to the right edge when the trigger is a
-				    full-width field; a no-op for the content-sized dashboard pill. */}
-				<ChevronDownIcon
+			{/* asChild + an explicit type="button" so the trigger never submits the
+			    surrounding form (the report form), matching the codebase convention. */}
+			<PopoverTrigger asChild>
+				<button
+					type="button"
+					aria-label={ariaLabel}
 					className={cn(
-						"ml-auto size-3.5 text-muted-foreground transition-transform",
-						open && "rotate-180",
+						"inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border bg-card py-1.5 pr-2 pl-3 text-[13px] font-medium transition-colors hover:bg-muted/50",
+						open && "bg-muted/50",
+						triggerClassName,
 					)}
-				/>
+				>
+					<CalendarIcon className="size-3.5 text-muted-foreground" />
+					{label}
+					{/* ml-auto pins the chevron to the right edge when the trigger is a
+					    full-width field; a no-op for the content-sized dashboard pill. */}
+					<ChevronDownIcon
+						className={cn(
+							"ml-auto size-3.5 text-muted-foreground transition-transform",
+							open && "rotate-180",
+						)}
+					/>
+				</button>
 			</PopoverTrigger>
 			<PopoverContent
 				align={align}
