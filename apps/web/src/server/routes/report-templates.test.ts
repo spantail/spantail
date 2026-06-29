@@ -8,6 +8,9 @@ import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const member = await signUpUser("Member", "member@example.com");
+	// Read once so the instance default is lazily seeded — the normal state in
+	// which templates are created (so a custom one isn't the sole default).
+	await apiGet("/api/v1/report-templates", admin);
 	return { admin, member };
 }
 
@@ -220,6 +223,28 @@ it("fetches a template by id and 404s for unknown ids", async () => {
 	expect(
 		(await apiGet("/api/v1/report-templates/does-not-exist", member)).status,
 	).toBe(404);
+});
+
+it("makes the first created template the default when none exists yet", async () => {
+	// A POST before anyone lists templates (so the lazy seed never ran): the
+	// instance has no default, so the created template must become it.
+	const admin = await signUpUser("Admin", "admin@example.com");
+
+	const created = (await (
+		await apiJson("POST", "/api/v1/report-templates", templateInput, admin)
+	).json()) as { id: string; isDefault: boolean };
+	expect(created.isDefault).toBe(true);
+
+	// A second template, now that a default exists, is not default.
+	const second = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/report-templates",
+			{ ...templateInput, name: "Second" },
+			admin,
+		)
+	).json()) as { isDefault: boolean };
+	expect(second.isDefault).toBe(false);
 });
 
 it("flags the seeded template as default and protects it", async () => {

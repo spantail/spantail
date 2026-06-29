@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { reportTemplates } from "../schema/reports";
@@ -88,6 +88,26 @@ export async function deleteReportTemplate(
 	id: string,
 ): Promise<void> {
 	await db.delete(reportTemplates).where(eq(reportTemplates.id, id));
+}
+
+/**
+ * Disables `id` only if it is not the default. The `is_default = false` guard is
+ * part of the UPDATE so it stays correct under a concurrent setDefault that
+ * promotes this id (a separate read-then-write could disable the new default).
+ * Returns the updated row, or undefined when the row is the default (or absent).
+ */
+export async function disableReportTemplateIfNotDefault(
+	db: Database,
+	id: string,
+): Promise<ReportTemplateRow | undefined> {
+	const rows = await db
+		.update(reportTemplates)
+		.set({ enabled: false })
+		.where(
+			and(eq(reportTemplates.id, id), eq(reportTemplates.isDefault, false)),
+		)
+		.returning();
+	return rows[0];
 }
 
 /**

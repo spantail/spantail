@@ -7,6 +7,7 @@ import {
 	countReportsByTemplateId,
 	createReportTemplate,
 	deleteReportTemplate,
+	disableReportTemplateIfNotDefault,
 	getReportTemplateById,
 	listReportTemplates,
 	type ReportTemplateRow,
@@ -61,12 +62,19 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 	.post("/", async (c) => {
 		const { user } = requireTemplateManager(c);
 		const input = validate(createReportTemplateInputSchema, await c.req.json());
+		// Keep the "exactly one default" invariant when a template is created on an
+		// instance that has none yet (e.g. a POST before anyone lists templates, so
+		// the lazy seed never ran): the first template becomes the default.
+		const hasDefault = (await listReportTemplates(c.var.db)).some(
+			(t) => t.isDefault,
+		);
 		const template = await createReportTemplate(c.var.db, {
 			name: input.name,
 			description: input.description ?? null,
 			body: input.body,
 			nameTemplate: input.nameTemplate ?? null,
 			noteTemplate: input.noteTemplate ?? null,
+			isDefault: !hasDefault,
 			createdBy: user.id,
 		});
 		return c.json(toApi(template), 201);
@@ -98,11 +106,25 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 		);
 		const template = await getReportTemplateById(c.var.db, id);
 		if (!template) throw new AppError("not_found", "Report template not found");
-		// The instance default must always stay available as the compose fallback.
-		if (template.isDefault && !input.enabled) {
-			throw new AppError("conflict", "The default template cannot be disabled");
+		if (!input.enabled) {
+			// The instance default must always stay available as the compose
+			// fallback. The guard is applied inside the UPDATE so it holds even if a
+			// concurrent set-default promotes this id between the read and the write.
+			const disabled = await disableReportTemplateIfNotDefault(
+				c.var.db,
+				template.id,
+			);
+			if (!disabled) {
+				throw new AppError(
+					"conflict",
+					"The default template cannot be disabled",
+				);
+			}
+			return c.json(toApi(disabled));
 		}
-		const updated = await updateReportTemplate(c.var.db, template.id, input);
+		const updated = await updateReportTemplate(c.var.db, template.id, {
+			enabled: true,
+		});
 		if (!updated) throw new AppError("not_found", "Report template not found");
 		return c.json(toApi(updated));
 	})
