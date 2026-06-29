@@ -149,7 +149,7 @@
 		"sameAsStart": "Same as start time",
 		"duration": "Duration",
 		"durationColumn": "Duration",
-		"durationPlaceholder": "90, 1h30m, 3.5h",
+		"durationPlaceholder": "Enter the time you worked",
 		"actionsMenu": "Entry actions",
 		"minutesFromRange": "Calculated from start and end ({{duration}}) — edit to override.",
 		"durationParsed": "= {{duration}} ({{minutes}}m)",

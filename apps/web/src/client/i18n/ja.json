@@ -152,7 +152,7 @@
 		"sameAsStart": "開始時刻と同じ",
 		"duration": "作業時間",
 		"durationColumn": "時間",
-		"durationPlaceholder": "90, 1h30m, 3.5h",
+		"durationPlaceholder": "作業時間を入力してください",
 		"actionsMenu": "記録の操作",
 		"minutesFromRange": "開始・終了から算出 ({{duration}})。上書きするには直接編集してください。",
 		"durationParsed": "= {{duration}}（{{minutes}}分）",
