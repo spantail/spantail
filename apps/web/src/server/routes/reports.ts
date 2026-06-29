@@ -8,6 +8,7 @@ import {
 	hashSharePasscode,
 	listReportsQuerySchema,
 	MAX_REPORT_MARKDOWN_LENGTH,
+	MAX_REPORT_WORKSPACES,
 	type ReportFilters,
 	type ReportFiltersInput,
 	renderReport,
@@ -176,6 +177,12 @@ async function renderReportDocument(
 	if (workspaceIds.length === 0) {
 		throw new AppError("bad_request", "You do not belong to any workspace");
 	}
+	// Instance scope resolves from live memberships, which bypass the wire schema;
+	// enforce the stored cap here so a user in too many workspaces can't persist a
+	// filter that violates the ReportFilters contract (or a runaway query).
+	if (workspaceIds.length > MAX_REPORT_WORKSPACES) {
+		throw new AppError("bad_request", "Report spans too many workspaces");
+	}
 	const { workspaces, templateBody, enabled } =
 		await validateFiltersAndTemplate(c, workspaceIds, templateId);
 	// A disabled (archived) template can't back a new or edited report; existing
@@ -185,8 +192,10 @@ async function renderReportDocument(
 	}
 
 	const scoped = workspaces.filter((w) => workspaceIds.includes(w.id));
-	const anchor = scoped.find((w) => w.id === workspaceIds[0]);
-	if (!anchor) throw new AppError("internal", "Filter workspace missing");
+	// Invariant: the validated memberships always cover the resolved scope.
+	if (!scoped.some((w) => w.id === workspaceIds[0])) {
+		throw new AppError("internal", "Filter workspace missing");
+	}
 
 	// The report renders in the running user's timezone: relative ranges and the
 	// generation date resolve in it. Entries are already bucketed by their stored

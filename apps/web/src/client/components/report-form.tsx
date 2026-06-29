@@ -215,8 +215,10 @@ export function ReportForm({
 	// The request body shared by the live preview and the submit. Null while the
 	// form can't render (invalid/too-long range or blank name) so the preview
 	// holds its last good output instead of erroring. An empty workspace is valid
-	// — it means instance scope (all the user's workspaces).
+	// — it means instance scope (all the user's workspaces) — but only when the
+	// user belongs to at least one workspace; otherwise every render would 400.
 	const input = useMemo<CreateReportInput | null>(() => {
+		if (memberWorkspaces.length === 0) return null;
 		if (!customValid || spanTooLong) return null;
 		if (effectiveName.trim() === "") return null;
 		const parsedTags = tags
@@ -241,6 +243,7 @@ export function ReportForm({
 		};
 	}, [
 		workspaceId,
+		memberWorkspaces.length,
 		customValid,
 		spanTooLong,
 		effectiveName,

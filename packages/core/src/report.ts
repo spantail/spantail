@@ -47,13 +47,18 @@ export const reportDateRangeSchema = z.union([
 ]);
 export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 
+/**
+ * Upper bound on a stored report's workspace set. One workspace is workspace
+ * scope; instance scope resolves to the caller's full membership set, so the cap
+ * is a generous abuse guard on the resolved set, not a user-facing limit (the
+ * create/update wire caps the selection at a single workspace). The server
+ * enforces the same bound when it resolves instance scope.
+ */
+export const MAX_REPORT_WORKSPACES = 100;
+
 /** Filters as stored on a report: the date range is always absolute. */
 export const reportFiltersSchema = z.object({
-	// One workspace (workspace scope) or the caller's full membership set (instance
-	// scope, resolved server-side at render). The cap is a generous abuse guard on
-	// the resolved set, not a user-facing limit — the create/update wire caps the
-	// selection at a single workspace.
-	workspaceIds: z.array(z.string()).min(1).max(100),
+	workspaceIds: z.array(z.string()).min(1).max(MAX_REPORT_WORKSPACES),
 	projectIds: z.array(z.string()).max(50).optional(),
 	userIds: z.array(z.string()).max(50).optional(),
 	tags: z.array(tagSchema).max(20).optional(),
