@@ -78,12 +78,16 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		name: "",
 		nameEdited: false,
 		templateId: template.id,
-		// Templates carry no workspace; a new report defaults to the current one.
-		workspaceId: current?.id ?? null,
+		// Opening straight from the reports screen (the New button, the `c`
+		// shortcut) defaults to instance scope: /reports is not bound to one
+		// workspace. The workspace-scoped deep link from the Home timeline
+		// overrides this in seedFromLink with its `ws` param.
+		workspaceId: null,
 		projectIds: [],
 		userIds: [],
-		// Period is chosen at run time; default a new report to the current month.
-		dateRange: "this_month",
+		// Default a new report to today (the most common cadence is a daily
+		// report). A deep link with from/to (the Home timeline) overrides this.
+		dateRange: "today",
 		tags: "",
 		note: "",
 		noteEdited: false,
