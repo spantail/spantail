@@ -470,7 +470,8 @@
 			"systemUsers": "ユーザー管理",
 			"systemAgents": "AI エージェント",
 			"email": "メール",
-			"oauth": "ソーシャルログイン"
+			"oauth": "ソーシャルログイン",
+			"systemAbout": "システム情報"
 		},
 		"systemAdminOnly": "このセクションはインスタンス管理者のみがアクセスできます。",
 		"slug": "スラッグ",
@@ -726,6 +727,11 @@
 			"saveAction": "保存",
 			"statusEnabled": "有効",
 			"statusDisabled": "無効"
+		},
+		"system": {
+			"description": "オープンソースの作業可観測性プラットフォーム。",
+			"versionLabel": "バージョン",
+			"copyrightLabel": "著作権"
 		},
 		"adminBannerLead": "インスタンス管理。",
 		"general": {
