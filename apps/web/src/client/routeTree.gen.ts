@@ -35,6 +35,7 @@ import { Route as AuthedWWsSlugRouteImport } from './routes/_authed/w.$wsSlug'
 import { Route as AuthedSettingsUsersRouteImport } from './routes/_authed/settings/users'
 import { Route as AuthedSettingsTokensRouteImport } from './routes/_authed/settings/tokens'
 import { Route as AuthedSettingsTemplatesRouteImport } from './routes/_authed/settings/templates'
+import { Route as AuthedSettingsSystemRouteImport } from './routes/_authed/settings/system'
 import { Route as AuthedSettingsProjectsRouteImport } from './routes/_authed/settings/projects'
 import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
 import { Route as AuthedSettingsPreferencesRouteImport } from './routes/_authed/settings/preferences'
@@ -179,6 +180,11 @@ const AuthedSettingsTemplatesRoute = AuthedSettingsTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsSystemRoute = AuthedSettingsSystemRouteImport.update({
+  id: '/system',
+  path: '/system',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsProjectsRoute = AuthedSettingsProjectsRouteImport.update({
   id: '/projects',
   path: '/projects',
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
+  '/settings/system': typeof AuthedSettingsSystemRoute
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
   '/settings/users': typeof AuthedSettingsUsersRoute
@@ -320,6 +327,7 @@ export interface FileRoutesByTo {
   '/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/projects': typeof AuthedSettingsProjectsRoute
+  '/settings/system': typeof AuthedSettingsSystemRoute
   '/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/settings/tokens': typeof AuthedSettingsTokensRoute
   '/settings/users': typeof AuthedSettingsUsersRoute
@@ -362,6 +370,7 @@ export interface FileRoutesById {
   '/_authed/settings/preferences': typeof AuthedSettingsPreferencesRoute
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/projects': typeof AuthedSettingsProjectsRoute
+  '/_authed/settings/system': typeof AuthedSettingsSystemRoute
   '/_authed/settings/templates': typeof AuthedSettingsTemplatesRoute
   '/_authed/settings/tokens': typeof AuthedSettingsTokensRoute
   '/_authed/settings/users': typeof AuthedSettingsUsersRoute
@@ -405,6 +414,7 @@ export interface FileRouteTypes {
     | '/settings/preferences'
     | '/settings/profile'
     | '/settings/projects'
+    | '/settings/system'
     | '/settings/templates'
     | '/settings/tokens'
     | '/settings/users'
@@ -441,6 +451,7 @@ export interface FileRouteTypes {
     | '/settings/preferences'
     | '/settings/profile'
     | '/settings/projects'
+    | '/settings/system'
     | '/settings/templates'
     | '/settings/tokens'
     | '/settings/users'
@@ -482,6 +493,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/preferences'
     | '/_authed/settings/profile'
     | '/_authed/settings/projects'
+    | '/_authed/settings/system'
     | '/_authed/settings/templates'
     | '/_authed/settings/tokens'
     | '/_authed/settings/users'
@@ -691,6 +703,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsTemplatesRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/system': {
+      id: '/_authed/settings/system'
+      path: '/system'
+      fullPath: '/settings/system'
+      preLoaderRoute: typeof AuthedSettingsSystemRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/projects': {
       id: '/_authed/settings/projects'
       path: '/projects'
@@ -804,6 +823,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsPreferencesRoute: typeof AuthedSettingsPreferencesRoute
   AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
   AuthedSettingsProjectsRoute: typeof AuthedSettingsProjectsRoute
+  AuthedSettingsSystemRoute: typeof AuthedSettingsSystemRoute
   AuthedSettingsTemplatesRoute: typeof AuthedSettingsTemplatesRoute
   AuthedSettingsTokensRoute: typeof AuthedSettingsTokensRoute
   AuthedSettingsUsersRoute: typeof AuthedSettingsUsersRoute
@@ -822,6 +842,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsPreferencesRoute: AuthedSettingsPreferencesRoute,
   AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
   AuthedSettingsProjectsRoute: AuthedSettingsProjectsRoute,
+  AuthedSettingsSystemRoute: AuthedSettingsSystemRoute,
   AuthedSettingsTemplatesRoute: AuthedSettingsTemplatesRoute,
   AuthedSettingsTokensRoute: AuthedSettingsTokensRoute,
   AuthedSettingsUsersRoute: AuthedSettingsUsersRoute,

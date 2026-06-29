@@ -4,6 +4,7 @@ import {
 	FileTextIcon,
 	FingerprintIcon,
 	FolderIcon,
+	InfoIcon,
 	KeyIcon,
 	KeyRoundIcon,
 	MailIcon,
@@ -36,19 +37,26 @@ interface SettingsNavItem {
 		| "/settings/users"
 		| "/settings/agents-admin"
 		| "/settings/email"
-		| "/settings/oauth";
+		| "/settings/oauth"
+		| "/settings/system";
 	labelKey: string;
 	icon: React.ComponentType<{ className?: string }>;
 	/** Hidden unless the instance has the agents feature enabled. */
 	requiresAgents?: boolean;
+	/**
+	 * Overrides the group's visibility for this item. "public" shows it to
+	 * everyone even inside an admin-only group (e.g. system info under System).
+	 */
+	visibility?: "admin" | "public";
 }
 
 interface SettingsNavGroup {
 	labelKey: string;
 	items: SettingsNavItem[];
 	/**
-	 * Visibility gate. "admin" shows only to instance admins; "templateManager"
-	 * shows to instance admins or users with the template-author capability.
+	 * Default visibility gate for the group's items. "admin" shows only to
+	 * instance admins; "templateManager" shows to instance admins or users with
+	 * the template-author capability. An item may override this.
 	 */
 	visibility?: "admin" | "templateManager";
 }
@@ -145,6 +153,12 @@ const GROUPS: SettingsNavGroup[] = [
 				labelKey: "settings.nav.oauth",
 				icon: KeyRoundIcon,
 			},
+			{
+				to: "/settings/system",
+				labelKey: "settings.nav.systemAbout",
+				icon: InfoIcon,
+				visibility: "public",
+			},
 		],
 	},
 ];
@@ -171,45 +185,48 @@ export function SettingsNav({
 	const { t } = useTranslation();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-	const isVisible = (group: SettingsNavGroup): boolean => {
-		if (group.visibility === "admin") return isAdmin;
-		if (group.visibility === "templateManager")
-			return isAdmin || canManageTemplates;
+	const itemVisible = (
+		item: SettingsNavItem,
+		group: SettingsNavGroup,
+	): boolean => {
+		if (item.requiresAgents && !agentsEnabled) return false;
+		// An item's own visibility overrides the group's default.
+		const visibility = item.visibility ?? group.visibility;
+		if (visibility === "admin") return isAdmin;
+		if (visibility === "templateManager") return isAdmin || canManageTemplates;
 		return true;
 	};
 
 	const visibleItems = (group: SettingsNavGroup): SettingsNavItem[] =>
-		group.items.filter((item) => !item.requiresAgents || agentsEnabled);
+		group.items.filter((item) => itemVisible(item, group));
 
 	return (
 		<nav className="flex shrink-0 flex-col gap-5 md:w-48">
-			{GROUPS.filter(isVisible)
-				.filter((group) => visibleItems(group).length > 0)
-				.map((group) => (
-					<div key={group.labelKey} className="flex flex-col gap-1">
-						<p className="text-muted-foreground px-2 pb-1 text-xs font-medium uppercase tracking-wider">
-							{t(group.labelKey)}
-						</p>
-						{visibleItems(group).map((item) => {
-							const isActive = pathname === item.to;
-							return (
-								<Link
-									key={item.to}
-									to={item.to}
-									className={cn(
-										"flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
-										isActive
-											? "bg-secondary text-foreground font-medium"
-											: "text-muted-foreground hover:bg-accent hover:text-foreground",
-									)}
-								>
-									<item.icon className="size-4" />
-									{t(item.labelKey)}
-								</Link>
-							);
-						})}
-					</div>
-				))}
+			{GROUPS.filter((group) => visibleItems(group).length > 0).map((group) => (
+				<div key={group.labelKey} className="flex flex-col gap-1">
+					<p className="text-muted-foreground px-2 pb-1 text-xs font-medium uppercase tracking-wider">
+						{t(group.labelKey)}
+					</p>
+					{visibleItems(group).map((item) => {
+						const isActive = pathname === item.to;
+						return (
+							<Link
+								key={item.to}
+								to={item.to}
+								className={cn(
+									"flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
+									isActive
+										? "bg-secondary text-foreground font-medium"
+										: "text-muted-foreground hover:bg-accent hover:text-foreground",
+								)}
+							>
+								<item.icon className="size-4" />
+								{t(item.labelKey)}
+							</Link>
+						);
+					})}
+				</div>
+			))}
 		</nav>
 	);
 }

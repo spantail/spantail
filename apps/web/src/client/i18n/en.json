@@ -467,7 +467,8 @@
 			"systemUsers": "User management",
 			"systemAgents": "AI agents",
 			"email": "Email",
-			"oauth": "Social login"
+			"oauth": "Social login",
+			"systemAbout": "About"
 		},
 		"systemAdminOnly": "Only instance admins can access this section.",
 		"slug": "Slug",
@@ -723,6 +724,11 @@
 			"saveAction": "Save",
 			"statusEnabled": "Enabled",
 			"statusDisabled": "Disabled"
+		},
+		"system": {
+			"description": "Open-source work observability platform.",
+			"versionLabel": "Version",
+			"copyrightLabel": "Copyright"
 		},
 		"adminBannerLead": "Instance administration.",
 		"general": {
