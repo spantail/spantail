@@ -57,10 +57,22 @@ export const reportFiltersSchema = z.object({
 });
 export type ReportFilters = z.infer<typeof reportFiltersSchema>;
 
-/** Filters on the create/update wire: the date range may still be a preset. */
-export const reportFiltersInputSchema = reportFiltersSchema.extend({
-	dateRange: reportDateRangeSchema,
-});
+/**
+ * Filters on the create/update wire: the date range may still be a preset, and
+ * the workspace is a single selection — empty means instance scope (resolved to
+ * the caller's workspaces server-side), one id means a single-workspace scope.
+ * Projects can only be scoped when a workspace is chosen.
+ */
+export const reportFiltersInputSchema = reportFiltersSchema
+	.extend({
+		dateRange: reportDateRangeSchema,
+		workspaceIds: z.array(z.string()).max(1),
+	})
+	.refine(
+		(filters) =>
+			filters.workspaceIds.length === 1 || !filters.projectIds?.length,
+		"projectIds requires a workspace",
+	);
 export type ReportFiltersInput = z.infer<typeof reportFiltersInputSchema>;
 
 export const reportTemplateSchema = z.object({

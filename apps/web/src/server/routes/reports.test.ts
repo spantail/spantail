@@ -400,6 +400,89 @@ it("rejects filters outside the caller's workspace memberships", async () => {
 	expect(ghost.status).toBe(403);
 });
 
+it("resolves an empty workspace selection to instance scope (all the caller's workspaces)", async () => {
+	const { admin, project, ws, templateId } = await setup();
+	// A second workspace the admin also belongs to, so instance scope spans both.
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "globex", name: "Globex" },
+			admin,
+		)
+	).json()) as { id: string };
+	const project2 = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws2.id}/projects`,
+			{ slug: "beta", name: "Beta" },
+			admin,
+		)
+	).json()) as { id: string };
+	const today = todayInTimezone("UTC");
+	await createEntry(admin, ws.id, project.id, "in acme", ["api"], today);
+	await createEntry(admin, ws2.id, project2.id, "in globex", ["api"], today);
+
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			name: "Everything",
+			templateId,
+			filters: { workspaceIds: [], dateRange: "today" },
+		},
+		admin,
+	);
+	expect(res.status).toBe(201);
+	const report = (await res.json()) as {
+		filters: { workspaceIds: string[] };
+		totalMinutes: number;
+	};
+	// Empty input is stored as the concrete resolved set of the caller's workspaces.
+	expect([...report.filters.workspaceIds].sort()).toEqual(
+		[ws.id, ws2.id].sort(),
+	);
+	// Both workspaces' entries are aggregated.
+	expect(report.totalMinutes).toBe(60);
+});
+
+it("rejects a project filter without a workspace", async () => {
+	const { admin, project, templateId } = await setup();
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			name: "Bad",
+			templateId,
+			filters: {
+				workspaceIds: [],
+				projectIds: [project.id],
+				dateRange: "today",
+			},
+		},
+		admin,
+	);
+	expect(res.status).toBe(400);
+});
+
+it("rejects selecting more than one workspace", async () => {
+	const { admin, ws, templateId } = await setup();
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			name: "TwoWs",
+			templateId,
+			filters: {
+				workspaceIds: [ws.id, crypto.randomUUID()],
+				dateRange: "today",
+			},
+		},
+		admin,
+	);
+	expect(res.status).toBe(400);
+});
+
 it("rejects reports outside the caller's memberships or with an unknown template", async () => {
 	const { admin, other, ws } = await setup();
 	const template = (await (
