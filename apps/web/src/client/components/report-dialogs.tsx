@@ -85,9 +85,10 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		workspaceId: null,
 		projectIds: [],
 		userIds: [],
-		// Default a new report to today (the most common cadence is a daily
-		// report). A deep link with from/to (the Home timeline) overrides this.
-		dateRange: "today",
+		// Seed the date range from the template's default; an unset template
+		// (null) falls back to today (the most common cadence is a daily report).
+		// A deep link with from/to (the Home timeline) overrides this.
+		dateRange: template.defaultDateRange ?? "today",
 		tags: "",
 		note: "",
 		noteEdited: false,

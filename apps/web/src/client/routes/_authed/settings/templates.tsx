@@ -1,4 +1,5 @@
-import type { ReportTemplate } from "@spantail/core";
+import type { DateRangePreset, ReportTemplate } from "@spantail/core";
+import { dateRangePresetSchema } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -16,6 +17,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
 	Table,
 	TableBody,
 	TableCell,
@@ -30,6 +38,10 @@ export const Route = createFileRoute("/_authed/settings/templates")({
 	component: TemplatesSection,
 });
 
+// Sentinel for the "not set" option: a Radix SelectItem cannot use an empty
+// string value, and null is the wire/draft representation of an unset default.
+const DATE_RANGE_NONE = "__none__";
+
 interface TemplateDraft {
 	editingId: string | null;
 	name: string;
@@ -37,6 +49,7 @@ interface TemplateDraft {
 	body: string;
 	nameTemplate: string;
 	noteTemplate: string;
+	defaultDateRange: DateRangePreset | null;
 }
 
 const EMPTY_DRAFT: TemplateDraft = {
@@ -46,6 +59,7 @@ const EMPTY_DRAFT: TemplateDraft = {
 	body: "",
 	nameTemplate: "",
 	noteTemplate: "",
+	defaultDateRange: null,
 };
 
 function TemplatesSection() {
@@ -81,6 +95,7 @@ function TemplatesSection() {
 						body: template.body,
 						nameTemplate: template.nameTemplate ?? "",
 						noteTemplate: template.noteTemplate ?? "",
+						defaultDateRange: template.defaultDateRange,
 					})
 				}
 				onDuplicate={(template) =>
@@ -91,6 +106,7 @@ function TemplatesSection() {
 						body: template.body,
 						nameTemplate: template.nameTemplate ?? "",
 						noteTemplate: template.noteTemplate ?? "",
+						defaultDateRange: template.defaultDateRange,
 					})
 				}
 			/>
@@ -120,6 +136,7 @@ function TemplateFormCard({
 					draft.nameTemplate.trim() === "" ? null : draft.nameTemplate,
 				noteTemplate:
 					draft.noteTemplate.trim() === "" ? null : draft.noteTemplate,
+				defaultDateRange: draft.defaultDateRange,
 			};
 			if (draft.editingId) {
 				return api.updateReportTemplate(draft.editingId, input);
@@ -226,6 +243,40 @@ function TemplateFormCard({
 						/>
 						<p className="text-muted-foreground text-sm">
 							{t("templates.noteTemplateHint")}
+						</p>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="tpl-default-date-range">
+							{t("templates.defaultDateRange")}
+						</Label>
+						<Select
+							value={draft.defaultDateRange ?? DATE_RANGE_NONE}
+							onValueChange={(value) =>
+								onDraftChange({
+									...draft,
+									defaultDateRange:
+										value === DATE_RANGE_NONE
+											? null
+											: (value as DateRangePreset),
+								})
+							}
+						>
+							<SelectTrigger id="tpl-default-date-range" className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value={DATE_RANGE_NONE}>
+									{t("templates.defaultDateRangeNone")}
+								</SelectItem>
+								{dateRangePresetSchema.options.map((preset) => (
+									<SelectItem key={preset} value={preset}>
+										{t(`reports.range.${preset}`)}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<p className="text-muted-foreground text-sm">
+							{t("templates.defaultDateRangeHint")}
 						</p>
 					</div>
 					{error && <p className="text-destructive text-sm">{error}</p>}

@@ -42,6 +42,9 @@ export const reportTemplates = sqliteTable(
 		// suggestion.
 		nameTemplate: text("name_template"),
 		noteTemplate: text("note_template"),
+		// Default relative range a new report seeds with at compose time (a
+		// DateRangePreset value). Null falls back to "today" in the compose dialog.
+		defaultDateRange: text("default_date_range"),
 		// Nullable + set null on delete: keep the template when its author is
 		// removed (authorship is just dropped).
 		createdBy: text("created_by").references(() => user.id, {

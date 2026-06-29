@@ -58,6 +58,50 @@ it("seeds a default template for the first admin and lists custom ones", async (
 	expect(list.length).toBe(2);
 });
 
+it("round-trips the optional default date range", async () => {
+	const { admin } = await setup();
+
+	// The lazily-seeded default carries no preset (null = compose falls back to today).
+	const seeded = (await (
+		await apiGet("/api/v1/report-templates", admin)
+	).json()) as Array<{ defaultDateRange: string | null }>;
+	expect(seeded[0]?.defaultDateRange).toBeNull();
+
+	// A preset set on create round-trips on read.
+	const created = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/report-templates",
+			{ ...templateInput, defaultDateRange: "this_week" },
+			admin,
+		)
+	).json()) as { id: string; defaultDateRange: string | null };
+	expect(created.defaultDateRange).toBe("this_week");
+
+	// An invalid preset is rejected at the boundary.
+	expect(
+		(
+			await apiJson(
+				"POST",
+				"/api/v1/report-templates",
+				{ ...templateInput, name: "Bad", defaultDateRange: "next_week" },
+				admin,
+			)
+		).status,
+	).toBe(400);
+
+	// Patching to null clears the preset.
+	const cleared = (await (
+		await apiJson(
+			"PATCH",
+			`/api/v1/report-templates/${created.id}`,
+			{ defaultDateRange: null },
+			admin,
+		)
+	).json()) as { defaultDateRange: string | null };
+	expect(cleared.defaultDateRange).toBeNull();
+});
+
 it("lazily seeds the default template in the request locale", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
 
