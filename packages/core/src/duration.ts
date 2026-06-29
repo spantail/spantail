@@ -8,8 +8,9 @@ export const MAX_DURATION_MINUTES = 525_600;
 
 /**
  * Parses a human duration into integer minutes: `"90"` (minutes), `"45m"`,
- * `"2h"`, `"1h30m"`, `"1h 30m"`. Case-insensitive. Returns null for anything
- * invalid or non-positive; the caller owns the user-facing error message.
+ * `"2h"`, `"1h30m"`, `"1h 30m"`, `"3.5h"` (fractional hours, rounded to the
+ * nearest minute). Case-insensitive. Returns null for anything invalid or
+ * non-positive; the caller owns the user-facing error message.
  */
 export function parseDuration(input: string): number | null {
 	const value = input.trim().toLowerCase();
@@ -17,10 +18,10 @@ export function parseDuration(input: string): number | null {
 	if (/^\d+$/.test(value)) {
 		minutes = Number(value);
 	} else {
-		const match = /^(?:(\d+)h)?(?: ?(\d+)m)?$/.exec(value);
+		const match = /^(?:(\d+(?:\.\d+)?)h)?(?: ?(\d+)m)?$/.exec(value);
 		if (!match || (match[1] === undefined && match[2] === undefined))
 			return null;
-		minutes = Number(match[1] ?? 0) * 60 + Number(match[2] ?? 0);
+		minutes = Math.round(Number(match[1] ?? 0) * 60) + Number(match[2] ?? 0);
 	}
 	return Number.isSafeInteger(minutes) && minutes > 0 ? minutes : null;
 }

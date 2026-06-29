@@ -17,12 +17,22 @@ it("parses h/m forms", () => {
 	expect(parseDuration("2h90m")).toBe(210);
 });
 
+it("parses fractional hours", () => {
+	expect(parseDuration("3.5h")).toBe(210);
+	expect(parseDuration("1.5h")).toBe(90);
+	expect(parseDuration("0.5h")).toBe(30);
+	expect(parseDuration("4h 10m")).toBe(250);
+	expect(parseDuration("1.1h")).toBe(66); // 66.0 rounds to 66
+	expect(parseDuration("1.25h 30m")).toBe(105);
+});
+
 it("rejects invalid or non-positive durations", () => {
 	expect(parseDuration("")).toBeNull();
 	expect(parseDuration("0")).toBeNull();
 	expect(parseDuration("0m")).toBeNull();
 	expect(parseDuration("-5")).toBeNull();
-	expect(parseDuration("1.5h")).toBeNull();
+	expect(parseDuration("3.5")).toBeNull(); // bare decimal is ambiguous
+	expect(parseDuration("1.5m")).toBeNull(); // fractional minutes not allowed
 	expect(parseDuration("h")).toBeNull();
 	expect(parseDuration("m")).toBeNull();
 	expect(parseDuration("30m1h")).toBeNull();

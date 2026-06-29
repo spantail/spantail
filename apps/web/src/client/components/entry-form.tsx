@@ -1,6 +1,7 @@
 import type { Project, WorkEntry } from "@spantail/core";
 import {
 	formatDuration,
+	parseDuration,
 	shiftDays,
 	todayInTimezone,
 	utcToZonedTime,
@@ -80,14 +81,6 @@ function endClock(
 	);
 }
 
-/** Parses the minutes field to a positive integer, or null if not finite. */
-function parseMinutes(value: string): number | null {
-	const minutes = Number(value);
-	return value !== "" && Number.isFinite(minutes) && minutes > 0
-		? Math.floor(minutes)
-		: null;
-}
-
 /** True when `HH:MM` time `a` is earlier in the day than `b`. */
 function timeBefore(a: string, b: string): boolean {
 	const [ah, am] = a.split(":").map(Number);
@@ -136,6 +129,8 @@ export function EntryForm({
 	// Start/end times drive the duration (counted across DST transitions), but
 	// minutes can still be entered directly, which nudges the end time.
 	const derived = rangeMinutes(entryDate, startTime, endTime, timezone);
+	// Parsed minutes from the duration field (accepts "90", "1h30m", "3.5h", …).
+	const parsedDuration = parseDuration(duration);
 	const endsNextDay =
 		Boolean(startTime && endTime) && timeBefore(endTime, startTime);
 	const handleStartTime = (value: string) => {
@@ -150,7 +145,7 @@ export function EntryForm({
 	};
 	const handleDuration = (value: string) => {
 		setDuration(value);
-		const mins = parseMinutes(value);
+		const mins = parseDuration(value);
 		if (startTime && mins != null)
 			setEndTime(endClock(entryDate, startTime, mins, timezone));
 	};
@@ -168,7 +163,7 @@ export function EntryForm({
 			// Start is the entry date at the start clock in the user timezone.
 			// The end instant is the start plus the (authoritative) duration, so it
 			// stays correct past midnight and for entries of 24h or longer.
-			const minutes = parseMinutes(duration);
+			const minutes = parsedDuration;
 			const startedAt = startTime
 				? zonedDateTimeToUtc(entryDate, startTime, timezone)
 				: undefined;
@@ -182,7 +177,7 @@ export function EntryForm({
 						: undefined;
 			const payload = {
 				entryDate,
-				durationMinutes: Number(duration),
+				durationMinutes: minutes ?? 0,
 				description,
 				note: note.trim() === "" ? undefined : note,
 				tags: tags
@@ -301,10 +296,9 @@ export function EntryForm({
 				<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
 				<Input
 					id="entry-duration"
-					type="number"
-					min={1}
-					step={1}
-					placeholder="60"
+					type="text"
+					inputMode="text"
+					placeholder={t("entries.durationPlaceholder")}
 					value={duration}
 					onChange={(e) => handleDuration(e.target.value)}
 					required
@@ -314,7 +308,12 @@ export function EntryForm({
 						? t("entries.minutesFromRange", {
 								duration: formatDuration(derived),
 							})
-						: t("entries.minutesManual")}
+						: parsedDuration != null
+							? t("entries.durationParsed", {
+									duration: formatDuration(parsedDuration),
+									minutes: parsedDuration,
+								})
+							: t("entries.minutesManual")}
 				</p>
 			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
@@ -353,7 +352,10 @@ export function EntryForm({
 				<Button type="button" variant="outline" onClick={onCancel}>
 					{t("entries.cancelAction")}
 				</Button>
-				<Button type="submit" disabled={mutation.isPending || !projectId}>
+				<Button
+					type="submit"
+					disabled={mutation.isPending || !projectId || parsedDuration == null}
+				>
 					{initial ? t("entries.saveAction") : t("entries.logAction")}
 				</Button>
 			</DialogFooter>
