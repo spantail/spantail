@@ -145,6 +145,7 @@ export function EntryForm({
 	};
 	const handleDuration = (value: string) => {
 		setDuration(value);
+		setError(null); // a fresh edit clears a stale "invalid duration" message
 		const mins = parseDuration(value);
 		if (startTime && mins != null)
 			setEndTime(endClock(entryDate, startTime, mins, timezone));
