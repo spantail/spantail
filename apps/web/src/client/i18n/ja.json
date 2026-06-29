@@ -166,6 +166,7 @@
 		"tagsPlaceholder": "api, design",
 		"author": "メンバー",
 		"logAction": "記録する",
+		"keepEntering": "続けて入力する",
 		"saveAction": "保存",
 		"cancelAction": "キャンセル",
 		"editAction": "編集",

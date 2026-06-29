@@ -23,6 +23,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { invalidateWorkEntryData } from "@/lib/query";
@@ -36,7 +37,7 @@ interface EntryFormProps {
 	projects: Project[];
 	initial: WorkEntry | null;
 	defaultProjectId?: string;
-	onSuccess: () => void;
+	onSuccess: (opts: { keepOpen: boolean }) => void;
 	onCancel: () => void;
 }
 
@@ -125,6 +126,9 @@ export function EntryForm({
 	const [note, setNote] = useState(initial?.note ?? "");
 	const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
 	const [error, setError] = useState<string | null>(null);
+	// Create mode only: keep the dialog open after logging to enter another entry,
+	// preserving project and date while the other fields are cleared.
+	const [keepEntering, setKeepEntering] = useState(false);
 
 	// Start/end times drive the duration (counted across DST transitions), but
 	// minutes can still be entered directly, which nudges the end time.
@@ -206,7 +210,19 @@ export function EntryForm({
 		},
 		onSuccess: () => {
 			invalidateWorkEntryData(queryClient, workspaceId);
-			onSuccess();
+			// "Keep entering" applies to logging new entries only. Reset the inputs
+			// that describe this specific entry, keeping project and date for the next.
+			const keepOpen = !initial && keepEntering;
+			if (keepOpen) {
+				setStartTime("");
+				setEndTime("");
+				setDuration("");
+				setTags("");
+				setDescription("");
+				setNote("");
+				setError(null);
+			}
+			onSuccess({ keepOpen });
 		},
 		onError: (err: Error) => setError(err.message),
 	});
@@ -351,16 +367,35 @@ export function EntryForm({
 			{error && (
 				<p className="text-destructive text-sm sm:col-span-2">{error}</p>
 			)}
-			<DialogFooter className="sm:col-span-2">
-				<Button type="button" variant="outline" onClick={onCancel}>
-					{t("entries.cancelAction")}
-				</Button>
-				<Button
-					type="submit"
-					disabled={mutation.isPending || !projectId || parsedDuration == null}
-				>
-					{initial ? t("entries.saveAction") : t("entries.logAction")}
-				</Button>
+			<DialogFooter className="sm:col-span-2 sm:items-center sm:justify-between">
+				{initial ? (
+					<span />
+				) : (
+					<Label
+						htmlFor="entry-keep-entering"
+						className="font-normal text-muted-foreground"
+					>
+						<Switch
+							id="entry-keep-entering"
+							checked={keepEntering}
+							onCheckedChange={setKeepEntering}
+						/>
+						{t("entries.keepEntering")}
+					</Label>
+				)}
+				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+					<Button type="button" variant="outline" onClick={onCancel}>
+						{t("entries.cancelAction")}
+					</Button>
+					<Button
+						type="submit"
+						disabled={
+							mutation.isPending || !projectId || parsedDuration == null
+						}
+					>
+						{initial ? t("entries.saveAction") : t("entries.logAction")}
+					</Button>
+				</div>
 			</DialogFooter>
 		</form>
 	);
