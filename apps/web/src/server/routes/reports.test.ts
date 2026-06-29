@@ -225,6 +225,41 @@ it("previews a report without persisting it", async () => {
 	expect(await (await apiGet("/api/v1/reports", admin)).json()).toEqual([]);
 });
 
+it("returns initial name/note suggestions from the template's Liquid", async () => {
+	const { admin, ws } = await setup();
+	const template = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/report-templates",
+			{
+				name: "Named",
+				body: "# {{ report.name }}",
+				nameTemplate: "{{ workspaces[0].name }} {{ user.name }}",
+				noteTemplate: "Note for {{ user.name }}",
+			},
+			admin,
+		)
+	).json()) as { id: string };
+
+	// name is omitted: the preview renders it from the template's name Liquid.
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports/preview",
+		{
+			templateId: template.id,
+			filters: { workspaceIds: [ws.id], dateRange: "today" },
+		},
+		admin,
+	);
+	expect(res.status).toBe(200);
+	const preview = (await res.json()) as {
+		suggestedName: string;
+		suggestedNote: string;
+	};
+	expect(preview.suggestedName).toBe("Acme Admin");
+	expect(preview.suggestedNote).toBe("Note for Admin");
+});
+
 it("renders entries inline, scoped by tags and date", async () => {
 	const { admin, ws, project } = await setup();
 	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
@@ -687,21 +722,6 @@ it("rejects creating a report with a disabled template", async () => {
 				admin,
 			)
 		).status,
-	).toBe(400);
-
-	// The seeded default template respects the same rule.
-	expect(
-		(
-			await apiJson(
-				"PATCH",
-				`/api/v1/report-templates/${seededTemplateId}/state`,
-				{ enabled: false },
-				admin,
-			)
-		).status,
-	).toBe(200);
-	expect(
-		(await apiJson("POST", "/api/v1/reports", baseReport(ws.id), admin)).status,
 	).toBe(400);
 });
 

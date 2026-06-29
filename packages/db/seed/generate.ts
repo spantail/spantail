@@ -348,6 +348,10 @@ export async function generateDataset(
 			description: t.description,
 			body: t.body,
 			enabled: true,
+			// The dataset seeds a single template, so it is the instance default.
+			isDefault: true,
+			nameTemplate: t.nameTemplate,
+			noteTemplate: t.noteTemplate,
 			createdBy: author?.id ?? null,
 			createdAt: baseCreatedAt,
 			updatedAt: baseCreatedAt,
@@ -541,6 +545,7 @@ export async function generateDataset(
 				};
 				const context: ReportContextInput = {
 					report: { name, note: null },
+					user: { name: user.name },
 					period: { from: date, to: date, preset: null },
 					timezone: ws.timezone,
 					generatedAt: createdAt,
@@ -631,6 +636,7 @@ export async function generateDataset(
 			};
 			const context: ReportContextInput = {
 				report: { name, note: null },
+				user: { name: sender.name },
 				period: { from: date, to: date, preset: null },
 				timezone: anchor.timezone,
 				generatedAt: createdAt,
@@ -741,6 +747,7 @@ export async function generateDataset(
 				};
 				const context: ReportContextInput = {
 					report: { name, note },
+					user: { name: user.name },
 					period: { from: month.first, to: month.last, preset: null },
 					timezone: ws.timezone,
 					generatedAt: createdAt,

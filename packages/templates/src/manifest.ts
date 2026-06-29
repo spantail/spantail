@@ -8,7 +8,16 @@ export interface CatalogEntry {
 	locale: CatalogLocale;
 	name: string;
 	description: string;
+	/** Liquid for a new report's initial name/note (null = no suggestion). */
+	nameTemplate: string | null;
+	noteTemplate: string | null;
 }
+
+// The seeded default reproduces the former built-in auto-name
+// (`{workspace} {user} {period}`) now that initial names come only from a
+// template. Names are interpolated data, so both locales share one string.
+const DEFAULT_NAME_TEMPLATE =
+	"{% if workspaces.size > 0 %}{{ workspaces[0].name }} {% endif %}{{ user.name }} {{ period.label }}";
 
 /**
  * Default report templates shipped with the product. A fresh instance is seeded
@@ -22,11 +31,15 @@ export const templateCatalog: CatalogEntry[] = [
 		locale: "en",
 		name: "Work report",
 		description: "Entries grouped by project for the selected period.",
+		nameTemplate: DEFAULT_NAME_TEMPLATE,
+		noteTemplate: null,
 	},
 	{
 		key: "default",
 		locale: "ja",
 		name: "稼働レポート",
 		description: "選択した期間のエントリをプロジェクト別にまとめます。",
+		nameTemplate: DEFAULT_NAME_TEMPLATE,
+		noteTemplate: null,
 	},
 ];

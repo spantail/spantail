@@ -38,6 +38,7 @@ import type {
 	MailItemDetail,
 	ManagedUser,
 	OauthSettings,
+	PreviewReportInput,
 	Project,
 	ProjectMember,
 	ProjectMemberAvatar,
@@ -499,6 +500,11 @@ export class SpantailClient {
 		});
 	}
 
+	/** Manager-only: make this template the sole instance default. */
+	setDefaultReportTemplate(templateId: string): Promise<ReportTemplate> {
+		return this.request("PATCH", `/report-templates/${templateId}/default`);
+	}
+
 	deleteReportTemplate(id: string): Promise<void> {
 		return this.request("DELETE", `/report-templates/${id}`);
 	}
@@ -527,11 +533,15 @@ export class SpantailClient {
 	 * compose dialog's live preview. `content` is the rendered Markdown including
 	 * the YAML front-matter header (strip it for display).
 	 */
-	previewReport(input: CreateReportInput): Promise<{
+	previewReport(input: PreviewReportInput): Promise<{
 		content: string;
 		totalMinutes: number;
 		entryCount: number;
 		projectCount: number;
+		// Initial name/note rendered from the template's name/note Liquid; the
+		// compose form adopts them until the user edits the fields.
+		suggestedName: string;
+		suggestedNote: string;
 	}> {
 		return this.request("POST", "/reports/preview", { body: input });
 	}

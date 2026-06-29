@@ -37,6 +37,7 @@ const fixture: ReportContextInput = {
 		name: "Team weekly",
 		note: "Shipped the report engine.\n\n**Next week:** share links.",
 	},
+	user: { name: "Alice" },
 	period: { from: "2026-05-25", to: "2026-05-31", preset: "last_week" },
 	timezone: "Asia/Tokyo",
 	generatedAt: new Date("2026-06-01T09:00:00Z"),
@@ -194,4 +195,23 @@ it("blocks prototype access and renders unknown variables as empty", async () =>
 		"[]",
 	);
 	expect(await renderReport("[{{ nonexistent.thing }}]", fixture)).toBe("[]");
+});
+
+it("exposes user and a period label for name/note templates", async () => {
+	const rendered = await renderReport(
+		"{{ workspaces[0].name }} {{ user.name }} {{ period.label }}",
+		fixture,
+	);
+	expect(rendered).toBe("Acme Alice 2026-05-25 – 2026-05-31");
+});
+
+it("renders name/note templates with a scope-only context (no entries)", async () => {
+	// The compose preview renders name/note Liquid before any entries exist.
+	const scopeOnly: ReportContextInput = { ...fixture, entries: [] };
+	expect(
+		await renderReport(
+			"{% if workspaces.size > 0 %}{{ workspaces[0].name }} {% endif %}{{ user.name }}",
+			scopeOnly,
+		),
+	).toBe("Acme Alice");
 });

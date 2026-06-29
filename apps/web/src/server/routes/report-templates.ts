@@ -11,6 +11,7 @@ import {
 	listReportTemplates,
 	type ReportTemplateRow,
 	seedDefaultReportTemplate,
+	setDefaultReportTemplate,
 	updateReportTemplate,
 } from "@spantail/db";
 import { defaultTemplateForLocale } from "@spantail/templates";
@@ -47,6 +48,10 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 				name: template.name,
 				description: template.description,
 				body: template.body,
+				// The lazily-seeded template is the instance default.
+				isDefault: true,
+				nameTemplate: template.nameTemplate,
+				noteTemplate: template.noteTemplate,
 				createdBy: null,
 			});
 			rows = await listReportTemplates(c.var.db);
@@ -60,6 +65,8 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 			name: input.name,
 			description: input.description ?? null,
 			body: input.body,
+			nameTemplate: input.nameTemplate ?? null,
+			noteTemplate: input.noteTemplate ?? null,
 			createdBy: user.id,
 		});
 		return c.json(toApi(template), 201);
@@ -91,7 +98,28 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 		);
 		const template = await getReportTemplateById(c.var.db, id);
 		if (!template) throw new AppError("not_found", "Report template not found");
+		// The instance default must always stay available as the compose fallback.
+		if (template.isDefault && !input.enabled) {
+			throw new AppError("conflict", "The default template cannot be disabled");
+		}
 		const updated = await updateReportTemplate(c.var.db, template.id, input);
+		if (!updated) throw new AppError("not_found", "Report template not found");
+		return c.json(toApi(updated));
+	})
+	// Makes this template the sole instance default (clears the previous one).
+	.patch("/:id/default", async (c) => {
+		requireTemplateManager(c);
+		const id = c.req.param("id");
+		const template = await getReportTemplateById(c.var.db, id);
+		if (!template) throw new AppError("not_found", "Report template not found");
+		// A disabled template can't be the compose fallback.
+		if (!template.enabled) {
+			throw new AppError(
+				"conflict",
+				"A disabled template cannot be the default",
+			);
+		}
+		const updated = await setDefaultReportTemplate(c.var.db, template.id);
 		if (!updated) throw new AppError("not_found", "Report template not found");
 		return c.json(toApi(updated));
 	})
@@ -100,6 +128,11 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 		const id = c.req.param("id");
 		const template = await getReportTemplateById(c.var.db, id);
 		if (!template) throw new AppError("not_found", "Report template not found");
+		// The instance always keeps exactly one default; deleting it is blocked
+		// (set another template as default first).
+		if (template.isDefault) {
+			throw new AppError("conflict", "The default template cannot be deleted");
+		}
 		if ((await countReportsByTemplateId(c.var.db, template.id)) > 0) {
 			throw new AppError(
 				"conflict",

@@ -9,6 +9,8 @@ export interface ReportTemplates {
 	templateById: Map<string, ReportTemplate>;
 	/** Enabled templates, ordered by name — the sidebar/menu order. */
 	enabledTemplates: ReportTemplate[];
+	/** The instance default template, when it is enabled (compose fallback). */
+	defaultTemplate: ReportTemplate | undefined;
 	templatesReady: boolean;
 	/** Resolves a report's template (for read-only state). */
 	reportTemplateState: (report: ReportMeta) => ReportTemplate | undefined;
@@ -39,19 +41,25 @@ export function useReportTemplates(): ReportTemplates {
 		.filter((tpl) => tpl.enabled)
 		.sort((a, b) => a.name.localeCompare(b.name));
 
+	// The instance default backs new reports from the All/archived tabs. Fall
+	// back to the first enabled template if the default is somehow disabled.
+	const defaultEnabled = templates.find((tpl) => tpl.isDefault && tpl.enabled);
+
 	const reportTemplateState = (
 		report: ReportMeta,
 	): ReportTemplate | undefined => templateById.get(report.templateId);
 
 	const createTargetForTab = (tab: string): ReportTemplate | undefined => {
 		const tabTemplate = templateById.get(tab);
-		return tabTemplate?.enabled === true ? tabTemplate : enabledTemplates[0];
+		if (tabTemplate?.enabled === true) return tabTemplate;
+		return defaultEnabled ?? enabledTemplates[0];
 	};
 
 	return {
 		templates,
 		templateById,
 		enabledTemplates,
+		defaultTemplate: defaultEnabled,
 		templatesReady,
 		reportTemplateState,
 		createTargetForTab,

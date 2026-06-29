@@ -3,9 +3,12 @@ import { Liquid } from "liquidjs";
 import { todayInTimezone } from "./common";
 import { formatDuration } from "./duration";
 import type { DateRangePreset } from "./report";
+import { formatPeriodLabel } from "./report-period";
 
 export interface ReportContextInput {
 	report: { name: string; note: string | null };
+	// The running user (report author). Available to name/note Liquid as `user`.
+	user: { name: string };
 	period: { from: string; to: string; preset: DateRangePreset | null };
 	// The timezone the report is rendered in: the running user's timezone. Used
 	// for the generation date and as template context (entries are pre-bucketed
@@ -179,7 +182,16 @@ export function buildReportContext(
 
 	return {
 		report: { name: input.report.name, note: input.report.note },
-		period: input.period,
+		user: { name: input.user.name },
+		// `label` is the compact period label (e.g. `2026-06`) used by the default
+		// template's name Liquid; from/to/preset pass through unchanged.
+		period: {
+			...input.period,
+			label: formatPeriodLabel({
+				from: input.period.from,
+				to: input.period.to,
+			}),
+		},
 		timezone: input.timezone,
 		generated_at: input.generatedAt.toISOString(),
 		// Local date of generation in the report timezone; the UTC date of

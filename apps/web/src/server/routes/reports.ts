@@ -9,6 +9,8 @@ import {
 	listReportsQuerySchema,
 	MAX_REPORT_MARKDOWN_LENGTH,
 	MAX_REPORT_WORKSPACES,
+	previewReportInputSchema,
+	type ReportContextInput,
 	type ReportFilters,
 	type ReportFiltersInput,
 	renderReport,
@@ -111,13 +113,32 @@ async function validateFiltersAndTemplate(
 	templateId: string,
 ): Promise<{
 	workspaces: MemberWorkspace[];
-	templateBody: string;
-	enabled: boolean;
+	template: NonNullable<Awaited<ReturnType<typeof getReportTemplateById>>>;
 }> {
 	const workspaces = await requireScopeWorkspaces(c, workspaceIds);
 	const template = await getReportTemplateById(c.var.db, templateId);
 	if (!template) throw new AppError("not_found", "Report template not found");
-	return { workspaces, templateBody: template.body, enabled: template.enabled };
+	return { workspaces, template };
+}
+
+/**
+ * Renders a template's initial name/note Liquid against a composed report's
+ * scope context (the same context as the body). Returns "" when the field has
+ * no template; a broken field template yields "" rather than failing the
+ * preview, and the result is clamped to the column's max length.
+ */
+async function renderReportField(
+	template: string | null,
+	context: ReportContextInput,
+	maxLength: number,
+): Promise<string> {
+	if (!template) return "";
+	try {
+		const rendered = await renderReport(template, context);
+		return rendered.trim().slice(0, maxLength);
+	} catch {
+		return "";
+	}
 }
 
 /** Blank notes collapse to null so templates can truth-test them. */
@@ -160,6 +181,12 @@ async function renderReportDocument(
 	// Distinct project ids present in this snapshot — persisted to drive the
 	// Send-to ACL against the frozen content rather than re-querying live entries.
 	projectIds: string[];
+	// The rendered body's scope context and the template's name/note Liquid, so
+	// the preview can render the initial name/note suggestions against the same
+	// context without re-resolving the scope.
+	context: ReportContextInput;
+	nameTemplate: string | null;
+	noteTemplate: string | null;
 }> {
 	const { filters, templateId } = doc;
 	// Project ACL: the report owner sees project-assigned entries only for the
@@ -183,11 +210,14 @@ async function renderReportDocument(
 	if (workspaceIds.length > MAX_REPORT_WORKSPACES) {
 		throw new AppError("bad_request", "Report spans too many workspaces");
 	}
-	const { workspaces, templateBody, enabled } =
-		await validateFiltersAndTemplate(c, workspaceIds, templateId);
+	const { workspaces, template } = await validateFiltersAndTemplate(
+		c,
+		workspaceIds,
+		templateId,
+	);
 	// A disabled (archived) template can't back a new or edited report; existing
 	// reports stay viewable/shareable, only re-rendering is blocked.
-	if (!enabled) {
+	if (!template.enabled) {
 		throw new AppError("bad_request", "Report template is disabled");
 	}
 
@@ -226,22 +256,24 @@ async function renderReportDocument(
 		typeof filters.dateRange === "string" ? filters.dateRange : null;
 	// One timestamp shared by the rendered body and the front-matter header.
 	const generatedAt = new Date();
+	const context: ReportContextInput = {
+		report: { name: doc.name, note: doc.note },
+		user: { name: user.name },
+		period: { ...range, preset },
+		timezone,
+		generatedAt,
+		workspaces: scoped.map((w) => ({
+			id: w.id,
+			slug: w.slug,
+			name: w.name,
+		})),
+		projects,
+		users: users.map((u) => ({ id: u.id, name: u.name })),
+		entries,
+	};
 	let body: string;
 	try {
-		body = await renderReport(templateBody, {
-			report: { name: doc.name, note: doc.note },
-			period: { ...range, preset },
-			timezone,
-			generatedAt,
-			workspaces: scoped.map((w) => ({
-				id: w.id,
-				slug: w.slug,
-				name: w.name,
-			})),
-			projects,
-			users: users.map((u) => ({ id: u.id, name: u.name })),
-			entries,
-		});
+		body = await renderReport(template.body, context);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		throw new AppError("bad_request", `Template rendering failed: ${message}`);
@@ -281,6 +313,9 @@ async function renderReportDocument(
 		// excluded, mirroring how they group under "(no project)" in the body).
 		projectCount: projects.length,
 		projectIds: projects.map((p) => p.id),
+		context,
+		nameTemplate: template.nameTemplate,
+		noteTemplate: template.noteTemplate,
 	};
 }
 
@@ -394,18 +429,53 @@ export const reportRoutes = new Hono<AppEnv>()
 	// validation and render so the preview matches what create/edit would store.
 	.post("/preview", async (c) => {
 		requireScope(c, "read");
-		const input = validate(createReportInputSchema, await c.req.json());
-		const { content, totalMinutes, entryCount, projectCount } =
-			await renderReportDocument(c, {
-				name: input.name,
-				templateId: input.templateId,
-				filters: input.filters,
-				note: normalizeNote(input.note ?? null),
-				// Cosmetic for a preview (the front-matter version line is stripped on
-				// display); the persisted version is assigned on create/edit.
-				version: 1,
-			});
-		return c.json({ content, totalMinutes, entryCount, projectCount });
+		// name is optional here: at compose time the initial name comes from the
+		// template's name Liquid, which this preview renders and returns.
+		const input = validate(previewReportInputSchema, await c.req.json());
+		const {
+			content,
+			totalMinutes,
+			entryCount,
+			projectCount,
+			context,
+			nameTemplate,
+			noteTemplate,
+		} = await renderReportDocument(c, {
+			name: input.name ?? "",
+			templateId: input.templateId,
+			filters: input.filters,
+			note: normalizeNote(input.note ?? null),
+			// Cosmetic for a preview (the front-matter version line is stripped on
+			// display); the persisted version is assigned on create/edit.
+			version: 1,
+		});
+		// Initial name/note the compose form adopts until the user edits them.
+		// Rendered against the scope context but with an empty report, so the
+		// suggestion never depends on the in-progress name/note — the form can send
+		// the adopted name back (so the body preview shows it) without the
+		// suggestion drifting on each round trip.
+		const fieldContext: ReportContextInput = {
+			...context,
+			report: { name: "", note: null },
+		};
+		const suggestedName = await renderReportField(
+			nameTemplate,
+			fieldContext,
+			100,
+		);
+		const suggestedNote = await renderReportField(
+			noteTemplate,
+			fieldContext,
+			20000,
+		);
+		return c.json({
+			content,
+			totalMinutes,
+			entryCount,
+			projectCount,
+			suggestedName,
+			suggestedNote,
+		});
 	})
 	.post("/", async (c) => {
 		const { user } = requireScope(c, "write");

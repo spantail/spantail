@@ -9,7 +9,15 @@ export type ReportTemplateInsert = Omit<
 	"id" | "createdAt" | "updatedAt"
 >;
 export type ReportTemplatePatch = Partial<
-	Pick<ReportTemplateRow, "name" | "description" | "body" | "enabled">
+	Pick<
+		ReportTemplateRow,
+		| "name"
+		| "description"
+		| "body"
+		| "enabled"
+		| "nameTemplate"
+		| "noteTemplate"
+	>
 >;
 
 export async function createReportTemplate(
@@ -80,4 +88,28 @@ export async function deleteReportTemplate(
 	id: string,
 ): Promise<void> {
 	await db.delete(reportTemplates).where(eq(reportTemplates.id, id));
+}
+
+/**
+ * Makes `id` the sole instance default. Atomic via batch: clear the current
+ * default(s) first, then set this one — so the "exactly one default" invariant
+ * holds even under concurrent calls. Returns the updated row (undefined if the
+ * id does not exist).
+ */
+export async function setDefaultReportTemplate(
+	db: Database,
+	id: string,
+): Promise<ReportTemplateRow | undefined> {
+	const [, rows] = await db.batch([
+		db
+			.update(reportTemplates)
+			.set({ isDefault: false })
+			.where(eq(reportTemplates.isDefault, true)),
+		db
+			.update(reportTemplates)
+			.set({ isDefault: true })
+			.where(eq(reportTemplates.id, id))
+			.returning(),
+	]);
+	return rows[0];
 }

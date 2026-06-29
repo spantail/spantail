@@ -86,6 +86,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		dateRange: "this_month",
 		tags: "",
 		note: "",
+		noteEdited: false,
 	});
 
 	const openCreate = (template: ReportTemplate) =>
@@ -121,6 +122,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 				},
 				tags: (report.filters.tags ?? []).join(", "),
 				note: report.note ?? "",
+				noteEdited: true,
 			},
 		});
 

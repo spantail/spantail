@@ -28,6 +28,17 @@ export const reportTemplates = sqliteTable("report_templates", {
 	body: text("body").notNull(),
 	// Admin-controlled: disabled templates are hidden from the report tabs.
 	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+	// Exactly one template is the instance default (enforced in the app layer:
+	// setting a default clears the others). It is the compose dialog's fallback
+	// pick and cannot be deleted or disabled.
+	isDefault: integer("is_default", { mode: "boolean" })
+		.notNull()
+		.default(false),
+	// Liquid producing a report's initial name/note at compose time. Rendered
+	// server-side with a scope-only context (no entries). Null falls back to no
+	// suggestion.
+	nameTemplate: text("name_template"),
+	noteTemplate: text("note_template"),
 	// Nullable + set null on delete: keep the template when its author is
 	// removed (authorship is just dropped).
 	createdBy: text("created_by").references(() => user.id, {
