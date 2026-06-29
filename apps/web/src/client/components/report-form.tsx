@@ -127,7 +127,11 @@ export function ReportForm({
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 	const userName = me.data?.user.name ?? "";
 
-	const memberIds = new Set(workspaces.map((w) => w.id));
+	// Report scope is membership-only (the server validates against
+	// listWorkspacesForUser), so an instance admin's non-member workspaces
+	// (role === null) must not be selectable or treated as membership.
+	const memberWorkspaces = workspaces.filter((w) => w.role !== null);
+	const memberIds = new Set(memberWorkspaces.map((w) => w.id));
 	// A seeded workspace the user no longer belongs to drops to instance scope.
 	const seededWorkspaceId =
 		seed.workspaceId && memberIds.has(seed.workspaceId)
@@ -195,7 +199,7 @@ export function ReportForm({
 				: null
 			: formatPeriodLabel(resolveDateRange(rangeChoice, timezone));
 	const workspaceName = workspaceId
-		? (workspaces.find((w) => w.id === workspaceId)?.name ?? "")
+		? (memberWorkspaces.find((w) => w.id === workspaceId)?.name ?? "")
 		: "";
 	const autoName = resolvedLabel
 		? [workspaceName, userName, resolvedLabel].filter(Boolean).join(" ")
@@ -376,7 +380,7 @@ export function ReportForm({
 							</div>
 						</div>
 
-						{workspaces.length > 0 && (
+						{memberWorkspaces.length > 0 && (
 							<div className="flex flex-col gap-2">
 								<Label>{t("reports.workspace")}</Label>
 								<Select
@@ -390,7 +394,7 @@ export function ReportForm({
 										<SelectItem value={INSTANCE_SCOPE}>
 											{t("reports.allWorkspaces")}
 										</SelectItem>
-										{workspaces.map((workspace) => (
+										{memberWorkspaces.map((workspace) => (
 											<SelectItem key={workspace.id} value={workspace.id}>
 												{workspace.name}
 											</SelectItem>
