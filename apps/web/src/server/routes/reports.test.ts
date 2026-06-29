@@ -296,6 +296,95 @@ it("renders name suggestions from the selected scope, even with no entries", asy
 	);
 });
 
+it("drops projects outside the selected workspace scope from suggestions", async () => {
+	const { admin, ws } = await setup();
+	// A second workspace + project the report's scope does not include.
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "beta", name: "Beta" },
+			admin,
+		)
+	).json()) as { id: string };
+	const p2 = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws2.id}/projects`,
+			{ slug: "secret", name: "Secret" },
+			admin,
+		)
+	).json()) as { id: string };
+	const template = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/report-templates",
+			{
+				name: "Scoped2",
+				body: "# x",
+				nameTemplate: "[{{ projects[0].name }}]",
+			},
+			admin,
+		)
+	).json()) as { id: string };
+
+	// The report is scoped to ws (not ws2), so a ws2 project supplied in the
+	// filter must not leak its name into the suggestion.
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports/preview",
+		{
+			templateId: template.id,
+			filters: {
+				workspaceIds: [ws.id],
+				projectIds: [p2.id],
+				dateRange: "today",
+			},
+		},
+		admin,
+	);
+	expect(res.status).toBe(200);
+	expect(((await res.json()) as { suggestedName: string }).suggestedName).toBe(
+		"[]",
+	);
+});
+
+it("omits the workspace name from the default name for instance scope", async () => {
+	const { admin, ws, templateId } = await setup();
+	// A second workspace so instance scope spans more than one.
+	await apiJson(
+		"POST",
+		"/api/v1/workspaces",
+		{ slug: "beta", name: "Beta" },
+		admin,
+	);
+
+	// Instance scope (empty workspaceIds) resolves to every workspace, so the
+	// default name drops the workspace and reads "<user> <period>".
+	const instance = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports/preview",
+			{ templateId, filters: { workspaceIds: [], dateRange: "today" } },
+			admin,
+		)
+	).json()) as { suggestedName: string };
+	expect(instance.suggestedName).not.toContain("Acme");
+	expect(instance.suggestedName).not.toContain("Beta");
+	expect(instance.suggestedName.startsWith("Admin ")).toBe(true);
+
+	// A single-workspace scope still leads with the workspace name.
+	const single = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports/preview",
+			{ templateId, filters: { workspaceIds: [ws.id], dateRange: "today" } },
+			admin,
+		)
+	).json()) as { suggestedName: string };
+	expect(single.suggestedName.startsWith("Acme Admin ")).toBe(true);
+});
+
 it("renders entries inline, scoped by tags and date", async () => {
 	const { admin, ws, project } = await setup();
 	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);

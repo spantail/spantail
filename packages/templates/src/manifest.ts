@@ -15,9 +15,12 @@ export interface CatalogEntry {
 
 // The seeded default reproduces the former built-in auto-name
 // (`{workspace} {user} {period}`) now that initial names come only from a
-// template. Names are interpolated data, so both locales share one string.
+// template. The workspace name is shown only for a single-workspace scope:
+// instance scope resolves to every workspace the user belongs to, so naming it
+// after whichever comes first would mislabel an all-workspace report. Names are
+// interpolated data, so both locales share one string.
 const DEFAULT_NAME_TEMPLATE =
-	"{% if workspaces.size > 0 %}{{ workspaces[0].name }} {% endif %}{{ user.name }} {{ period.label }}";
+	"{% if workspaces.size == 1 %}{{ workspaces[0].name }} {% endif %}{{ user.name }} {{ period.label }}";
 
 /**
  * Default report templates shipped with the product. A fresh instance is seeded

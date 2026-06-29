@@ -38,6 +38,7 @@ import {
 	listReportTemplateIdsByOwner,
 	listUsersByIds,
 	listWorkEntriesForReport,
+	listWorkspaceMemberIds,
 	listWorkspacesForUser,
 	type ReportRow,
 	updateReportWithNewVersion,
@@ -456,27 +457,45 @@ export const reportRoutes = new Hono<AppEnv>()
 			// The name/note Liquid is scope-derived, so its projects/users are the
 			// *selected* filter (resolved by id), not the body's entry-derived set —
 			// otherwise a project/user with no entries in the period would render as
-			// missing. The report is blanked so the suggestion never depends on the
-			// in-progress name/note: the form can echo the adopted name back (so the
-			// body preview shows it) without the suggestion drifting each round trip.
-			const [scopeProjects, scopeUsers] = await Promise.all([
-				input.filters.projectIds?.length
-					? listProjectsByIds(c.var.db, input.filters.projectIds)
+			// missing. Lookups are constrained to the authorized scope (projects to
+			// the resolved workspaces, users to their members) so a crafted request
+			// can't leak a name from a workspace the caller can't see. The report is
+			// blanked so the suggestion never depends on the in-progress name/note:
+			// the form can echo the adopted name back (so the body preview shows it)
+			// without the suggestion drifting each round trip.
+			const authorizedWsIds = new Set(context.workspaces.map((w) => w.id));
+			const projectIds = input.filters.projectIds ?? [];
+			const userIds = input.filters.userIds ?? [];
+			const [projectRows, userRows, memberIdLists] = await Promise.all([
+				projectIds.length
+					? listProjectsByIds(c.var.db, projectIds)
 					: Promise.resolve([]),
-				input.filters.userIds?.length
-					? listUsersByIds(c.var.db, input.filters.userIds)
+				userIds.length
+					? listUsersByIds(c.var.db, userIds)
 					: Promise.resolve([]),
+				userIds.length
+					? Promise.all(
+							[...authorizedWsIds].map((id) =>
+								listWorkspaceMemberIds(c.var.db, id),
+							),
+						)
+					: Promise.resolve([] as string[][]),
 			]);
+			const memberIds = new Set(memberIdLists.flat());
 			const fieldContext: ReportContextInput = {
 				...context,
 				report: { name: "", note: null },
-				projects: scopeProjects.map((p) => ({
-					id: p.id,
-					slug: p.slug,
-					name: p.name,
-					workspaceId: p.workspaceId,
-				})),
-				users: scopeUsers.map((u) => ({ id: u.id, name: u.name })),
+				projects: projectRows
+					.filter((p) => authorizedWsIds.has(p.workspaceId))
+					.map((p) => ({
+						id: p.id,
+						slug: p.slug,
+						name: p.name,
+						workspaceId: p.workspaceId,
+					})),
+				users: userRows
+					.filter((u) => memberIds.has(u.id))
+					.map((u) => ({ id: u.id, name: u.name })),
 				entries: [],
 			};
 			suggestedName = await renderReportField(nameTemplate, fieldContext, 100);
