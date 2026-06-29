@@ -450,24 +450,42 @@ export const reportRoutes = new Hono<AppEnv>()
 			version: 1,
 		});
 		// Initial name/note the compose form adopts until the user edits them.
-		// Rendered against the scope context but with an empty report, so the
-		// suggestion never depends on the in-progress name/note — the form can send
-		// the adopted name back (so the body preview shows it) without the
-		// suggestion drifting on each round trip.
-		const fieldContext: ReportContextInput = {
-			...context,
-			report: { name: "", note: null },
-		};
-		const suggestedName = await renderReportField(
-			nameTemplate,
-			fieldContext,
-			100,
-		);
-		const suggestedNote = await renderReportField(
-			noteTemplate,
-			fieldContext,
-			20000,
-		);
+		let suggestedName = "";
+		let suggestedNote = "";
+		if (nameTemplate || noteTemplate) {
+			// The name/note Liquid is scope-derived, so its projects/users are the
+			// *selected* filter (resolved by id), not the body's entry-derived set —
+			// otherwise a project/user with no entries in the period would render as
+			// missing. The report is blanked so the suggestion never depends on the
+			// in-progress name/note: the form can echo the adopted name back (so the
+			// body preview shows it) without the suggestion drifting each round trip.
+			const [scopeProjects, scopeUsers] = await Promise.all([
+				input.filters.projectIds?.length
+					? listProjectsByIds(c.var.db, input.filters.projectIds)
+					: Promise.resolve([]),
+				input.filters.userIds?.length
+					? listUsersByIds(c.var.db, input.filters.userIds)
+					: Promise.resolve([]),
+			]);
+			const fieldContext: ReportContextInput = {
+				...context,
+				report: { name: "", note: null },
+				projects: scopeProjects.map((p) => ({
+					id: p.id,
+					slug: p.slug,
+					name: p.name,
+					workspaceId: p.workspaceId,
+				})),
+				users: scopeUsers.map((u) => ({ id: u.id, name: u.name })),
+				entries: [],
+			};
+			suggestedName = await renderReportField(nameTemplate, fieldContext, 100);
+			suggestedNote = await renderReportField(
+				noteTemplate,
+				fieldContext,
+				20000,
+			);
+		}
 		return c.json({
 			content,
 			totalMinutes,

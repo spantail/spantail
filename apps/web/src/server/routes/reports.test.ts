@@ -260,6 +260,42 @@ it("returns initial name/note suggestions from the template's Liquid", async () 
 	expect(preview.suggestedNote).toBe("Note for Admin");
 });
 
+it("renders name suggestions from the selected scope, even with no entries", async () => {
+	const { admin, ws, project } = await setup();
+	const template = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/report-templates",
+			{
+				name: "Scoped",
+				body: "# {{ report.name }}",
+				nameTemplate: "{{ projects[0].name }}",
+			},
+			admin,
+		)
+	).json()) as { id: string };
+
+	// The project is selected but has no entries in the period: its name still
+	// resolves because name/note Liquid draws on the selected scope, not entries.
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports/preview",
+		{
+			templateId: template.id,
+			filters: {
+				workspaceIds: [ws.id],
+				projectIds: [project.id],
+				dateRange: "today",
+			},
+		},
+		admin,
+	);
+	expect(res.status).toBe(200);
+	expect(((await res.json()) as { suggestedName: string }).suggestedName).toBe(
+		"Spantail",
+	);
+});
+
 it("renders entries inline, scoped by tags and date", async () => {
 	const { admin, ws, project } = await setup();
 	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
