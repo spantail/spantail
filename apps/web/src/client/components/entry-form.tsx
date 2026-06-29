@@ -375,17 +375,19 @@ export function EntryForm({
 				{initial ? (
 					<span />
 				) : (
-					<Label
-						htmlFor="entry-keep-entering"
-						className="font-normal text-muted-foreground"
-					>
+					<div className="flex items-center gap-2">
 						<Switch
 							id="entry-keep-entering"
 							checked={keepEntering}
 							onCheckedChange={setKeepEntering}
 						/>
-						{t("entries.keepEntering")}
-					</Label>
+						<Label
+							htmlFor="entry-keep-entering"
+							className="font-normal text-muted-foreground"
+						>
+							{t("entries.keepEntering")}
+						</Label>
+					</div>
 				)}
 				<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 					<Button type="button" variant="outline" onClick={onCancel}>
