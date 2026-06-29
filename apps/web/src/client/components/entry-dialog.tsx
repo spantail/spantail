@@ -238,13 +238,13 @@ export function EntryDialogProvider({
 								defaultProjectId={
 									state.mode === "create" ? state.defaultProjectId : undefined
 								}
-								onSuccess={() => {
+								onSuccess={({ keepOpen }) => {
 									toast.success(
 										state.mode === "edit"
 											? t("entries.toast.updated")
 											: t("entries.toast.created"),
 									);
-									close();
+									if (!keepOpen) close();
 								}}
 								onCancel={close}
 							/>
