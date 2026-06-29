@@ -136,7 +136,7 @@ it("rejects missing required flags and positionals", async () => {
 
 it("rejects unparseable durations and dates", async () => {
 	for (const argv of [
-		["log", "x", "--project", "api", "--duration", "1.5h"],
+		["log", "x", "--project", "api", "--duration", "abc"],
 		[
 			"log",
 			"x",
