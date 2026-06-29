@@ -2,8 +2,8 @@ import {
 	type CreateReportInput,
 	type DateRangePreset,
 	formatDuration,
-	formatPeriodLabel,
 	MAX_REPORT_SPAN_DAYS,
+	type PreviewReportInput,
 	type Report,
 	type ReportDateRange,
 	type ReportFiltersInput,
@@ -57,7 +57,7 @@ const PRESETS: DateRangePreset[] = [
 /** Initial field values; the route seeds these for create/edit. */
 export interface ReportFormSeed {
 	name: string;
-	/** When false, the name auto-updates from period + user name until edited. */
+	/** When false, the name follows the template's name suggestion until edited. */
 	nameEdited: boolean;
 	templateId: string;
 	// Single workspace scope: an id selects one workspace; null means instance
@@ -72,6 +72,8 @@ export interface ReportFormSeed {
 	dateRange: ReportDateRange;
 	tags: string;
 	note: string;
+	/** When false, the note follows the template's note suggestion until edited. */
+	noteEdited: boolean;
 }
 
 export type ReportFormMode = "create" | "edit";
@@ -125,8 +127,6 @@ export function ReportForm({
 	const queryClient = useQueryClient();
 	const { workspaces } = useWorkspace();
 	const timezone = useUserTimezone();
-	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
-	const userName = me.data?.user.name ?? "";
 
 	// Report scope is membership-only (the server validates against
 	// listWorkspacesForUser), so an instance admin's non-member workspaces
@@ -165,6 +165,7 @@ export function ReportForm({
 	const [dateRange, setDateRange] = useState<ReportDateRange>(seed.dateRange);
 	const [tags, setTags] = useState(seed.tags);
 	const [note, setNote] = useState(seed.note);
+	const [noteEdited, setNoteEdited] = useState(seed.noteEdited);
 	const [error, setError] = useState<string | null>(null);
 
 	// Templates are instance-wide formats, available for any scope. Disabled
@@ -192,25 +193,15 @@ export function ReportForm({
 	const range = resolveDateRange(dateRange, timezone);
 	const rangeValid = range.from <= range.to;
 	const spanTooLong = spanDays(range.from, range.to) > MAX_REPORT_SPAN_DAYS;
-	const resolvedLabel =
-		rangeValid && !spanTooLong ? formatPeriodLabel(range) : null;
-	const workspaceName = workspaceId
-		? (memberWorkspaces.find((w) => w.id === workspaceId)?.name ?? "")
-		: "";
-	const autoName = resolvedLabel
-		? [workspaceName, userName, resolvedLabel].filter(Boolean).join(" ")
-		: "";
-	const effectiveName = nameEdited ? name : autoName;
 
-	// The request body shared by the live preview and the submit. Null while the
-	// form can't render (invalid/too-long range or blank name) so the preview
-	// holds its last good output instead of erroring. An empty workspace is valid
-	// — it means instance scope (all the user's workspaces) — but only when the
-	// user belongs to at least one workspace; otherwise every render would 400.
-	const input = useMemo<CreateReportInput | null>(() => {
+	// Scope shared by the preview and the submit. Null while the form can't render
+	// (no membership, or an invalid/too-long range) so the preview holds its last
+	// good output instead of erroring. An empty workspace is valid — it means
+	// instance scope (all the user's workspaces) — but only when the user belongs
+	// to at least one workspace; otherwise every render would 400.
+	const filters = useMemo<ReportFiltersInput | null>(() => {
 		if (memberWorkspaces.length === 0) return null;
 		if (!rangeValid || spanTooLong) return null;
-		if (effectiveName.trim() === "") return null;
 		const parsedTags = tags
 			.split(",")
 			.map((tag) => tag.trim())
@@ -218,34 +209,52 @@ export function ReportForm({
 		// projectIds is only ever set while a single workspace is selected (its
 		// checkboxes are cleared when the workspace changes), so it is dropped
 		// automatically for instance scope.
-		const filters: ReportFiltersInput = {
+		return {
 			workspaceIds: workspaceId ? [workspaceId] : [],
 			...(projectIds.length > 0 ? { projectIds } : {}),
 			...(userIds.length > 0 ? { userIds } : {}),
 			...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
 			dateRange,
 		};
-		return {
-			name: effectiveName,
-			templateId: selectedTemplateId,
-			filters,
-			...(note.trim() !== "" ? { note } : {}),
-		};
 	}, [
 		workspaceId,
 		memberWorkspaces.length,
 		rangeValid,
 		spanTooLong,
-		effectiveName,
 		tags,
 		projectIds,
 		userIds,
 		dateRange,
-		note,
-		selectedTemplateId,
 	]);
 
-	const inputKey = input ? JSON.stringify(input) : null;
+	// The preview renders even before the name is filled: the initial name/note
+	// come from the template, which the preview renders and returns. Whatever name
+	// /note the form holds (the adopted suggestion or a manual edit) is sent so the
+	// body preview reflects it; the server renders the suggestion independently, so
+	// echoing it back does not make it drift.
+	const previewInput = useMemo<PreviewReportInput | null>(() => {
+		if (!filters) return null;
+		return {
+			templateId: selectedTemplateId,
+			filters,
+			...(name.trim() !== "" ? { name } : {}),
+			...(note.trim() !== "" ? { note } : {}),
+		};
+	}, [filters, selectedTemplateId, name, note]);
+
+	// The submit additionally requires a non-empty name (the rendered suggestion,
+	// or the user's edit).
+	const input = useMemo<CreateReportInput | null>(() => {
+		if (!filters || name.trim() === "") return null;
+		return {
+			name,
+			templateId: selectedTemplateId,
+			filters,
+			...(note.trim() !== "" ? { note } : {}),
+		};
+	}, [filters, selectedTemplateId, name, note]);
+
+	const inputKey = previewInput ? JSON.stringify(previewInput) : null;
 	const debouncedKey = useDebouncedValue(inputKey, 350);
 	const preview = useQuery({
 		queryKey: ["report-preview", debouncedKey],
@@ -256,6 +265,22 @@ export function ReportForm({
 	// "Updating" while the debounce is pending or a render is in flight.
 	const previewPending =
 		inputKey !== debouncedKey || (preview.isFetching && debouncedKey !== null);
+
+	// Adopt the template's name/note suggestions until the user takes over a
+	// field. The suggestions are scope-derived and independent of the typed
+	// name/note, so syncing them does not feed back into the preview request.
+	const suggestedName = preview.data?.suggestedName;
+	const suggestedNote = preview.data?.suggestedNote;
+	useEffect(() => {
+		if (!nameEdited && suggestedName !== undefined && suggestedName !== name) {
+			setName(suggestedName);
+		}
+	}, [nameEdited, suggestedName, name]);
+	useEffect(() => {
+		if (!noteEdited && suggestedNote !== undefined && suggestedNote !== note) {
+			setNote(suggestedNote);
+		}
+	}, [noteEdited, suggestedNote, note]);
 
 	const mutation = useMutation({
 		mutationFn: async (): Promise<Report> => {
@@ -316,7 +341,16 @@ export function ReportForm({
 
 	const submitLabel =
 		mode === "edit" ? t("reports.saveAction") : t("reports.createAction");
-	const canSubmit = input !== null && templatesReady && !mutation.isPending;
+	// While a field still follows the template suggestion, a pending preview may
+	// be about to refresh it. Block save until it settles so a quick Create right
+	// after a scope/range/template change can't persist the previous suggestion
+	// (create no longer recomputes the name/note defaults server-side).
+	const awaitingSuggestion = previewPending && (!nameEdited || !noteEdited);
+	const canSubmit =
+		input !== null &&
+		templatesReady &&
+		!mutation.isPending &&
+		!awaitingSuggestion;
 
 	return (
 		<>
@@ -343,7 +377,7 @@ export function ReportForm({
 								<Label htmlFor="report-name">{t("reports.name")}</Label>
 								<Input
 									id="report-name"
-									value={effectiveName}
+									value={name}
 									onChange={(e) => {
 										setName(e.target.value);
 										setNameEdited(true);
@@ -450,7 +484,10 @@ export function ReportForm({
 								id="report-note"
 								className="field-sizing-fixed"
 								value={note}
-								onChange={(e) => setNote(e.target.value)}
+								onChange={(e) => {
+									setNote(e.target.value);
+									setNoteEdited(true);
+								}}
 								rows={4}
 								placeholder={t("reports.notePlaceholder")}
 							/>

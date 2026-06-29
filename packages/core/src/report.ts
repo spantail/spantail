@@ -95,6 +95,12 @@ export const reportTemplateSchema = z.object({
 	body: z.string().min(1).max(50000),
 	// Admin-controlled: disabled templates are hidden from the report tabs.
 	enabled: z.boolean(),
+	// The sole instance default (exactly one). Cannot be deleted or disabled.
+	isDefault: z.boolean(),
+	// Liquid producing a report's initial name/note at compose time, rendered
+	// with a scope-only context. Null means no suggestion.
+	nameTemplate: z.string().max(2000).nullable(),
+	noteTemplate: z.string().max(20000).nullable(),
 	createdBy: z.string().nullable(),
 	createdAt: z.string().nullable(),
 	updatedAt: z.string().nullable(),
@@ -105,6 +111,8 @@ export const createReportTemplateInputSchema = z.object({
 	name: z.string().min(1).max(100),
 	description: z.string().max(1000).optional(),
 	body: z.string().min(1).max(50000),
+	nameTemplate: z.string().max(2000).optional(),
+	noteTemplate: z.string().max(20000).optional(),
 });
 export type CreateReportTemplateInput = z.infer<
 	typeof createReportTemplateInputSchema
@@ -115,6 +123,8 @@ export const updateReportTemplateInputSchema = z
 		name: z.string().min(1).max(100),
 		description: z.string().max(1000).nullable(),
 		body: z.string().min(1).max(50000),
+		nameTemplate: z.string().max(2000).nullable(),
+		noteTemplate: z.string().max(20000).nullable(),
 	})
 	.partial();
 
@@ -187,6 +197,17 @@ export const createReportInputSchema = z.object({
 	note: z.string().max(20000).optional(),
 });
 export type CreateReportInput = z.infer<typeof createReportInputSchema>;
+
+/**
+ * Preview is identical to create, but name/note are optional: at compose time
+ * the initial name/note come from the template's name/note Liquid, which the
+ * preview renders and returns. The form fills them in (until the user edits),
+ * so an unedited compose still previews with an empty name.
+ */
+export const previewReportInputSchema = createReportInputSchema.partial({
+	name: true,
+});
+export type PreviewReportInput = z.infer<typeof previewReportInputSchema>;
 
 /**
  * Editing a report changes its fields and re-renders, appending a new immutable

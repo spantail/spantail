@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { Database } from "../index";
 import { reportTemplates } from "../schema/reports";
@@ -9,7 +9,15 @@ export type ReportTemplateInsert = Omit<
 	"id" | "createdAt" | "updatedAt"
 >;
 export type ReportTemplatePatch = Partial<
-	Pick<ReportTemplateRow, "name" | "description" | "body" | "enabled">
+	Pick<
+		ReportTemplateRow,
+		| "name"
+		| "description"
+		| "body"
+		| "enabled"
+		| "nameTemplate"
+		| "noteTemplate"
+	>
 >;
 
 export async function createReportTemplate(
@@ -80,4 +88,73 @@ export async function deleteReportTemplate(
 	id: string,
 ): Promise<void> {
 	await db.delete(reportTemplates).where(eq(reportTemplates.id, id));
+}
+
+/**
+ * Deletes `id` only if it is not the default. The `is_default = false` guard is
+ * part of the DELETE so a concurrent setDefault that promotes this id between a
+ * caller's read and the delete can't remove the new default. Returns true when a
+ * row was deleted, false when it was the default (or already gone).
+ */
+export async function deleteReportTemplateIfNotDefault(
+	db: Database,
+	id: string,
+): Promise<boolean> {
+	const rows = await db
+		.delete(reportTemplates)
+		.where(
+			and(eq(reportTemplates.id, id), eq(reportTemplates.isDefault, false)),
+		)
+		.returning({ id: reportTemplates.id });
+	return rows.length > 0;
+}
+
+/**
+ * Disables `id` only if it is not the default. The `is_default = false` guard is
+ * part of the UPDATE so it stays correct under a concurrent setDefault that
+ * promotes this id (a separate read-then-write could disable the new default).
+ * Returns the updated row, or undefined when the row is the default (or absent).
+ */
+export async function disableReportTemplateIfNotDefault(
+	db: Database,
+	id: string,
+): Promise<ReportTemplateRow | undefined> {
+	const rows = await db
+		.update(reportTemplates)
+		.set({ enabled: false })
+		.where(
+			and(eq(reportTemplates.id, id), eq(reportTemplates.isDefault, false)),
+		)
+		.returning();
+	return rows[0];
+}
+
+/**
+ * Makes `id` the sole instance default. Clears the current default(s) first,
+ * then promotes this one — only if it is still enabled, so a target disabled in
+ * the request window is never promoted. Returns the new default, or undefined
+ * when the target no longer qualifies (caller maps that to a 4xx).
+ *
+ * The clear-then-set order keeps the one-default unique index from tripping
+ * mid-batch. The residual race — the target being deleted between the clear and
+ * the set — would briefly leave no default; it needs two admins acting within
+ * the same instant and self-corrects on the next create/seed, so it is accepted
+ * rather than guarded with an interactive transaction D1 does not offer.
+ */
+export async function setDefaultReportTemplate(
+	db: Database,
+	id: string,
+): Promise<ReportTemplateRow | undefined> {
+	const [, rows] = await db.batch([
+		db
+			.update(reportTemplates)
+			.set({ isDefault: false })
+			.where(eq(reportTemplates.isDefault, true)),
+		db
+			.update(reportTemplates)
+			.set({ isDefault: true })
+			.where(and(eq(reportTemplates.id, id), eq(reportTemplates.enabled, true)))
+			.returning(),
+	]);
+	return rows[0];
 }

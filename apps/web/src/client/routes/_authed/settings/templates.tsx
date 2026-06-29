@@ -35,6 +35,8 @@ interface TemplateDraft {
 	name: string;
 	description: string;
 	body: string;
+	nameTemplate: string;
+	noteTemplate: string;
 }
 
 const EMPTY_DRAFT: TemplateDraft = {
@@ -42,6 +44,8 @@ const EMPTY_DRAFT: TemplateDraft = {
 	name: "",
 	description: "",
 	body: "",
+	nameTemplate: "",
+	noteTemplate: "",
 };
 
 function TemplatesSection() {
@@ -75,6 +79,8 @@ function TemplatesSection() {
 						name: template.name,
 						description: template.description ?? "",
 						body: template.body,
+						nameTemplate: template.nameTemplate ?? "",
+						noteTemplate: template.noteTemplate ?? "",
 					})
 				}
 				onDuplicate={(template) =>
@@ -83,6 +89,8 @@ function TemplatesSection() {
 						name: t("templates.copyName", { name: template.name }),
 						description: template.description ?? "",
 						body: template.body,
+						nameTemplate: template.nameTemplate ?? "",
+						noteTemplate: template.noteTemplate ?? "",
 					})
 				}
 			/>
@@ -108,6 +116,10 @@ function TemplateFormCard({
 				name: draft.name,
 				description: draft.description.trim() === "" ? null : draft.description,
 				body: draft.body,
+				nameTemplate:
+					draft.nameTemplate.trim() === "" ? null : draft.nameTemplate,
+				noteTemplate:
+					draft.noteTemplate.trim() === "" ? null : draft.noteTemplate,
 			};
 			if (draft.editingId) {
 				return api.updateReportTemplate(draft.editingId, input);
@@ -115,6 +127,8 @@ function TemplateFormCard({
 			return api.createReportTemplate({
 				...input,
 				description: input.description ?? undefined,
+				nameTemplate: input.nameTemplate ?? undefined,
+				noteTemplate: input.noteTemplate ?? undefined,
 			});
 		},
 		onSuccess: async () => {
@@ -180,6 +194,39 @@ function TemplateFormCard({
 							className="font-mono text-sm"
 							required
 						/>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="tpl-name-template">
+							{t("templates.nameTemplate")}
+						</Label>
+						<Input
+							id="tpl-name-template"
+							value={draft.nameTemplate}
+							onChange={(e) =>
+								onDraftChange({ ...draft, nameTemplate: e.target.value })
+							}
+							className="font-mono text-sm"
+						/>
+						<p className="text-muted-foreground text-sm">
+							{t("templates.nameTemplateHint")}
+						</p>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="tpl-note-template">
+							{t("templates.noteTemplate")}
+						</Label>
+						<Textarea
+							id="tpl-note-template"
+							value={draft.noteTemplate}
+							onChange={(e) =>
+								onDraftChange({ ...draft, noteTemplate: e.target.value })
+							}
+							rows={3}
+							className="font-mono text-sm"
+						/>
+						<p className="text-muted-foreground text-sm">
+							{t("templates.noteTemplateHint")}
+						</p>
 					</div>
 					{error && <p className="text-destructive text-sm">{error}</p>}
 					<div className="flex gap-2">
@@ -249,6 +296,15 @@ function TemplateListCard({
 		onError: (err: Error) => setError(err.message),
 	});
 
+	const defaultMutation = useMutation({
+		mutationFn: (id: string) => api.setDefaultReportTemplate(id),
+		onSuccess: async () => {
+			await invalidate();
+			setError(null);
+		},
+		onError: (err: Error) => setError(err.message),
+	});
+
 	const rows = templates.data ?? [];
 
 	return (
@@ -278,6 +334,11 @@ function TemplateListCard({
 									<TableCell>
 										<span className="flex flex-wrap items-center gap-2">
 											{template.name}
+											{template.isDefault && (
+												<Badge variant="secondary">
+													{t("templates.defaultBadge")}
+												</Badge>
+											)}
 											{!template.enabled && (
 												<Badge variant="outline">
 													{t("templates.disabledBadge")}
@@ -288,21 +349,35 @@ function TemplateListCard({
 									<TableCell className="text-right">
 										{canManage && (
 											<>
-												<Button
-													variant="ghost"
-													size="sm"
-													disabled={enabledMutation.isPending}
-													onClick={() =>
-														enabledMutation.mutate({
-															id: template.id,
-															enabled: !template.enabled,
-														})
-													}
-												>
-													{template.enabled
-														? t("templates.disableAction")
-														: t("templates.enableAction")}
-												</Button>
+												{/* The default is always enabled and undeletable, so it
+												    omits the set-default, disable and delete actions. */}
+												{!template.isDefault && template.enabled && (
+													<Button
+														variant="ghost"
+														size="sm"
+														disabled={defaultMutation.isPending}
+														onClick={() => defaultMutation.mutate(template.id)}
+													>
+														{t("templates.setDefaultAction")}
+													</Button>
+												)}
+												{!template.isDefault && (
+													<Button
+														variant="ghost"
+														size="sm"
+														disabled={enabledMutation.isPending}
+														onClick={() =>
+															enabledMutation.mutate({
+																id: template.id,
+																enabled: !template.enabled,
+															})
+														}
+													>
+														{template.enabled
+															? t("templates.disableAction")
+															: t("templates.enableAction")}
+													</Button>
+												)}
 												<Button
 													variant="ghost"
 													size="sm"
@@ -317,13 +392,15 @@ function TemplateListCard({
 												>
 													{t("templates.editAction")}
 												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => deleteMutation.mutate(template.id)}
-												>
-													{t("templates.deleteAction")}
-												</Button>
+												{!template.isDefault && (
+													<Button
+														variant="ghost"
+														size="sm"
+														onClick={() => deleteMutation.mutate(template.id)}
+													>
+														{t("templates.deleteAction")}
+													</Button>
+												)}
 											</>
 										)}
 									</TableCell>
