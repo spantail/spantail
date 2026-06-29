@@ -49,7 +49,11 @@ export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 
 /** Filters as stored on a report: the date range is always absolute. */
 export const reportFiltersSchema = z.object({
-	workspaceIds: z.array(z.string()).min(1).max(20),
+	// One workspace (workspace scope) or the caller's full membership set (instance
+	// scope, resolved server-side at render). The cap is a generous abuse guard on
+	// the resolved set, not a user-facing limit — the create/update wire caps the
+	// selection at a single workspace.
+	workspaceIds: z.array(z.string()).min(1).max(100),
 	projectIds: z.array(z.string()).max(50).optional(),
 	userIds: z.array(z.string()).max(50).optional(),
 	tags: z.array(tagSchema).max(20).optional(),
@@ -68,11 +72,15 @@ export const reportFiltersInputSchema = reportFiltersSchema
 		dateRange: reportDateRangeSchema,
 		workspaceIds: z.array(z.string()).max(1),
 	})
-	.refine(
-		(filters) =>
-			filters.workspaceIds.length === 1 || !filters.projectIds?.length,
-		"projectIds requires a workspace",
-	);
+	.superRefine((filters, ctx) => {
+		if (filters.workspaceIds.length !== 1 && filters.projectIds?.length) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "projectIds requires a workspace",
+				path: ["projectIds"],
+			});
+		}
+	});
 export type ReportFiltersInput = z.infer<typeof reportFiltersInputSchema>;
 
 export const reportTemplateSchema = z.object({
