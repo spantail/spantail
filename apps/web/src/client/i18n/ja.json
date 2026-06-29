@@ -217,8 +217,7 @@
 			"this_week": "今週",
 			"last_week": "先週",
 			"this_month": "今月",
-			"last_month": "先月",
-			"custom": "期間を指定"
+			"last_month": "先月"
 		},
 		"from": "開始日",
 		"to": "終了日",
@@ -275,7 +274,6 @@
 			"next": "次へ",
 			"position": "{{total}} 件中 {{index}} 件目"
 		},
-		"form": { "presetPreview": "現在の解決結果: {{from}} – {{to}}" },
 		"shares": {
 			"title": "共有: {{name}}",
 			"description": "このレポートへの読み取り専用リンクを作成します。",

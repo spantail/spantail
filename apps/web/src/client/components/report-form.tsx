@@ -5,6 +5,7 @@ import {
 	formatPeriodLabel,
 	MAX_REPORT_SPAN_DAYS,
 	type Report,
+	type ReportDateRange,
 	type ReportFiltersInput,
 	type ReportTemplate,
 	resolveDateRange,
@@ -19,6 +20,7 @@ import { FileTextIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DateRangePicker } from "@/components/date-range-picker";
 import { MarkdownView } from "@/components/markdown-view";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -66,9 +68,8 @@ export interface ReportFormSeed {
 	// user-scoped report (e.g. a personal daily) keeps its scope instead of
 	// silently broadening to every member of the workspace.
 	userIds: string[];
-	rangeChoice: DateRangePreset | "custom";
-	from: string;
-	to: string;
+	// A preset shortcut, or an arbitrary absolute range.
+	dateRange: ReportDateRange;
 	tags: string;
 	note: string;
 }
@@ -161,11 +162,7 @@ export function ReportForm({
 	const [userIds, setUserIds] = useState<string[]>(
 		filtersIntact ? seed.userIds : [],
 	);
-	const [rangeChoice, setRangeChoice] = useState<DateRangePreset | "custom">(
-		seed.rangeChoice,
-	);
-	const [from, setFrom] = useState(seed.from);
-	const [to, setTo] = useState(seed.to);
+	const [dateRange, setDateRange] = useState<ReportDateRange>(seed.dateRange);
 	const [tags, setTags] = useState(seed.tags);
 	const [note, setNote] = useState(seed.note);
 	const [error, setError] = useState<string | null>(null);
@@ -190,14 +187,13 @@ export function ReportForm({
 		enabled: Boolean(workspaceId),
 	});
 
-	const customValid =
-		rangeChoice !== "custom" || (from !== "" && to !== "" && from <= to);
+	// Resolve once: presets are always valid; an absolute range (picker-clamped,
+	// but a deep link could still pass anything) is guarded for order and span.
+	const range = resolveDateRange(dateRange, timezone);
+	const rangeValid = range.from <= range.to;
+	const spanTooLong = spanDays(range.from, range.to) > MAX_REPORT_SPAN_DAYS;
 	const resolvedLabel =
-		rangeChoice === "custom"
-			? customValid && from !== "" && to !== ""
-				? formatPeriodLabel({ from, to })
-				: null
-			: formatPeriodLabel(resolveDateRange(rangeChoice, timezone));
+		rangeValid && !spanTooLong ? formatPeriodLabel(range) : null;
 	const workspaceName = workspaceId
 		? (memberWorkspaces.find((w) => w.id === workspaceId)?.name ?? "")
 		: "";
@@ -205,12 +201,6 @@ export function ReportForm({
 		? [workspaceName, userName, resolvedLabel].filter(Boolean).join(" ")
 		: "";
 	const effectiveName = nameEdited ? name : autoName;
-	const spanTooLong =
-		rangeChoice === "custom" &&
-		from !== "" &&
-		to !== "" &&
-		from <= to &&
-		spanDays(from, to) > MAX_REPORT_SPAN_DAYS;
 
 	// The request body shared by the live preview and the submit. Null while the
 	// form can't render (invalid/too-long range or blank name) so the preview
@@ -219,7 +209,7 @@ export function ReportForm({
 	// user belongs to at least one workspace; otherwise every render would 400.
 	const input = useMemo<CreateReportInput | null>(() => {
 		if (memberWorkspaces.length === 0) return null;
-		if (!customValid || spanTooLong) return null;
+		if (!rangeValid || spanTooLong) return null;
 		if (effectiveName.trim() === "") return null;
 		const parsedTags = tags
 			.split(",")
@@ -233,7 +223,7 @@ export function ReportForm({
 			...(projectIds.length > 0 ? { projectIds } : {}),
 			...(userIds.length > 0 ? { userIds } : {}),
 			...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
-			dateRange: rangeChoice === "custom" ? { from, to } : rangeChoice,
+			dateRange,
 		};
 		return {
 			name: effectiveName,
@@ -244,15 +234,13 @@ export function ReportForm({
 	}, [
 		workspaceId,
 		memberWorkspaces.length,
-		customValid,
+		rangeValid,
 		spanTooLong,
 		effectiveName,
 		tags,
 		projectIds,
 		userIds,
-		rangeChoice,
-		from,
-		to,
+		dateRange,
 		note,
 		selectedTemplateId,
 	]);
@@ -409,61 +397,15 @@ export function ReportForm({
 
 						<div className="flex flex-col gap-2">
 							<Label>{t("reports.dateRange")}</Label>
-							<Select
-								value={rangeChoice}
-								onValueChange={(v) =>
-									setRangeChoice(v as DateRangePreset | "custom")
-								}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{PRESETS.map((preset) => (
-										<SelectItem key={preset} value={preset}>
-											{t(`reports.range.${preset}`)}
-										</SelectItem>
-									))}
-									<SelectItem value="custom">
-										{t("reports.range.custom")}
-									</SelectItem>
-								</SelectContent>
-							</Select>
-							{rangeChoice !== "custom" && (
-								<p className="text-muted-foreground text-xs">
-									{t(
-										"reports.form.presetPreview",
-										resolveDateRange(rangeChoice, timezone),
-									)}
-								</p>
-							)}
+							<DateRangePicker
+								value={dateRange}
+								onChange={setDateRange}
+								presets={PRESETS}
+								labelFor={(p) => t(`reports.range.${p}`)}
+								ariaLabel={t("reports.dateRange")}
+								triggerClassName="h-9 w-full rounded-md px-3 text-sm font-normal"
+							/>
 						</div>
-						{rangeChoice === "custom" && (
-							<div className="grid gap-5 sm:grid-cols-2">
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="report-from">{t("reports.from")}</Label>
-									<Input
-										id="report-from"
-										type="date"
-										className="[color-scheme:light] dark:[color-scheme:dark]"
-										value={from}
-										onChange={(e) => setFrom(e.target.value)}
-										required
-									/>
-								</div>
-								<div className="flex flex-col gap-2">
-									<Label htmlFor="report-to">{t("reports.to")}</Label>
-									<Input
-										id="report-to"
-										type="date"
-										className="[color-scheme:light] dark:[color-scheme:dark]"
-										value={to}
-										onChange={(e) => setTo(e.target.value)}
-										required
-									/>
-								</div>
-							</div>
-						)}
 
 						{workspaceId && (projects.data?.length ?? 0) > 0 && (
 							<div className="flex flex-col gap-2">

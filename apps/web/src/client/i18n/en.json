@@ -214,8 +214,7 @@
 			"this_week": "This week",
 			"last_week": "Last week",
 			"this_month": "This month",
-			"last_month": "Last month",
-			"custom": "Custom range"
+			"last_month": "Last month"
 		},
 		"from": "From",
 		"to": "To",
@@ -272,7 +271,6 @@
 			"next": "Next",
 			"position": "{{index}} of {{total}}"
 		},
-		"form": { "presetPreview": "Currently resolves to {{from}} – {{to}}" },
 		"shares": {
 			"title": "Share: {{name}}",
 			"description": "Create a read-only link to this report.",
