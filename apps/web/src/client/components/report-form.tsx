@@ -58,7 +58,9 @@ export interface ReportFormSeed {
 	/** When false, the name auto-updates from period + user name until edited. */
 	nameEdited: boolean;
 	templateId: string;
-	workspaceIds: string[];
+	// Single workspace scope: an id selects one workspace; null means instance
+	// scope (every workspace the running user belongs to).
+	workspaceId: string | null;
 	projectIds: string[];
 	// Preserved across an edit even though there is no UI field for it, so a
 	// user-scoped report (e.g. a personal daily) keeps its scope instead of
@@ -120,33 +122,39 @@ export function ReportForm({
 }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { workspaces, current } = useWorkspace();
+	const { workspaces } = useWorkspace();
 	const timezone = useUserTimezone();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 	const userName = me.data?.user.name ?? "";
 
-	const memberIds = new Set(workspaces.map((w) => w.id));
-	const seededWorkspaceIds = seed.workspaceIds.filter((id) =>
-		memberIds.has(id),
-	);
-	// If a seeded workspace was dropped (lost membership), its project filter
-	// belongs to a workspace that is no longer selected; keep projects only when
-	// the workspace set is intact so submit can't send a hidden, empty-rendering
-	// project filter.
-	const filtersIntact = seededWorkspaceIds.length === seed.workspaceIds.length;
+	// Report scope is membership-only (the server validates against
+	// listWorkspacesForUser), so an instance admin's non-member workspaces
+	// (role === null) must not be selectable or treated as membership.
+	const memberWorkspaces = workspaces.filter((w) => w.role !== null);
+	const memberIds = new Set(memberWorkspaces.map((w) => w.id));
+	// A seeded workspace the user no longer belongs to drops to instance scope.
+	const seededWorkspaceId =
+		seed.workspaceId && memberIds.has(seed.workspaceId)
+			? seed.workspaceId
+			: null;
+	// True when the seeded workspace selection survived (still a member, or it was
+	// already instance scope). When it didn't, the carried-over user filter no
+	// longer matches the scope and is dropped.
+	const filtersIntact = seededWorkspaceId === seed.workspaceId;
+	// Projects only apply to a single workspace. Keep the seeded project filter
+	// only for an intact single-workspace scope — never for instance scope (the
+	// API rejects projects without a workspace, which would block save), and never
+	// when the workspace was dropped (it would be a hidden, empty-rendering filter).
+	const projectsIntact = filtersIntact && seededWorkspaceId !== null;
 
 	const [name, setName] = useState(seed.name);
 	const [nameEdited, setNameEdited] = useState(seed.nameEdited);
 	const [templateId, setTemplateId] = useState(seed.templateId);
-	const [workspaceIds, setWorkspaceIds] = useState<string[]>(
-		seededWorkspaceIds.length > 0
-			? seededWorkspaceIds
-			: current
-				? [current.id]
-				: [],
+	const [workspaceId, setWorkspaceId] = useState<string | null>(
+		seededWorkspaceId,
 	);
 	const [projectIds, setProjectIds] = useState<string[]>(
-		filtersIntact ? seed.projectIds : [],
+		projectsIntact ? seed.projectIds : [],
 	);
 	// No UI field: carried through edit as-is (dropped only if the workspace set
 	// changes, alongside projects).
@@ -176,11 +184,10 @@ export function ReportForm({
 				// rather than blanking it into an invalid request.
 				(availableTemplates[0]?.id ?? templateId);
 
-	const singleWorkspaceId = workspaceIds.length === 1 ? workspaceIds[0] : null;
 	const projects = useQuery({
-		queryKey: ["projects", singleWorkspaceId],
-		queryFn: () => api.listProjects(singleWorkspaceId ?? ""),
-		enabled: Boolean(singleWorkspaceId),
+		queryKey: ["projects", workspaceId],
+		queryFn: () => api.listProjects(workspaceId ?? ""),
+		enabled: Boolean(workspaceId),
 	});
 
 	const customValid =
@@ -191,11 +198,11 @@ export function ReportForm({
 				? formatPeriodLabel({ from, to })
 				: null
 			: formatPeriodLabel(resolveDateRange(rangeChoice, timezone));
-	const singleWorkspaceName = singleWorkspaceId
-		? (workspaces.find((w) => w.id === singleWorkspaceId)?.name ?? "")
+	const workspaceName = workspaceId
+		? (memberWorkspaces.find((w) => w.id === workspaceId)?.name ?? "")
 		: "";
 	const autoName = resolvedLabel
-		? [singleWorkspaceName, userName, resolvedLabel].filter(Boolean).join(" ")
+		? [workspaceName, userName, resolvedLabel].filter(Boolean).join(" ")
 		: "";
 	const effectiveName = nameEdited ? name : autoName;
 	const spanTooLong =
@@ -206,20 +213,23 @@ export function ReportForm({
 		spanDays(from, to) > MAX_REPORT_SPAN_DAYS;
 
 	// The request body shared by the live preview and the submit. Null while the
-	// form can't render (no workspace, invalid/too-long range, or blank name) so
-	// the preview holds its last good output instead of erroring.
+	// form can't render (invalid/too-long range or blank name) so the preview
+	// holds its last good output instead of erroring. An empty workspace is valid
+	// — it means instance scope (all the user's workspaces) — but only when the
+	// user belongs to at least one workspace; otherwise every render would 400.
 	const input = useMemo<CreateReportInput | null>(() => {
-		if (workspaceIds.length === 0 || !customValid || spanTooLong) return null;
+		if (memberWorkspaces.length === 0) return null;
+		if (!customValid || spanTooLong) return null;
 		if (effectiveName.trim() === "") return null;
 		const parsedTags = tags
 			.split(",")
 			.map((tag) => tag.trim())
 			.filter(Boolean);
-		// projectIds is only ever set for a single workspace (its checkboxes) or
-		// carried over from the edited report; include it whenever present so a
-		// cross-workspace report keeps its project scope on a name/note edit.
+		// projectIds is only ever set while a single workspace is selected (its
+		// checkboxes are cleared when the workspace changes), so it is dropped
+		// automatically for instance scope.
 		const filters: ReportFiltersInput = {
-			workspaceIds,
+			workspaceIds: workspaceId ? [workspaceId] : [],
 			...(projectIds.length > 0 ? { projectIds } : {}),
 			...(userIds.length > 0 ? { userIds } : {}),
 			...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
@@ -232,7 +242,8 @@ export function ReportForm({
 			...(note.trim() !== "" ? { note } : {}),
 		};
 	}, [
-		workspaceIds,
+		workspaceId,
+		memberWorkspaces.length,
 		customValid,
 		spanTooLong,
 		effectiveName,
@@ -282,9 +293,12 @@ export function ReportForm({
 	) => {
 		setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 	};
-	const toggleWorkspace = (id: string) => {
-		toggle(workspaceIds, setWorkspaceIds, id);
-		// Project and user scopes belong to the old workspace set; clear both.
+	// The Select uses a sentinel value for instance scope, since an empty string
+	// is not a valid SelectItem value.
+	const INSTANCE_SCOPE = "__all__";
+	const changeWorkspace = (value: string) => {
+		setWorkspaceId(value === INSTANCE_SCOPE ? null : value);
+		// Project and user scopes belong to the old workspace; clear both.
 		setProjectIds([]);
 		setUserIds([]);
 	};
@@ -369,25 +383,27 @@ export function ReportForm({
 							</div>
 						</div>
 
-						{workspaces.length > 1 && (
+						{memberWorkspaces.length > 0 && (
 							<div className="flex flex-col gap-2">
-								<Label>{t("reports.workspaces")}</Label>
-								<div className="flex flex-wrap gap-4">
-									{workspaces.map((workspace) => (
-										<label
-											key={workspace.id}
-											htmlFor={`report-ws-${workspace.id}`}
-											className="flex items-center gap-2 text-sm"
-										>
-											<Checkbox
-												id={`report-ws-${workspace.id}`}
-												checked={workspaceIds.includes(workspace.id)}
-												onCheckedChange={() => toggleWorkspace(workspace.id)}
-											/>
-											{workspace.name}
-										</label>
-									))}
-								</div>
+								<Label>{t("reports.workspace")}</Label>
+								<Select
+									value={workspaceId ?? INSTANCE_SCOPE}
+									onValueChange={changeWorkspace}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value={INSTANCE_SCOPE}>
+											{t("reports.noWorkspace")}
+										</SelectItem>
+										{memberWorkspaces.map((workspace) => (
+											<SelectItem key={workspace.id} value={workspace.id}>
+												{workspace.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
 						)}
 
@@ -449,7 +465,7 @@ export function ReportForm({
 							</div>
 						)}
 
-						{singleWorkspaceId && (projects.data?.length ?? 0) > 0 && (
+						{workspaceId && (projects.data?.length ?? 0) > 0 && (
 							<div className="flex flex-col gap-2">
 								<Label>{t("reports.projects")}</Label>
 								<div className="flex flex-wrap gap-4">

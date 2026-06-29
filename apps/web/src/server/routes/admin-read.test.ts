@@ -69,7 +69,8 @@ async function setup() {
 		iAdmin,
 	);
 
-	// member's reports: one scoped to the single workspace ws1, one to ws1+ws2.
+	// member's reports: one scoped to the single workspace ws1, one to every
+	// workspace they belong to (instance scope → resolves to ws1+ws2).
 	const single = (await (
 		await apiJson(
 			"POST",
@@ -89,7 +90,7 @@ async function setup() {
 			{
 				name: "Multi",
 				templateId: await defaultTemplateId(member),
-				filters: { workspaceIds: [ws1.id, ws2.id], dateRange: "today" },
+				filters: { workspaceIds: [], dateRange: "today" },
 			},
 			member,
 		)

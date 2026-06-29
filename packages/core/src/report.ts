@@ -47,9 +47,18 @@ export const reportDateRangeSchema = z.union([
 ]);
 export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 
+/**
+ * Upper bound on a stored report's workspace set. One workspace is workspace
+ * scope; instance scope resolves to the caller's full membership set, so the cap
+ * is a generous abuse guard on the resolved set, not a user-facing limit (the
+ * create/update wire caps the selection at a single workspace). The server
+ * enforces the same bound when it resolves instance scope.
+ */
+export const MAX_REPORT_WORKSPACES = 100;
+
 /** Filters as stored on a report: the date range is always absolute. */
 export const reportFiltersSchema = z.object({
-	workspaceIds: z.array(z.string()).min(1).max(20),
+	workspaceIds: z.array(z.string()).min(1).max(MAX_REPORT_WORKSPACES),
 	projectIds: z.array(z.string()).max(50).optional(),
 	userIds: z.array(z.string()).max(50).optional(),
 	tags: z.array(tagSchema).max(20).optional(),
@@ -57,10 +66,26 @@ export const reportFiltersSchema = z.object({
 });
 export type ReportFilters = z.infer<typeof reportFiltersSchema>;
 
-/** Filters on the create/update wire: the date range may still be a preset. */
-export const reportFiltersInputSchema = reportFiltersSchema.extend({
-	dateRange: reportDateRangeSchema,
-});
+/**
+ * Filters on the create/update wire: the date range may still be a preset, and
+ * the workspace is a single selection — empty means instance scope (resolved to
+ * the caller's workspaces server-side), one id means a single-workspace scope.
+ * Projects can only be scoped when a workspace is chosen.
+ */
+export const reportFiltersInputSchema = reportFiltersSchema
+	.extend({
+		dateRange: reportDateRangeSchema,
+		workspaceIds: z.array(z.string()).max(1),
+	})
+	.superRefine((filters, ctx) => {
+		if (filters.workspaceIds.length !== 1 && filters.projectIds?.length) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "projectIds requires a workspace",
+				path: ["projectIds"],
+			});
+		}
+	});
 export type ReportFiltersInput = z.infer<typeof reportFiltersInputSchema>;
 
 export const reportTemplateSchema = z.object({

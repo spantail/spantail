@@ -8,6 +8,7 @@ import {
 	hashSharePasscode,
 	listReportsQuerySchema,
 	MAX_REPORT_MARKDOWN_LENGTH,
+	MAX_REPORT_WORKSPACES,
 	type ReportFilters,
 	type ReportFiltersInput,
 	renderReport,
@@ -161,22 +162,41 @@ async function renderReportDocument(
 	projectIds: string[];
 }> {
 	const { filters, templateId } = doc;
+	// Project ACL: the report owner sees project-assigned entries only for the
+	// projects they belong to (admins see all in their workspaces). Snapshots are
+	// point-in-time — this is enforced at render, not on stored content.
+	const { user } = requireAuth(c);
+	// A single-workspace scope filters to that workspace; an empty selection means
+	// instance scope — resolved here to the caller's workspaces and stored as the
+	// concrete set (like a preset date range resolved to absolute dates), so the
+	// snapshot records exactly which workspaces it covered.
+	const workspaceIds =
+		filters.workspaceIds.length > 0
+			? filters.workspaceIds
+			: (await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id);
+	if (workspaceIds.length === 0) {
+		throw new AppError("bad_request", "You do not belong to any workspace");
+	}
+	// Instance scope resolves from live memberships, which bypass the wire schema;
+	// enforce the stored cap here so a user in too many workspaces can't persist a
+	// filter that violates the ReportFilters contract (or a runaway query).
+	if (workspaceIds.length > MAX_REPORT_WORKSPACES) {
+		throw new AppError("bad_request", "Report spans too many workspaces");
+	}
 	const { workspaces, templateBody, enabled } =
-		await validateFiltersAndTemplate(c, filters.workspaceIds, templateId);
+		await validateFiltersAndTemplate(c, workspaceIds, templateId);
 	// A disabled (archived) template can't back a new or edited report; existing
 	// reports stay viewable/shareable, only re-rendering is blocked.
 	if (!enabled) {
 		throw new AppError("bad_request", "Report template is disabled");
 	}
 
-	const scoped = workspaces.filter((w) => filters.workspaceIds.includes(w.id));
-	const anchor = scoped.find((w) => w.id === filters.workspaceIds[0]);
-	if (!anchor) throw new AppError("internal", "Filter workspace missing");
+	const scoped = workspaces.filter((w) => workspaceIds.includes(w.id));
+	// Invariant: the validated memberships always cover the resolved scope.
+	if (!scoped.some((w) => w.id === workspaceIds[0])) {
+		throw new AppError("internal", "Filter workspace missing");
+	}
 
-	// Project ACL: the report owner sees project-assigned entries only for the
-	// projects they belong to (admins see all in their workspaces). Snapshots are
-	// point-in-time — this is enforced at render, not on stored content.
-	const { user } = requireAuth(c);
 	// The report renders in the running user's timezone: relative ranges and the
 	// generation date resolve in it. Entries are already bucketed by their stored
 	// local date, so grouping itself needs no timezone.
@@ -187,7 +207,7 @@ async function renderReportDocument(
 	);
 	const access = resolveEntryAccessForWorkspaces(scoped, user.id);
 	const rows = await listWorkEntriesForReport(c.var.db, {
-		workspaceIds: filters.workspaceIds,
+		workspaceIds,
 		projectIds: filters.projectIds,
 		userIds: filters.userIds,
 		from: range.from,
@@ -238,7 +258,7 @@ async function renderReportDocument(
 		templateId,
 		period: { from: range.from, to: range.to, preset },
 		filters: {
-			workspaceIds: filters.workspaceIds,
+			workspaceIds,
 			...(filters.projectIds?.length ? { projectIds: filters.projectIds } : {}),
 			...(filters.userIds?.length ? { userIds: filters.userIds } : {}),
 			...(filters.tags?.length ? { tags: filters.tags } : {}),
@@ -254,7 +274,7 @@ async function renderReportDocument(
 
 	return {
 		content,
-		resolvedFilters: { ...filters, dateRange: range },
+		resolvedFilters: { ...filters, workspaceIds, dateRange: range },
 		totalMinutes,
 		entryCount: entries.length,
 		// Distinct projects with at least one entry (entries with no project are

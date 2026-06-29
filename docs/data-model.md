@@ -201,7 +201,7 @@ erDiagram
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
 | `report_templates` | Instance | Presentation format (Markdown + Liquid). A fresh instance is seeded with one default template from `@spantail/templates`. | optional author `user` (set null) |
-| `reports` | User | Mutable report header: `templateId` + `filters` + note. May span multiple workspaces via `filters.workspaceIds`. `version` points at the current snapshot. | owner `user`; `templateId` is a `report_templates` id (no FK) |
+| `reports` | User | Mutable report header: `templateId` + `filters` + note. Scope is a single workspace, or instance scope (every workspace the running user belongs to, resolved to a concrete `filters.workspaceIds` set at render — so an instance-scope report may span multiple workspaces). `version` points at the current snapshot. | owner `user`; `templateId` is a `report_templates` id (no FK) |
 | `report_content` | User (per report) | Immutable rendered snapshot per version: YAML front-matter + Markdown body. | belongs to `reports` (cascade) |
 | `report_shares` | Report | Public capability link to a frozen snapshot; optional passcode (hashed), expiry, revoke; view counter. | belongs to `reports` (cascade) |
 | `report_deliveries` | User (recipient) | "Send to" inbox copy, frozen at send time (email model). One send fans out to N rows grouped by `batchId`. | source `reports` (cascade); sender + recipient `user` |

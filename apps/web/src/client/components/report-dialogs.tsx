@@ -79,7 +79,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		nameEdited: false,
 		templateId: template.id,
 		// Templates carry no workspace; a new report defaults to the current one.
-		workspaceIds: current ? [current.id] : [],
+		workspaceId: current?.id ?? null,
 		projectIds: [],
 		userIds: [],
 		// Period is chosen at run time; default a new report to the current month.
@@ -108,7 +108,13 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 				name: report.name,
 				nameEdited: true,
 				templateId: report.templateId,
-				workspaceIds: report.filters.workspaceIds,
+				// A single stored workspace restores as a workspace scope; an empty or
+				// multi-workspace set (e.g. a legacy cross-workspace report) restores as
+				// instance scope and re-resolves to the user's workspaces on save.
+				workspaceId:
+					report.filters.workspaceIds.length === 1
+						? (report.filters.workspaceIds[0] ?? null)
+						: null,
 				projectIds: report.filters.projectIds ?? [],
 				userIds: report.filters.userIds ?? [],
 				rangeChoice: "custom",
@@ -169,7 +175,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 				mode: "create",
 				seed: {
 					...base,
-					workspaceIds: wsId ? [wsId] : base.workspaceIds,
+					workspaceId: wsId ?? base.workspaceId,
 					...(custom
 						? {
 								rangeChoice: "custom" as const,

@@ -307,7 +307,8 @@ it("restricts recipients to members of every workspace in the report", async () 
 			{
 				name: "Cross",
 				templateId: await defaultTemplateId(owner),
-				filters: { workspaceIds: [wsA.id, wsB.id], dateRange: "this_month" },
+				// Instance scope → resolves to every workspace owner belongs to (A + B).
+				filters: { workspaceIds: [], dateRange: "this_month" },
 			},
 			owner,
 		)
