@@ -9,7 +9,7 @@ import {
 } from "@spantail/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -129,6 +129,7 @@ export function EntryForm({
 	// Create mode only: keep the dialog open after logging to enter another entry,
 	// preserving project and date while the other fields are cleared.
 	const [keepEntering, setKeepEntering] = useState(false);
+	const durationRef = useRef<HTMLInputElement>(null);
 
 	// Start/end times drive the duration (counted across DST transitions), but
 	// minutes can still be entered directly, which nudges the end time.
@@ -221,6 +222,8 @@ export function EntryForm({
 				setDescription("");
 				setNote("");
 				setError(null);
+				// Land the cursor on duration so the next entry starts there.
+				durationRef.current?.focus();
 			}
 			onSuccess({ keepOpen });
 		},
@@ -315,6 +318,7 @@ export function EntryForm({
 				<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
 				<Input
 					id="entry-duration"
+					ref={durationRef}
 					type="text"
 					inputMode="text"
 					placeholder={t("entries.durationPlaceholder")}
