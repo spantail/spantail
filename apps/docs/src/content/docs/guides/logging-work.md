@@ -35,7 +35,7 @@ Fill in:
 - **Date** — defaults to today, in your timezone. Set
   [your timezone](/guides/account-preferences/) so dates land on the right day.
 - **Duration** — minutes, or an hours/minutes form. All of these are valid:
-  `90`, `90m`, `2h`, `1h30m`.
+  `90`, `90m`, `1.5h`, `2h`, `1h30m`.
 - **Description** — what you worked on.
 - **Project** *(optional)* — assign the entry to a project, or leave it blank to
   keep it workspace-wide. If you opened the dialog from a project page, that
@@ -44,6 +44,18 @@ Fill in:
 - **Tags** *(optional)* — labels you can later filter and report on.
 
 Save to add the entry to the timeline.
+
+### Logging several entries in a row
+
+Turn on **Keep entering** in the dialog to log a batch without reopening it. When
+it's on, saving adds the entry and keeps the dialog open with the **project** and
+**date** preserved, clearing the duration, description, note, and tags for the next
+one. The toggle appears only when creating an entry, not when editing.
+
+:::note[Screenshot]
+The Log Work dialog with the "Keep entering" toggle in the footer.
+🚧 Image to be added.
+:::
 
 ### Project-scoped vs. workspace-wide
 
