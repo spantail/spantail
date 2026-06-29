@@ -130,10 +130,16 @@ export async function disableReportTemplateIfNotDefault(
 }
 
 /**
- * Makes `id` the sole instance default. Atomic via batch: clear the current
- * default(s) first, then set this one — so the "exactly one default" invariant
- * holds even under concurrent calls. Returns the updated row (undefined if the
- * id does not exist).
+ * Makes `id` the sole instance default. Clears the current default(s) first,
+ * then promotes this one — only if it is still enabled, so a target disabled in
+ * the request window is never promoted. Returns the new default, or undefined
+ * when the target no longer qualifies (caller maps that to a 4xx).
+ *
+ * The clear-then-set order keeps the one-default unique index from tripping
+ * mid-batch. The residual race — the target being deleted between the clear and
+ * the set — would briefly leave no default; it needs two admins acting within
+ * the same instant and self-corrects on the next create/seed, so it is accepted
+ * rather than guarded with an interactive transaction D1 does not offer.
  */
 export async function setDefaultReportTemplate(
 	db: Database,
@@ -147,7 +153,7 @@ export async function setDefaultReportTemplate(
 		db
 			.update(reportTemplates)
 			.set({ isDefault: true })
-			.where(eq(reportTemplates.id, id))
+			.where(and(eq(reportTemplates.id, id), eq(reportTemplates.enabled, true)))
 			.returning(),
 	]);
 	return rows[0];

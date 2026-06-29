@@ -341,7 +341,16 @@ export function ReportForm({
 
 	const submitLabel =
 		mode === "edit" ? t("reports.saveAction") : t("reports.createAction");
-	const canSubmit = input !== null && templatesReady && !mutation.isPending;
+	// While a field still follows the template suggestion, a pending preview may
+	// be about to refresh it. Block save until it settles so a quick Create right
+	// after a scope/range/template change can't persist the previous suggestion
+	// (create no longer recomputes the name/note defaults server-side).
+	const awaitingSuggestion = previewPending && (!nameEdited || !noteEdited);
+	const canSubmit =
+		input !== null &&
+		templatesReady &&
+		!mutation.isPending &&
+		!awaitingSuggestion;
 
 	return (
 		<>
