@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `report_templates_one_default` ON `report_templates` (`is_default`) WHERE "report_templates"."is_default" = 1;

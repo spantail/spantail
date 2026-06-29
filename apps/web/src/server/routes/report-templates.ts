@@ -6,7 +6,7 @@ import {
 import {
 	countReportsByTemplateId,
 	createReportTemplate,
-	deleteReportTemplate,
+	deleteReportTemplateIfNotDefault,
 	disableReportTemplateIfNotDefault,
 	getReportTemplateById,
 	listReportTemplates,
@@ -62,21 +62,26 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 	.post("/", async (c) => {
 		const { user } = requireTemplateManager(c);
 		const input = validate(createReportTemplateInputSchema, await c.req.json());
-		// Keep the "exactly one default" invariant when a template is created on an
-		// instance that has none yet (e.g. a POST before anyone lists templates, so
-		// the lazy seed never ran): the first template becomes the default.
-		const hasDefault = (await listReportTemplates(c.var.db)).some(
-			(t) => t.isDefault,
-		);
 		const template = await createReportTemplate(c.var.db, {
 			name: input.name,
 			description: input.description ?? null,
 			body: input.body,
 			nameTemplate: input.nameTemplate ?? null,
 			noteTemplate: input.noteTemplate ?? null,
-			isDefault: !hasDefault,
 			createdBy: user.id,
 		});
+		// Keep the "exactly one default" invariant when a template is created on an
+		// instance that has none yet (e.g. a POST before anyone lists templates, so
+		// the lazy seed never ran): promote this row. setDefault clears any existing
+		// default first, so it never trips the one-default unique index even under a
+		// concurrent create that promoted a different row.
+		const hasDefault = (await listReportTemplates(c.var.db)).some(
+			(t) => t.isDefault,
+		);
+		if (!hasDefault) {
+			const promoted = await setDefaultReportTemplate(c.var.db, template.id);
+			return c.json(toApi(promoted ?? template), 201);
+		}
 		return c.json(toApi(template), 201);
 	})
 	.get("/:id", async (c) => {
@@ -161,6 +166,14 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 				"This template is referenced by saved reports",
 			);
 		}
-		await deleteReportTemplate(c.var.db, template.id);
+		// The is_default guard is part of the DELETE so a concurrent set-default
+		// promoting this id between the check above and here can't drop the default.
+		const deleted = await deleteReportTemplateIfNotDefault(
+			c.var.db,
+			template.id,
+		);
+		if (!deleted) {
+			throw new AppError("conflict", "The default template cannot be deleted");
+		}
 		return c.body(null, 204);
 	});

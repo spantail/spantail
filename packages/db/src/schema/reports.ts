@@ -20,33 +20,45 @@ const updatedAtMs = () =>
 // Templates are instance-scoped presentation formats: a report picks one
 // freely, independent of which workspaces/projects/period it covers. A fresh
 // instance is seeded with a default template from @spantail/templates.
-export const reportTemplates = sqliteTable("report_templates", {
-	id: text("id").primaryKey(),
-	name: text("name").notNull(),
-	description: text("description"),
-	// Markdown + Liquid.
-	body: text("body").notNull(),
-	// Admin-controlled: disabled templates are hidden from the report tabs.
-	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-	// Exactly one template is the instance default (enforced in the app layer:
-	// setting a default clears the others). It is the compose dialog's fallback
-	// pick and cannot be deleted or disabled.
-	isDefault: integer("is_default", { mode: "boolean" })
-		.notNull()
-		.default(false),
-	// Liquid producing a report's initial name/note at compose time. Rendered
-	// server-side with a scope-only context (no entries). Null falls back to no
-	// suggestion.
-	nameTemplate: text("name_template"),
-	noteTemplate: text("note_template"),
-	// Nullable + set null on delete: keep the template when its author is
-	// removed (authorship is just dropped).
-	createdBy: text("created_by").references(() => user.id, {
-		onDelete: "set null",
-	}),
-	createdAt: createdAtMs(),
-	updatedAt: updatedAtMs(),
-});
+export const reportTemplates = sqliteTable(
+	"report_templates",
+	{
+		id: text("id").primaryKey(),
+		name: text("name").notNull(),
+		description: text("description"),
+		// Markdown + Liquid.
+		body: text("body").notNull(),
+		// Admin-controlled: disabled templates are hidden from the report tabs.
+		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+		// Exactly one template is the instance default: at most one at the DB level
+		// (the partial unique index below), at least one in the app layer (the lazy
+		// seed and the first-create fallback). It is the compose dialog's fallback
+		// pick and cannot be deleted or disabled.
+		isDefault: integer("is_default", { mode: "boolean" })
+			.notNull()
+			.default(false),
+		// Liquid producing a report's initial name/note at compose time. Rendered
+		// server-side with a scope-only context (no entries). Null falls back to no
+		// suggestion.
+		nameTemplate: text("name_template"),
+		noteTemplate: text("note_template"),
+		// Nullable + set null on delete: keep the template when its author is
+		// removed (authorship is just dropped).
+		createdBy: text("created_by").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: createdAtMs(),
+		updatedAt: updatedAtMs(),
+	},
+	(table) => [
+		// Guarantees at most one default per instance: a partial unique index over
+		// the truthy flag allows any number of is_default = 0 rows but only a single
+		// is_default = 1, so concurrent writers can never leave two defaults.
+		uniqueIndex("report_templates_one_default")
+			.on(table.isDefault)
+			.where(sql`${table.isDefault} = 1`),
+	],
+);
 
 // A report is a mutable header: the current, queryable state (template, filters,
 // note, totals) that the list/tabs group by and the compose dialog seeds from.

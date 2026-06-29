@@ -91,6 +91,25 @@ export async function deleteReportTemplate(
 }
 
 /**
+ * Deletes `id` only if it is not the default. The `is_default = false` guard is
+ * part of the DELETE so a concurrent setDefault that promotes this id between a
+ * caller's read and the delete can't remove the new default. Returns true when a
+ * row was deleted, false when it was the default (or already gone).
+ */
+export async function deleteReportTemplateIfNotDefault(
+	db: Database,
+	id: string,
+): Promise<boolean> {
+	const rows = await db
+		.delete(reportTemplates)
+		.where(
+			and(eq(reportTemplates.id, id), eq(reportTemplates.isDefault, false)),
+		)
+		.returning({ id: reportTemplates.id });
+	return rows.length > 0;
+}
+
+/**
  * Disables `id` only if it is not the default. The `is_default = false` guard is
  * part of the UPDATE so it stays correct under a concurrent setDefault that
  * promotes this id (a separate read-then-write could disable the new default).

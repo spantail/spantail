@@ -78,6 +78,13 @@
       "when": 1782749685751,
       "tag": "0010_fresh_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1782755597987,
+      "tag": "0011_tricky_jack_flag",
+      "breakpoints": true
     }
   ]
 }
