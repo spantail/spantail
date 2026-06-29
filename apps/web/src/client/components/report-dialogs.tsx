@@ -83,9 +83,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		projectIds: [],
 		userIds: [],
 		// Period is chosen at run time; default a new report to the current month.
-		rangeChoice: "this_month",
-		from: "",
-		to: "",
+		dateRange: "this_month",
 		tags: "",
 		note: "",
 	});
@@ -117,9 +115,10 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 						: null,
 				projectIds: report.filters.projectIds ?? [],
 				userIds: report.filters.userIds ?? [],
-				rangeChoice: "custom",
-				from: report.filters.dateRange.from,
-				to: report.filters.dateRange.to,
+				dateRange: {
+					from: report.filters.dateRange.from,
+					to: report.filters.dateRange.to,
+				},
 				tags: (report.filters.tags ?? []).join(", "),
 				note: report.note ?? "",
 			},
@@ -177,11 +176,7 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 					...base,
 					workspaceId: wsId ?? base.workspaceId,
 					...(custom
-						? {
-								rangeChoice: "custom" as const,
-								from: s.from ?? "",
-								to: s.to ?? "",
-							}
+						? { dateRange: { from: s.from ?? "", to: s.to ?? "" } }
 						: {}),
 				},
 			});
