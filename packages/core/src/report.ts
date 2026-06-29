@@ -101,6 +101,9 @@ export const reportTemplateSchema = z.object({
 	// with a scope-only context. Null means no suggestion.
 	nameTemplate: z.string().max(2000).nullable(),
 	noteTemplate: z.string().max(20000).nullable(),
+	// Default relative range a new report seeds with at compose time. Null means
+	// the compose dialog falls back to "today".
+	defaultDateRange: dateRangePresetSchema.nullable(),
 	createdBy: z.string().nullable(),
 	createdAt: z.string().nullable(),
 	updatedAt: z.string().nullable(),
@@ -113,6 +116,7 @@ export const createReportTemplateInputSchema = z.object({
 	body: z.string().min(1).max(50000),
 	nameTemplate: z.string().max(2000).optional(),
 	noteTemplate: z.string().max(20000).optional(),
+	defaultDateRange: dateRangePresetSchema.nullish(),
 });
 export type CreateReportTemplateInput = z.infer<
 	typeof createReportTemplateInputSchema
@@ -125,6 +129,7 @@ export const updateReportTemplateInputSchema = z
 		body: z.string().min(1).max(50000),
 		nameTemplate: z.string().max(2000).nullable(),
 		noteTemplate: z.string().max(20000).nullable(),
+		defaultDateRange: dateRangePresetSchema.nullable(),
 	})
 	.partial();
 

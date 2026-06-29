@@ -68,6 +68,7 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 			body: input.body,
 			nameTemplate: input.nameTemplate ?? null,
 			noteTemplate: input.noteTemplate ?? null,
+			defaultDateRange: input.defaultDateRange ?? null,
 			createdBy: user.id,
 		});
 		// Keep the "exactly one default" invariant when a template is created on an

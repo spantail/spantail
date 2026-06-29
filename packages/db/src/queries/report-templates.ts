@@ -17,6 +17,7 @@ export type ReportTemplatePatch = Partial<
 		| "enabled"
 		| "nameTemplate"
 		| "noteTemplate"
+		| "defaultDateRange"
 	>
 >;
 
