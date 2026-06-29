@@ -157,6 +157,7 @@
 		"minutesFromRange": "開始・終了から算出 ({{duration}})。上書きするには直接編集してください。",
 		"durationParsed": "= {{duration}}（{{minutes}}分）",
 		"minutesManual": "分または時間で入力できます（例: 90, 1h30m, 3.5h）。",
+		"invalidDuration": "有効な作業時間を入力してください（例: 90, 1h30m, 3.5h）。",
 		"description": "内容",
 		"descriptionPlaceholder": "何に取り組みましたか?",
 		"note": "メモ",

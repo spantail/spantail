@@ -163,21 +163,23 @@ export function EntryForm({
 			// Start is the entry date at the start clock in the user timezone.
 			// The end instant is the start plus the (authoritative) duration, so it
 			// stays correct past midnight and for entries of 24h or longer.
-			const minutes = parsedDuration;
+			// Fail fast: the submit button is disabled while unparseable, but Enter
+			// can still trigger an implicit submit, and 0 minutes is never valid.
+			const minutes = parseDuration(duration);
+			if (minutes == null) throw new Error(t("entries.invalidDuration"));
 			const startedAt = startTime
 				? zonedDateTimeToUtc(entryDate, startTime, timezone)
 				: undefined;
-			const endedAt =
-				startedAt && minutes != null
-					? new Date(
-							new Date(startedAt).getTime() + minutes * 60000,
-						).toISOString()
-					: endTime
-						? zonedDateTimeToUtc(entryDate, endTime, timezone)
-						: undefined;
+			const endedAt = startedAt
+				? new Date(
+						new Date(startedAt).getTime() + minutes * 60000,
+					).toISOString()
+				: endTime
+					? zonedDateTimeToUtc(entryDate, endTime, timezone)
+					: undefined;
 			const payload = {
 				entryDate,
-				durationMinutes: minutes ?? 0,
+				durationMinutes: minutes,
 				description,
 				note: note.trim() === "" ? undefined : note,
 				tags: tags

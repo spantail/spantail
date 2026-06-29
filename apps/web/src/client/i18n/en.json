@@ -154,6 +154,7 @@
 		"minutesFromRange": "Calculated from start and end ({{duration}}) — edit to override.",
 		"durationParsed": "= {{duration}} ({{minutes}}m)",
 		"minutesManual": "Enter minutes or hours, e.g. 90, 1h30m, 3.5h.",
+		"invalidDuration": "Enter a valid duration, e.g. 90, 1h30m, 3.5h.",
 		"description": "Description",
 		"descriptionPlaceholder": "What did you work on?",
 		"note": "Note",
