@@ -49,7 +49,8 @@ A tag (a release) and a deploy are **independent** steps; the repository is inst
 
 - **App (`apps/web`)** — deploying to your own Cloudflare account is a self-hosting task. See the
   Setup guide in the [documentation](../apps/docs). The project does not deploy any specific
-  instance from this repository.
+  instance from this repository. For the hands-on commands — including the **migration-bearing
+  upgrade** flow and backup/rollback — see [`deploy.md`](./deploy.md).
 - **Docs (`apps/docs`)** — a **separate lifecycle**: not part of `v*` version tags. Every change to
   `apps/docs/**` on `main` deploys automatically to docs.spantail.com via the
   [`Deploy docs` workflow](../.github/workflows/docs-deploy.yml) (needs the `CLOUDFLARE_API_TOKEN`
