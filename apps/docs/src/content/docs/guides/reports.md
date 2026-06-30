@@ -31,9 +31,9 @@ Set:
 - **Filters** — the project(s), user(s), and tags to include within that scope.
 - **Date range** — a preset (today, yesterday, this week, last week, this month,
   last month) or a custom range from the calendar. Relative presets resolve in your
-  timezone. A template can carry its own
-  [default range](/admin/report-templates/), and opening **New report** from the
-  Reports page starts at *instance scope* and *today*.
+  timezone. Opening **New report** from the Reports page starts at *instance scope*,
+  with the range taken from the template's
+  [default range](/admin/report-templates/) — *today* when the template sets none.
 - **Note** *(optional)* — free-form text included in the report.
 
 The **name** and **note** start from the selected template — each template can

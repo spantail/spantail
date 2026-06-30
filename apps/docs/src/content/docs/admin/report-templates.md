@@ -27,7 +27,7 @@ One template can be marked the **default** — the one the report composer prese
 report. Use **Set as default** on a template to move the flag to it; at most one template holds
 it at a time, and it shows a **Default** badge in the list. The default template cannot be
 deleted or disabled while it holds the flag — set another template as default first to release
-it. A freshly seeded starter template carries no default flag until you set one.
+it. The seeded starter template starts out as the default, so a fresh instance always has one.
 
 ## Managing templates
 
