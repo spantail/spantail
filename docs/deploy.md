@@ -119,11 +119,3 @@ A schema migration does not roll back automatically. To revert:
 
 `wrangler deployments list` / `wrangler rollback` can also revert the Worker, but that reverts only
 code — not schema, which is why the database restore comes first.
-
-## Example: v0.1.0 → v0.2.0
-
-`v0.2.0` adds three additive migrations to `report_templates`: new `is_default`, `name_template`,
-`note_template`, and `default_date_range` columns, plus a partial unique index on the default. No
-special handling is needed — follow [Upgrading an existing instance](#upgrading-an-existing-instance)
-as-is: `pnpm db:migrate:remote` applies the three unseen migrations and `pnpm run deploy` ships the
-code.
