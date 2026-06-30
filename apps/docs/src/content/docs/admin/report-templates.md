@@ -14,12 +14,20 @@ scope and date range. Templates are instance-wide, so every workspace draws from
 *Placeholder — the Report templates list with each template's name, description, and enabled state.*
 :::
 
-## The default template
+## A starter template is always available
 
 A fresh instance starts with no templates. The first time the list is read, Spantail lazily
-seeds a single **default template** (in the request's language) so reports are always composable.
+seeds a single **starter template** (in the request's language) so reports are always composable.
 The seed is idempotent — it is added once and never duplicated — and you can edit, disable, or
 replace it like any other template.
+
+## The default template
+
+One template can be marked the **default** — the one the report composer preselects for a new
+report. Use **Set as default** on a template to move the flag to it; at most one template holds
+it at a time, and it shows a **Default** badge in the list. The default template cannot be
+deleted or disabled while it holds the flag — set another template as default first to release
+it. The seeded starter template starts out as the default, so a fresh instance always has one.
 
 ## Managing templates
 
@@ -27,6 +35,8 @@ replace it like any other template.
 - **Edit** its name, description, or body at any time.
 - **Enable / disable** a template — disabled templates stay in the list but are hidden from the
   report-composer's picker.
+- **Set as default** — make this the template the report composer opens with (see
+  [The default template](#the-default-template)).
 - **Delete** a template you no longer need.
 
 :::note[Screenshot]
@@ -38,7 +48,18 @@ replace it like any other template.
 A template body is **Markdown** with **Liquid** placeholders. At render time Spantail fills in
 the report's data — its name and note, the resolved period, totals, and the entries grouped by
 project, date, or member — and produces Markdown. A duration filter formats minutes as
-`1h 30m`. To see what a template produces, compose a [report](/guides/reports) with it.
+`1h 30m`. To see what a template produces, compose a [report](/guides/reports/) with it.
+
+## Report defaults from a template
+
+Besides the body, a template can pre-fill how a new report composed with it starts out:
+
+- **Default report name** and **Default report note** — Liquid that generates the report's
+  initial name and note. The report form adopts them and keeps them in sync until the author edits
+  the field by hand. The data in scope here is `user`, `workspaces`, `projects`, `users`, and
+  `period` — not the entries, which belong to the body.
+- **Default date range** — the range a new report starts with: Today, Yesterday, This Week, Last
+  Week, This Month, or Last Month. Leave it unset to fall back to Today.
 
 ### Safety
 

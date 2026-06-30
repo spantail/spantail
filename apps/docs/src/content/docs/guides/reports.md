@@ -22,16 +22,24 @@ Markdown preview on the right.
 
 Set:
 
-- **Template** — the presentation format. If your instance has none yet, a
-  default template is provided automatically so you can always compose a report.
-- **Filters** — workspace(s), project(s), user(s), and tags to include.
+- **Template** — the presentation format. If your instance has a **default
+  template**, the form opens with it preselected; if your instance has none yet, a
+  template is provided automatically so you can always compose a report.
+- **Scope** — a single choice: one **workspace**, or **all your workspaces**
+  (*instance scope*). Projects can be narrowed only when a single workspace is
+  selected.
+- **Filters** — the project(s), user(s), and tags to include within that scope.
 - **Date range** — a preset (today, yesterday, this week, last week, this month,
-  last month) or a custom range. Relative presets resolve in your timezone.
+  last month) or a custom range from the calendar. Relative presets resolve in your
+  timezone. Opening **New report** from the Reports page starts at *instance scope*,
+  with the range taken from the template's
+  [default range](/admin/report-templates/) — *today* when the template sets none.
 - **Note** *(optional)* — free-form text included in the report.
 
-The name starts from the period and members and keeps updating until you edit it
-by hand. The preview re-renders as you change filters and the note. Save to
-render the report and open it.
+The **name** and **note** start from the selected template — each template can
+define a Liquid name and note — and keep updating as you change the scope, range,
+or template, until you edit the field by hand. The preview re-renders as you change
+filters and the note. Save to render the report and open it.
 
 ## Read a report
 

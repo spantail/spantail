@@ -4,7 +4,7 @@ description: Configure email delivery, social login, and the AI agents feature.
 ---
 
 The **System** group in Settings holds the instance-wide switches. Every screen here is **instance
-admin only**.
+admin only**, except **About**, which is visible to everyone.
 
 The credentials these features depend on — SMTP/email routing and OAuth client secrets — are set
 once at deploy time as environment secrets, not in this UI. See
@@ -57,4 +57,16 @@ nobody can claim the instance through social sign-in before it is set up. See
 
 :::note[Screenshot]
 *Placeholder — the AI agents page with the feature toggle.*
+:::
+
+## About
+
+**Settings → System → About.** Unlike the rest of System, **this page is visible to every user**,
+not just instance admins — so anyone can see which version the instance runs.
+
+It shows the product name, the running **Version** (linked to the matching GitHub release), and the
+**Copyright**. There is nothing to configure here.
+
+:::note[Screenshot]
+*Placeholder — the About page showing the product name, version, and copyright.*
 :::
