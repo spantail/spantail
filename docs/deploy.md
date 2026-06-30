@@ -113,6 +113,7 @@ A schema migration does not roll back automatically. To revert:
 
    ```bash
    git checkout v<old>
+   pnpm install
    pnpm run deploy
    ```
 
