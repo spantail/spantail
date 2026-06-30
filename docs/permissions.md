@@ -114,6 +114,11 @@ Notes:
 - **Work entries are hybrid-scoped.** Writes are always author-only (self-service). Reads depend
   on `projectId`: assigned entries are project-scoped (project members + admins); unassigned
   entries (`projectId = null`, the state left when a project is deleted) are workspace-scoped.
+- **A report's content is owner-scoped by default.** Rendering restricts entries to the owner's
+  own work unless `filters.userIds` lists other authors. The web app never sets `userIds`, so a
+  web-created report always covers only the owner's entries — even an instance-scope report
+  spanning every workspace, and even for an instance admin. Including other authors is an API-only
+  path and is still bounded by the owner's entry-read access (the rows above).
 - **`R*` for workspace admins** (reading a member's user-scoped resources limited to that
   workspace's data) is realized through **single-workspace reports**: a workspace admin reads a
   report — and, by extension, its inbox deliveries, shares, and discussion — only when the report

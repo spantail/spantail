@@ -237,10 +237,16 @@ async function renderReportDocument(
 		timezone,
 	);
 	const access = resolveEntryAccessForWorkspaces(scoped, user.id);
+	// Reports are scoped to the owner's own work by default. The web UI never
+	// sends userIds, so it always renders own-only — an instance-scope report
+	// still spans every workspace, but includes only the caller's entries. The
+	// API can pass explicit userIds for a cross-user report (still bounded by
+	// `access`).
+	const userIds = filters.userIds?.length ? filters.userIds : [user.id];
 	const rows = await listWorkEntriesForReport(c.var.db, {
 		workspaceIds,
 		projectIds: filters.projectIds,
-		userIds: filters.userIds,
+		userIds,
 		from: range.from,
 		to: range.to,
 		access,

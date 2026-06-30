@@ -40,7 +40,7 @@ List payloads omit `renderedMarkdown`; fetch the body on demand with [`GET /repo
 | --- | --- | --- | --- |
 | `workspaceIds` | string[] | yes | 1–20 workspaces. A cross-workspace report is limited to the union of the caller's memberships. |
 | `projectIds` | string[] | no | Up to 50 projects to scope to. |
-| `userIds` | string[] | no | Up to 50 authors to scope to. |
+| `userIds` | string[] | no | Up to 50 authors to include. **Omitted, the report covers only the caller's own entries** — this is the default and what the web app always does. Listed authors are still bounded by the caller's access (you can only include entries you may read). |
 | `tags` | string[] | no | Up to 20 tags; an entry matches if it carries any of them. |
 | `dateRange` | object \| string | yes | On the wire, either a preset string or an absolute range. On a stored report, always an absolute `{ from, to }`. |
 

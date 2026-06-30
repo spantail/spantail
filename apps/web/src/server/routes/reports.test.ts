@@ -225,6 +225,77 @@ it("previews a report without persisting it", async () => {
 	expect(await (await apiGet("/api/v1/reports", admin)).json()).toEqual([]);
 });
 
+it("scopes report entries to the owner's own work, even for a workspace admin", async () => {
+	const { admin, other, ws, project } = await setup();
+	await createEntry(admin, ws.id, project.id, "Admin work", ["api"]);
+
+	// Other joins the workspace + project and logs their own entry. The admin is
+	// the workspace owner and could otherwise read every entry in it.
+	const membership = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/members`,
+			{ email: "other@example.com", role: "member" },
+			admin,
+		)
+	).json()) as { userId: string };
+	await apiJson(
+		"POST",
+		`/api/v1/projects/${project.id}/members`,
+		{ userId: membership.userId },
+		admin,
+	);
+	await createEntry(other, ws.id, project.id, "Other work", ["api"]);
+
+	// Default (no userIds): the admin's report includes only their own entry,
+	// not the workspace's other authors.
+	const ownScope = (await (
+		await apiJson("POST", "/api/v1/reports/preview", baseReport(ws.id), admin)
+	).json()) as { content: string; entryCount: number; totalMinutes: number };
+	expect(ownScope.entryCount).toBe(1);
+	expect(ownScope.totalMinutes).toBe(30);
+	expect(ownScope.content).toContain("Admin work");
+	expect(ownScope.content).not.toContain("Other work");
+
+	// Instance scope (no workspace selected) is also own-only.
+	const instanceScope = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports/preview",
+			{
+				name: "Daily standup",
+				templateId: seededTemplateId,
+				filters: { workspaceIds: [], tags: ["api"], dateRange: "today" },
+			},
+			admin,
+		)
+	).json()) as { content: string; entryCount: number };
+	expect(instanceScope.entryCount).toBe(1);
+	expect(instanceScope.content).not.toContain("Other work");
+
+	// The API can still build a cross-user report by passing userIds explicitly
+	// (bounded by the caller's access).
+	const crossUser = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports/preview",
+			{
+				name: "Team standup",
+				templateId: seededTemplateId,
+				filters: {
+					workspaceIds: [ws.id],
+					userIds: [membership.userId],
+					tags: ["api"],
+					dateRange: "today",
+				},
+			},
+			admin,
+		)
+	).json()) as { content: string; entryCount: number };
+	expect(crossUser.entryCount).toBe(1);
+	expect(crossUser.content).toContain("Other work");
+});
+
 it("returns initial name/note suggestions from the template's Liquid", async () => {
 	const { admin, ws } = await setup();
 	const template = (await (
@@ -409,9 +480,9 @@ it("renders entries inline, scoped by tags and date", async () => {
 
 it("redacts totalMinutes once the report owner loses workspace membership", async () => {
 	const { admin, ws, project } = await setup();
-	await createEntry(admin, ws.id, project.id, "Wired the endpoint", ["api"]);
 
-	// Bob joins, owns a report scoped to the workspace, then is removed.
+	// Bob joins, logs his own work, owns a report scoped to the workspace, then
+	// is removed.
 	const bob = await signUpUser("Bob", "bob@example.com");
 	const membership = (await (
 		await apiJson(
@@ -421,13 +492,14 @@ it("redacts totalMinutes once the report owner loses workspace membership", asyn
 			admin,
 		)
 	).json()) as { userId: string };
-	// Bob joins the project so his report can see its entries (project ACL).
+	// Bob joins the project so he can log entries against it.
 	await apiJson(
 		"POST",
 		`/api/v1/projects/${project.id}/members`,
 		{ userId: membership.userId },
 		admin,
 	);
+	await createEntry(bob, ws.id, project.id, "Wired the endpoint", ["api"]);
 
 	const report = (await (
 		await apiJson("POST", "/api/v1/reports", baseReport(ws.id), bob)
