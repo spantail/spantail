@@ -64,10 +64,6 @@ export interface ReportFormSeed {
 	// scope (every workspace the running user belongs to).
 	workspaceId: string | null;
 	projectIds: string[];
-	// Preserved across an edit even though there is no UI field for it, so a
-	// user-scoped report (e.g. a personal daily) keeps its scope instead of
-	// silently broadening to every member of the workspace.
-	userIds: string[];
 	// A preset shortcut, or an arbitrary absolute range.
 	dateRange: ReportDateRange;
 	tags: string;
@@ -157,11 +153,6 @@ export function ReportForm({
 	const [projectIds, setProjectIds] = useState<string[]>(
 		projectsIntact ? seed.projectIds : [],
 	);
-	// No UI field: carried through edit as-is (dropped only if the workspace set
-	// changes, alongside projects).
-	const [userIds, setUserIds] = useState<string[]>(
-		filtersIntact ? seed.userIds : [],
-	);
 	const [dateRange, setDateRange] = useState<ReportDateRange>(seed.dateRange);
 	const [tags, setTags] = useState(seed.tags);
 	const [note, setNote] = useState(seed.note);
@@ -209,10 +200,11 @@ export function ReportForm({
 		// projectIds is only ever set while a single workspace is selected (its
 		// checkboxes are cleared when the workspace changes), so it is dropped
 		// automatically for instance scope.
+		// userIds is never sent: a web-created or web-edited report always covers
+		// the owner's own work (the server defaults an empty userIds to self).
 		return {
 			workspaceIds: workspaceId ? [workspaceId] : [],
 			...(projectIds.length > 0 ? { projectIds } : {}),
-			...(userIds.length > 0 ? { userIds } : {}),
 			...(parsedTags.length > 0 ? { tags: parsedTags } : {}),
 			dateRange,
 		};
@@ -223,7 +215,6 @@ export function ReportForm({
 		spanTooLong,
 		tags,
 		projectIds,
-		userIds,
 		dateRange,
 	]);
 
@@ -311,9 +302,8 @@ export function ReportForm({
 	const INSTANCE_SCOPE = "__all__";
 	const changeWorkspace = (value: string) => {
 		setWorkspaceId(value === INSTANCE_SCOPE ? null : value);
-		// Project and user scopes belong to the old workspace; clear both.
+		// Project scope belongs to the old workspace; clear it.
 		setProjectIds([]);
-		setUserIds([]);
 	};
 
 	// Draggable divider between the form and the preview (percent width).

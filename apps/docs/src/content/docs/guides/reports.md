@@ -4,10 +4,17 @@ description: Create, view, share, and discuss reports; manage your inbox.
 ---
 
 A **report** turns your entries into a readable document. It combines a
-**template** (the format), **filters** (which workspaces, projects, people, and
-tags), and a **date range** into an immutable snapshot you can read, share,
+**template** (the format), **filters** (which workspaces, projects, and tags),
+and a **date range** into an immutable snapshot you can read, share,
 download, and discuss. Reports are user-owned and live under **Reports** in the
 header's top-right corner.
+
+:::note
+A report you create in the web app always covers **only your own work
+records** — even an instance-scope report that spans every workspace, and even
+if you are an instance admin. (Including other authors is an API-only feature;
+see the [API reference](/api/reports/).)
+:::
 
 ## Create a report
 
@@ -28,7 +35,8 @@ Set:
 - **Scope** — a single choice: one **workspace**, or **all your workspaces**
   (*instance scope*). Projects can be narrowed only when a single workspace is
   selected.
-- **Filters** — the project(s), user(s), and tags to include within that scope.
+- **Filters** — the project(s) and tags to include within that scope. The report
+  always covers only your own work records.
 - **Date range** — a preset (today, yesterday, this week, last week, this month,
   last month) or a custom range from the calendar. Relative presets resolve in your
   timezone. Opening **New report** from the Reports page starts at *instance scope*,

@@ -84,7 +84,6 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 		// overrides this in seedFromLink with its `ws` param.
 		workspaceId: null,
 		projectIds: [],
-		userIds: [],
 		// Seed the date range from the template's default; an unset template
 		// (null) falls back to today (the most common cadence is a daily report).
 		// A deep link with from/to (the Home timeline) overrides this.
@@ -120,7 +119,6 @@ export function ReportDialogsProvider({ children }: { children: ReactNode }) {
 						? (report.filters.workspaceIds[0] ?? null)
 						: null,
 				projectIds: report.filters.projectIds ?? [],
-				userIds: report.filters.userIds ?? [],
 				dateRange: {
 					from: report.filters.dateRange.from,
 					to: report.filters.dateRange.to,
