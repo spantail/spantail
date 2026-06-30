@@ -17,12 +17,39 @@ All examples are instance-agnostic. Replace `spantail-db`, database IDs, and ori
 - Wrangler authenticated against your Cloudflare account — either `wrangler login`, or
   `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` in the environment (the token needs Workers
   Scripts, D1, and R2 edit permissions).
-- `apps/web/wrangler.jsonc` pointed at your own resources: set your D1 `database_id` in **both** the
-  top-level `d1_databases` block and the `env.production.d1_databases` block (they ship with
-  placeholder IDs), and confirm the R2 bucket name. Every binding, secret, and variable is listed in
-  the [configuration reference](https://docs.spantail.com/self-hosting/configuration/).
 
-`wrangler.jsonc` holds only non-secret IDs; secrets go through `wrangler secret put`.
+## Set up a deploy repository
+
+Deploy from your own copy of the repository with your instance's configuration committed to it, and
+track the public repo as `upstream` so you can pull new releases:
+
+```bash
+git clone <your-repo-url> spantail && cd spantail
+git remote add upstream https://github.com/spantail/spantail.git
+```
+
+The only committed change to the source tree is the configuration below — non-secret IDs, so it is
+safe to commit. If that configuration must stay private, use a **private** repository: a GitHub fork
+of a public repo is itself public. Pull later releases by merging from `upstream` (see
+[Upgrading](#upgrading-an-existing-instance)).
+
+## Configure your instance
+
+`apps/web/wrangler.jsonc` ships with placeholder IDs; point it at the resources you create in your
+Cloudflare account. It holds only **non-secret IDs** — secrets go through `wrangler secret put`.
+Every binding and variable is documented in the
+[configuration reference](https://docs.spantail.com/self-hosting/configuration/).
+
+Edit, at minimum:
+
+- **`d1_databases[].database_id`** — the ID returned by `wrangler d1 create` (below). `pnpm run
+  deploy` runs `wrangler deploy` against the **top-level** (default) environment, so set it in the
+  top-level `d1_databases` block; the `env.production` block applies only to
+  `wrangler deploy -e production`. Set whichever your deploy command targets — keep both in sync if
+  unsure.
+- **`r2_buckets[].bucket_name`** — match the bucket you create.
+- **`vars.APP_ENV`** — `production` for a real deployment; the default `development` routes mail to
+  an in-memory dev outbox.
 
 ## Initial deploy
 
@@ -30,7 +57,7 @@ For the first deploy of a fresh instance, follow the
 [Deploy to Cloudflare](https://docs.spantail.com/self-hosting/deploy/) guide. In short:
 
 ```bash
-wrangler d1 create spantail-db            # copy the id into wrangler.jsonc (both blocks)
+wrangler d1 create spantail-db            # copy the id into wrangler.jsonc (see "Configure your instance")
 wrangler r2 bucket create spantail-uploads
 wrangler secret put BETTER_AUTH_SECRET    # >= 32 chars, e.g. openssl rand -base64 32
 pnpm db:migrate:remote                    # apply all migrations to the new database
@@ -51,13 +78,17 @@ A new release may add database migrations. Spantail keeps migrations **additive 
 backward-compatible** wherever possible (in `0.x` nothing is guaranteed, but breaking schema changes
 are avoided), so the standard flow is **back up → migrate → deploy**.
 
-1. **Check out the target version and install.**
+1. **Pull the target release and install.** With the public repo tracked as `upstream`:
 
    ```bash
-   git fetch --tags
-   git checkout vX.Y.Z          # or: git pull on main
+   git fetch upstream --tags
+   git merge vX.Y.Z             # a release tag; or `git merge upstream/main` for the latest
    pnpm install
    ```
+
+   Resolve any conflict in `apps/web/wrangler.jsonc` by keeping your IDs and taking upstream's
+   structural changes. (Deploying from a plain clone of the public repo instead of your own copy?
+   Use `git fetch --tags && git checkout vX.Y.Z`.)
 
 2. **See what changed**, especially new migrations.
 
