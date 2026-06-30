@@ -33,38 +33,46 @@ safe to commit. If that configuration must stay private, use a **private** repos
 of a public repo is itself public. Pull later releases by merging from `upstream` (see
 [Upgrading](#upgrading-an-existing-instance)).
 
-## Configure your instance
-
-`apps/web/wrangler.jsonc` ships with placeholder IDs; point it at the resources you create in your
-Cloudflare account. It holds only **non-secret IDs** — secrets go through `wrangler secret put`.
-Every binding and variable is documented in the
-[configuration reference](https://docs.spantail.com/self-hosting/configuration/).
-
-Edit, at minimum:
-
-- **`d1_databases[].database_id`** — the ID returned by `wrangler d1 create` (below). `pnpm run
-  deploy` runs `wrangler deploy` against the **top-level** (default) environment, so set it in the
-  top-level `d1_databases` block; the `env.production` block applies only to
-  `wrangler deploy -e production`. Set whichever your deploy command targets — keep both in sync if
-  unsure.
-- **`r2_buckets[].bucket_name`** — match the bucket you create.
-- **`vars.APP_ENV`** — `production` for a real deployment; the default `development` routes mail to
-  an in-memory dev outbox.
-
 ## Initial deploy
 
-For the first deploy of a fresh instance, follow the
-[Deploy to Cloudflare](https://docs.spantail.com/self-hosting/deploy/) guide. In short:
+For a fresh instance, create the Cloudflare resources, point the config at them, then migrate and
+deploy. The [Deploy to Cloudflare](https://docs.spantail.com/self-hosting/deploy/) guide is the
+narrative version of these steps.
 
-```bash
-wrangler d1 create spantail-db            # copy the id into wrangler.jsonc (see "Configure your instance")
-wrangler r2 bucket create spantail-uploads
-wrangler secret put BETTER_AUTH_SECRET    # >= 32 chars, e.g. openssl rand -base64 32
-pnpm db:migrate:remote                    # apply all migrations to the new database
-pnpm run deploy
-```
+1. **Create the D1 database and the R2 bucket.**
 
-Then set `BETTER_AUTH_URL` to your deployed origin and finish in the
+   ```bash
+   wrangler d1 create spantail-db
+   wrangler r2 bucket create spantail-uploads
+   ```
+
+2. **Point `apps/web/wrangler.jsonc` at them.** It ships with placeholder IDs and holds only
+   **non-secret IDs** (secrets go through `wrangler secret put`); the
+   [configuration reference](https://docs.spantail.com/self-hosting/configuration/) documents every
+   field. Edit, at minimum:
+
+   - **`d1_databases[].database_id`** — the ID returned by `wrangler d1 create` above. `pnpm run
+     deploy` deploys the **top-level** (default) environment, so set it in the top-level
+     `d1_databases` block; the `env.production` block applies only to `wrangler deploy -e
+     production`. Set whichever your deploy command targets — keep both in sync if unsure.
+   - **`r2_buckets[].bucket_name`** — match the bucket you created.
+   - **`vars.APP_ENV`** — `production` for a real deployment; the default `development` routes mail
+     to an in-memory dev outbox.
+
+3. **Set the session secret.**
+
+   ```bash
+   wrangler secret put BETTER_AUTH_SECRET    # >= 32 chars, e.g. openssl rand -base64 32
+   ```
+
+4. **Apply migrations, then deploy.**
+
+   ```bash
+   pnpm db:migrate:remote                    # apply all migrations to the new database
+   pnpm run deploy
+   ```
+
+Finally, set `BETTER_AUTH_URL` to your deployed origin and finish in the
 [setup wizard](https://docs.spantail.com/self-hosting/setup-wizard/) — the first person to sign up
 becomes the instance administrator.
 
