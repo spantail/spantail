@@ -774,13 +774,21 @@ export const reportRoutes = new Hono<AppEnv>()
 		// not a "sent to N people" delivery.
 		return c.json({ delivered: recipientIds.length }, 201);
 	})
-	// A report's send history for its owner: one entry per "Send to" batch. Same
-	// owner + membership re-check as GET /:id/shares.
+	// A report's send history: one entry per "Send to" batch. Follows the same
+	// read access as GET /:id/shares (owner, instance admin, or single-workspace
+	// admin), so admin-read contexts see it too. Only the owner can send, so the
+	// sender is always report.ownerUserId — never the (possibly admin) caller.
 	.get("/:id/sends", async (c) => {
 		const { user } = requireScope(c, "read");
-		const report = await requireReportOwner(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
-		const sends = await listReportSendsByReport(c.var.db, report.id, user.id);
+		const report = await requireReportReadAccess(c, c.req.param("id"));
+		if (report.ownerUserId === user.id) {
+			await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		}
+		const sends = await listReportSendsByReport(
+			c.var.db,
+			report.id,
+			report.ownerUserId,
+		);
 		return c.json(
 			sends.map((s) => ({
 				id: s.id,
