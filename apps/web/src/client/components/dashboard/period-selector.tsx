@@ -24,10 +24,10 @@ const PERIOD_LABEL_KEYS: Record<HomePeriod, string> = {
 	this_month: "dashboard.thisMonth",
 };
 
-// Rail order: rolling windows first (most recent first), then calendar weeks and months.
+// Rail order: rolling windows first (shortest first), then calendar weeks and months.
 const PERIOD_ORDER: HomePeriod[] = [
-	"last_30_days",
 	"last_7_days",
+	"last_30_days",
 	"this_week",
 	"last_week",
 	"this_month",

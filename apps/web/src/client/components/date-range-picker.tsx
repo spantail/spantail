@@ -161,14 +161,14 @@ export function DateRangePicker({
 				sideOffset={6}
 				className="flex w-auto flex-row-reverse overflow-hidden p-0"
 			>
-				<div className="flex w-32 shrink-0 flex-col gap-0.5 border-l p-2">
+				<div className="flex w-36 shrink-0 flex-col gap-0.5 border-l p-2">
 					{presets.map((p) => (
 						<button
 							key={p}
 							type="button"
 							onClick={() => choosePreset(p)}
 							className={cn(
-								"flex items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-accent",
+								"flex items-center justify-between gap-2 whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors hover:bg-accent",
 								presetId === p
 									? "bg-muted/70 font-medium text-foreground"
 									: "text-muted-foreground",
