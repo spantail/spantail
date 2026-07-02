@@ -106,6 +106,7 @@ function ReportPane({ report, tab }: { report: Report; tab: string }) {
 					{showHeader && (
 						<ReportHeaderMeta
 							frontMatter={parseReportFrontMatter(report.renderedMarkdown)}
+							onClose={() => setShowHeader(false)}
 						/>
 					)}
 					{/* The report name is the markdown's own H1 — no title header.

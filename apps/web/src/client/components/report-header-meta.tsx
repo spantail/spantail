@@ -3,18 +3,24 @@ import {
 	formatPeriodLabel,
 	type ReportFrontMatter,
 } from "@spantail/core";
+import { XIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/ui/button";
 
 /**
  * The rendered version's own YAML front-matter (system provenance), surfaced
  * subtly at the top of the reading pane when "Show header" is toggled on. It
  * reflects the version as generated — muted and compact, never competing with
- * the report body.
+ * the report body. `onClose` dismisses it (same effect as toggling the header
+ * off from the toolbar).
  */
 export function ReportHeaderMeta({
 	frontMatter,
+	onClose,
 }: {
 	frontMatter: ReportFrontMatter | null;
+	onClose: () => void;
 }) {
 	const { t } = useTranslation();
 	if (!frontMatter) return null;
@@ -65,13 +71,25 @@ export function ReportHeaderMeta({
 	);
 
 	return (
-		<dl className="text-muted-foreground bg-muted/40 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-md border px-4 py-3 text-xs print:hidden">
-			{items.map((item) => (
-				<div key={item.label} className="contents">
-					<dt className="font-medium">{item.label}</dt>
-					<dd>{item.value}</dd>
-				</div>
-			))}
-		</dl>
+		<div className="text-muted-foreground bg-muted/40 relative rounded-md border px-4 py-3 text-xs print:hidden">
+			<Button
+				variant="ghost"
+				size="icon"
+				className="text-muted-foreground absolute top-1.5 right-1.5 size-6"
+				aria-label={t("reports.toolbar.hideHeader")}
+				title={t("reports.toolbar.hideHeader")}
+				onClick={onClose}
+			>
+				<XIcon />
+			</Button>
+			<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 pr-6">
+				{items.map((item) => (
+					<div key={item.label} className="contents">
+						<dt className="font-medium">{item.label}</dt>
+						<dd>{item.value}</dd>
+					</div>
+				))}
+			</dl>
+		</div>
 	);
 }
