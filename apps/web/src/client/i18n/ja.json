@@ -278,7 +278,8 @@
 			"prev": "前へ",
 			"next": "次へ",
 			"position": "{{total}} 件中 {{index}} 件目",
-			"showHeader": "ヘッダを表示"
+			"showHeader": "ヘッダを表示",
+			"hideHeader": "ヘッダを非表示"
 		},
 		"history": {
 			"title": "履歴",

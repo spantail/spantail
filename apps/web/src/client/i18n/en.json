@@ -275,7 +275,8 @@
 			"prev": "Previous",
 			"next": "Next",
 			"position": "{{index}} of {{total}}",
-			"showHeader": "Show header"
+			"showHeader": "Show header",
+			"hideHeader": "Hide header"
 		},
 		"history": {
 			"title": "History",

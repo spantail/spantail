@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
 	ArrowLeftIcon,
-	CheckIcon,
 	ChevronRightIcon,
 	DownloadIcon,
+	EyeIcon,
+	EyeOffIcon,
 	MoreVerticalIcon,
 	PencilIcon,
 	PrinterIcon,
@@ -32,7 +33,6 @@ import {
 import { api } from "@/lib/api";
 import { downloadReportMarkdown } from "@/lib/report-download";
 import { useReportTemplates } from "@/lib/use-report-templates";
-import { cn } from "@/lib/utils";
 
 export function ReportToolbar({
 	report,
@@ -175,13 +175,16 @@ export function ReportToolbar({
 						<DownloadIcon />
 						{t("reports.view.downloadAction")}
 					</DropdownMenuItem>
-					{/* Toggle the version's provenance header above the body. */}
+					{/* Toggle the version's provenance header above the body. The eye
+					    state icon reads as shown / hidden in both positions. */}
 					<DropdownMenuItem
 						className="gap-2.5 px-2 py-1.5"
 						onSelect={onToggleHeader}
 					>
-						<CheckIcon className={cn(!showHeader && "invisible")} />
-						{t("reports.toolbar.showHeader")}
+						{showHeader ? <EyeIcon /> : <EyeOffIcon />}
+						{showHeader
+							? t("reports.toolbar.hideHeader")
+							: t("reports.toolbar.showHeader")}
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
