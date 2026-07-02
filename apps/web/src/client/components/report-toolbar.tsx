@@ -5,6 +5,8 @@ import {
 	ArrowLeftIcon,
 	ChevronRightIcon,
 	DownloadIcon,
+	EyeIcon,
+	EyeOffIcon,
 	MoreVerticalIcon,
 	PencilIcon,
 	PrinterIcon,
@@ -35,9 +37,13 @@ import { useReportTemplates } from "@/lib/use-report-templates";
 export function ReportToolbar({
 	report,
 	tab,
+	showHeader,
+	onToggleHeader,
 }: {
 	report: Report;
 	tab: string;
+	showHeader: boolean;
+	onToggleHeader: () => void;
 }) {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
@@ -168,6 +174,17 @@ export function ReportToolbar({
 					>
 						<DownloadIcon />
 						{t("reports.view.downloadAction")}
+					</DropdownMenuItem>
+					{/* Toggle the version's provenance header above the body. The eye
+					    state icon reads as shown / hidden in both positions. */}
+					<DropdownMenuItem
+						className="gap-2.5 px-2 py-1.5"
+						onSelect={onToggleHeader}
+					>
+						{showHeader ? <EyeIcon /> : <EyeOffIcon />}
+						{showHeader
+							? t("reports.toolbar.hideHeader")
+							: t("reports.toolbar.showHeader")}
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem

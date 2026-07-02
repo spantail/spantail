@@ -278,6 +278,64 @@ async function listSent(
 	}));
 }
 
+export interface ReportSendRow {
+	id: string;
+	createdAt: Date;
+	message: string | null;
+	recipientNames: string[];
+	recipientCount: number;
+	readCount: number;
+}
+
+// A row addressed to someone other than the sender (i.e. a real recipient, not
+// a self-copy). Unlike the Sent folder — which drops self-only batches — the
+// per-report history keeps every send the owner performed, so this filters the
+// aggregates (names/counts/reads) rather than the rows: a self-only send stays
+// as a batch with zero recipients instead of disappearing.
+const isRealRecipient = sql`${reportDeliveries.recipientUserId} != ${reportDeliveries.senderUserId}`;
+
+/**
+ * A report's send history for its owner: one entry per "Send to" batch, newest
+ * first. Scoped to a single report + sender, no folder/flag joins. Self-copies
+ * are excluded from `recipientNames`/`recipientCount`/`readCount` but never drop
+ * the batch, so a self-only send still appears (with zero recipients).
+ */
+export async function listReportSendsByReport(
+	db: Database,
+	reportId: string,
+	senderUserId: string,
+): Promise<ReportSendRow[]> {
+	const rows = await db
+		.select({
+			id: batchKey,
+			createdAt: sql<number>`min(${reportDeliveries.createdAt})`,
+			message: sql<string | null>`max(${reportDeliveries.message})`,
+			recipientNames: sql<
+				string | null
+			>`group_concat(case when ${isRealRecipient} then ${user.name} end, ${NAME_SEP})`,
+			recipientCount: sql<number>`sum(case when ${isRealRecipient} then 1 else 0 end)`,
+			readCount: sql<number>`sum(case when ${isRealRecipient} and ${reportDeliveries.readAt} is not null then 1 else 0 end)`,
+		})
+		.from(reportDeliveries)
+		.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
+		.where(
+			and(
+				eq(reportDeliveries.reportId, reportId),
+				eq(reportDeliveries.senderUserId, senderUserId),
+			),
+		)
+		.groupBy(batchKey)
+		.orderBy(desc(sql`min(${reportDeliveries.createdAt})`), desc(batchKey));
+	return rows.map((r) => ({
+		id: r.id,
+		createdAt: new Date(r.createdAt),
+		message: r.message,
+		recipientNames: r.recipientNames ? r.recipientNames.split(NAME_SEP) : [],
+		recipientCount: Number(r.recipientCount ?? 0),
+		readCount: Number(r.readCount ?? 0),
+	}));
+}
+
 /**
  * Lists a mailbox folder for the caller. Inbox is received-only, Sent is
  * sent-only; Starred/Archive/Trash span both and are merged newest-first.

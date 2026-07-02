@@ -48,6 +48,7 @@ import type {
 	Report,
 	ReportDiscussion,
 	ReportMeta,
+	ReportSend,
 	ReportShare,
 	ReportTemplate,
 	SearchResponse,
@@ -589,6 +590,11 @@ export class SpantailClient {
 		input: SendReportInput,
 	): Promise<SendReportResult> {
 		return this.request("POST", `/reports/${reportId}/send`, { body: input });
+	}
+
+	/** The report's send history (owner only): one entry per "Send to" batch. */
+	listReportSends(reportId: string): Promise<ReportSend[]> {
+		return this.request("GET", `/reports/${reportId}/sends`);
 	}
 
 	/**
