@@ -40,14 +40,18 @@ export function datasetToSql(tables: SeededTable[]): string {
 		const keys = Object.keys(rows[0] as Record<string, unknown>);
 		const columnList = keys.map((k) => `"${columns[k]?.name}"`).join(", ");
 		const prefix = `INSERT INTO "${tableName}" (${columnList}) VALUES\n`;
+		// D1's limit is on the UTF-8 byte length seed.ts writes to disk, not the
+		// JS string length — multi-byte bodies (e.g. Japanese in demo-ja) are
+		// several times longer in bytes, so measure bytes to size the batch.
+		const prefixBytes = Buffer.byteLength(prefix);
 
 		let batch: string[] = [];
-		let batchBytes = prefix.length;
+		let batchBytes = prefixBytes;
 		const flush = () => {
 			if (batch.length === 0) return;
 			statements.push(`${prefix}${batch.join(",\n")};`);
 			batch = [];
-			batchBytes = prefix.length;
+			batchBytes = prefixBytes;
 		};
 		for (const row of rows) {
 			const cells = keys.map((k) => {
@@ -58,17 +62,18 @@ export function datasetToSql(tables: SeededTable[]): string {
 				return literal(column.mapToDriverValue(raw));
 			});
 			const tuple = `(${cells.join(", ")})`;
-			// Flush before the row cap or the byte ceiling would be exceeded, but keep
-			// at least one tuple per statement so an oversized single row still emits.
+			// `,\n` joins tuples (2 bytes). Flush before the row cap or the byte
+			// ceiling would be exceeded, but keep at least one tuple per statement so
+			// an oversized single row still emits.
+			const tupleBytes = Buffer.byteLength(tuple) + 2;
 			if (
 				batch.length > 0 &&
-				(batch.length >= CHUNK ||
-					batchBytes + tuple.length + 2 > MAX_STATEMENT_BYTES)
+				(batch.length >= CHUNK || batchBytes + tupleBytes > MAX_STATEMENT_BYTES)
 			) {
 				flush();
 			}
 			batch.push(tuple);
-			batchBytes += tuple.length + 2;
+			batchBytes += tupleBytes;
 		}
 		flush();
 	}
