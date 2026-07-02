@@ -22,6 +22,7 @@ export type ReportHeaderPatch = Pick<
 	| "note"
 	| "totalMinutes"
 	| "snapshotProjectIds"
+	| "snapshotWorkspaceIds"
 >;
 
 /**

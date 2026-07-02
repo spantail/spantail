@@ -668,12 +668,17 @@ it("aggregates every workspace for instance scope but stores the empty set", asy
 	expect(res.status).toBe(201);
 	const report = (await res.json()) as {
 		filters: { workspaceIds: string[] };
+		snapshotWorkspaceIds: string[] | null;
 		totalMinutes: number;
 		renderedMarkdown: string;
 	};
 	// Instance scope is owner-scoped: the resolved membership set is a query
 	// detail, so the stored filter keeps the empty set (not the expanded list).
 	expect(report.filters.workspaceIds).toEqual([]);
+	// The resolved render scope is frozen separately to bound the Send-to ACL.
+	expect([...(report.snapshotWorkspaceIds ?? [])].sort()).toEqual(
+		[ws.id, ws2.id].sort(),
+	);
 	// The front-matter likewise records the empty set, never the expanded list.
 	const { frontMatter } = splitFrontMatter(report.renderedMarkdown);
 	expect(frontMatter).toContain("workspaceIds: []");

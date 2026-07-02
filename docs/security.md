@@ -85,10 +85,12 @@ new public surface must satisfy:
 - Only the intended snapshot body is exposed — the machine-readable front-matter
   (filters, ids, provenance) is stripped before a share is rendered.
 
-Send-to deliveries enforce an ACL computed from the report's **frozen** snapshot
-(`snapshotProjectIds`): a recipient must be able to read every project in the snapshot, and
-the check runs again at send time against that frozen set, so there is no live/stored
-drift. See [`permissions.md`](./permissions.md) for the full matrix.
+Send-to deliveries and public shares enforce an ACL computed from the report's **frozen**
+snapshot (`snapshotProjectIds` + `snapshotWorkspaceIds`): a recipient must be a member of the
+snapshot's rendered workspaces and able to read every project in it, and the owner must still
+cover that frozen workspace scope to disseminate — checked at send/share time against the
+frozen sets, not the stored filter (empty for instance scope) or live memberships, so there is
+no live/stored drift. See [`permissions.md`](./permissions.md) for the full matrix.
 
 ## 5. Snapshots are point-in-time and intentionally not re-filtered
 

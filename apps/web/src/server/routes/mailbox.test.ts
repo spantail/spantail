@@ -159,6 +159,54 @@ it("resolves recipients for an instance-scope report (empty workspaceIds)", asyn
 	});
 });
 
+it("bounds recipients to the frozen render scope, not the owner's live workspaces", async () => {
+	const { owner, aliceId, bobId } = await setup();
+	// Instance-scope report frozen against the owner's only workspace (Acme).
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Instance",
+				templateId: await defaultTemplateId(owner),
+				filters: { workspaceIds: [], dateRange: "today" },
+			},
+			owner,
+		)
+	).json()) as { id: string };
+
+	// The owner later joins a second workspace with its own member.
+	const carol = await signUpUser("Carol", "carol@example.com");
+	const carolId = (
+		(await (await apiGet("/api/v1/me", carol)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "globex", name: "Globex" },
+			owner,
+		)
+	).json()) as { id: string };
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws2.id}/members`,
+		{ email: "carol@example.com" },
+		owner,
+	);
+
+	// Recipients stay bounded to the frozen scope: Carol (Globex-only, outside the
+	// rendered scope) is excluded even though the owner now belongs to Globex.
+	const recipients = (await (
+		await apiGet(`/api/v1/reports/${report.id}/recipients`, owner)
+	).json()) as Array<{ id: string }>;
+	const ids = recipients.map((r) => r.id);
+	expect(ids.sort()).toEqual([aliceId, bobId].sort());
+	expect(ids).not.toContain(carolId);
+});
+
 it("keeps recipient and sender flags independent (no collision)", async () => {
 	const { owner, alice, report, aliceId, bobId } = await setup();
 	await apiJson(
