@@ -285,69 +285,6 @@ export function EntryForm({
 					required
 				/>
 			</div>
-			<div className="flex flex-col gap-2">
-				<Label htmlFor="entry-start">{t("entries.startTime")}</Label>
-				<Input
-					id="entry-start"
-					type="time"
-					className="[color-scheme:light] dark:[color-scheme:dark]"
-					value={startTime}
-					onChange={(e) => handleStartTime(e.target.value)}
-				/>
-			</div>
-			<div className="flex flex-col gap-2">
-				<Label htmlFor="entry-end">{t("entries.endTime")}</Label>
-				<Input
-					id="entry-end"
-					type="time"
-					className="[color-scheme:light] dark:[color-scheme:dark]"
-					value={endTime}
-					onChange={(e) => handleEndTime(e.target.value)}
-				/>
-				{sameAsStart ? (
-					<p className="text-muted-foreground text-xs">
-						{t("entries.sameAsStart")}
-					</p>
-				) : endsNextDay ? (
-					<p className="text-muted-foreground text-xs">
-						{t("entries.endsNextDay")}
-					</p>
-				) : null}
-			</div>
-			<div className="flex flex-col gap-2 sm:col-span-2">
-				<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
-				<Input
-					id="entry-duration"
-					ref={durationRef}
-					type="text"
-					inputMode="text"
-					placeholder={t("entries.durationPlaceholder")}
-					value={duration}
-					onChange={(e) => handleDuration(e.target.value)}
-					required
-				/>
-				<p className="text-muted-foreground text-xs">
-					{derived != null
-						? t("entries.minutesFromRange", {
-								duration: formatDuration(derived),
-							})
-						: parsedDuration != null
-							? t("entries.durationParsed", {
-									duration: formatDuration(parsedDuration),
-									minutes: parsedDuration,
-								})
-							: t("entries.minutesManual")}
-				</p>
-			</div>
-			<div className="flex flex-col gap-2 sm:col-span-2">
-				<Label htmlFor="entry-tags">{t("entries.tags")}</Label>
-				<Input
-					id="entry-tags"
-					placeholder={t("entries.tagsPlaceholder")}
-					value={tags}
-					onChange={(e) => setTags(e.target.value)}
-				/>
-			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
 				<Label htmlFor="entry-description">{t("entries.description")}</Label>
 				<Input
@@ -356,6 +293,71 @@ export function EntryForm({
 					onChange={(e) => setDescription(e.target.value)}
 					placeholder={t("entries.descriptionPlaceholder")}
 					required
+				/>
+			</div>
+			<div className="grid gap-5 sm:col-span-2 sm:grid-cols-3">
+				<div className="flex flex-col gap-2">
+					<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
+					<Input
+						id="entry-duration"
+						ref={durationRef}
+						type="text"
+						inputMode="text"
+						placeholder={t("entries.durationPlaceholder")}
+						value={duration}
+						onChange={(e) => handleDuration(e.target.value)}
+						required
+					/>
+					<p className="text-muted-foreground text-xs">
+						{derived != null
+							? t("entries.minutesFromRange", {
+									duration: formatDuration(derived),
+								})
+							: parsedDuration != null
+								? t("entries.durationParsed", {
+										duration: formatDuration(parsedDuration),
+										minutes: parsedDuration,
+									})
+								: t("entries.minutesManual")}
+					</p>
+				</div>
+				<div className="flex flex-col gap-2">
+					<Label htmlFor="entry-start">{t("entries.startTime")}</Label>
+					<Input
+						id="entry-start"
+						type="time"
+						className="[color-scheme:light] dark:[color-scheme:dark]"
+						value={startTime}
+						onChange={(e) => handleStartTime(e.target.value)}
+					/>
+				</div>
+				<div className="flex flex-col gap-2">
+					<Label htmlFor="entry-end">{t("entries.endTime")}</Label>
+					<Input
+						id="entry-end"
+						type="time"
+						className="[color-scheme:light] dark:[color-scheme:dark]"
+						value={endTime}
+						onChange={(e) => handleEndTime(e.target.value)}
+					/>
+					{sameAsStart ? (
+						<p className="text-muted-foreground text-xs">
+							{t("entries.sameAsStart")}
+						</p>
+					) : endsNextDay ? (
+						<p className="text-muted-foreground text-xs">
+							{t("entries.endsNextDay")}
+						</p>
+					) : null}
+				</div>
+			</div>
+			<div className="flex flex-col gap-2 sm:col-span-2">
+				<Label htmlFor="entry-tags">{t("entries.tags")}</Label>
+				<Input
+					id="entry-tags"
+					placeholder={t("entries.tagsPlaceholder")}
+					value={tags}
+					onChange={(e) => setTags(e.target.value)}
 				/>
 			</div>
 			<div className="flex flex-col gap-2 sm:col-span-2">
