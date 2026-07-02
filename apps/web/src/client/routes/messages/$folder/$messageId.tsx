@@ -1,7 +1,7 @@
 import { formatPeriodLabel, type MailFolder } from "@spantail/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { DownloadIcon, FileTextIcon } from "lucide-react";
+import { DownloadIcon, FileTextIcon, PrinterIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -133,9 +133,9 @@ function ReadingPane() {
 					)}
 
 					{/* the report itself, framed as an attachment */}
-					<section className="border-border bg-card overflow-hidden rounded-2xl border">
-						<div className="border-border bg-muted/30 flex items-center gap-3 border-b px-5 py-3.5">
-							<span className="bg-secondary text-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
+					<section className="flex flex-col">
+						<div className="border-border bg-muted/40 -mx-8 flex items-center gap-3 border-y px-8 py-3.5">
+							<span className="text-muted-foreground flex size-9 shrink-0 items-center justify-center">
 								<FileTextIcon className="size-4" />
 							</span>
 							<div className="min-w-0 flex-1">
@@ -146,26 +146,39 @@ function ReadingPane() {
 									{period}
 								</div>
 							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								className="shrink-0"
-								aria-label={t("messages.detail.download")}
-								title={t("messages.detail.download")}
-								onClick={() =>
-									downloadMarkdown(
-										`${data.reportName} ${period}.md`,
-										data.renderedMarkdown,
-									)
-								}
-							>
-								<DownloadIcon className="size-4" />
-								<span className="hidden sm:inline">
-									{t("messages.detail.download")}
-								</span>
-							</Button>
+							<div className="flex shrink-0 items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									aria-label={t("messages.detail.print")}
+									title={t("messages.detail.print")}
+									onClick={() => window.print()}
+								>
+									<PrinterIcon className="size-4" />
+									<span className="hidden sm:inline">
+										{t("messages.detail.print")}
+									</span>
+								</Button>
+								<Button
+									variant="outline"
+									size="sm"
+									aria-label={t("messages.detail.download")}
+									title={t("messages.detail.download")}
+									onClick={() =>
+										downloadMarkdown(
+											`${data.reportName} ${period}.md`,
+											data.renderedMarkdown,
+										)
+									}
+								>
+									<DownloadIcon className="size-4" />
+									<span className="hidden sm:inline">
+										{t("messages.detail.download")}
+									</span>
+								</Button>
+							</div>
 						</div>
-						<div className="px-5 py-5">
+						<div className="print-area pt-6">
 							{/* A received report: the report variant strips the system
 							    front-matter header and gives it the article look. */}
 							<MarkdownView markdown={data.renderedMarkdown} variant="report" />

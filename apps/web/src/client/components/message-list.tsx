@@ -105,11 +105,14 @@ export function MessageList({
 					</Button>
 				)}
 			</div>
-			<div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto p-2">
+			<div ref={containerRef} className="min-h-0 flex-1 overflow-y-auto">
 				{query.isPending ? (
-					<div className="flex flex-col gap-1">
+					<div className="flex flex-col">
 						{[0, 1, 2, 3].map((i) => (
-							<div key={i} className="flex items-start gap-3 px-3 py-3">
+							<div
+								key={i}
+								className="border-border/60 flex items-start gap-3 border-b px-4 py-3"
+							>
 								<Skeleton className="size-9 shrink-0 rounded-full" />
 								<div className="flex-1 space-y-2 py-0.5">
 									<Skeleton className="h-3 w-2/3" />
@@ -128,7 +131,7 @@ export function MessageList({
 						</p>
 					</div>
 				) : (
-					<div className="flex flex-col gap-1">
+					<div className="flex flex-col">
 						{items.map((item, index) => (
 							<MessageListItem
 								key={item.id}

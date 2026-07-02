@@ -35,14 +35,20 @@ export function MessageListItem({
 		<div
 			data-nav-index={index}
 			className={cn(
-				"group relative rounded-xl transition-colors",
-				selected ? "bg-card ring-border shadow-sm ring-1" : "hover:bg-card/60",
+				"group border-border/60 relative border-b transition-colors",
+				selected ? "bg-secondary" : "hover:bg-muted/50",
 			)}
 		>
+			{selected && (
+				<span
+					className="bg-brand absolute inset-y-1 left-0 w-[3px] rounded-r-full"
+					aria-hidden
+				/>
+			)}
 			<Link
 				to="/messages/$folder/$messageId"
 				params={{ folder, messageId: item.id }}
-				className="flex w-full gap-3 rounded-xl px-3 py-3 text-left"
+				className="flex w-full gap-3 px-4 py-3 text-left"
 			>
 				<PersonAvatar
 					name={isSent ? (item.recipientNames[0] ?? "?") : item.senderName}
@@ -111,7 +117,7 @@ export function MessageListItem({
 				aria-pressed={item.starred}
 				title={starLabel}
 				className={cn(
-					"focus-visible:ring-ring absolute top-3 right-3 z-10 flex size-5 items-center justify-center rounded outline-none transition focus-visible:ring-2",
+					"focus-visible:ring-ring absolute top-3 right-4 z-10 flex size-5 items-center justify-center rounded outline-none transition focus-visible:ring-2",
 					item.starred
 						? "text-amber-400"
 						: // Faintly visible by default (so touch + keyboard users can find
