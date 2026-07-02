@@ -50,17 +50,23 @@ export const reportDateRangeSchema = z.union([
 export type ReportDateRange = z.infer<typeof reportDateRangeSchema>;
 
 /**
- * Upper bound on a stored report's workspace set. One workspace is workspace
- * scope; instance scope resolves to the caller's full membership set, so the cap
- * is a generous abuse guard on the resolved set, not a user-facing limit (the
- * create/update wire caps the selection at a single workspace). The server
- * enforces the same bound when it resolves instance scope.
+ * Upper bound on a stored report's workspace set. A stored report is either
+ * single-workspace scope (one id) or instance scope (empty): instance scope is
+ * owner-scoped (see `ownerUserId`) and never persists the workspace set — the
+ * render resolves the caller's memberships transiently for the entry query, so
+ * the cap is a generous abuse guard on that resolved set, not a stored count.
+ * Legacy reports may still hold a multi-workspace set, so the cap remains.
  */
 export const MAX_REPORT_WORKSPACES = 100;
 
-/** Filters as stored on a report: the date range is always absolute. */
+/**
+ * Filters as stored on a report: the date range is always absolute. An empty
+ * `workspaceIds` is instance scope (owner-scoped, resolved live at render but
+ * not persisted); a single id is single-workspace scope. Legacy reports may
+ * carry a resolved multi-workspace set, so the cap still applies.
+ */
 export const reportFiltersSchema = z.object({
-	workspaceIds: z.array(z.string()).min(1).max(MAX_REPORT_WORKSPACES),
+	workspaceIds: z.array(z.string()).max(MAX_REPORT_WORKSPACES),
 	projectIds: z.array(z.string()).max(50).optional(),
 	userIds: z.array(z.string()).max(50).optional(),
 	tags: z.array(tagSchema).max(20).optional(),

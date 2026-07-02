@@ -98,6 +98,17 @@ export const reports = sqliteTable(
 		snapshotProjectIds: text("snapshot_project_ids", {
 			mode: "json",
 		}).$type<string[]>(),
+		// The workspace set the current snapshot was rendered against, captured at
+		// render time. Bounds the Send-to / share ACL together with
+		// snapshotProjectIds: dissemination stays scoped to this frozen set (and the
+		// owner must still cover it), so it is stable even when the stored filter
+		// carries no workspaces (instance scope stores an empty `filters.workspaceIds`)
+		// or the owner's live memberships change. Nullable = a report rendered before
+		// this column existed: fall back to `filters.workspaceIds`, which for those
+		// reports holds the resolved set.
+		snapshotWorkspaceIds: text("snapshot_workspace_ids", {
+			mode: "json",
+		}).$type<string[]>(),
 		// The current version number; 1 at creation, incremented on each edit.
 		version: integer("version").notNull().default(1),
 		createdAt: createdAtMs(),

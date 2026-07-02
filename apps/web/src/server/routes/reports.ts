@@ -182,6 +182,11 @@ async function renderReportDocument(
 	// Distinct project ids present in this snapshot — persisted to drive the
 	// Send-to ACL against the frozen content rather than re-querying live entries.
 	projectIds: string[];
+	// The workspace set this snapshot was rendered against (the resolved instance
+	// scope, or the single selected workspace). Persisted as `snapshotWorkspaceIds`
+	// to bound the Send-to / share ACL to the frozen scope, since the stored filter
+	// keeps the empty set for instance scope.
+	snapshotWorkspaceIds: string[];
 	// The rendered body's scope context and the template's name/note Liquid, so
 	// the preview can render the initial name/note suggestions against the same
 	// context without re-resolving the scope.
@@ -195,13 +200,15 @@ async function renderReportDocument(
 	// point-in-time — this is enforced at render, not on stored content.
 	const { user } = requireAuth(c);
 	// A single-workspace scope filters to that workspace; an empty selection means
-	// instance scope — resolved here to the caller's workspaces and stored as the
-	// concrete set (like a preset date range resolved to absolute dates), so the
-	// snapshot records exactly which workspaces it covered.
-	const workspaceIds =
-		filters.workspaceIds.length > 0
-			? filters.workspaceIds
-			: (await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id);
+	// instance scope. Instance scope is owner-scoped (see userIds below), so the
+	// workspace set is not part of the report's identity — it is resolved here to
+	// the caller's memberships only to bound the entry query, and NOT persisted
+	// (the stored filter keeps the empty set, so it never records a stale
+	// membership snapshot; only the entries, which are the owner's own, matter).
+	const instanceScope = filters.workspaceIds.length === 0;
+	const workspaceIds = instanceScope
+		? (await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id)
+		: filters.workspaceIds;
 	if (workspaceIds.length === 0) {
 		throw new AppError("bad_request", "You do not belong to any workspace");
 	}
@@ -297,7 +304,9 @@ async function renderReportDocument(
 		templateId,
 		period: { from: range.from, to: range.to, preset },
 		filters: {
-			workspaceIds,
+			// Instance scope stores the empty set: it is owner-scoped, so the
+			// resolved membership set is a query detail, not part of the snapshot.
+			workspaceIds: instanceScope ? [] : workspaceIds,
 			...(filters.projectIds?.length ? { projectIds: filters.projectIds } : {}),
 			...(filters.userIds?.length ? { userIds: filters.userIds } : {}),
 			...(filters.tags?.length ? { tags: filters.tags } : {}),
@@ -313,17 +322,36 @@ async function renderReportDocument(
 
 	return {
 		content,
-		resolvedFilters: { ...filters, workspaceIds, dateRange: range },
+		resolvedFilters: {
+			...filters,
+			workspaceIds: instanceScope ? [] : workspaceIds,
+			dateRange: range,
+		},
 		totalMinutes,
 		entryCount: entries.length,
 		// Distinct projects with at least one entry (entries with no project are
 		// excluded, mirroring how they group under "(no project)" in the body).
 		projectCount: projects.length,
 		projectIds: projects.map((p) => p.id),
+		snapshotWorkspaceIds: workspaceIds,
 		context,
 		nameTemplate: template.nameTemplate,
 		noteTemplate: template.noteTemplate,
 	};
+}
+
+/**
+ * The workspace set a report's snapshot was rendered against — the basis for
+ * every membership gate on the report (read, edit, list redaction, send/share)
+ * and for the recipient pool. It is the frozen `snapshotWorkspaceIds`, since
+ * instance scope stores an empty `filters.workspaceIds`; it falls back to the
+ * stored filter for legacy reports that predate the snapshot column (their
+ * filter holds the resolved set). Gating on the frozen scope keeps access stable
+ * against later membership changes and correct for cross-user snapshots (which
+ * are not own-only), so losing membership in a rendered workspace still revokes.
+ */
+function frozenReportScope(report: ReportRow): string[] {
+	return report.snapshotWorkspaceIds ?? report.filters.workspaceIds;
 }
 
 /**
@@ -350,9 +378,15 @@ async function reportRecipientCandidates(
 	const snapshotProjectIds = report.snapshotProjectIds;
 	if (snapshotProjectIds === null) return [];
 
+	// The recipient pool is bounded by the frozen render scope, not live
+	// memberships: an instance-scope report stores an empty `filters.workspaceIds`,
+	// so deriving it live would let the pool drift as the owner's memberships
+	// change (and leak snapshot data to members outside the rendered scope).
+	const workspaceIds = frozenReportScope(report);
+
 	const base = await listMembersInAllWorkspaces(
 		c.var.db,
-		report.filters.workspaceIds,
+		workspaceIds,
 		senderId,
 	);
 	if (snapshotProjectIds.length === 0) return base;
@@ -361,7 +395,7 @@ async function reportRecipientCandidates(
 	const projectWorkspace = new Map(projects.map((p) => [p.id, p.workspaceId]));
 	const adminsByWorkspace = new Map<string, Set<string>>();
 	const membersByProject = new Map<string, Set<string>>();
-	for (const wsId of report.filters.workspaceIds) {
+	for (const wsId of workspaceIds) {
 		const ms = await listMembers(c.var.db, wsId);
 		adminsByWorkspace.set(
 			wsId,
@@ -412,14 +446,15 @@ export const reportRoutes = new Hono<AppEnv>()
 		}
 		const metas = await listReportMetaByOwner(c.var.db, scope.userId, query);
 		// totalMinutes is an aggregate of workspace entries (report content), so it
-		// is redacted for reports whose scope the owner no longer fully covers —
-		// mirroring the membership re-check that gates the full report read.
+		// is redacted for reports whose frozen render scope the owner no longer fully
+		// covers — mirroring the frozen-scope membership re-check that gates the full
+		// report read (instance scope stores an empty filter, so use the frozen set).
 		const memberIds = new Set(
 			(await listWorkspacesForUser(c.var.db, scope.userId)).map((w) => w.id),
 		);
 		return c.json(
 			metas.map((report) =>
-				report.filters.workspaceIds.every((id) => memberIds.has(id))
+				frozenReportScope(report).every((id) => memberIds.has(id))
 					? report
 					: { ...report, totalMinutes: null },
 			),
@@ -524,14 +559,19 @@ export const reportRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "write");
 		const input = validate(createReportInputSchema, await c.req.json());
 		const note = normalizeNote(input.note ?? null);
-		const { content, resolvedFilters, totalMinutes, projectIds } =
-			await renderReportDocument(c, {
-				name: input.name,
-				templateId: input.templateId,
-				filters: input.filters,
-				note,
-				version: 1,
-			});
+		const {
+			content,
+			resolvedFilters,
+			totalMinutes,
+			projectIds,
+			snapshotWorkspaceIds,
+		} = await renderReportDocument(c, {
+			name: input.name,
+			templateId: input.templateId,
+			filters: input.filters,
+			note,
+			version: 1,
+		});
 		const { report, content: contentRow } = await createReport(c.var.db, {
 			name: input.name,
 			ownerUserId: user.id,
@@ -540,6 +580,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			note,
 			totalMinutes,
 			snapshotProjectIds: projectIds,
+			snapshotWorkspaceIds,
 			content,
 		});
 		return c.json(toApiReport(report, contentRow.content), 201);
@@ -548,11 +589,13 @@ export const reportRoutes = new Hono<AppEnv>()
 		const { user } = requireScope(c, "read");
 		const report = await requireReportReadAccess(c, c.req.param("id"));
 		// For the owner, the rendered markdown is workspace data: losing membership
-		// in any filtered workspace revokes access to the content. Admin readers are
+		// in any rendered workspace revokes access to the content. Admin readers are
 		// already authorized by requireReportReadAccess and need not be members, so
-		// the membership re-check applies to the owner path only.
+		// the membership re-check applies to the owner path only. Gated on the frozen
+		// render scope (instance scope stores an empty filter), so a cross-user
+		// snapshot — which is not own-only — stays gated after membership changes.
 		if (report.ownerUserId === user.id) {
-			await requireScopeWorkspaces(c, report.filters.workspaceIds);
+			await requireScopeWorkspaces(c, frozenReportScope(report));
 		}
 		const current = await getCurrentReportContent(c.var.db, report.id);
 		if (!current) throw new AppError("internal", "Report content missing");
@@ -562,22 +605,27 @@ export const reportRoutes = new Hono<AppEnv>()
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		// The response carries the rendered body (workspace data), and the edit
-		// re-renders it, so losing membership in any filtered workspace revokes
-		// editing too — the same gate as GET /:id.
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		// re-renders it, so losing membership in any rendered workspace revokes
+		// editing too — the same frozen-scope gate as GET /:id.
+		await requireScopeWorkspaces(c, frozenReportScope(report));
 		// Editing changes the report's fields and re-renders, appending a new
 		// immutable content version. The header stays the current, queryable state.
 		const input = validate(updateReportInputSchema, await c.req.json());
 		const note = normalizeNote(input.note ?? null);
 		const version = report.version + 1;
-		const { content, resolvedFilters, totalMinutes, projectIds } =
-			await renderReportDocument(c, {
-				name: input.name,
-				templateId: input.templateId,
-				filters: input.filters,
-				note,
-				version,
-			});
+		const {
+			content,
+			resolvedFilters,
+			totalMinutes,
+			projectIds,
+			snapshotWorkspaceIds,
+		} = await renderReportDocument(c, {
+			name: input.name,
+			templateId: input.templateId,
+			filters: input.filters,
+			note,
+			version,
+		});
 		const updated = await updateReportWithNewVersion(c.var.db, report.id, {
 			name: input.name,
 			templateId: input.templateId,
@@ -585,6 +633,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			note,
 			totalMinutes,
 			snapshotProjectIds: projectIds,
+			snapshotWorkspaceIds,
 			version,
 			content,
 		});
@@ -599,12 +648,13 @@ export const reportRoutes = new Hono<AppEnv>()
 		await deleteReport(c.var.db, report.id);
 		return c.body(null, 204);
 	})
-	// Minting a public link is at least as sensitive as reading the report, so
-	// it carries the same membership re-check as GET /:id.
+	// Minting a public link disseminates the frozen snapshot, so the owner must
+	// still cover its rendered scope (not the stored filter, which is empty for
+	// instance scope).
 	.post("/:id/shares", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		await requireScopeWorkspaces(c, frozenReportScope(report));
 		const input = validate(
 			createReportShareInputSchema,
 			await parseOptionalJsonBody(c),
@@ -632,23 +682,24 @@ export const reportRoutes = new Hono<AppEnv>()
 		return c.json(toApiShare(share), 201);
 	})
 	// Listed shares include plaintext tokens (content capabilities); reading them
-	// follows the report's read access. The owner path re-checks membership (the
-	// tokens are workspace data); admin readers are already authorized.
+	// follows the report's read access. The owner path re-checks the frozen
+	// dissemination scope (the tokens are capabilities over workspace data); admin
+	// readers are already authorized.
 	.get("/:id/shares", async (c) => {
 		const { user } = requireScope(c, "read");
 		const report = await requireReportReadAccess(c, c.req.param("id"));
 		if (report.ownerUserId === user.id) {
-			await requireScopeWorkspaces(c, report.filters.workspaceIds);
+			await requireScopeWorkspaces(c, frozenReportScope(report));
 		}
 		const shares = await listReportSharesByReport(c.var.db, report.id);
 		return c.json(shares.map(toApiShare));
 	})
 	// Recipient picker for "Send to": the union of members across the report's
-	// workspaces (people already entitled to its data), minus the sender.
+	// rendered workspaces (people already entitled to its data), minus the sender.
 	.get("/:id/recipients", async (c) => {
 		const { user } = requireScope(c, "read");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		await requireScopeWorkspaces(c, frozenReportScope(report));
 		const members = await reportRecipientCandidates(c, report, user.id);
 		return c.json(
 			members.map(({ image, ...m }) => ({
@@ -657,13 +708,13 @@ export const reportRoutes = new Hono<AppEnv>()
 			})),
 		);
 	})
-	// Drops a frozen snapshot of the report into each recipient's inbox. Same
-	// owner + membership re-check as reading the report; recipients are validated
+	// Drops a frozen snapshot of the report into each recipient's inbox. The owner
+	// must still cover the frozen dissemination scope; recipients are validated
 	// against the workspace-members union so a send can't widen who sees the data.
 	.post("/:id/send", async (c) => {
 		const { user } = requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		await requireScopeWorkspaces(c, frozenReportScope(report));
 		const input = validate(
 			sendReportInputSchema,
 			await parseOptionalJsonBody(c),

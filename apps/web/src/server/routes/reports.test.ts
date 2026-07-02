@@ -632,7 +632,7 @@ it("rejects filters outside the caller's workspace memberships", async () => {
 	expect(ghost.status).toBe(403);
 });
 
-it("resolves an empty workspace selection to instance scope (all the caller's workspaces)", async () => {
+it("aggregates every workspace for instance scope but stores the empty set", async () => {
 	const { admin, project, ws, templateId } = await setup();
 	// A second workspace the admin also belongs to, so instance scope spans both.
 	const ws2 = (await (
@@ -668,13 +668,23 @@ it("resolves an empty workspace selection to instance scope (all the caller's wo
 	expect(res.status).toBe(201);
 	const report = (await res.json()) as {
 		filters: { workspaceIds: string[] };
+		snapshotWorkspaceIds: string[] | null;
 		totalMinutes: number;
+		renderedMarkdown: string;
 	};
-	// Empty input is stored as the concrete resolved set of the caller's workspaces.
-	expect([...report.filters.workspaceIds].sort()).toEqual(
+	// Instance scope is owner-scoped: the resolved membership set is a query
+	// detail, so the stored filter keeps the empty set (not the expanded list).
+	expect(report.filters.workspaceIds).toEqual([]);
+	// The resolved render scope is frozen separately to bound the Send-to ACL.
+	expect([...(report.snapshotWorkspaceIds ?? [])].sort()).toEqual(
 		[ws.id, ws2.id].sort(),
 	);
-	// Both workspaces' entries are aggregated.
+	// The front-matter likewise records the empty set, never the expanded list.
+	const { frontMatter } = splitFrontMatter(report.renderedMarkdown);
+	expect(frontMatter).toContain("workspaceIds: []");
+	expect(frontMatter).not.toContain(ws.id);
+	expect(frontMatter).not.toContain(ws2.id);
+	// Both workspaces' own entries are still aggregated (query unchanged).
 	expect(report.totalMinutes).toBe(60);
 });
 
@@ -868,6 +878,65 @@ it("revokes report content access when workspace membership is lost", async () =
 	).toBe(204);
 });
 
+it("revokes instance-scope report access when a rendered workspace is left", async () => {
+	const { admin, other, ws } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "other@example.com" },
+		admin,
+	);
+	// An instance-scope report stores an empty filter; the read gate must fall back
+	// to the frozen render scope, not treat the empty set as "no gate" (which would
+	// leave a cross-user snapshot readable after the owner leaves the workspace).
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Instance mine",
+				templateId: seededTemplateId,
+				filters: { workspaceIds: [], dateRange: "today" },
+			},
+			other,
+		)
+	).json()) as { id: string; filters: { workspaceIds: string[] } };
+	expect(report.filters.workspaceIds).toEqual([]);
+	expect((await apiGet(`/api/v1/reports/${report.id}`, other)).status).toBe(
+		200,
+	);
+
+	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
+		user: { id: string };
+	};
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${ws.id}/members/${me.user.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// Frozen scope was [ws]; after leaving it, the empty stored filter must still
+	// gate the read (and the edit re-render).
+	expect((await apiGet(`/api/v1/reports/${report.id}`, other)).status).toBe(
+		403,
+	);
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/reports/${report.id}`,
+				{ name: "Edited" },
+				other,
+			)
+		).status,
+	).toBe(403);
+});
+
 it("rejects creating a report with a disabled template", async () => {
 	const { admin, ws } = await setup();
 	const template = (await (
@@ -945,6 +1014,27 @@ it("surfaces template rendering errors as bad_request and saves nothing", async 
 
 	// Nothing was persisted.
 	expect(await (await apiGet("/api/v1/reports", admin)).json()).toEqual([]);
+});
+
+it("surfaces an instance-scope report under a project filter via its frozen scope", async () => {
+	const { admin, project } = await setup();
+	// Instance-scope, all-projects report: stores `filters.workspaceIds = []` but a
+	// frozen `snapshotWorkspaceIds` spanning the workspace. The project filter must
+	// consult the frozen scope so the report still matches a project in it.
+	await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			name: "Instance",
+			templateId: seededTemplateId,
+			filters: { workspaceIds: [], dateRange: "today" },
+		},
+		admin,
+	);
+	const list = (await (
+		await apiGet(`/api/v1/reports?projectId=${project.id}`, admin)
+	).json()) as Array<{ name: string }>;
+	expect(list.map((r) => r.name)).toContain("Instance");
 });
 
 it("filters and paginates the report list server-side", async () => {

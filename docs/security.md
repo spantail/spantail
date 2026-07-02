@@ -85,10 +85,12 @@ new public surface must satisfy:
 - Only the intended snapshot body is exposed — the machine-readable front-matter
   (filters, ids, provenance) is stripped before a share is rendered.
 
-Send-to deliveries enforce an ACL computed from the report's **frozen** snapshot
-(`snapshotProjectIds`): a recipient must be able to read every project in the snapshot, and
-the check runs again at send time against that frozen set, so there is no live/stored
-drift. See [`permissions.md`](./permissions.md) for the full matrix.
+Send-to deliveries and public shares enforce an ACL computed from the report's **frozen**
+snapshot (`snapshotProjectIds` + `snapshotWorkspaceIds`): a recipient must be a member of the
+snapshot's rendered workspaces and able to read every project in it, and the owner must still
+cover that frozen workspace scope to disseminate — checked at send/share time against the
+frozen sets, not the stored filter (empty for instance scope) or live memberships, so there is
+no live/stored drift. See [`permissions.md`](./permissions.md) for the full matrix.
 
 ## 5. Snapshots are point-in-time and intentionally not re-filtered
 
@@ -97,9 +99,12 @@ persisted content is **not re-filtered against live entries on later reads** —
 [`permissions.md`](./permissions.md). The deliberate consequence differs by surface:
 
 - The **owner** reading their own report (`GET /api/v1/reports/:id`) still has workspace
-  membership re-checked, so losing **workspace** membership revokes access. Losing only a
-  **project** ACL (while remaining a workspace member) does not — the snapshot still shows
-  the projects the author could read at render time.
+  membership re-checked against the snapshot's **frozen render scope**
+  (`snapshotWorkspaceIds`, falling back to `filters.workspaceIds` on legacy rows), so losing
+  **workspace** membership revokes access. This holds for instance scope too: it stores an empty
+  `filters.workspaceIds`, but the gate uses the frozen scope, so a cross-user snapshot (not
+  own-only) is never left ungated. Losing only a **project** ACL (while remaining a workspace
+  member) does not — the snapshot still shows the projects the author could read at render time.
 - A **public share** (`/share/:token`) or a **Send-to delivery** is reached by capability
   token / recipient identity, with no live membership check, so an already-shared or
   delivered copy stays viewable even after the author or recipient loses access.

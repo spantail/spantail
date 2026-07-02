@@ -87,13 +87,14 @@ it("rejects an absolute range with from after to", () => {
 	).toBe(false);
 });
 
-it("requires at least one workspace in report filters", () => {
-	expect(
-		reportFiltersSchema.safeParse({
-			workspaceIds: [],
-			dateRange: { from: "2026-06-01", to: "2026-06-07" },
-		}).success,
-	).toBe(false);
+it("accepts an empty workspace set as instance scope in stored filters", () => {
+	// Instance scope is owner-scoped and stores the empty set (the resolved
+	// membership set is a render-time query detail, never persisted).
+	const instance = reportFiltersSchema.parse({
+		workspaceIds: [],
+		dateRange: { from: "2026-06-01", to: "2026-06-07" },
+	});
+	expect(instance.workspaceIds).toEqual([]);
 	const parsed = reportFiltersSchema.parse({
 		workspaceIds: ["ws1"],
 		dateRange: { from: "2026-06-01", to: "2026-06-07" },
