@@ -378,6 +378,7 @@
 			"selectPrompt": "読むメッセージを選択してください。",
 			"notFound": "このメッセージは利用できなくなりました。",
 			"attachedReport": "添付レポート",
+			"print": "印刷",
 			"download": "ダウンロード"
 		}
 	},
