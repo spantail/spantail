@@ -284,6 +284,7 @@
 			"empty": "This report hasn't been sent or shared yet.",
 			"recipients_one": "{{count}} recipient",
 			"recipients_other": "{{count}} recipients",
+			"selfOnly": "Sent to your inbox",
 			"read": "{{read}}/{{total}} read"
 		},
 		"header": {

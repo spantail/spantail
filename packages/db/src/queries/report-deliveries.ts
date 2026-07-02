@@ -287,11 +287,18 @@ export interface ReportSendRow {
 	readCount: number;
 }
 
+// A row addressed to someone other than the sender (i.e. a real recipient, not
+// a self-copy). Unlike the Sent folder — which drops self-only batches — the
+// per-report history keeps every send the owner performed, so this filters the
+// aggregates (names/counts/reads) rather than the rows: a self-only send stays
+// as a batch with zero recipients instead of disappearing.
+const isRealRecipient = sql`${reportDeliveries.recipientUserId} != ${reportDeliveries.senderUserId}`;
+
 /**
  * A report's send history for its owner: one entry per "Send to" batch, newest
- * first. Mirrors listSent's batch grouping (batchKey, recipient concat, real
- * recipients only via notSelfCopy) but scopes to a single report and needs no
- * folder/flag joins. `readCount` is how many recipients have opened their copy.
+ * first. Scoped to a single report + sender, no folder/flag joins. Self-copies
+ * are excluded from `recipientNames`/`recipientCount`/`readCount` but never drop
+ * the batch, so a self-only send still appears (with zero recipients).
  */
 export async function listReportSendsByReport(
 	db: Database,
@@ -303,9 +310,11 @@ export async function listReportSendsByReport(
 			id: batchKey,
 			createdAt: sql<number>`min(${reportDeliveries.createdAt})`,
 			message: sql<string | null>`max(${reportDeliveries.message})`,
-			recipientNames: sql<string>`group_concat(${user.name}, ${NAME_SEP})`,
-			recipientCount: sql<number>`count(*)`,
-			readCount: sql<number>`sum(case when ${reportDeliveries.readAt} is not null then 1 else 0 end)`,
+			recipientNames: sql<
+				string | null
+			>`group_concat(case when ${isRealRecipient} then ${user.name} end, ${NAME_SEP})`,
+			recipientCount: sql<number>`sum(case when ${isRealRecipient} then 1 else 0 end)`,
+			readCount: sql<number>`sum(case when ${isRealRecipient} and ${reportDeliveries.readAt} is not null then 1 else 0 end)`,
 		})
 		.from(reportDeliveries)
 		.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
@@ -313,7 +322,6 @@ export async function listReportSendsByReport(
 			and(
 				eq(reportDeliveries.reportId, reportId),
 				eq(reportDeliveries.senderUserId, senderUserId),
-				notSelfCopy,
 			),
 		)
 		.groupBy(batchKey)
@@ -323,7 +331,7 @@ export async function listReportSendsByReport(
 		createdAt: new Date(r.createdAt),
 		message: r.message,
 		recipientNames: r.recipientNames ? r.recipientNames.split(NAME_SEP) : [],
-		recipientCount: r.recipientCount,
+		recipientCount: Number(r.recipientCount ?? 0),
 		readCount: Number(r.readCount ?? 0),
 	}));
 }

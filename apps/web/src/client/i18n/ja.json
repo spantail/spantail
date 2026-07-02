@@ -287,6 +287,7 @@
 			"empty": "このレポートはまだ送信・共有されていません。",
 			"recipients_one": "{{count}} 人に送信",
 			"recipients_other": "{{count}} 人に送信",
+			"selfOnly": "自分の受信箱に送信",
 			"read": "{{read}}/{{total}} 既読"
 		},
 		"header": {

@@ -108,6 +108,21 @@ it("excludes a self-copy from the recipient list and count", async () => {
 	expect(rows[0]?.recipientNames).toEqual(["Alice"]);
 });
 
+it("keeps a self-only send as an entry with zero recipients", async () => {
+	const { owner, report } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ sendToSelf: true },
+		owner,
+	);
+	const rows = await sends(owner, report.id);
+	expect(rows).toHaveLength(1);
+	expect(rows[0]?.recipientCount).toBe(0);
+	expect(rows[0]?.recipientNames).toEqual([]);
+	expect(rows[0]?.readCount).toBe(0);
+});
+
 it("does not reveal another user's report send history", async () => {
 	const { alice, report } = await setup();
 	const res = await apiGet(`/api/v1/reports/${report.id}/sends`, alice);

@@ -58,23 +58,33 @@ export function ReportHistory({ reportId }: { reportId: string }) {
 								{sendRows.map((send) => (
 									<li key={send.id} className="flex flex-col gap-0.5 text-sm">
 										<span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-											<span className="font-medium">
-												{t("reports.history.recipients", {
-													count: send.recipientCount,
-												})}
-											</span>
-											{send.recipientNames.length > 0 && (
-												<span className="text-muted-foreground">
-													{send.recipientNames.join(", ")}
+											{send.recipientCount === 0 ? (
+												// A self-only send: no teammate recipients, just an inbox copy.
+												<span className="font-medium">
+													{t("reports.history.selfOnly")}
 												</span>
+											) : (
+												<>
+													<span className="font-medium">
+														{t("reports.history.recipients", {
+															count: send.recipientCount,
+														})}
+													</span>
+													{send.recipientNames.length > 0 && (
+														<span className="text-muted-foreground">
+															{send.recipientNames.join(", ")}
+														</span>
+													)}
+												</>
 											)}
 										</span>
 										<span className="text-muted-foreground text-xs">
 											{new Date(send.createdAt).toLocaleString()}
-											{` · ${t("reports.history.read", {
-												read: send.readCount,
-												total: send.recipientCount,
-											})}`}
+											{send.recipientCount > 0 &&
+												` · ${t("reports.history.read", {
+													read: send.readCount,
+													total: send.recipientCount,
+												})}`}
 										</span>
 										{send.message && (
 											<span className="text-muted-foreground text-xs italic">
