@@ -55,6 +55,14 @@ describe("report front-matter", () => {
 		expect(parseReportFrontMatter(legacy)).toBeNull();
 	});
 
+	it("parses to null for a signature-key block that isn't the full shape", () => {
+		// Carries the signature keys (so splitFrontMatter treats it as a header) but
+		// lacks period/filters/etc — must not yield a partial object.
+		const partial =
+			"---\nversion: 1\ntemplateId: t1\ngeneratedAt: 2026-06-22T09:00:00.000Z\n---\n# Body\n";
+		expect(parseReportFrontMatter(partial)).toBeNull();
+	});
+
 	it("leaves a non-system leading YAML block intact (legacy/user content)", () => {
 		// A pre-migration body that opens with a user/template front-matter block
 		// lacking our signature keys must not be stripped.

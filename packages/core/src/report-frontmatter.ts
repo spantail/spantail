@@ -1,29 +1,36 @@
 import { parse, stringify } from "yaml";
+import { z } from "zod";
 
-import type { DateRangePreset } from "./report";
+import { dateRangePresetSchema } from "./report";
 
 /**
  * Machine-readable provenance embedded as a YAML front-matter header at the top
  * of a rendered report's content. It is system-generated (never template- or
  * user-controlled) so every version is self-describing for Send/Share/export.
  * `note` is deliberately excluded — it is long/multi-line and rendered into the
- * body — and is snapshotted as a column instead.
+ * body — and is snapshotted as a column instead. The schema also validates
+ * headers parsed back at display time (see parseReportFrontMatter).
  */
-export interface ReportFrontMatter {
-	name: string;
-	version: number;
-	templateId: string;
-	period: { from: string; to: string; preset: DateRangePreset | null };
-	filters: {
-		workspaceIds: string[];
-		projectIds?: string[];
-		userIds?: string[];
-		tags?: string[];
-	};
-	totalMinutes: number;
-	timezone: string;
-	generatedAt: string;
-}
+export const reportFrontMatterSchema = z.object({
+	name: z.string(),
+	version: z.number(),
+	templateId: z.string(),
+	period: z.object({
+		from: z.string(),
+		to: z.string(),
+		preset: dateRangePresetSchema.nullable(),
+	}),
+	filters: z.object({
+		workspaceIds: z.array(z.string()),
+		projectIds: z.array(z.string()).optional(),
+		userIds: z.array(z.string()).optional(),
+		tags: z.array(z.string()).optional(),
+	}),
+	totalMinutes: z.number(),
+	timezone: z.string(),
+	generatedAt: z.string(),
+});
+export type ReportFrontMatter = z.infer<typeof reportFrontMatterSchema>;
 
 /**
  * Serializes the front-matter to a `---\n…\n---\n` block. `yaml.stringify`
@@ -75,9 +82,21 @@ export function splitFrontMatter(md: string): {
  * is the read path for surfacing a rendered version's own provenance (e.g. a
  * "show header" toggle) — the header is the source of truth, so it reflects the
  * version as generated rather than re-deriving from the possibly-edited report.
+ *
+ * Returns null when the block isn't well-formed YAML or doesn't match the full
+ * shape: splitFrontMatter only checks for the signature keys, so a legacy or
+ * hand-authored block that carries them without the rest would otherwise yield a
+ * partial object and crash the caller — the schema guards against that.
  */
 export function parseReportFrontMatter(md: string): ReportFrontMatter | null {
 	const { frontMatter } = splitFrontMatter(md);
 	if (frontMatter === null) return null;
-	return parse(frontMatter) as ReportFrontMatter;
+	let parsed: unknown;
+	try {
+		parsed = parse(frontMatter);
+	} catch {
+		return null;
+	}
+	const result = reportFrontMatterSchema.safeParse(parsed);
+	return result.success ? result.data : null;
 }
