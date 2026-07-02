@@ -3,9 +3,34 @@ import { expect, it } from "vitest";
 import {
 	apiGet,
 	apiJson,
+	appFetch,
 	defaultTemplateId,
 	signUpUser,
 } from "../../../test/helpers";
+
+// The server stores avatar bytes verbatim (never decodes), so any non-empty
+// allowed payload is a valid upload — see avatars.test.ts.
+const PNG_BYTES = new Uint8Array([
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+
+async function uploadAvatar(cookie: string): Promise<void> {
+	await appFetch("/api/v1/me/avatar", {
+		method: "POST",
+		headers: { "content-type": "image/png", cookie },
+		body: PNG_BYTES,
+	});
+}
+
+async function userId(cookie: string): Promise<string> {
+	return (
+		(await (await apiGet("/api/v1/me", cookie)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+}
+
+const AVATAR_URL = /^\/api\/v1\/avatars\/[^?]+\?v=[a-f0-9]{16}$/;
 
 /**
  * Sets up an owner + a workspace member (eligible recipient) + an outsider
@@ -125,6 +150,73 @@ it("delivers a frozen snapshot to a recipient's inbox", async () => {
 	expect(
 		((await (await apiGet("/api/v1/inbox", owner)).json()) as unknown[]).length,
 	).toBe(0);
+});
+
+it("surfaces sender and recipient avatars across list and detail", async () => {
+	const { owner, member, report, memberId } = await setup();
+	const ownerId = await userId(owner);
+	await uploadAvatar(owner);
+	await uploadAvatar(member);
+
+	await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ recipientUserIds: [memberId] },
+		owner,
+	);
+
+	// Received: the recipient sees the sender's avatar (list + detail).
+	const inbox = (await (
+		await apiGet("/api/v1/inbox", member)
+	).json()) as Array<{
+		id: string;
+		senderImageUrl: string | null;
+		recipientImageUrls: (string | null)[];
+	}>;
+	expect(inbox[0]?.senderImageUrl).toMatch(AVATAR_URL);
+	expect(inbox[0]?.senderImageUrl).toContain(`/avatars/${ownerId}?`);
+	expect(inbox[0]?.recipientImageUrls).toEqual([]);
+	const received = (await (
+		await apiGet(`/api/v1/inbox/${inbox[0]?.id}`, member)
+	).json()) as { senderImageUrl: string | null };
+	expect(received.senderImageUrl).toMatch(AVATAR_URL);
+
+	// Sent: the sender's Sent view shows the recipient's avatar (list + detail).
+	const sent = (await (
+		await apiGet("/api/v1/inbox?folder=sent", owner)
+	).json()) as Array<{
+		id: string;
+		senderImageUrl: string | null;
+		recipientImageUrls: (string | null)[];
+	}>;
+	expect(sent[0]?.recipientImageUrls[0]).toMatch(AVATAR_URL);
+	expect(sent[0]?.recipientImageUrls[0]).toContain(`/avatars/${memberId}?`);
+	const sentDetail = (await (
+		await apiGet(`/api/v1/inbox/${sent[0]?.id}`, owner)
+	).json()) as { recipients: Array<{ id: string; imageUrl: string | null }> };
+	expect(
+		sentDetail.recipients.find((r) => r.id === memberId)?.imageUrl,
+	).toMatch(AVATAR_URL);
+});
+
+it("returns null avatars when the sender and recipient have none", async () => {
+	const { owner, member, report, memberId } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ recipientUserIds: [memberId] },
+		owner,
+	);
+	const inbox = (await (
+		await apiGet("/api/v1/inbox", member)
+	).json()) as Array<{
+		senderImageUrl: string | null;
+	}>;
+	expect(inbox[0]?.senderImageUrl).toBeNull();
+	const sent = (await (
+		await apiGet("/api/v1/inbox?folder=sent", owner)
+	).json()) as Array<{ recipientImageUrls: (string | null)[] }>;
+	expect(sent[0]?.recipientImageUrls).toEqual([null]);
 });
 
 it("marks messages read individually and in bulk", async () => {

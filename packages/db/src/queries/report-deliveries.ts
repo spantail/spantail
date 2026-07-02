@@ -83,7 +83,11 @@ function flagPredicate(folder: MailFolder) {
 	}
 }
 
-/** A listed mailbox item (no body), unified across received and sent scopes. */
+/**
+ * A listed mailbox item (no body), unified across received and sent scopes. The
+ * avatar fields are raw (a `user.image` token/URL plus the user id needed to
+ * resolve it); the route turns them into ready-to-use URLs via resolveAvatarUrl.
+ */
 export interface MailItemRow {
 	id: string;
 	scope: MailScope;
@@ -91,6 +95,10 @@ export interface MailItemRow {
 	reportId: string | null;
 	senderName: string;
 	senderEmail: string;
+	// Received scope: the sender's user id + stored image (live-joined, so a
+	// deleted sender yields null → the initials fallback). Unused for sent.
+	senderUserId: string | null;
+	senderImage: string | null;
 	reportName: string;
 	dateFrom: string;
 	dateTo: string;
@@ -101,6 +109,10 @@ export interface MailItemRow {
 	archived: boolean;
 	trashed: boolean;
 	recipientNames: string[];
+	// Sent scope: recipient ids + stored images, aligned by index with
+	// recipientNames so the route can resolve each avatar. Empty for received.
+	recipientIds: string[];
+	recipientImages: (string | null)[];
 	recipientCount: number;
 }
 
@@ -119,6 +131,8 @@ async function listReceived(
 			reportId: reportDeliveries.reportId,
 			senderName: reportDeliveries.senderName,
 			senderEmail: reportDeliveries.senderEmail,
+			senderUserId: reportDeliveries.senderUserId,
+			senderImage: user.image,
 			reportName: reportDeliveries.reportName,
 			dateFrom: reportDeliveries.dateFrom,
 			dateTo: reportDeliveries.dateTo,
@@ -130,6 +144,9 @@ async function listReceived(
 			trashedAt: deliveryFlags.trashedAt,
 		})
 		.from(reportDeliveries)
+		// Live-join the sender for their current avatar; left so a deleted sender
+		// (senderUserId set null) still returns the row with a null image.
+		.leftJoin(user, eq(user.id, reportDeliveries.senderUserId))
 		.leftJoin(
 			deliveryFlags,
 			and(
@@ -154,6 +171,8 @@ async function listReceived(
 		reportId: r.reportId,
 		senderName: r.senderName,
 		senderEmail: r.senderEmail,
+		senderUserId: r.senderUserId,
+		senderImage: r.senderImage,
 		reportName: r.reportName,
 		dateFrom: r.dateFrom,
 		dateTo: r.dateTo,
@@ -164,6 +183,8 @@ async function listReceived(
 		archived: r.archivedAt != null,
 		trashed: r.trashedAt != null,
 		recipientNames: [],
+		recipientIds: [],
+		recipientImages: [],
 		recipientCount: 0,
 	}));
 }
@@ -185,12 +206,19 @@ async function listSent(
 			reportId: sql<string | null>`max(${reportDeliveries.reportId})`,
 			senderName: sql<string>`max(${reportDeliveries.senderName})`,
 			senderEmail: sql<string>`max(${reportDeliveries.senderEmail})`,
+			senderUserId: sql<string | null>`max(${reportDeliveries.senderUserId})`,
 			reportName: sql<string>`max(${reportDeliveries.reportName})`,
 			dateFrom: sql<string>`max(${reportDeliveries.dateFrom})`,
 			dateTo: sql<string>`max(${reportDeliveries.dateTo})`,
 			message: sql<string | null>`max(${reportDeliveries.message})`,
 			createdAt: sql<number>`min(${reportDeliveries.createdAt})`,
+			// Three concats over the same grouped rows stay index-aligned: SQLite
+			// feeds every aggregate in a group the same row order. names/ids are
+			// non-null; image is coalesced to "" to hold its slot (mapped back to
+			// null below) so it never drops out and shifts the columns.
 			recipientNames: sql<string>`group_concat(${user.name}, ${NAME_SEP})`,
+			recipientIds: sql<string>`group_concat(${user.id}, ${NAME_SEP})`,
+			recipientImages: sql<string>`group_concat(coalesce(${user.image}, ''), ${NAME_SEP})`,
 			recipientCount: sql<number>`count(*)`,
 			starredAt: sql<number | null>`max(${deliveryFlags.starredAt})`,
 			archivedAt: sql<number | null>`max(${deliveryFlags.archivedAt})`,
@@ -227,6 +255,10 @@ async function listSent(
 		reportId: r.reportId,
 		senderName: r.senderName,
 		senderEmail: r.senderEmail,
+		// Sent rows show the recipient's avatar, not the sender's; carry the
+		// sender id for shape uniformity but no sender image is joined here.
+		senderUserId: r.senderUserId,
+		senderImage: null,
 		reportName: r.reportName,
 		dateFrom: r.dateFrom,
 		dateTo: r.dateTo,
@@ -237,6 +269,11 @@ async function listSent(
 		archived: r.archivedAt != null,
 		trashed: r.trashedAt != null,
 		recipientNames: r.recipientNames ? r.recipientNames.split(NAME_SEP) : [],
+		recipientIds: r.recipientIds ? r.recipientIds.split(NAME_SEP) : [],
+		// "" placeholder (a recipient with no avatar) maps back to null.
+		recipientImages: r.recipientImages
+			? r.recipientImages.split(NAME_SEP).map((img) => img || null)
+			: [],
 		recipientCount: r.recipientCount,
 	}));
 }
@@ -334,6 +371,14 @@ export async function getMailItemDetail(
 
 	if (row.recipientUserId === userId) {
 		const flags = await getDeliveryFlags(db, userId, "received", row.id);
+		// Live-look up the sender's current avatar (null if the account is gone).
+		const sender = row.senderUserId
+			? await db
+					.select({ image: user.image })
+					.from(user)
+					.where(eq(user.id, row.senderUserId))
+					.get()
+			: undefined;
 		return {
 			id: row.id,
 			scope: "received",
@@ -341,6 +386,8 @@ export async function getMailItemDetail(
 			reportId: row.reportId,
 			senderName: row.senderName,
 			senderEmail: row.senderEmail,
+			senderUserId: row.senderUserId,
+			senderImage: sender?.image ?? null,
 			reportName: row.reportName,
 			dateFrom: row.dateFrom,
 			dateTo: row.dateTo,
@@ -349,6 +396,8 @@ export async function getMailItemDetail(
 			createdAt: row.createdAt,
 			...flags,
 			recipientNames: [],
+			recipientIds: [],
+			recipientImages: [],
 			recipientCount: 0,
 			renderedMarkdown: row.renderedMarkdown,
 		};
@@ -386,10 +435,14 @@ export async function getMailItemDetail(
 			dateFrom: row.dateFrom,
 			dateTo: row.dateTo,
 			message: row.message,
+			senderUserId: row.senderUserId,
+			senderImage: null,
 			readAt: null,
 			createdAt: row.createdAt,
 			...flags,
 			recipientNames: recipients.map((r) => r.name),
+			recipientIds: recipients.map((r) => r.id),
+			recipientImages: recipients.map((r) => r.image),
 			recipientCount: recipients.length,
 			renderedMarkdown: row.renderedMarkdown,
 			recipients,
@@ -417,6 +470,8 @@ export async function listDeliveriesByWorkspace(
 			reportId: reportDeliveries.reportId,
 			senderName: reportDeliveries.senderName,
 			senderEmail: reportDeliveries.senderEmail,
+			senderUserId: reportDeliveries.senderUserId,
+			senderImage: user.image,
 			reportName: reportDeliveries.reportName,
 			dateFrom: reportDeliveries.dateFrom,
 			dateTo: reportDeliveries.dateTo,
@@ -425,6 +480,7 @@ export async function listDeliveriesByWorkspace(
 		})
 		.from(reportDeliveries)
 		.innerJoin(reports, eq(reports.id, reportDeliveries.reportId))
+		.leftJoin(user, eq(user.id, reportDeliveries.senderUserId))
 		.where(singleWorkspaceReport(workspaceId))
 		// id breaks createdAt ties so offset paging is stable.
 		.orderBy(desc(reportDeliveries.createdAt), desc(reportDeliveries.id))
@@ -438,6 +494,8 @@ export async function listDeliveriesByWorkspace(
 		reportId: r.reportId,
 		senderName: r.senderName,
 		senderEmail: r.senderEmail,
+		senderUserId: r.senderUserId,
+		senderImage: r.senderImage,
 		reportName: r.reportName,
 		dateFrom: r.dateFrom,
 		dateTo: r.dateTo,
@@ -450,6 +508,8 @@ export async function listDeliveriesByWorkspace(
 		archived: false,
 		trashed: false,
 		recipientNames: [],
+		recipientIds: [],
+		recipientImages: [],
 		recipientCount: 0,
 	}));
 }
@@ -470,6 +530,13 @@ export async function getDeliveryDetailById(
 		.where(eq(reportDeliveries.id, id))
 		.get();
 	if (!row) return undefined;
+	const sender = row.senderUserId
+		? await db
+				.select({ image: user.image })
+				.from(user)
+				.where(eq(user.id, row.senderUserId))
+				.get()
+		: undefined;
 	return {
 		id: row.id,
 		scope: "received",
@@ -477,6 +544,8 @@ export async function getDeliveryDetailById(
 		reportId: row.reportId,
 		senderName: row.senderName,
 		senderEmail: row.senderEmail,
+		senderUserId: row.senderUserId,
+		senderImage: sender?.image ?? null,
 		reportName: row.reportName,
 		dateFrom: row.dateFrom,
 		dateTo: row.dateTo,
@@ -488,6 +557,8 @@ export async function getDeliveryDetailById(
 		archived: false,
 		trashed: false,
 		recipientNames: [],
+		recipientIds: [],
+		recipientImages: [],
 		recipientCount: 0,
 		renderedMarkdown: row.renderedMarkdown,
 	};

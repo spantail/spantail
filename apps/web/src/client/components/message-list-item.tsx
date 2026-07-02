@@ -46,6 +46,9 @@ export function MessageListItem({
 			>
 				<PersonAvatar
 					name={isSent ? (item.recipientNames[0] ?? "?") : item.senderName}
+					imageUrl={
+						isSent ? (item.recipientImageUrls[0] ?? null) : item.senderImageUrl
+					}
 					size={36}
 				/>
 				<span className="min-w-0 flex-1">

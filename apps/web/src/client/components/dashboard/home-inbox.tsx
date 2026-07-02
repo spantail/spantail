@@ -87,7 +87,11 @@ export function HomeInbox({ className }: { className?: string }) {
 												<span className="bg-brand size-1.5 rounded-full" />
 											)}
 										</span>
-										<PersonAvatar name={item.senderName} size={32} />
+										<PersonAvatar
+											name={item.senderName}
+											imageUrl={item.senderImageUrl}
+											size={32}
+										/>
 										<div className="min-w-0 flex-1">
 											<div className="flex items-baseline gap-2">
 												<span

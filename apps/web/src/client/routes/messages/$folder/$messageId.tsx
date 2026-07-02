@@ -86,6 +86,11 @@ function ReadingPane() {
 	const personLabel = isSent
 		? t("messages.list.to", { names: data.recipientNames.join(", ") })
 		: data.senderName;
+	// Sent: the first recipient's avatar (already resolved on the detail);
+	// received: the sender's avatar.
+	const personImageUrl = isSent
+		? (data.recipients[0]?.imageUrl ?? null)
+		: data.senderImageUrl;
 	const email = isSent ? undefined : data.senderEmail;
 	const period = formatPeriodLabel({ from: data.dateFrom, to: data.dateTo });
 
@@ -97,7 +102,11 @@ function ReadingPane() {
 					{/* byline — the report name is rendered by the markdown body */}
 					<header className="flex flex-col gap-4">
 						<div className="flex items-center gap-3">
-							<PersonAvatar name={personName} size={40} />
+							<PersonAvatar
+								name={personName}
+								imageUrl={personImageUrl}
+								size={40}
+							/>
 							<div className="min-w-0 flex-1">
 								<div className="flex items-baseline gap-1.5 text-sm">
 									<span className="text-foreground font-medium">
