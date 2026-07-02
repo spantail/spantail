@@ -110,8 +110,11 @@ function reportFilterConditions(filter: ListReportsFilter): SQL[] {
 			sql`json_extract(${reports.filters}, '$.dateRange.from') <= ${filter.to}`,
 		);
 	// Project filter: a report listing explicit projectIds matches when it
-	// includes the project; an all-projects report (no projectIds) matches when
-	// it spans the project's workspace.
+	// includes the project; an all-projects report (no projectIds) matches when it
+	// spans the project's workspace. The workspace match reads the frozen render
+	// scope (`snapshot_workspace_ids`), since instance-scope reports store an empty
+	// `filters.workspaceIds`; it falls back to the filter for legacy rows (which
+	// hold the resolved set).
 	if (filter.projectId)
 		conditions.push(
 			sql`(
@@ -119,7 +122,7 @@ function reportFilterConditions(filter: ListReportsFilter): SQL[] {
 					and exists (select 1 from json_each(json_extract(${reports.filters}, '$.projectIds')) where value = ${filter.projectId}))
 				or
 				(json_array_length(coalesce(json_extract(${reports.filters}, '$.projectIds'), '[]')) = 0
-					and exists (select 1 from json_each(json_extract(${reports.filters}, '$.workspaceIds'))
+					and exists (select 1 from json_each(coalesce(${reports.snapshotWorkspaceIds}, json_extract(${reports.filters}, '$.workspaceIds')))
 						where value = (select ${projects.workspaceId} from ${projects} where ${projects.id} = ${filter.projectId})))
 			)`,
 		);

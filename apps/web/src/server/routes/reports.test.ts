@@ -1016,6 +1016,27 @@ it("surfaces template rendering errors as bad_request and saves nothing", async 
 	expect(await (await apiGet("/api/v1/reports", admin)).json()).toEqual([]);
 });
 
+it("surfaces an instance-scope report under a project filter via its frozen scope", async () => {
+	const { admin, project } = await setup();
+	// Instance-scope, all-projects report: stores `filters.workspaceIds = []` but a
+	// frozen `snapshotWorkspaceIds` spanning the workspace. The project filter must
+	// consult the frozen scope so the report still matches a project in it.
+	await apiJson(
+		"POST",
+		"/api/v1/reports",
+		{
+			name: "Instance",
+			templateId: seededTemplateId,
+			filters: { workspaceIds: [], dateRange: "today" },
+		},
+		admin,
+	);
+	const list = (await (
+		await apiGet(`/api/v1/reports?projectId=${project.id}`, admin)
+	).json()) as Array<{ name: string }>;
+	expect(list.map((r) => r.name)).toContain("Instance");
+});
+
 it("filters and paginates the report list server-side", async () => {
 	const { admin, ws, project } = await setup();
 	const project2 = (await (
