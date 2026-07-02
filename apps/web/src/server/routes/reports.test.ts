@@ -878,6 +878,65 @@ it("revokes report content access when workspace membership is lost", async () =
 	).toBe(204);
 });
 
+it("revokes instance-scope report access when a rendered workspace is left", async () => {
+	const { admin, other, ws } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "other@example.com" },
+		admin,
+	);
+	// An instance-scope report stores an empty filter; the read gate must fall back
+	// to the frozen render scope, not treat the empty set as "no gate" (which would
+	// leave a cross-user snapshot readable after the owner leaves the workspace).
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Instance mine",
+				templateId: seededTemplateId,
+				filters: { workspaceIds: [], dateRange: "today" },
+			},
+			other,
+		)
+	).json()) as { id: string; filters: { workspaceIds: string[] } };
+	expect(report.filters.workspaceIds).toEqual([]);
+	expect((await apiGet(`/api/v1/reports/${report.id}`, other)).status).toBe(
+		200,
+	);
+
+	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
+		user: { id: string };
+	};
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${ws.id}/members/${me.user.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// Frozen scope was [ws]; after leaving it, the empty stored filter must still
+	// gate the read (and the edit re-render).
+	expect((await apiGet(`/api/v1/reports/${report.id}`, other)).status).toBe(
+		403,
+	);
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/reports/${report.id}`,
+				{ name: "Edited" },
+				other,
+			)
+		).status,
+	).toBe(403);
+});
+
 it("rejects creating a report with a disabled template", async () => {
 	const { admin, ws } = await setup();
 	const template = (await (
