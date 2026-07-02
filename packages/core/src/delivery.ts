@@ -22,6 +22,21 @@ export const sendReportResultSchema = z.object({
 });
 export type SendReportResult = z.infer<typeof sendReportResultSchema>;
 
+/**
+ * One entry in a report's send history (owner view): a single "Send to" batch,
+ * fanned out to one or more recipients. `id` is the batch id; `readCount` is how
+ * many recipients have opened their copy. Self-copies are excluded.
+ */
+export const reportSendSchema = z.object({
+	id: z.string(),
+	createdAt: z.string(),
+	message: z.string().nullable(),
+	recipientNames: z.array(z.string()),
+	recipientCount: z.number().int().nonnegative(),
+	readCount: z.number().int().nonnegative(),
+});
+export type ReportSend = z.infer<typeof reportSendSchema>;
+
 /** A candidate recipient in the "Send to" picker. */
 export const recipientSchema = z.object({
 	id: z.string(),

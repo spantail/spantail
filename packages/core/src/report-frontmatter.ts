@@ -1,4 +1,4 @@
-import { stringify } from "yaml";
+import { parse, stringify } from "yaml";
 
 import type { DateRangePreset } from "./report";
 
@@ -67,4 +67,17 @@ export function splitFrontMatter(md: string): {
 		return { frontMatter: null, body: md };
 	}
 	return { frontMatter: match[1] ?? "", body: md.slice(match[0].length) };
+}
+
+/**
+ * Parses the system-generated YAML front-matter header into its structured
+ * fields, or null when the document has no header (see splitFrontMatter). This
+ * is the read path for surfacing a rendered version's own provenance (e.g. a
+ * "show header" toggle) — the header is the source of truth, so it reflects the
+ * version as generated rather than re-deriving from the possibly-edited report.
+ */
+export function parseReportFrontMatter(md: string): ReportFrontMatter | null {
+	const { frontMatter } = splitFrontMatter(md);
+	if (frontMatter === null) return null;
+	return parse(frontMatter) as ReportFrontMatter;
 }

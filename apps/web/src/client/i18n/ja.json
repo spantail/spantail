@@ -277,7 +277,28 @@
 			"close": "閉じる",
 			"prev": "前へ",
 			"next": "次へ",
-			"position": "{{total}} 件中 {{index}} 件目"
+			"position": "{{total}} 件中 {{index}} 件目",
+			"showHeader": "ヘッダを表示"
+		},
+		"history": {
+			"title": "履歴",
+			"sentHeading": "送信",
+			"sharedHeading": "共有リンク",
+			"empty": "このレポートはまだ送信・共有されていません。",
+			"recipients_one": "{{count}} 人に送信",
+			"recipients_other": "{{count}} 人に送信",
+			"read": "{{read}}/{{total}} 既読"
+		},
+		"header": {
+			"period": "期間",
+			"total": "合計",
+			"workspaces": "ワークスペース",
+			"projects": "プロジェクト",
+			"users": "ユーザー",
+			"tags": "タグ",
+			"timezone": "タイムゾーン",
+			"generatedAt": "生成日時",
+			"version": "バージョン"
 		},
 		"shares": {
 			"title": "共有: {{name}}",

@@ -57,6 +57,10 @@ export function SendReportDialog({
 			// The report is now shared, so a cached {shared:false} discussion
 			// (owner opened it before sending) must refetch.
 			invalidateReportDiscussion(queryClient, report.id);
+			// Reflect this send in the reading pane's inline send history.
+			queryClient.invalidateQueries({
+				queryKey: ["report-sends", report.id],
+			});
 			// `delivered` counts teammate recipients only; a self-only send reports 0,
 			// so confirm the inbox copy instead.
 			toast.success(

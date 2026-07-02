@@ -34,6 +34,7 @@ import {
 	listProjectsByIds,
 	listReportMetaByOwner,
 	listReportMetaByWorkspace,
+	listReportSendsByReport,
 	listReportSharesByReport,
 	listReportTemplateIdsByOwner,
 	listUsersByIds,
@@ -772,4 +773,22 @@ export const reportRoutes = new Hono<AppEnv>()
 		// Count only the teammate recipients; the self-copy is an inbox convenience,
 		// not a "sent to N people" delivery.
 		return c.json({ delivered: recipientIds.length }, 201);
+	})
+	// A report's send history for its owner: one entry per "Send to" batch. Same
+	// owner + membership re-check as GET /:id/shares.
+	.get("/:id/sends", async (c) => {
+		const { user } = requireScope(c, "read");
+		const report = await requireReportOwner(c, c.req.param("id"));
+		await requireScopeWorkspaces(c, report.filters.workspaceIds);
+		const sends = await listReportSendsByReport(c.var.db, report.id, user.id);
+		return c.json(
+			sends.map((s) => ({
+				id: s.id,
+				createdAt: s.createdAt.toISOString(),
+				message: s.message,
+				recipientNames: s.recipientNames,
+				recipientCount: s.recipientCount,
+				readCount: s.readCount,
+			})),
+		);
 	});

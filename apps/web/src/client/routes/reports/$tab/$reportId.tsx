@@ -1,13 +1,19 @@
-import { type Report, splitFrontMatter } from "@spantail/core";
+import {
+	parseReportFrontMatter,
+	type Report,
+	splitFrontMatter,
+} from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { XIcon } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { CopyMarkdownButton } from "@/components/copy-markdown-button";
 import { MarkdownView } from "@/components/markdown-view";
 import { ReportDeleteAction } from "@/components/report-delete-action";
-import { ReportDiscussion } from "@/components/report-discussion";
+import { ReportHeaderMeta } from "@/components/report-header-meta";
+import { ReportHistory } from "@/components/report-history";
 import { ReportToolbar } from "@/components/report-toolbar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -82,11 +88,26 @@ function ReportReadingPane() {
 }
 
 function ReportPane({ report, tab }: { report: Report; tab: string }) {
+	// Provenance header is hidden by default; the toolbar's "Show header" toggle
+	// reveals the version's own front-matter above the body. Resets per report
+	// (this pane remounts on report change via its key).
+	const [showHeader, setShowHeader] = useState(false);
+
 	return (
 		<div className="flex h-full min-h-0 flex-col">
-			<ReportToolbar report={report} tab={tab} />
+			<ReportToolbar
+				report={report}
+				tab={tab}
+				showHeader={showHeader}
+				onToggleHeader={() => setShowHeader((v) => !v)}
+			/>
 			<div className="min-h-0 flex-1 overflow-y-auto">
 				<div className="mx-auto flex w-full max-w-3xl flex-col gap-7 px-8 py-8">
+					{showHeader && (
+						<ReportHeaderMeta
+							frontMatter={parseReportFrontMatter(report.renderedMarkdown)}
+						/>
+					)}
 					{/* The report name is the markdown's own H1 — no title header.
 					    The YAML front-matter header is stripped by MarkdownView.
 					    `print-area` scopes the Print action to the preview only. */}
@@ -97,7 +118,7 @@ function ReportPane({ report, tab }: { report: Report; tab: string }) {
 						/>
 						<MarkdownView markdown={report.renderedMarkdown} variant="report" />
 					</div>
-					<ReportDiscussion reportId={report.id} />
+					<ReportHistory reportId={report.id} />
 				</div>
 			</div>
 		</div>

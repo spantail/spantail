@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	buildReportFrontMatter,
+	parseReportFrontMatter,
 	type ReportFrontMatter,
 	splitFrontMatter,
 } from "./report-frontmatter";
@@ -41,6 +42,17 @@ describe("report front-matter", () => {
 		const { frontMatter, body } = splitFrontMatter("# Just a body\n\n---\n");
 		expect(frontMatter).toBeNull();
 		expect(body).toBe("# Just a body\n\n---\n");
+	});
+
+	it("parses the system header back into structured fields", () => {
+		const content = `${buildReportFrontMatter(meta)}# Body heading\n`;
+		expect(parseReportFrontMatter(content)).toEqual(meta);
+	});
+
+	it("parses to null when there is no system front-matter", () => {
+		expect(parseReportFrontMatter("# Just a body\n")).toBeNull();
+		const legacy = "---\ntitle: Quarterly\nauthor: Mei\n---\n\n# Q\n";
+		expect(parseReportFrontMatter(legacy)).toBeNull();
 	});
 
 	it("leaves a non-system leading YAML block intact (legacy/user content)", () => {

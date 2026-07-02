@@ -278,6 +278,56 @@ async function listSent(
 	}));
 }
 
+export interface ReportSendRow {
+	id: string;
+	createdAt: Date;
+	message: string | null;
+	recipientNames: string[];
+	recipientCount: number;
+	readCount: number;
+}
+
+/**
+ * A report's send history for its owner: one entry per "Send to" batch, newest
+ * first. Mirrors listSent's batch grouping (batchKey, recipient concat, real
+ * recipients only via notSelfCopy) but scopes to a single report and needs no
+ * folder/flag joins. `readCount` is how many recipients have opened their copy.
+ */
+export async function listReportSendsByReport(
+	db: Database,
+	reportId: string,
+	senderUserId: string,
+): Promise<ReportSendRow[]> {
+	const rows = await db
+		.select({
+			id: batchKey,
+			createdAt: sql<number>`min(${reportDeliveries.createdAt})`,
+			message: sql<string | null>`max(${reportDeliveries.message})`,
+			recipientNames: sql<string>`group_concat(${user.name}, ${NAME_SEP})`,
+			recipientCount: sql<number>`count(*)`,
+			readCount: sql<number>`sum(case when ${reportDeliveries.readAt} is not null then 1 else 0 end)`,
+		})
+		.from(reportDeliveries)
+		.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
+		.where(
+			and(
+				eq(reportDeliveries.reportId, reportId),
+				eq(reportDeliveries.senderUserId, senderUserId),
+				notSelfCopy,
+			),
+		)
+		.groupBy(batchKey)
+		.orderBy(desc(sql`min(${reportDeliveries.createdAt})`), desc(batchKey));
+	return rows.map((r) => ({
+		id: r.id,
+		createdAt: new Date(r.createdAt),
+		message: r.message,
+		recipientNames: r.recipientNames ? r.recipientNames.split(NAME_SEP) : [],
+		recipientCount: r.recipientCount,
+		readCount: Number(r.readCount ?? 0),
+	}));
+}
+
 /**
  * Lists a mailbox folder for the caller. Inbox is received-only, Sent is
  * sent-only; Starred/Archive/Trash span both and are merged newest-first.
