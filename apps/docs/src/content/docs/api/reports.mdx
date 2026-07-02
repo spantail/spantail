@@ -44,8 +44,9 @@ List payloads omit `renderedMarkdown`; fetch the body on demand with [`GET /repo
 | `tags` | string[] | no | Up to 20 tags; an entry matches if it carries any of them. |
 | `dateRange` | object \| string | yes | On the wire, either a preset string or an absolute range. On a stored report, always an absolute `{ from, to }`. |
 
-`dateRange` accepts either a **preset** — one of `today`, `yesterday`, `this_week`, `last_week`,
-`this_month`, `last_month` (resolved server-side in the owner's timezone; weeks start Monday) — or
+`dateRange` accepts either a **preset** — one of `today`, `yesterday`, `last_7_days`, `last_30_days`,
+`this_week`, `last_week`, `this_month`, `last_month` (resolved server-side in the owner's timezone;
+weeks start Monday) — or
 an **absolute range** `{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }` (inclusive; `from ≤ to`,
 spanning at most 366 days). Whichever you send, the stored report keeps the resolved absolute range.
 

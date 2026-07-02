@@ -119,6 +119,8 @@
 		}
 	},
 	"dashboard": {
+		"last30Days": "過去30日間",
+		"last7Days": "過去7日間",
 		"lastWeek": "先週",
 		"thisWeek": "今週",
 		"lastMonth": "先月",

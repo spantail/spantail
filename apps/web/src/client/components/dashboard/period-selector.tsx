@@ -5,6 +5,8 @@ import { DateRangePicker } from "@/components/date-range-picker";
 
 /** Dashboard preset window. Each id is a valid `resolveDateRange` preset. */
 export type HomePeriod =
+	| "last_30_days"
+	| "last_7_days"
 	| "last_week"
 	| "this_week"
 	| "last_month"
@@ -14,18 +16,22 @@ export type HomePeriod =
 export type DashboardPeriod = HomePeriod | AbsoluteDateRange;
 
 const PERIOD_LABEL_KEYS: Record<HomePeriod, string> = {
+	last_30_days: "dashboard.last30Days",
+	last_7_days: "dashboard.last7Days",
 	last_week: "dashboard.lastWeek",
 	this_week: "dashboard.thisWeek",
 	last_month: "dashboard.lastMonth",
 	this_month: "dashboard.thisMonth",
 };
 
-// Mockup rail order: month windows first, then week windows (most recent first).
+// Rail order: rolling windows first (most recent first), then calendar weeks and months.
 const PERIOD_ORDER: HomePeriod[] = [
-	"this_month",
-	"last_month",
+	"last_30_days",
+	"last_7_days",
 	"this_week",
 	"last_week",
+	"this_month",
+	"last_month",
 ];
 
 /** i18n key for a preset's display label — shared by the chart/donut headers. */
@@ -40,8 +46,8 @@ interface PeriodSelectorProps {
 
 /**
  * Period picker for the dashboard widget area: a popover pairing a two-month
- * range calendar with the four preset shortcuts. Re-scopes the daily focus
- * chart and the breakdown donut; the work log and inbox stay unaffected.
+ * range calendar with the preset shortcuts. Re-scopes the daily focus chart,
+ * the breakdown donut, and the work-log timeline; the inbox stays unaffected.
  */
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
 	const { t } = useTranslation();

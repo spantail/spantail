@@ -26,6 +26,23 @@ it("resolves today and yesterday in the given timezone", () => {
 	).toEqual({ from: "2026-06-07", to: "2026-06-07" });
 });
 
+it("resolves rolling windows ending today (inclusive)", () => {
+	// last_7_days spans today and the six days before it.
+	expect(resolveDateRange("last_7_days", "UTC", sundayUtcMondayJst)).toEqual({
+		from: "2026-06-01",
+		to: "2026-06-07",
+	});
+	// last_30_days spans today and the 29 days before it.
+	expect(resolveDateRange("last_30_days", "UTC", sundayUtcMondayJst)).toEqual({
+		from: "2026-05-09",
+		to: "2026-06-07",
+	});
+	// Anchored to today in the viewer's timezone (JST is a day ahead here).
+	expect(
+		resolveDateRange("last_7_days", "Asia/Tokyo", sundayUtcMondayJst),
+	).toEqual({ from: "2026-06-02", to: "2026-06-08" });
+});
+
 it("resolves weeks starting on Monday", () => {
 	// Sunday in UTC belongs to the week starting the previous Monday.
 	expect(resolveDateRange("this_week", "UTC", sundayUtcMondayJst)).toEqual({
