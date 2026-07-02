@@ -139,18 +139,30 @@ it("does not reveal another user's report send history", async () => {
 	expect(res.status).toBe(404);
 });
 
-it("lets a workspace admin read the owner's send history (admin R*)", async () => {
-	const { owner, wsAdmin, report, aliceId } = await setup();
+it("lets a workspace admin read the owner's send history but redacts read state", async () => {
+	const { owner, alice, wsAdmin, report, aliceId } = await setup();
 	await apiJson(
 		"POST",
 		`/api/v1/reports/${report.id}/send`,
 		{ recipientUserIds: [aliceId] },
 		owner,
 	);
+	// Alice opens her copy, so the owner's history shows one read.
+	const aliceInbox = (await (
+		await apiGet("/api/v1/inbox?folder=inbox", alice)
+	).json()) as { id: string }[];
+	await apiJson("POST", `/api/v1/inbox/${aliceInbox[0]?.id}/read`, {}, alice);
+
 	// wsAdmin never sent this report, but reads it (R*); the history is scoped to
-	// the report's owner as sender, so it still lists the owner's send.
-	const rows = await sends(wsAdmin, report.id);
-	expect(rows).toHaveLength(1);
-	expect(rows[0]?.recipientCount).toBe(1);
-	expect(rows[0]?.recipientNames).toEqual(["Alice"]);
+	// the report's owner as sender, so it still lists the owner's send — but the
+	// recipient's read state is redacted (the admin is not the recipient).
+	const adminRows = await sends(wsAdmin, report.id);
+	expect(adminRows).toHaveLength(1);
+	expect(adminRows[0]?.recipientCount).toBe(1);
+	expect(adminRows[0]?.recipientNames).toEqual(["Alice"]);
+	expect(adminRows[0]?.readCount).toBe(0);
+
+	// The owner sees the true read count.
+	const ownerRows = await sends(owner, report.id);
+	expect(ownerRows[0]?.readCount).toBe(1);
 });

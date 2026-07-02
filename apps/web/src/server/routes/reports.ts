@@ -781,7 +781,8 @@ export const reportRoutes = new Hono<AppEnv>()
 	.get("/:id/sends", async (c) => {
 		const { user } = requireScope(c, "read");
 		const report = await requireReportReadAccess(c, c.req.param("id"));
-		if (report.ownerUserId === user.id) {
+		const isOwner = report.ownerUserId === user.id;
+		if (isOwner) {
 			await requireScopeWorkspaces(c, report.filters.workspaceIds);
 		}
 		const sends = await listReportSendsByReport(
@@ -796,7 +797,11 @@ export const reportRoutes = new Hono<AppEnv>()
 				message: s.message,
 				recipientNames: s.recipientNames,
 				recipientCount: s.recipientCount,
-				readCount: s.readCount,
+				// Read state is the recipient's, not the (possibly admin) reader's.
+				// Redact it for anyone but the owner, mirroring the admin delivery
+				// read paths that null readAt — otherwise a single-recipient send
+				// would leak whether that person opened it.
+				readCount: isOwner ? s.readCount : 0,
 			})),
 		);
 	});
