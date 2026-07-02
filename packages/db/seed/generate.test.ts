@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from "node:url";
+import { splitFrontMatter } from "@spantail/core";
 import { describe, expect, it } from "vitest";
 
 import { generateDataset } from "./generate";
@@ -191,7 +192,11 @@ describe("generateDataset", () => {
 		);
 		expect(reports.length).toBeGreaterThan(0);
 		for (const r of reports) {
-			expect(contentByReport.get(r.id as string)).toContain(r.name as string);
+			const content = contentByReport.get(r.id as string) as string;
+			expect(content).toContain(r.name as string);
+			// Seeded content carries the system YAML front-matter header (as the API
+			// composes it), so the reading pane's "Show header" has data to display.
+			expect(splitFrontMatter(content).frontMatter).not.toBeNull();
 			expect(r.totalMinutes as number).toBeGreaterThan(0);
 			expect(r.version).toBe(1);
 		}

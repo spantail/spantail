@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+	buildReportFrontMatter,
 	generateShareToken,
 	hashToken,
 	lastDayOfMonth,
@@ -447,10 +448,44 @@ export async function generateDataset(
 
 	// --- Reports / deliveries / shares -------------------------------------
 	const reportRows: Row[] = [];
-	// One immutable content version per seeded report (all at version 1). Seed
-	// bodies carry no front-matter; that renders fine (display only strips a
-	// header when present).
+	// One immutable content version per seeded report (all at version 1). Each
+	// body carries the same system YAML front-matter header the API composes
+	// (`buildReportFrontMatter` + body), so a seeded report is self-describing and
+	// the reading pane's "Show header" has something to display.
 	const contentRows: Row[] = [];
+	// Composes a report version's stored content exactly as the API does: the
+	// system provenance header (never template-controlled) followed by the body.
+	// Seed reports are all version 1 with absolute (non-preset) periods.
+	const contentWithHeader = (
+		body: string,
+		name: string,
+		templateId: string,
+		filters: ReportFilters,
+		timezone: string,
+		generatedAt: Date,
+		totalMinutes: number,
+	): string =>
+		buildReportFrontMatter({
+			name,
+			version: 1,
+			templateId,
+			period: {
+				from: filters.dateRange.from,
+				to: filters.dateRange.to,
+				preset: null,
+			},
+			filters: {
+				workspaceIds: filters.workspaceIds,
+				...(filters.projectIds?.length
+					? { projectIds: filters.projectIds }
+					: {}),
+				...(filters.userIds?.length ? { userIds: filters.userIds } : {}),
+				...(filters.tags?.length ? { tags: filters.tags } : {}),
+			},
+			totalMinutes,
+			timezone,
+			generatedAt: generatedAt.toISOString(),
+		}) + body;
 	const addReport = (report: Row, rendered: string, createdAt: Date) => {
 		reportRows.push({ ...report, version: 1 });
 		contentRows.push({
@@ -560,6 +595,16 @@ export async function generateDataset(
 					entries: entries.map(toEngineEntry),
 				};
 				const rendered = await renderReport(tmpl.body, context);
+				const totalMinutes = entries.reduce((a, e) => a + e.minutes, 0);
+				const content = contentWithHeader(
+					rendered,
+					name,
+					tmpl.id,
+					filters,
+					ws.timezone,
+					createdAt,
+					totalMinutes,
+				);
 				const id = randomUUID();
 				addReport(
 					{
@@ -569,16 +614,16 @@ export async function generateDataset(
 						templateId: tmpl.id,
 						filters,
 						note: null,
-						totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+						totalMinutes,
 						snapshotProjectIds: scopedProjects.map((p) => p.id),
 						createdAt,
 						updatedAt: createdAt,
 					},
-					rendered,
+					content,
 					createdAt,
 				);
 				addDeliveries(
-					{ id, name, sender: user, rendered },
+					{ id, name, sender: user, rendered: content },
 					manager && manager.key !== user.key ? [manager] : [],
 					date,
 					date,
@@ -655,6 +700,16 @@ export async function generateDataset(
 				entries: entries.map(toEngineEntry),
 			};
 			const rendered = await renderReport(tmpl.body, context);
+			const totalMinutes = entries.reduce((a, e) => a + e.minutes, 0);
+			const content = contentWithHeader(
+				rendered,
+				name,
+				tmpl.id,
+				filters,
+				anchor.timezone,
+				createdAt,
+				totalMinutes,
+			);
 			const id = randomUUID();
 			addReport(
 				{
@@ -664,16 +719,16 @@ export async function generateDataset(
 					templateId: tmpl.id,
 					filters,
 					note: null,
-					totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+					totalMinutes,
 					snapshotProjectIds: scopedProjects.map((p) => p.id),
 					createdAt,
 					updatedAt: createdAt,
 				},
-				rendered,
+				content,
 				createdAt,
 			);
 			addDeliveries(
-				{ id, name, sender, rendered },
+				{ id, name, sender, rendered: content },
 				recipients,
 				date,
 				date,
@@ -762,6 +817,16 @@ export async function generateDataset(
 					entries: entries.map(toEngineEntry),
 				};
 				const rendered = await renderReport(tmpl.body, context);
+				const totalMinutes = entries.reduce((a, e) => a + e.minutes, 0);
+				const content = contentWithHeader(
+					rendered,
+					name,
+					tmpl.id,
+					filters,
+					ws.timezone,
+					createdAt,
+					totalMinutes,
+				);
 				const id = randomUUID();
 				addReport(
 					{
@@ -771,17 +836,17 @@ export async function generateDataset(
 						templateId: tmpl.id,
 						filters,
 						note,
-						totalMinutes: entries.reduce((a, e) => a + e.minutes, 0),
+						totalMinutes,
 						snapshotProjectIds: scopedProjects.map((p) => p.id),
 						createdAt,
 						updatedAt: createdAt,
 					},
-					rendered,
+					content,
 					createdAt,
 				);
 				const manager = managerByWs.get(ws.key);
 				addDeliveries(
-					{ id, name, sender: user, rendered },
+					{ id, name, sender: user, rendered: content },
 					manager && manager.key !== user.key ? [manager] : [],
 					month.first,
 					month.last,
@@ -795,7 +860,7 @@ export async function generateDataset(
 						id: randomUUID(),
 						reportId: id,
 						token,
-						renderedMarkdown: rendered,
+						renderedMarkdown: content,
 						reportName: name,
 						dateFrom: month.first,
 						dateTo: month.last,
