@@ -7,6 +7,7 @@ import {
 	getMailItemDetail,
 	listDeliveriesByWorkspace,
 	listMailbox,
+	type MailItemRow,
 	markAllInboxRead,
 	markInboxRead,
 	markInboxUnread,
@@ -24,6 +25,24 @@ import { requireScope } from "../middleware/auth";
 import { publishToUser } from "../realtime/publish";
 import type { AppEnv } from "../types";
 import { requireReportReadAccess } from "./reports";
+
+// Resolves a row's raw avatar fields into ready-to-use URLs and drops the raw
+// ones, producing the wire `MailItem` shape. Received rows carry the sender's
+// image; sent rows carry per-recipient images aligned with recipientNames.
+function toMailItem(row: MailItemRow) {
+	const { senderUserId, senderImage, recipientIds, recipientImages, ...rest } =
+		row;
+	return {
+		...rest,
+		senderImageUrl: senderUserId
+			? resolveAvatarUrl(senderUserId, senderImage)
+			: null,
+		recipientImageUrls: rest.recipientNames.map((_, i) => {
+			const id = recipientIds[i];
+			return id ? resolveAvatarUrl(id, recipientImages[i]) : null;
+		}),
+	};
+}
 
 // The caller's mailbox of report deliveries (the "Send to" target). Folders are
 // server-side filters over the caller's own deliveries; every route is scoped to
@@ -52,19 +71,19 @@ export const inboxRoutes = new Hono<AppEnv>()
 					"Folder filtering does not apply to a workspace-scoped delivery view",
 				);
 			}
-			return c.json(
-				await listDeliveriesByWorkspace(
-					c.var.db,
-					scope.workspaceId,
-					limit,
-					offset,
-				),
+			const wsRows = await listDeliveriesByWorkspace(
+				c.var.db,
+				scope.workspaceId,
+				limit,
+				offset,
 			);
+			return c.json(wsRows.map(toMailItem));
 		}
 		const userId = scope.kind === "user" ? scope.ownerUserId : scope.userId;
-		// Date timestamps + boolean flags serialize straight to the API shape.
+		// Date timestamps + boolean flags serialize straight to the API shape;
+		// toMailItem resolves the raw avatar fields into URLs.
 		const rows = await listMailbox(c.var.db, userId, folder, limit, offset);
-		return c.json(rows);
+		return c.json(rows.map(toMailItem));
 	})
 	// Static segments registered before "/:id" so they never match it.
 	.get("/counts", async (c) => {
@@ -117,14 +136,14 @@ export const inboxRoutes = new Hono<AppEnv>()
 		if (detail) {
 			if (detail.scope === "sent") {
 				return c.json({
-					...detail,
+					...toMailItem(detail),
 					recipients: detail.recipients.map(({ image, ...r }) => ({
 						...r,
 						imageUrl: resolveAvatarUrl(r.id, image),
 					})),
 				});
 			}
-			return c.json(detail);
+			return c.json(toMailItem(detail));
 		}
 		// Not the caller's own mail — admins may still read it (matrix R/R*) as a
 		// received-detail view. Instance admins read any delivery; a workspace admin
@@ -137,7 +156,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 			}
 			await requireReportReadAccess(c, adminDetail.reportId);
 		}
-		return c.json(adminDetail);
+		return c.json(toMailItem(adminDetail));
 	})
 	.post("/:id/read", async (c) => {
 		const { user } = requireScope(c, "write");

@@ -83,6 +83,9 @@ export const mailItemSchema = z.object({
 	reportId: z.string().nullable(),
 	senderName: z.string(),
 	senderEmail: z.string(),
+	// Received scope: the sender's ready-to-use avatar URL, or null when the
+	// sender has no avatar (or the account was deleted). Sent scope: null.
+	senderImageUrl: z.string().nullable(),
 	reportName: z.string(),
 	dateFrom: z.string(),
 	dateTo: z.string(),
@@ -95,6 +98,9 @@ export const mailItemSchema = z.object({
 	trashed: z.boolean(),
 	// Sent only: aggregated recipients for the "To: …" summary.
 	recipientNames: z.array(z.string()),
+	// Sent only: each recipient's avatar URL, aligned by index with
+	// recipientNames (null where a recipient has no avatar). Empty for received.
+	recipientImageUrls: z.array(z.string().nullable()),
 	recipientCount: z.number().int().nonnegative(),
 });
 export type MailItem = z.infer<typeof mailItemSchema>;
