@@ -155,9 +155,6 @@ function ReadingPane() {
 									onClick={() => window.print()}
 								>
 									<PrinterIcon className="size-4" />
-									<span className="hidden sm:inline">
-										{t("messages.detail.print")}
-									</span>
 								</Button>
 								<Button
 									variant="outline"
@@ -172,9 +169,6 @@ function ReadingPane() {
 									}
 								>
 									<DownloadIcon className="size-4" />
-									<span className="hidden sm:inline">
-										{t("messages.detail.download")}
-									</span>
 								</Button>
 							</div>
 						</div>
