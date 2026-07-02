@@ -1,4 +1,4 @@
-import { todayInTimezone } from "@spantail/core";
+import { resolveDateRange, todayInTimezone } from "@spantail/core";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -50,9 +50,12 @@ function Timeline({
 	const { t, i18n } = useTranslation();
 	const { openCreate } = useEntryDialog();
 	const navigate = useNavigate();
-	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
+	const [period, setPeriod] = useState<DashboardPeriod>("last_30_days");
 	const timezone = useUserTimezone();
 	const today = todayInTimezone(timezone);
+	// The timeline follows the period selector: resolve the window to absolute
+	// dates so the entry query (and its cache key) tracks the selected range.
+	const range = resolveDateRange(period, timezone);
 	const dateLabel = formatEntryDate(today, i18n.language, {
 		weekday: "long",
 		month: "long",
@@ -60,11 +63,20 @@ function Timeline({
 	});
 	const projects = useProjects();
 	const entries = useInfiniteQuery({
-		queryKey: ["work-entries", workspaceId, "timeline", userId],
+		queryKey: [
+			"work-entries",
+			workspaceId,
+			"timeline",
+			userId,
+			range.from,
+			range.to,
+		],
 		queryFn: ({ pageParam }) =>
 			api.listWorkEntries({
 				workspaceId,
 				userId,
+				from: range.from,
+				to: range.to,
 				limit: PAGE_SIZE,
 				offset: pageParam,
 			}),

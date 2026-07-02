@@ -116,6 +116,8 @@
 		}
 	},
 	"dashboard": {
+		"last30Days": "Last 30 days",
+		"last7Days": "Last 7 days",
 		"lastWeek": "Last week",
 		"thisWeek": "This week",
 		"lastMonth": "Last month",
@@ -212,6 +214,8 @@
 		"range": {
 			"today": "Today",
 			"yesterday": "Yesterday",
+			"last_7_days": "Last 7 days",
+			"last_30_days": "Last 30 days",
 			"this_week": "This week",
 			"last_week": "Last week",
 			"this_month": "This month",

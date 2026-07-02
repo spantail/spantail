@@ -44,8 +44,8 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `tags` | string[] | いいえ | 最大 20 件のタグ。いずれかを持つエントリが一致。 |
 | `dateRange` | object \| string | はい | ワイヤ上はプリセット文字列か絶対範囲。保存済みレポートでは常に絶対値の `{ from, to }`。 |
 
-`dateRange` は **プリセット**（`today`、`yesterday`、`this_week`、`last_week`、`this_month`、
-`last_month` のいずれか。サーバー側で所有者のタイムゾーンで解決。週は月曜始まり）か、**絶対範囲**
+`dateRange` は **プリセット**（`today`、`yesterday`、`last_7_days`、`last_30_days`、`this_week`、
+`last_week`、`this_month`、`last_month` のいずれか。サーバー側で所有者のタイムゾーンで解決。週は月曜始まり）か、**絶対範囲**
 `{ "from": "YYYY-MM-DD", "to": "YYYY-MM-DD" }`（両端含む。`from ≤ to`、最大 366 日）を受け付けます。
 いずれを送っても、保存されるレポートは解決済みの絶対範囲を保持します。
 

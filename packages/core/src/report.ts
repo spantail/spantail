@@ -6,6 +6,8 @@ import { tagSchema } from "./work-entry";
 export const dateRangePresetSchema = z.enum([
 	"today",
 	"yesterday",
+	"last_7_days",
+	"last_30_days",
 	"this_week",
 	"last_week",
 	"this_month",
@@ -247,6 +249,10 @@ export function resolveDateRange(
 			const yesterday = shiftDays(today, -1);
 			return { from: yesterday, to: yesterday };
 		}
+		case "last_7_days":
+			return { from: shiftDays(today, -6), to: today };
+		case "last_30_days":
+			return { from: shiftDays(today, -29), to: today };
 		case "this_week":
 		case "last_week": {
 			const dow = new Date(`${today}T00:00:00Z`).getUTCDay();
