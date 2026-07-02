@@ -96,10 +96,13 @@ A report snapshot captures exactly what its author could see when it was generat
 persisted content is **not re-filtered against live entries on later reads** — see
 [`permissions.md`](./permissions.md). The deliberate consequence differs by surface:
 
-- The **owner** reading their own report (`GET /api/v1/reports/:id`) still has workspace
-  membership re-checked, so losing **workspace** membership revokes access. Losing only a
-  **project** ACL (while remaining a workspace member) does not — the snapshot still shows
-  the projects the author could read at render time.
+- The **owner** reading their own single-workspace (or legacy multi-workspace) report
+  (`GET /api/v1/reports/:id`) still has workspace membership re-checked, so losing
+  **workspace** membership revokes access. Losing only a **project** ACL (while remaining a
+  workspace member) does not — the snapshot still shows the projects the author could read at
+  render time. An **instance-scope** report stores an empty workspace set (`filters.workspaceIds
+  === []`) and is owner-scoped, so it carries no per-workspace gate: its content is the owner's
+  own work, and the owner keeps access regardless of later membership changes.
 - A **public share** (`/share/:token`) or a **Send-to delivery** is reached by capability
   token / recipient identity, with no live membership check, so an already-shared or
   delivered copy stays viewable even after the author or recipient loses access.

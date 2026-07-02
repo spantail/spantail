@@ -195,13 +195,15 @@ async function renderReportDocument(
 	// point-in-time — this is enforced at render, not on stored content.
 	const { user } = requireAuth(c);
 	// A single-workspace scope filters to that workspace; an empty selection means
-	// instance scope — resolved here to the caller's workspaces and stored as the
-	// concrete set (like a preset date range resolved to absolute dates), so the
-	// snapshot records exactly which workspaces it covered.
-	const workspaceIds =
-		filters.workspaceIds.length > 0
-			? filters.workspaceIds
-			: (await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id);
+	// instance scope. Instance scope is owner-scoped (see userIds below), so the
+	// workspace set is not part of the report's identity — it is resolved here to
+	// the caller's memberships only to bound the entry query, and NOT persisted
+	// (the stored filter keeps the empty set, so it never records a stale
+	// membership snapshot; only the entries, which are the owner's own, matter).
+	const instanceScope = filters.workspaceIds.length === 0;
+	const workspaceIds = instanceScope
+		? (await listWorkspacesForUser(c.var.db, user.id)).map((w) => w.id)
+		: filters.workspaceIds;
 	if (workspaceIds.length === 0) {
 		throw new AppError("bad_request", "You do not belong to any workspace");
 	}
@@ -297,7 +299,9 @@ async function renderReportDocument(
 		templateId,
 		period: { from: range.from, to: range.to, preset },
 		filters: {
-			workspaceIds,
+			// Instance scope stores the empty set: it is owner-scoped, so the
+			// resolved membership set is a query detail, not part of the snapshot.
+			workspaceIds: instanceScope ? [] : workspaceIds,
 			...(filters.projectIds?.length ? { projectIds: filters.projectIds } : {}),
 			...(filters.userIds?.length ? { userIds: filters.userIds } : {}),
 			...(filters.tags?.length ? { tags: filters.tags } : {}),
@@ -313,7 +317,11 @@ async function renderReportDocument(
 
 	return {
 		content,
-		resolvedFilters: { ...filters, workspaceIds, dateRange: range },
+		resolvedFilters: {
+			...filters,
+			workspaceIds: instanceScope ? [] : workspaceIds,
+			dateRange: range,
+		},
 		totalMinutes,
 		entryCount: entries.length,
 		// Distinct projects with at least one entry (entries with no project are
@@ -350,9 +358,17 @@ async function reportRecipientCandidates(
 	const snapshotProjectIds = report.snapshotProjectIds;
 	if (snapshotProjectIds === null) return [];
 
+	// Instance-scope reports store an empty workspace set (owner-scoped); resolve
+	// the recipient pool live from the owner's current workspaces. senderId is the
+	// report owner (every send-path route requires owner), so this is their set.
+	const workspaceIds =
+		report.filters.workspaceIds.length > 0
+			? report.filters.workspaceIds
+			: (await listWorkspacesForUser(c.var.db, senderId)).map((w) => w.id);
+
 	const base = await listMembersInAllWorkspaces(
 		c.var.db,
-		report.filters.workspaceIds,
+		workspaceIds,
 		senderId,
 	);
 	if (snapshotProjectIds.length === 0) return base;
@@ -361,7 +377,7 @@ async function reportRecipientCandidates(
 	const projectWorkspace = new Map(projects.map((p) => [p.id, p.workspaceId]));
 	const adminsByWorkspace = new Map<string, Set<string>>();
 	const membersByProject = new Map<string, Set<string>>();
-	for (const wsId of report.filters.workspaceIds) {
+	for (const wsId of workspaceIds) {
 		const ms = await listMembers(c.var.db, wsId);
 		adminsByWorkspace.set(
 			wsId,

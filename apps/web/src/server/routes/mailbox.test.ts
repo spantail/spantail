@@ -126,6 +126,39 @@ it("groups a fan-out send into one Sent entry, one inbox row each", async () => 
 	expect(await folder(owner, "inbox")).toHaveLength(0);
 });
 
+it("resolves recipients for an instance-scope report (empty workspaceIds)", async () => {
+	const { owner, aliceId, bobId } = await setup();
+	// An instance-scope report stores an empty workspace set (owner-scoped); its
+	// recipient pool must still resolve live from the owner's current workspaces.
+	const instanceReport = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Instance daily",
+				templateId: await defaultTemplateId(owner),
+				filters: { workspaceIds: [], dateRange: "today" },
+			},
+			owner,
+		)
+	).json()) as { id: string };
+
+	const recipients = (await (
+		await apiGet(`/api/v1/reports/${instanceReport.id}/recipients`, owner)
+	).json()) as Array<{ id: string }>;
+	expect(recipients.map((r) => r.id).sort()).toEqual([aliceId, bobId].sort());
+
+	const sent = await apiJson(
+		"POST",
+		`/api/v1/reports/${instanceReport.id}/send`,
+		{ recipientUserIds: [aliceId, bobId] },
+		owner,
+	);
+	expect((await sent.json()) as { delivered: number }).toEqual({
+		delivered: 2,
+	});
+});
+
 it("keeps recipient and sender flags independent (no collision)", async () => {
 	const { owner, alice, report, aliceId, bobId } = await setup();
 	await apiJson(

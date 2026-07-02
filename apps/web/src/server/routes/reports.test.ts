@@ -632,7 +632,7 @@ it("rejects filters outside the caller's workspace memberships", async () => {
 	expect(ghost.status).toBe(403);
 });
 
-it("resolves an empty workspace selection to instance scope (all the caller's workspaces)", async () => {
+it("aggregates every workspace for instance scope but stores the empty set", async () => {
 	const { admin, project, ws, templateId } = await setup();
 	// A second workspace the admin also belongs to, so instance scope spans both.
 	const ws2 = (await (
@@ -669,12 +669,17 @@ it("resolves an empty workspace selection to instance scope (all the caller's wo
 	const report = (await res.json()) as {
 		filters: { workspaceIds: string[] };
 		totalMinutes: number;
+		renderedMarkdown: string;
 	};
-	// Empty input is stored as the concrete resolved set of the caller's workspaces.
-	expect([...report.filters.workspaceIds].sort()).toEqual(
-		[ws.id, ws2.id].sort(),
-	);
-	// Both workspaces' entries are aggregated.
+	// Instance scope is owner-scoped: the resolved membership set is a query
+	// detail, so the stored filter keeps the empty set (not the expanded list).
+	expect(report.filters.workspaceIds).toEqual([]);
+	// The front-matter likewise records the empty set, never the expanded list.
+	const { frontMatter } = splitFrontMatter(report.renderedMarkdown);
+	expect(frontMatter).toContain("workspaceIds: []");
+	expect(frontMatter).not.toContain(ws.id);
+	expect(frontMatter).not.toContain(ws2.id);
+	// Both workspaces' own entries are still aggregated (query unchanged).
 	expect(report.totalMinutes).toBe(60);
 });
 
