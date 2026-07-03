@@ -1,7 +1,14 @@
 import { SpantailApiError } from "@spantail/sdk";
 
 import { authLogin, authLogout, authStatus } from "./commands/auth";
-import { entriesList } from "./commands/entries";
+import {
+	entriesDelete,
+	entriesEdit,
+	entriesList,
+	entriesStats,
+	entriesTags,
+	entriesView,
+} from "./commands/entries";
 import { logCommand } from "./commands/log";
 import { mcpCommand } from "./commands/mcp";
 import { projectsList } from "./commands/projects";
@@ -21,7 +28,14 @@ const commands: Record<
 	workspaces: { list: workspacesList },
 	projects: { list: projectsList },
 	log: logCommand,
-	entries: { list: entriesList },
+	entries: {
+		list: entriesList,
+		view: entriesView,
+		edit: entriesEdit,
+		delete: entriesDelete,
+		stats: entriesStats,
+		tags: entriesTags,
+	},
 	report: { list: reportList, view: reportView },
 	mcp: mcpCommand,
 };
@@ -38,6 +52,11 @@ Commands:
   projects list     List the projects in a workspace
   log               Log a work entry
   entries list      List recent work entries
+  entries view      Print one work entry in full
+  entries edit      Update fields of a work entry
+  entries delete    Delete a work entry
+  entries stats     Show aggregated work-entry stats
+  entries tags      List the distinct tags in scope
   report list       List your reports
   report view       Print a report's rendered markdown
   mcp               Run a stdio MCP server bridging AI clients to a Spantail instance
