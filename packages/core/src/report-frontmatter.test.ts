@@ -108,9 +108,10 @@ describe("renderReportFrontMatterYaml", () => {
 		const rlo = String.fromCharCode(0x202e); // right-to-left override
 		const zwsp = String.fromCharCode(0x200b); // zero-width space
 		const bell = String.fromCharCode(0x07); // C0 control
+		const invPlus = String.fromCharCode(0x2064); // invisible plus (U+206x format char)
 		const hostile: ReportFrontMatter = {
 			...meta,
-			name: `report${rlo}${zwsp}${bell}name`,
+			name: `report${rlo}${zwsp}${bell}${invPlus}name`,
 			filters: { workspaceIds: ["ws-1"] },
 		};
 		const content = `${buildReportFrontMatter(hostile)}# Body\n`;
@@ -121,6 +122,7 @@ describe("renderReportFrontMatterYaml", () => {
 		expect(line).not.toContain(rlo);
 		expect(line).not.toContain(zwsp);
 		expect(line).not.toContain(bell);
+		expect(line).not.toContain(invPlus);
 		expect(line).toContain("report");
 		expect(line).toContain("name");
 	});

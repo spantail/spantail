@@ -117,8 +117,7 @@ function isUnsafeDisplayChar(cp: number): boolean {
 		cp === 0x2028 || // line separator
 		cp === 0x2029 || // paragraph separator
 		(cp >= 0x202a && cp <= 0x202e) || // bidi embeddings/overrides
-		cp === 0x2060 || // word joiner
-		(cp >= 0x2066 && cp <= 0x2069) || // bidi isolates
+		(cp >= 0x2060 && cp <= 0x2069) || // word joiner, invisible math ops, bidi isolates
 		cp === 0xfeff // BOM / zero-width no-break space
 	);
 }
