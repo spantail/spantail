@@ -7,7 +7,7 @@ settings:
 overrides:
   undici: ^7.28.0
   ws: ^8.21.0
-  yaml: ^2.8.3
+  yaml: ^2.9.0
   esbuild: ^0.28.1
 
 importers:
@@ -252,7 +252,7 @@ importers:
         specifier: ^10.27.0
         version: 10.27.0
       yaml:
-        specifier: ^2.8.3
+        specifier: ^2.9.0
         version: 2.9.0
       zod:
         specifier: ^4.4.3
@@ -290,7 +290,7 @@ importers:
         specifier: ^0.31.10
         version: 0.31.10
       yaml:
-        specifier: ^2.8.3
+        specifier: ^2.9.0
         version: 2.9.0
 
   packages/sdk:
@@ -6081,7 +6081,7 @@ packages:
       sugarss: ^5.0.0
       terser: ^5.16.0
       tsx: ^4.8.1
-      yaml: ^2.8.3
+      yaml: ^2.9.0
     peerDependenciesMeta:
       '@types/node':
         optional: true
