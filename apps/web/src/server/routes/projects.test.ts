@@ -125,17 +125,34 @@ it("updates a project's name, slug, color and description", async () => {
 	expect(body.hue).toBe(200);
 });
 
-it("creates a project with an explicit colour hue", async () => {
+it("creates a project with an explicit colour hue and symbol", async () => {
 	const { admin, ws } = await setup();
 	const created = await apiJson(
 		"POST",
 		`/api/v1/workspaces/${ws.id}/projects`,
-		{ slug: "spantail", name: "Spantail", hue: 160 },
+		{ slug: "spantail", name: "Spantail", hue: 160, symbol: "star" },
 		admin,
 	);
 	expect(created.status).toBe(201);
-	const project = (await created.json()) as { hue: number | null };
+	const project = (await created.json()) as {
+		hue: number | null;
+		symbol: string;
+	};
 	expect(project.hue).toBe(160);
+	expect(project.symbol).toBe("star");
+});
+
+it("defaults a project's symbol to circle when omitted", async () => {
+	const { admin, ws } = await setup();
+	const created = await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/projects`,
+		{ slug: "spantail", name: "Spantail" },
+		admin,
+	);
+	expect(created.status).toBe(201);
+	const project = (await created.json()) as { symbol: string };
+	expect(project.symbol).toBe("circle");
 });
 
 it("rejects updating a slug to one already used in the workspace", async () => {

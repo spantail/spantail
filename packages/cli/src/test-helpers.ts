@@ -115,6 +115,7 @@ export function projectFixture(
 		name: slug.toUpperCase(),
 		description: null,
 		hue: 264,
+		symbol: "circle",
 		status,
 		createdAt: "2026-06-01T00:00:00Z",
 		archivedAt: null,

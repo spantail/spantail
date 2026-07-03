@@ -4,6 +4,7 @@
   slug: platform
   name: Platform Core
   hue: 240
+  symbol: square
   description: Core services and APIs.
   activities:
     - Implemented the workspace invitation flow
@@ -16,6 +17,7 @@
   slug: tooling
   name: Internal Tools
   hue: 160
+  symbol: triangle
   description: Internal developer tooling.
   activities:
     - Built the local seed-data generator
@@ -27,6 +29,7 @@
   slug: devops
   name: DevOps
   hue: 20
+  symbol: diamond
   description: CI/CD and infrastructure.
   activities:
     - Tuned the Workers deploy pipeline
@@ -39,6 +42,7 @@
   slug: warehouse
   name: Warehouse App
   hue: 40
+  symbol: star
   description: Warehouse management application.
   activities:
     - Wired up the pick-and-pack workflow screens
@@ -50,6 +54,7 @@
   slug: mobile
   name: Mobile Client
   hue: 200
+  symbol: heart
   description: Customer-facing mobile client.
   activities:
     - Implemented offline order caching
@@ -60,6 +65,7 @@
   slug: data
   name: Data Pipeline
   hue: 264
+  symbol: spade
   description: Batch and streaming data pipeline.
   activities:
     - Backfilled the sensor telemetry tables
@@ -71,6 +77,7 @@
   slug: portal
   name: Web Portal
   hue: 300
+  symbol: club
   description: Public web portal.
   activities:
     - Rebuilt the article landing pages
@@ -81,6 +88,7 @@
   slug: analytics
   name: Analytics
   hue: 120
+  symbol: ring
   description: Product analytics and dashboards.
   activities:
     - Modeled the subscriber funnel dashboard
@@ -91,6 +99,7 @@
   slug: cms
   name: CMS Migration
   hue: 340
+  symbol: circle
   description: Headless CMS migration.
   activities:
     - Mapped legacy content types to the headless CMS
@@ -102,6 +111,7 @@
   slug: inventory
   name: Inventory System
   hue: 80
+  symbol: triangle
   description: Warehouse inventory management system.
   activities:
     - Implemented the goods-receipt screen
@@ -113,6 +123,7 @@
   slug: orders
   name: Ordering API
   hue: 200
+  symbol: square
   description: Order and procurement API.
   activities:
     - Implemented the purchase-order endpoint
@@ -123,6 +134,7 @@
   slug: dashboard
   name: Admin Dashboard
   hue: 264
+  symbol: diamond
   description: Internal admin dashboard.
   activities:
     - Built the sales-summary screen
@@ -134,6 +146,7 @@
   slug: crm
   name: CRM Platform
   hue: 60
+  symbol: star
   description: Customer relationship management platform.
   activities:
     - Built the contact deduplication job
@@ -144,6 +157,7 @@
   slug: billing
   name: Billing Service
   hue: 320
+  symbol: club
   description: Subscription billing and invoicing.
   activities:
     - Implemented proration on plan changes

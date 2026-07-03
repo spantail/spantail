@@ -1,8 +1,12 @@
-import type {
-	Project,
-	ProjectMember,
-	ProjectMemberAvatar,
-	WorkspaceMember,
+import {
+	DEFAULT_PROJECT_SYMBOL,
+	PROJECT_SYMBOLS,
+	type Project,
+	type ProjectMember,
+	type ProjectMemberAvatar,
+	type ProjectSymbol,
+	pickNextSymbol,
+	type WorkspaceMember,
 } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -20,8 +24,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { Dot } from "@/components/dot";
 import { PersonAvatar } from "@/components/person-avatar";
+import { ProjectMarker } from "@/components/project-marker";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -121,6 +125,41 @@ function ColorPicker({
 						style={{ background: `oklch(0.62 0.17 ${option})` }}
 					>
 						{selected && <CheckIcon className="size-3.5 text-white" />}
+					</button>
+				);
+			})}
+		</div>
+	);
+}
+
+function SymbolPicker({
+	hue,
+	value,
+	onChange,
+}: {
+	hue: number;
+	value: ProjectSymbol;
+	onChange: (symbol: ProjectSymbol) => void;
+}) {
+	const { t } = useTranslation();
+	return (
+		<div className="flex flex-wrap gap-2">
+			{PROJECT_SYMBOLS.map((option) => {
+				const selected = value === option;
+				return (
+					<button
+						key={option}
+						type="button"
+						aria-label={`${t("settings.projects.symbol")} ${option}`}
+						aria-pressed={selected}
+						onClick={() => onChange(option)}
+						className={cn(
+							"border-border flex size-7 items-center justify-center rounded-full border transition-transform hover:scale-110",
+							selected &&
+								"ring-foreground ring-offset-background border-transparent ring-2 ring-offset-2",
+						)}
+					>
+						<ProjectMarker hue={hue} symbol={option} size={16} />
 					</button>
 				);
 			})}
@@ -261,6 +300,10 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 	const [slug, setSlug] = useState("");
 	const [name, setName] = useState("");
 	const [hue, setHue] = useState<number>(DEFAULT_PROJECT_HUE);
+	const [symbol, setSymbol] = useState<ProjectSymbol>(DEFAULT_PROJECT_SYMBOL);
+	// Until the user picks a symbol, the form tracks a suggestion that spreads
+	// variety across the workspace's existing projects (see the effect below).
+	const [symbolTouched, setSymbolTouched] = useState(false);
 	const [memberIds, setMemberIds] = useState<string[]>([]);
 	const [error, setError] = useState<string | null>(null);
 	const [editing, setEditing] = useState<Project | null>(null);
@@ -272,6 +315,16 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 		queryFn: () => api.listProjects(workspaceId),
 		enabled: Boolean(workspaceId),
 	});
+
+	// The least-used symbol among existing projects, so a new project defaults to
+	// a shape that isn't already crowded. Recomputes as projects load / change.
+	const suggestedSymbol = useMemo(
+		() => pickNextSymbol((projects.data ?? []).map((p) => p.symbol)),
+		[projects.data],
+	);
+	useEffect(() => {
+		if (!symbolTouched) setSymbol(suggestedSymbol);
+	}, [suggestedSymbol, symbolTouched]);
 
 	// Workspace members feed the create form's member picker and the manage dialog.
 	const workspaceMembers = useQuery({
@@ -309,6 +362,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 				slug,
 				name,
 				hue,
+				symbol,
 				memberUserIds: memberIds,
 			}),
 		onSuccess: async () => {
@@ -316,6 +370,9 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 			setSlug("");
 			setName("");
 			setHue(DEFAULT_PROJECT_HUE);
+			// Re-enable the auto-suggestion so the next project picks a fresh shape
+			// (the refreshed project list now includes the one just created).
+			setSymbolTouched(false);
 			setMemberIds([]);
 			setError(null);
 			toast.success(t("settings.projects.toast.created"));
@@ -385,6 +442,17 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 							<ColorPicker value={hue} onChange={setHue} />
 						</div>
 						<div className="flex flex-col gap-2">
+							<Label>{t("settings.projects.symbol")}</Label>
+							<SymbolPicker
+								hue={hue}
+								value={symbol}
+								onChange={(s) => {
+									setSymbol(s);
+									setSymbolTouched(true);
+								}}
+							/>
+						</div>
+						<div className="flex flex-col gap-2">
 							<Label>{t("settings.projects.members.label")}</Label>
 							<MemberMultiSelect
 								members={workspaceMembers.data ?? []}
@@ -418,7 +486,7 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 							>
 								<TableCell>
 									<span className="flex items-center gap-2">
-										<Dot hue={project.hue} />
+										<ProjectMarker hue={project.hue} symbol={project.symbol} />
 										{project.name}
 									</span>
 								</TableCell>
@@ -552,6 +620,7 @@ function ProjectEditDialog({
 	const [slug, setSlug] = useState("");
 	const [description, setDescription] = useState("");
 	const [hue, setHue] = useState<number>(DEFAULT_PROJECT_HUE);
+	const [symbol, setSymbol] = useState<ProjectSymbol>(DEFAULT_PROJECT_SYMBOL);
 	const [error, setError] = useState<string | null>(null);
 
 	// Seed the form whenever a different project is opened for editing.
@@ -561,6 +630,7 @@ function ProjectEditDialog({
 			setSlug(project.slug);
 			setDescription(project.description ?? "");
 			setHue(project.hue);
+			setSymbol(project.symbol);
 			setError(null);
 		}
 	}, [project]);
@@ -573,6 +643,7 @@ function ProjectEditDialog({
 				slug: slug.trim(),
 				description: description.trim() || null,
 				hue,
+				symbol,
 			});
 		},
 		onSuccess: () => onSaved(),
@@ -620,6 +691,10 @@ function ProjectEditDialog({
 					<div className="flex flex-col gap-2 sm:col-span-2">
 						<Label>{t("settings.projects.color")}</Label>
 						<ColorPicker value={hue} onChange={setHue} />
+					</div>
+					<div className="flex flex-col gap-2 sm:col-span-2">
+						<Label>{t("settings.projects.symbol")}</Label>
+						<SymbolPicker hue={hue} value={symbol} onChange={setSymbol} />
 					</div>
 					<div className="flex flex-col gap-2 sm:col-span-2">
 						<Label htmlFor="pe-desc">

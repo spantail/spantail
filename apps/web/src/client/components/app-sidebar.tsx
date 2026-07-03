@@ -4,7 +4,7 @@ import { ChevronRightIcon, HomeIcon, SettingsIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AgentTypeIcon } from "@/components/agent-icon";
-import { Dot } from "@/components/dot";
+import { ProjectMarker } from "@/components/project-marker";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -142,7 +142,11 @@ function ProjectsGroup() {
 														projectSlug: project.slug,
 													}}
 												>
-													<Dot hue={project.hue} size={12} />
+													<ProjectMarker
+														hue={project.hue}
+														symbol={project.symbol}
+														size={12}
+													/>
 													<span>{project.name}</span>
 												</Link>
 											</SidebarMenuButton>

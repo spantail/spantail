@@ -151,6 +151,7 @@ export function DashboardStats({
 							: (projectById(row.projectId)?.name ?? row.projectId),
 					minutes: row.minutes,
 					hue: projectById(row.projectId)?.hue ?? null,
+					symbol: projectById(row.projectId)?.symbol ?? null,
 				}))
 			: data.byUser.map((row) => ({
 					key: row.userId,

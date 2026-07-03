@@ -1,4 +1,4 @@
-import { workEntrySources } from "@spantail/core";
+import { PROJECT_SYMBOLS, workEntrySources } from "@spantail/core";
 import { sql } from "drizzle-orm";
 import {
 	index,
@@ -63,6 +63,11 @@ export const projects = sqliteTable(
 		// Color marker (OKLCH hue 0–359). Always set; the create form picks one
 		// and this default covers rows created without an explicit color.
 		hue: integer("hue").notNull().default(264),
+		// Shape marker paired with the hue so a project is identifiable by shape
+		// as well as colour. Defaults to "circle" for migrated/omitted rows.
+		symbol: text("symbol", { enum: PROJECT_SYMBOLS })
+			.notNull()
+			.default("circle"),
 		status: text("status", { enum: ["active", "archived"] })
 			.notNull()
 			.default("active"),

@@ -1,4 +1,8 @@
-import { formatDuration, type WorkEntry } from "@spantail/core";
+import {
+	formatDuration,
+	type ProjectSymbol,
+	type WorkEntry,
+} from "@spantail/core";
 import {
 	CalendarIcon,
 	ClockIcon,
@@ -12,9 +16,9 @@ import {
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Dot } from "@/components/dot";
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
+import { ProjectMarker } from "@/components/project-marker";
 import { Badge } from "@/components/ui/badge";
 
 /** Provenance chip icon per logging route. */
@@ -28,8 +32,10 @@ const SOURCE_ICONS: Record<WorkEntry["source"], LucideIcon> = {
 interface EntryDetailProps {
 	entry: WorkEntry;
 	projectName: string;
-	/** Project's OKLCH hue for the color dot; null when unassigned. */
+	/** Project's OKLCH hue for the marker; null when unassigned. */
 	projectHue: number | null;
+	/** Project's marker symbol; null when unassigned. */
+	projectSymbol: ProjectSymbol | null;
 	dateLabel: string;
 	/** Local start–end time range, when both ends are recorded. */
 	timeRange: string | null;
@@ -46,6 +52,7 @@ export function EntryDetail({
 	entry,
 	projectName,
 	projectHue,
+	projectSymbol,
 	dateLabel,
 	timeRange,
 	authorName,
@@ -61,9 +68,9 @@ export function EntryDetail({
 					icon={<FolderIcon className="size-3.5" />}
 					label={t("entries.project")}
 					value={
-						projectHue != null ? (
+						projectHue != null && projectSymbol != null ? (
 							<span className="flex items-center gap-1.5">
-								<Dot hue={projectHue} />
+								<ProjectMarker hue={projectHue} symbol={projectSymbol} />
 								{projectName}
 							</span>
 						) : (

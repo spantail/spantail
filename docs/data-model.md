@@ -141,7 +141,7 @@ erDiagram
 |---|---|---|---|
 | `workspaces` | Workspace | Organizational unit (department, team, or client) and the primary membership scope — not an isolated tenant (users can belong to several, and reports can span them). Has accent color, optional logo. Timezone is a per-user concept, not a workspace one. | contains projects, members, entries |
 | `workspace_members` | Workspace | Membership and role: `owner` / `admin` / `member`. PK (workspaceId, userId). | joins `workspaces` and `user` |
-| `projects` | Workspace | A workspace subdivision. Status `active` / `archived`; color hue; slug unique per workspace. | belongs to `workspaces` (cascade) |
+| `projects` | Workspace | A workspace subdivision. Status `active` / `archived`; marker = color hue + shape symbol (paired so a project is identifiable by shape as well as colour, symbol defaults to `circle`); slug unique per workspace. | belongs to `workspaces` (cascade) |
 | `project_members` | Project | Binary membership (no per-project role), managed by workspace admins. | joins `projects` and `user` |
 | `work_entries` | Project / Workspace | Human-logged work: `entry_date`, `durationMinutes`, description, tags, `source`. | author `user`; denormalized `workspaceId`; optional `projectId` (set null on project delete) |
 

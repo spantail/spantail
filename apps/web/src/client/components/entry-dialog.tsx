@@ -150,6 +150,7 @@ export function EntryDialogProvider({
 			: t("projects.unassigned")
 		: "";
 	const viewProjectHue = viewProject?.hue ?? null;
+	const viewProjectSymbol = viewProject?.symbol ?? null;
 	const viewDateLabel = viewEntry
 		? formatEntryDate(viewEntry.entryDate, i18n.language, {
 				year: "numeric",
@@ -217,6 +218,7 @@ export function EntryDialogProvider({
 									entry={state.entry}
 									projectName={viewProjectName}
 									projectHue={viewProjectHue}
+									projectSymbol={viewProjectSymbol}
 									dateLabel={viewDateLabel}
 									timeRange={viewTimeRange}
 									authorName={viewAuthorName}

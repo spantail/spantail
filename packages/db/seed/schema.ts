@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+	projectSymbolSchema,
 	slugSchema,
 	tagSchema,
 	timezoneSchema,
@@ -45,6 +46,8 @@ const projectConfigSchema = z.object({
 	description: z.string().max(1000).optional(),
 	// Color marker as an OKLCH hue (0–359).
 	hue: z.number().int().min(0).max(359),
+	// Shape marker paired with the hue. Defaults to "circle" when omitted.
+	symbol: projectSymbolSchema.default("circle"),
 	// Concrete task phrases the generator draws from; authored in the workspace language.
 	activities: z.array(z.string().min(1).max(200)).min(1),
 });

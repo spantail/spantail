@@ -10,8 +10,8 @@ import {
 	type DashboardPeriod,
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
-import { Dot } from "@/components/dot";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
+import { ProjectMarker } from "@/components/project-marker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -74,8 +74,6 @@ function AgentPage() {
 	const projectById = new Map((projects.data ?? []).map((p) => [p.id, p]));
 	const projectName = (id: string | null) =>
 		id ? (projectById.get(id)?.name ?? id) : t("projects.unassigned");
-	const projectHue = (id: string | null) =>
-		id ? projectById.get(id)?.hue : undefined;
 
 	const entries = useInfiniteQuery({
 		// Each entry's `entryDate` is derived server-side in the viewer's timezone,
@@ -215,7 +213,9 @@ function AgentPage() {
 							</TableHeader>
 							<TableBody>
 								{list.map((entry, index) => {
-									const hue = projectHue(entry.projectId);
+									const project = entry.projectId
+										? projectById.get(entry.projectId)
+										: undefined;
 									return (
 										<TableRow
 											key={entry.id}
@@ -249,7 +249,13 @@ function AgentPage() {
 											</TableCell>
 											<TableCell className="whitespace-nowrap">
 												<span className="flex items-center gap-1.5">
-													{hue !== undefined && <Dot hue={hue} size={6} />}
+													{project && (
+														<ProjectMarker
+															hue={project.hue}
+															symbol={project.symbol}
+															size={12}
+														/>
+													)}
 													{projectName(entry.projectId)}
 												</span>
 											</TableCell>

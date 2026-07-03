@@ -1,8 +1,14 @@
-import { formatDuration, formatHours } from "@spantail/core";
+import {
+	formatDuration,
+	formatHours,
+	type ProjectSymbol,
+} from "@spantail/core";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ProjectMarker } from "@/components/project-marker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { projectColor } from "@/lib/hue";
 import { cn } from "@/lib/utils";
 
 export interface DonutItem {
@@ -11,6 +17,9 @@ export interface DonutItem {
 	minutes: number;
 	/** Project/member hue; null falls back to a neutral grey slice. */
 	hue: number | null;
+	/** Project marker symbol; when set (with a hue) the legend shows the shape
+	 *  instead of a plain swatch. Omitted for non-project donuts (e.g. members). */
+	symbol?: ProjectSymbol | null;
 }
 
 interface DonutProps {
@@ -26,9 +35,9 @@ interface DonutProps {
 const SIZE = 168;
 const STROKE = 22;
 
-/** Matches the colored dots used elsewhere (`components/dot.tsx`). */
+/** Matches the colored markers used elsewhere. */
 function sliceColor(hue: number | null): string {
-	return hue == null ? "var(--muted-foreground)" : `oklch(0.62 0.17 ${hue})`;
+	return hue == null ? "var(--muted-foreground)" : projectColor(hue);
 }
 
 /**
@@ -139,10 +148,18 @@ export function Donut({
 									onMouseEnter={() => setHover(i)}
 									onMouseLeave={() => setHover(null)}
 								>
-									<span
-										className="size-2.5 shrink-0 rounded-full"
-										style={{ background: sliceColor(item.hue) }}
-									/>
+									{item.symbol != null && item.hue != null ? (
+										<ProjectMarker
+											hue={item.hue}
+											symbol={item.symbol}
+											size={12}
+										/>
+									) : (
+										<span
+											className="size-2.5 shrink-0 rounded-full"
+											style={{ background: sliceColor(item.hue) }}
+										/>
+									)}
 									<span className="flex-1 truncate" title={item.label}>
 										{item.label}
 									</span>
