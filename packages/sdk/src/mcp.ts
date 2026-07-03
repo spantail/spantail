@@ -1,5 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { localDateSchema, tagSchema } from "@spantail/core";
+import type { ReportFilters, ReportFiltersInput } from "@spantail/core";
+import {
+	dateRangePresetSchema,
+	localDateSchema,
+	tagSchema,
+} from "@spantail/core";
 import { z } from "zod";
 
 import { SpantailApiError, type SpantailClient } from "./index";
@@ -29,6 +34,104 @@ async function run(fn: () => Promise<unknown>): Promise<ToolResult> {
 	} catch (error) {
 		return fail(error);
 	}
+}
+
+/**
+ * Flattened report-scope arguments shared by the report tools. The wire's
+ * nested `filters` object is flattened into top-level fields so the tool
+ * schemas stay small and unambiguous for an LLM caller.
+ */
+const reportScopeInputs = {
+	workspaceId: z
+		.string()
+		.optional()
+		.describe(
+			"Workspace id to scope the report to; omit for instance scope " +
+				"(all workspaces the token owner belongs to)",
+		),
+	projectIds: z
+		.array(z.string())
+		.max(50)
+		.optional()
+		.describe("Only entries of these project ids (requires workspaceId)"),
+	userIds: z
+		.array(z.string())
+		.max(50)
+		.optional()
+		.describe("Only entries by these author user ids"),
+	tags: z
+		.array(tagSchema)
+		.max(20)
+		.optional()
+		.describe("Only entries carrying at least one of these tags"),
+	dateRangePreset: dateRangePresetSchema
+		.optional()
+		.describe(
+			"Relative period, resolved in the token owner's timezone when the " +
+				"report renders (mutually exclusive with from/to)",
+		),
+	from: localDateSchema
+		.optional()
+		.describe("Absolute period start YYYY-MM-DD (requires to)"),
+	to: localDateSchema
+		.optional()
+		.describe("Absolute period end YYYY-MM-DD (requires from)"),
+};
+
+interface ReportScopeArgs {
+	workspaceId?: string;
+	projectIds?: string[];
+	userIds?: string[];
+	tags?: string[];
+	dateRangePreset?: z.infer<typeof dateRangePresetSchema>;
+	from?: string;
+	to?: string;
+}
+
+/**
+ * Assembles the create/update wire filters from the flattened tool args. With
+ * `base` (updating), omitted args keep the report's current filters.
+ */
+function assembleReportFilters(
+	args: ReportScopeArgs,
+	base?: ReportFilters,
+): ReportFiltersInput {
+	if (args.dateRangePreset && (args.from || args.to)) {
+		throw new Error("dateRangePreset and from/to are mutually exclusive");
+	}
+	if ((args.from === undefined) !== (args.to === undefined)) {
+		throw new Error("from and to must be given together");
+	}
+
+	const dateRange =
+		args.dateRangePreset ??
+		(args.from && args.to ? { from: args.from, to: args.to } : undefined) ??
+		base?.dateRange;
+	if (dateRange === undefined) {
+		throw new Error("provide dateRangePreset or from and to");
+	}
+
+	let workspaceIds: string[];
+	if (args.workspaceId !== undefined) {
+		workspaceIds = [args.workspaceId];
+	} else if (base) {
+		if (base.workspaceIds.length > 1) {
+			throw new Error(
+				"this report has a legacy multi-workspace scope; pass a workspaceId",
+			);
+		}
+		workspaceIds = base.workspaceIds;
+	} else {
+		workspaceIds = [];
+	}
+
+	return {
+		workspaceIds,
+		projectIds: args.projectIds ?? base?.projectIds,
+		userIds: args.userIds ?? base?.userIds,
+		tags: args.tags ?? base?.tags,
+		dateRange,
+	};
 }
 
 /**
@@ -204,5 +307,162 @@ export function registerSpantailTools(
 			},
 		},
 		({ id, ...patch }) => run(() => client.updateWorkEntry(id, patch)),
+	);
+
+	server.registerTool(
+		"delete_entry",
+		{
+			title: "Delete a work entry",
+			description:
+				"Delete a work entry by id (e.g. a duplicate or mistaken log). Only " +
+				"the entry's author can delete it. Get ids from list_entries.",
+			inputSchema: {
+				id: z.string().describe("Work entry id"),
+			},
+		},
+		({ id }) =>
+			run(async () => {
+				await client.deleteWorkEntry(id);
+				return { deleted: id };
+			}),
+	);
+
+	server.registerTool(
+		"create_report",
+		{
+			title: "Create a report",
+			description:
+				"Create a report: renders a template over the work entries selected " +
+				"by the scope and period. Use list_report_templates for template ids. " +
+				"When name is omitted the template's suggested name is adopted. " +
+				"Returns the report including its rendered Markdown.",
+			inputSchema: {
+				templateId: z
+					.string()
+					.describe("Report template id from list_report_templates"),
+				name: z
+					.string()
+					.max(100)
+					.optional()
+					.describe("Report name; omit to adopt the template's suggestion"),
+				note: z
+					.string()
+					.max(20000)
+					.optional()
+					.describe("Free-form Markdown note appended to the report"),
+				...reportScopeInputs,
+			},
+		},
+		({ templateId, name, note, ...scope }) =>
+			run(async () => {
+				const filters = assembleReportFilters(scope);
+				let reportName = name;
+				let reportNote = note;
+				if (!reportName) {
+					const preview = await client.previewReport({ templateId, filters });
+					reportName = preview.suggestedName;
+					reportNote ??= preview.suggestedNote || undefined;
+				}
+				if (!reportName) {
+					// The template suggests no name (no name Liquid); require one.
+					throw new Error("name is required for this template");
+				}
+				return client.createReport({
+					name: reportName,
+					templateId,
+					filters,
+					note: reportNote,
+				});
+			}),
+	);
+
+	server.registerTool(
+		"preview_report",
+		{
+			title: "Preview a report",
+			description:
+				"Render a report from a template, scope, and period WITHOUT saving " +
+				"it. Returns the rendered Markdown plus entry count, total minutes, " +
+				"and the template's suggested name. Use it to iterate before " +
+				"create_report.",
+			inputSchema: {
+				templateId: z
+					.string()
+					.describe("Report template id from list_report_templates"),
+				name: z
+					.string()
+					.max(100)
+					.optional()
+					.describe("Report name to render with"),
+				note: z
+					.string()
+					.max(20000)
+					.optional()
+					.describe("Free-form Markdown note to render with"),
+				...reportScopeInputs,
+			},
+		},
+		({ templateId, name, note, ...scope }) =>
+			run(() =>
+				client.previewReport({
+					templateId,
+					name,
+					note,
+					filters: assembleReportFilters(scope),
+				}),
+			),
+	);
+
+	server.registerTool(
+		"update_report",
+		{
+			title: "Update a report",
+			description:
+				"Re-render an existing report with changed fields, appending a new " +
+				"version. Omitted fields keep the report's current values; pass an " +
+				"empty array to clear projectIds/userIds/tags. Only the report's " +
+				"owner can update it. Get ids from list_reports.",
+			inputSchema: {
+				id: z.string().describe("Report id from list_reports"),
+				templateId: z
+					.string()
+					.optional()
+					.describe("Switch to another template"),
+				name: z.string().max(100).optional().describe("New report name"),
+				note: z
+					.string()
+					.max(20000)
+					.optional()
+					.describe("New note (empty string clears it)"),
+				...reportScopeInputs,
+			},
+		},
+		({ id, templateId, name, note, ...scope }) =>
+			run(async () => {
+				// The update wire is a full replace, so seed every field from the
+				// current report and override with the provided args.
+				const current = await client.getReport(id);
+				return client.updateReport(id, {
+					name: name ?? current.name,
+					templateId: templateId ?? current.templateId,
+					filters: assembleReportFilters(scope, current.filters),
+					note: note === "" ? undefined : (note ?? current.note ?? undefined),
+				});
+			}),
+	);
+
+	server.registerTool(
+		"search",
+		{
+			title: "Search",
+			description:
+				"Search the token owner's visible work entries and reports by text. " +
+				"Returns matching work entries in full and matching reports as " +
+				"id/name pairs.",
+			inputSchema: {
+				q: z.string().min(1).max(100).describe("Search text"),
+			},
+		},
+		({ q }) => run(() => client.search(q)),
 	);
 }
