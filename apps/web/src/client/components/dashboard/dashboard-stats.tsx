@@ -33,6 +33,8 @@ interface DashboardStatsProps {
 	breakdown: "project" | "user";
 	/** Period that scopes both widgets, controlled by the parent's selector. */
 	period: DashboardPeriod;
+	/** Optional tag filter applied to both widgets, alongside the period. */
+	tag?: string;
 	/**
 	 * `split` (default): daily chart + donut side by side.
 	 * `stacked`: full-width daily chart, then donut + `aside` in a 2-col row.
@@ -51,6 +53,7 @@ export function DashboardStats({
 	scope,
 	breakdown,
 	period,
+	tag,
 	layout = "split",
 	aside,
 }: DashboardStatsProps) {
@@ -66,10 +69,10 @@ export function DashboardStats({
 		queryKey: [
 			"work-entry-stats",
 			scope.workspaceId,
-			{ ...scope, from: range.from, to: range.to },
+			{ ...scope, tag, from: range.from, to: range.to },
 		],
 		queryFn: () =>
-			api.getWorkEntryStats({ ...scope, from: range.from, to: range.to }),
+			api.getWorkEntryStats({ ...scope, tag, from: range.from, to: range.to }),
 	});
 
 	const projects = useProjects();

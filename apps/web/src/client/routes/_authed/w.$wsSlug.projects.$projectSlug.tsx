@@ -1,4 +1,4 @@
-import { formatPeriodLabel } from "@spantail/core";
+import { resolveDateRange } from "@spantail/core";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SlidersHorizontalIcon } from "lucide-react";
@@ -16,7 +16,6 @@ import { FilterChip } from "@/components/filter-chip";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Popover,
@@ -32,6 +31,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useProjects } from "@/hooks/use-projects";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
 import { useWorkspace } from "@/lib/workspace";
@@ -54,6 +54,7 @@ function ProjectPage() {
 	const { t } = useTranslation();
 	const { projectSlug } = Route.useParams();
 	const { current } = useWorkspace();
+	const timezone = useUserTimezone();
 
 	const workspaceId = current?.id;
 	// The project is resolved from the workspace's project list (the same query
@@ -76,13 +77,14 @@ function ProjectPage() {
 		enabled: Boolean(workspaceId),
 	});
 
-	// Entry filters (local state). Like the Reports filter they live in a
-	// popover and are off by default: empty dates and a null member/tag keep
-	// every entry. They flow into the server query so results stay correct
-	// across the entry list's pagination.
-	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
-	const [from, setFrom] = useState("");
-	const [to, setTo] = useState("");
+	// The period selector drives both the stats widgets and the entry list, and
+	// resolves to an absolute range in the viewer's timezone (mirrors Home).
+	const [period, setPeriod] = useState<DashboardPeriod>("last_30_days");
+	const range = resolveDateRange(period, timezone);
+	// Member/tag filters live in a popover next to the selector and, like the
+	// period, apply to both the widgets and the entry list. They default to null
+	// (no filter) and flow into the server queries so paginated results stay
+	// correct.
 	const [member, setMember] = useState<string | null>(null);
 	const [tag, setTag] = useState<string | null>(null);
 
@@ -104,7 +106,7 @@ function ProjectPage() {
 			workspaceId,
 			"project",
 			project?.id,
-			{ from, to, member, tag },
+			{ from: range.from, to: range.to, member, tag },
 		],
 		queryFn: ({ pageParam }) =>
 			api.listWorkEntries({
@@ -112,8 +114,8 @@ function ProjectPage() {
 				projectId: project?.id as string,
 				userId: member ?? undefined,
 				tag: tag ?? undefined,
-				from: from || undefined,
-				to: to || undefined,
+				from: range.from,
+				to: range.to,
 				limit: PAGE_SIZE,
 				offset: pageParam,
 			}),
@@ -157,20 +159,10 @@ function ProjectPage() {
 		memberOptions.find((m) => m.userId === id)?.name ?? id;
 	const tagOptions = tags.data ?? [];
 
-	const periodActive = from !== "" || to !== "";
 	const memberActive = member !== null;
 	const tagActive = tag !== null;
-	const activeFilterCount =
-		(periodActive ? 1 : 0) + (memberActive ? 1 : 0) + (tagActive ? 1 : 0);
-	const periodLabel =
-		from && to
-			? formatPeriodLabel({ from, to })
-			: from
-				? `${t("reports.from")} ${from}`
-				: `${t("reports.to")} ${to}`;
+	const activeFilterCount = (memberActive ? 1 : 0) + (tagActive ? 1 : 0);
 	const clearFilters = () => {
-		setFrom("");
-		setTo("");
 		setMember(null);
 		setTag(null);
 	};
@@ -178,167 +170,125 @@ function ProjectPage() {
 	return (
 		<div className="flex flex-col gap-7">
 			{/* No page-level log button: the header one pre-selects this project. */}
-			<div className="flex flex-wrap items-start justify-between gap-3">
-				<div className="flex flex-col gap-1.5">
-					<div className="flex items-center gap-2">
-						<Dot hue={project.hue} size={10} />
-						<h1 className="font-heading text-xl font-semibold tracking-tight">
-							{project.name}
-						</h1>
-						<Badge
-							variant={project.status === "active" ? "outline" : "secondary"}
-						>
-							{t(`settings.projects.status.${project.status}`)}
-						</Badge>
-					</div>
-					{project.description && (
-						<p className="text-muted-foreground text-sm">
-							{project.description}
-						</p>
-					)}
-				</div>
-				<PeriodSelector value={period} onChange={setPeriod} />
-			</div>
-			<DashboardStats
-				scope={{ workspaceId: current.id, projectId: project.id }}
-				breakdown="user"
-				period={period}
-			/>
-			<section className="flex flex-col gap-3">
-				<div className="flex items-center justify-between gap-3">
-					<h2 className="font-heading text-lg font-semibold">
-						{t("projects.entriesTitle")}
-					</h2>
-					<Popover>
-						<PopoverTrigger asChild>
-							<Button
-								variant={activeFilterCount ? "secondary" : "outline"}
-								size="sm"
+			<div className="flex flex-col gap-4">
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div className="flex flex-col gap-1.5">
+						<div className="flex items-center gap-2">
+							<Dot hue={project.hue} size={10} />
+							<h1 className="font-heading text-xl font-semibold tracking-tight">
+								{project.name}
+							</h1>
+							<Badge
+								variant={project.status === "active" ? "outline" : "secondary"}
 							>
-								<SlidersHorizontalIcon />
-								{t("reports.filterAction")}
-								{activeFilterCount > 0 && (
-									<span className="bg-foreground text-background ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
-										{activeFilterCount}
-									</span>
-								)}
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent align="end" className="w-80">
-							<div className="flex flex-col gap-3.5">
-								<div className="grid grid-cols-2 gap-3">
-									<div className="flex flex-col gap-1.5">
-										<Label htmlFor="entries-from" className="text-xs">
-											{t("reports.from")}
-										</Label>
-										<Input
-											id="entries-from"
-											type="date"
-											className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
-											value={from}
-											max={to || undefined}
-											onChange={(e) => setFrom(e.target.value)}
-										/>
-									</div>
-									<div className="flex flex-col gap-1.5">
-										<Label htmlFor="entries-to" className="text-xs">
-											{t("reports.to")}
-										</Label>
-										<Input
-											id="entries-to"
-											type="date"
-											className="h-9 [color-scheme:light] dark:[color-scheme:dark]"
-											value={to}
-											min={from || undefined}
-											onChange={(e) => setTo(e.target.value)}
-										/>
-									</div>
-								</div>
-								{memberOptions.length > 0 && (
-									<div className="flex flex-col gap-1.5">
-										<Label className="text-xs">
-											{t("entries.filter.member")}
-										</Label>
-										<Select
-											value={member ?? "all"}
-											onValueChange={(v) => setMember(v === "all" ? null : v)}
-										>
-											<SelectTrigger className="h-9 w-full">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="all">
-													{t("entries.filter.allMembers")}
-												</SelectItem>
-												{memberOptions.map((m) => (
-													<SelectItem key={m.userId} value={m.userId}>
-														{m.name}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-								)}
-								{tagOptions.length > 0 && (
-									<div className="flex flex-col gap-1.5">
-										<Label className="text-xs">{t("entries.filter.tag")}</Label>
-										<Select
-											value={tag === null ? TAG_ALL : `${TAG_PREFIX}${tag}`}
-											onValueChange={(v) =>
-												setTag(
-													v === TAG_ALL ? null : v.slice(TAG_PREFIX.length),
-												)
-											}
-										>
-											<SelectTrigger className="h-9 w-full">
-												<SelectValue />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value={TAG_ALL}>
-													{t("entries.filter.allTags")}
-												</SelectItem>
-												{tagOptions.map((option) => (
-													<SelectItem
-														key={option}
-														value={`${TAG_PREFIX}${option}`}
-													>
-														{option}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-								)}
-							</div>
-							<div className="mt-4 flex items-center justify-between">
+								{t(`settings.projects.status.${project.status}`)}
+							</Badge>
+						</div>
+						{project.description && (
+							<p className="text-muted-foreground text-sm">
+								{project.description}
+							</p>
+						)}
+					</div>
+					{/* Filter (member/tag) sits next to the period selector; together
+					    they scope both the widgets below and the entry list. */}
+					<div className="flex items-center gap-2">
+						<Popover>
+							<PopoverTrigger asChild>
 								<Button
-									variant="ghost"
+									variant={activeFilterCount ? "secondary" : "outline"}
 									size="sm"
-									className="text-muted-foreground h-8 px-2"
-									disabled={!activeFilterCount}
-									onClick={clearFilters}
 								>
-									{t("reports.filter.clear")}
+									<SlidersHorizontalIcon />
+									{t("reports.filterAction")}
+									{activeFilterCount > 0 && (
+										<span className="bg-foreground text-background ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold tabular-nums">
+											{activeFilterCount}
+										</span>
+									)}
 								</Button>
-								<PopoverClose asChild>
-									<Button size="sm">{t("reports.filter.done")}</Button>
-								</PopoverClose>
-							</div>
-						</PopoverContent>
-					</Popover>
+							</PopoverTrigger>
+							<PopoverContent align="end" className="w-80">
+								<div className="flex flex-col gap-3.5">
+									{memberOptions.length > 0 && (
+										<div className="flex flex-col gap-1.5">
+											<Label className="text-xs">
+												{t("entries.filter.member")}
+											</Label>
+											<Select
+												value={member ?? "all"}
+												onValueChange={(v) => setMember(v === "all" ? null : v)}
+											>
+												<SelectTrigger className="h-9 w-full">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="all">
+														{t("entries.filter.allMembers")}
+													</SelectItem>
+													{memberOptions.map((m) => (
+														<SelectItem key={m.userId} value={m.userId}>
+															{m.name}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+									)}
+									{tagOptions.length > 0 && (
+										<div className="flex flex-col gap-1.5">
+											<Label className="text-xs">
+												{t("entries.filter.tag")}
+											</Label>
+											<Select
+												value={tag === null ? TAG_ALL : `${TAG_PREFIX}${tag}`}
+												onValueChange={(v) =>
+													setTag(
+														v === TAG_ALL ? null : v.slice(TAG_PREFIX.length),
+													)
+												}
+											>
+												<SelectTrigger className="h-9 w-full">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value={TAG_ALL}>
+														{t("entries.filter.allTags")}
+													</SelectItem>
+													{tagOptions.map((option) => (
+														<SelectItem
+															key={option}
+															value={`${TAG_PREFIX}${option}`}
+														>
+															{option}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+									)}
+								</div>
+								<div className="mt-4 flex items-center justify-between">
+									<Button
+										variant="ghost"
+										size="sm"
+										className="text-muted-foreground h-8 px-2"
+										disabled={!activeFilterCount}
+										onClick={clearFilters}
+									>
+										{t("reports.filter.clear")}
+									</Button>
+									<PopoverClose asChild>
+										<Button size="sm">{t("reports.filter.done")}</Button>
+									</PopoverClose>
+								</div>
+							</PopoverContent>
+						</Popover>
+						<PeriodSelector value={period} onChange={setPeriod} />
+					</div>
 				</div>
 				{activeFilterCount > 0 && (
 					<div className="flex flex-wrap items-center gap-2">
-						{periodActive && (
-							<FilterChip
-								label={periodLabel}
-								removeLabel={t("reports.filter.remove")}
-								onClear={() => {
-									setFrom("");
-									setTo("");
-								}}
-							/>
-						)}
 						{member !== null && (
 							<FilterChip
 								label={memberName(member)}
@@ -364,11 +314,26 @@ function ProjectPage() {
 						)}
 					</div>
 				)}
+			</div>
+			<DashboardStats
+				scope={{
+					workspaceId: current.id,
+					projectId: project.id,
+					userId: member ?? undefined,
+				}}
+				breakdown="user"
+				period={period}
+				tag={tag ?? undefined}
+			/>
+			<section className="flex flex-col gap-3">
+				<h2 className="font-heading text-lg font-semibold">
+					{t("projects.entriesTitle")}
+				</h2>
 				{entries.isPending ? (
 					<p className="text-muted-foreground p-4 text-center text-sm">
 						{t("app.loading")}
 					</p>
-				) : allEntries.length === 0 && activeFilterCount > 0 ? (
+				) : allEntries.length === 0 ? (
 					<p className="text-muted-foreground p-4 text-center text-sm">
 						{t("entries.filter.empty")}
 					</p>
