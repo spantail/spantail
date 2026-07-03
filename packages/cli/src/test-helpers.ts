@@ -2,7 +2,18 @@ import { mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { Project, WorkEntry, WorkspaceWithRole } from "@spantail/core";
+import type {
+	Comment,
+	MailItem,
+	Project,
+	Recipient,
+	Report,
+	ReportShare,
+	ReportTemplate,
+	WorkEntry,
+	WorkspaceMember,
+	WorkspaceWithRole,
+} from "@spantail/core";
 
 import type { CliContext } from "./context";
 import type { Prompter } from "./prompt";
@@ -138,6 +149,131 @@ export function entryFixture(overrides: Partial<WorkEntry> = {}): WorkEntry {
 		source: "cli",
 		createdAt: "2026-06-12T00:00:00Z",
 		updatedAt: "2026-06-12T00:00:00Z",
+		...overrides,
+	};
+}
+
+export function memberFixture(
+	overrides: Partial<WorkspaceMember> = {},
+): WorkspaceMember {
+	return {
+		workspaceId: "ws-acme",
+		userId: "u1",
+		role: "member",
+		name: "Alice",
+		email: "alice@example.com",
+		imageUrl: null,
+		createdAt: "2026-06-01T00:00:00Z",
+		...overrides,
+	};
+}
+
+export function reportFixture(overrides: Partial<Report> = {}): Report {
+	return {
+		id: "rep-1",
+		name: "Weekly report",
+		ownerUserId: "u1",
+		templateId: "tpl-1",
+		filters: {
+			workspaceIds: ["ws-acme"],
+			dateRange: { from: "2026-06-08", to: "2026-06-14" },
+		},
+		note: null,
+		totalMinutes: 120,
+		version: 1,
+		renderedMarkdown: "# Weekly report\n",
+		createdAt: "2026-06-14T00:00:00Z",
+		updatedAt: "2026-06-14T00:00:00Z",
+		...overrides,
+	};
+}
+
+export function templateFixture(
+	overrides: Partial<ReportTemplate> = {},
+): ReportTemplate {
+	return {
+		id: "tpl-1",
+		name: "Weekly",
+		description: null,
+		body: "# {{ report.name }}",
+		enabled: true,
+		isDefault: true,
+		nameTemplate: null,
+		noteTemplate: null,
+		defaultDateRange: null,
+		createdBy: null,
+		createdAt: "2026-06-01T00:00:00Z",
+		updatedAt: "2026-06-01T00:00:00Z",
+		...overrides,
+	};
+}
+
+export function recipientFixture(
+	overrides: Partial<Recipient> = {},
+): Recipient {
+	return {
+		id: "u2",
+		name: "Bob",
+		email: "bob@example.com",
+		imageUrl: null,
+		...overrides,
+	};
+}
+
+export function shareFixture(
+	overrides: Partial<ReportShare> = {},
+): ReportShare {
+	return {
+		id: "share-1",
+		reportId: "rep-1",
+		token: "tok_abcdefghijklmnopqr",
+		hasPasscode: false,
+		expiresAt: null,
+		revokedAt: null,
+		viewCount: 0,
+		lastViewedAt: null,
+		createdAt: "2026-06-14T00:00:00Z",
+		...overrides,
+	};
+}
+
+export function commentFixture(overrides: Partial<Comment> = {}): Comment {
+	return {
+		id: "com-1",
+		reportId: "rep-1",
+		authorUserId: "u2",
+		authorName: "Bob",
+		authorImageUrl: null,
+		body: "Nice work!",
+		createdAt: "2026-06-14T10:00:00Z",
+		updatedAt: "2026-06-14T10:00:00Z",
+		editable: false,
+		reactions: [],
+		...overrides,
+	};
+}
+
+export function mailItemFixture(overrides: Partial<MailItem> = {}): MailItem {
+	return {
+		id: "mail-1",
+		scope: "received",
+		batchId: "batch-1",
+		reportId: "rep-1",
+		senderName: "Bob",
+		senderEmail: "bob@example.com",
+		senderImageUrl: null,
+		reportName: "Weekly report",
+		dateFrom: "2026-06-08",
+		dateTo: "2026-06-14",
+		message: null,
+		readAt: null,
+		createdAt: "2026-06-14T12:00:00Z",
+		starred: false,
+		archived: false,
+		trashed: false,
+		recipientNames: [],
+		recipientImageUrls: [],
+		recipientCount: 0,
 		...overrides,
 	};
 }
