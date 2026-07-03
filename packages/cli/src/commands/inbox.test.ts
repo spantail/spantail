@@ -57,6 +57,36 @@ it("shows batch ids and recipients for the sent folder", async () => {
 	expect(lines[1]).toContain("Cara, Dan");
 });
 
+it("renders mixed scopes per item in the starred folder", async () => {
+	const api = fakeApi([
+		{
+			path: "/inbox",
+			body: [
+				mailItemFixture({ starred: true }),
+				mailItemFixture({
+					id: "mail-2",
+					scope: "sent",
+					batchId: "batch-2",
+					recipientNames: ["Cara"],
+					recipientCount: 1,
+					starred: true,
+				}),
+			],
+		},
+	]);
+	const { ctx, stdout, configDir } = createTestContext({ fetch: api.fetch });
+	loggedIn(configDir);
+
+	expect(await runCli(["inbox", "list", "--folder", "starred"], ctx)).toBe(0);
+	const lines = stdout.text().trimEnd().split("\n");
+	expect(lines[0]).toMatch(/^ID\s+STATUS\s+FROM\/TO\s+BATCH\s+REPORT/);
+	expect(lines[1]).toContain("unread");
+	expect(lines[1]).toContain("Bob");
+	expect(lines[2]).toContain("sent");
+	expect(lines[2]).toContain("→ Cara");
+	expect(lines[2]).toContain("batch-2");
+});
+
 it("rejects an unknown folder", async () => {
 	const { ctx, stderr, configDir } = createTestContext();
 	loggedIn(configDir);

@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 
-import type { MailFolder, SetMailFlagsInput } from "@spantail/core";
+import type { MailFolder, MailItem, SetMailFlagsInput } from "@spantail/core";
 import { mailFolderSchema } from "@spantail/core";
 
 import { createClient, requireConnection } from "../client";
@@ -13,8 +13,9 @@ const FOLDERS = mailFolderSchema.options.join("|");
 const LIST_USAGE = `Usage: spantail inbox list [options]
 
 Lists a mailbox folder. The ID column is the input to \`spantail inbox view\`,
-\`read\`, and \`unread\`; in the sent folder the BATCH column is the input to
-\`spantail inbox flag --sent\`.
+\`read\`, and \`unread\`; sent batches show a BATCH column, the input to
+\`spantail inbox flag --sent\`. Starred, archive, and trash mix received items
+and sent batches.
 
 Options:
   --folder <name>  Folder: ${FOLDERS} (default: inbox)
@@ -65,18 +66,30 @@ export async function inboxList(
 		return 0;
 	}
 
-	const sent = folder === "sent";
-	const headers = sent
-		? ["ID", "BATCH", "TO", "REPORT", "RANGE", "DATE"]
-		: ["ID", "STATUS", "FROM", "REPORT", "RANGE", "DATE"];
+	// Inbox is received-only and sent is sent-only, but the flag folders
+	// (starred/archive/trash) interleave both scopes, so rows must render by
+	// each item's own scope.
+	const headers =
+		folder === "sent"
+			? ["ID", "BATCH", "TO", "REPORT", "RANGE", "DATE"]
+			: folder === "inbox"
+				? ["ID", "STATUS", "FROM", "REPORT", "RANGE", "DATE"]
+				: ["ID", "STATUS", "FROM/TO", "BATCH", "REPORT", "RANGE", "DATE"];
+	const scoped = (item: MailItem): string[] => {
+		const recipients = truncate(item.recipientNames.join(", "), 30);
+		if (folder === "sent") return [item.batchId, recipients];
+		const status = item.readAt ? "" : "unread";
+		if (folder === "inbox") return [status, item.senderName];
+		return item.scope === "sent"
+			? ["sent", `→ ${recipients}`, item.batchId]
+			: [status, item.senderName, ""];
+	};
 	ctx.stdout.write(
 		`${formatTable(
 			headers,
 			items.map((item) => [
 				item.id,
-				...(sent
-					? [item.batchId, truncate(item.recipientNames.join(", "), 30)]
-					: [item.readAt ? "" : "unread", item.senderName]),
+				...scoped(item),
 				truncate(item.reportName, 40),
 				`${item.dateFrom}..${item.dateTo}`,
 				item.createdAt,
