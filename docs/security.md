@@ -34,6 +34,10 @@ Standing rules:
   exhaust D1 or inflate the operator's storage/cost.
 - **Validate, don't just format-check.** ISO-8601 shape is not a date-range check;
   `min(0)` is not an upper bound.
+- **Schema-on-read payloads are still bounded on write.** Fields stored verbatim and read
+  defensively later (an event's raw `usage`, its `attributes` metadata, an entry's
+  `context` facets) get size/count/length caps at ingest, and every read of them treats
+  the stored value as hostile (type-checked, length-checked, never coerced).
 
 A token is write-only ingest, scoped to its owner's workspace membership, re-checked live
 at ingest time — but that only governs *where* it may write, not *what* it may write. The
@@ -44,6 +48,9 @@ bounds above are what protect the data itself.
 Spantail records AI-agent activity verbatim and human work as free text, so span
 descriptions, notes, and event payloads can contain **secrets, source-code fragments, or
 PII** — an agent may paste an API key into a description without anyone intending it.
+Event `attributes` and entry `context` are metadata, not transcript content, but not
+innocuous either: a branch name, repository URL, or working directory can reveal internal
+project names or customer identifiers, and they fan out with everything else.
 
 That content flows downstream: ingest → reports (Liquid → Markdown) → public share links →
 Send-to deliveries. The standing rule is to treat captured content as potentially

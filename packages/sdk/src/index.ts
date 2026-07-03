@@ -25,7 +25,9 @@ import type {
 	CreateWorkspaceInput,
 	EmailEnabled,
 	EmailSettings,
+	FinalizeAgentSessionInput,
 	IngestAgentEntryInputData,
+	IngestAgentEventsInputData,
 	Invitation,
 	InvitationPreview,
 	ListAgentEntriesQueryData,
@@ -443,6 +445,24 @@ export class SpantailClient {
 	/** Ingests one agent session (agent access token auth). Idempotent. */
 	ingestAgentEntry(input: IngestAgentEntryInputData): Promise<AgentEntry> {
 		return this.request("POST", "/agent-entries", { body: input });
+	}
+
+	/**
+	 * Ingests one session's raw events (agent access token auth) and returns the
+	 * recomputed session entry. Idempotent on (agent, sourceId): re-posting the
+	 * cumulative transcript is safe.
+	 */
+	ingestAgentEvents(input: IngestAgentEventsInputData): Promise<AgentEntry> {
+		return this.request("POST", "/agent-events", { body: input });
+	}
+
+	/**
+	 * Finalizes an events-fed session (agent access token auth) with closing
+	 * facts — wall-clock end, description, extra context. 404 when the session
+	 * has no entry yet.
+	 */
+	finalizeAgentSession(input: FinalizeAgentSessionInput): Promise<AgentEntry> {
+		return this.request("POST", "/agent-events/finalize", { body: input });
 	}
 
 	listAgentEntries(query: ListAgentEntriesQueryData): Promise<AgentEntry[]> {

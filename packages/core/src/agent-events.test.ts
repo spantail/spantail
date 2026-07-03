@@ -54,4 +54,63 @@ describe("ingestAgentEventsInputSchema", () => {
 			}).success,
 		).toBe(false);
 	});
+
+	it("defaults operation to chat and accepts a custom one", () => {
+		const parsed = ingestAgentEventsInputSchema.parse({
+			sessionId: "s1",
+			events: [
+				validEvent,
+				{ ...validEvent, sourceId: "msg_B", operation: "execute_tool" },
+			],
+		});
+		expect(parsed.events[0]?.operation).toBe("chat");
+		expect(parsed.events[1]?.operation).toBe("execute_tool");
+	});
+
+	it("accepts bounded attributes and a costUsd", () => {
+		const parsed = ingestAgentEventsInputSchema.parse({
+			sessionId: "s1",
+			events: [
+				{
+					...validEvent,
+					costUsd: 0.42,
+					attributes: {
+						"vcs.ref.head.name": "feature/123-foo",
+						"app.version": "2.1.0",
+					},
+				},
+			],
+		});
+		expect(parsed.events[0]?.costUsd).toBe(0.42);
+		expect(parsed.events[0]?.attributes?.["vcs.ref.head.name"]).toBe(
+			"feature/123-foo",
+		);
+	});
+
+	it("rejects a negative costUsd", () => {
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [{ ...validEvent, costUsd: -1 }],
+			}).success,
+		).toBe(false);
+	});
+
+	it("bounds attributes: entry count, value length, scalar values only", () => {
+		const tooMany = Object.fromEntries(
+			Array.from({ length: 21 }, (_, i) => [`k${i}`, "v"]),
+		);
+		for (const attributes of [
+			tooMany,
+			{ k: "x".repeat(501) },
+			{ k: { nested: true } },
+		]) {
+			expect(
+				ingestAgentEventsInputSchema.safeParse({
+					sessionId: "s1",
+					events: [{ ...validEvent, attributes }],
+				}).success,
+			).toBe(false);
+		}
+	});
 });

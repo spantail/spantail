@@ -1,4 +1,5 @@
 import {
+	type AgentEntryContext,
 	type AgentUsage,
 	shiftDays,
 	todayInTimezone,
@@ -11,7 +12,6 @@ import {
 	eq,
 	gte,
 	inArray,
-	isNotNull,
 	isNull,
 	lt,
 	ne,
@@ -401,6 +401,7 @@ export async function upsertAgentEntry(
 				projectId: values.projectId,
 				durationMinutes: values.durationMinutes,
 				usage: values.usage,
+				context: values.context,
 				description: values.description,
 				startedAt: values.startedAt,
 				endedAt: values.endedAt,
@@ -601,11 +602,11 @@ export async function getAgentEntryStats(
 
 // --- agent events (raw per-turn telemetry) ---
 
-// D1 caps a query at 100 bound parameters. Each event row binds 8 columns
-// (id + 7 fields; createdAt uses its default), so a chunk of 10 stays well
-// under the cap (80). The unique index makes re-inserting seen rows a no-op,
-// so splitting a session across statements is safe.
-const EVENT_INSERT_CHUNK = 10;
+// D1 caps a query at 100 bound parameters. Each event row binds 11 columns
+// (id + 10 fields; createdAt uses its default), so a chunk of 8 stays under
+// the cap (88). The unique index makes re-inserting seen rows a no-op, so
+// splitting a session across statements is safe.
+const EVENT_INSERT_CHUNK = 8;
 
 /**
  * Idempotently inserts a session's events. `ON CONFLICT DO NOTHING` on the
@@ -631,10 +632,34 @@ export async function insertAgentEventsIgnoreConflicts(
 export interface SessionRollup {
 	/** Normalized rollup written to `agent_entries.usage` (camelCase AgentUsage). */
 	usage: AgentUsage;
+	/** Event-derived facets for `agent_entries.context`; null when none exist. */
+	context: AgentEntryContext | null;
 	startedAt: Date;
 	endedAt: Date;
 	durationMinutes: number;
 	eventCount: number;
+}
+
+// Context facets keep at most this many distinct values, each at most this
+// long — the bounds `agentEntryContextSchema` enforces on the read side.
+const CONTEXT_VALUES_MAX = 20;
+const CONTEXT_VALUE_LENGTH_MAX = 200;
+
+/**
+ * First-seen distinct values for one context facet, read defensively: event
+ * attributes are stored verbatim from untrusted input, so anything that is not
+ * a non-empty string within the schema's bounds is skipped, not coerced.
+ */
+function distinctContextValues(values: unknown[]): string[] | undefined {
+	const seen: string[] = [];
+	for (const value of values) {
+		if (typeof value !== "string") continue;
+		if (value.length === 0 || value.length > CONTEXT_VALUE_LENGTH_MAX) continue;
+		if (seen.includes(value)) continue;
+		seen.push(value);
+		if (seen.length >= CONTEXT_VALUES_MAX) break;
+	}
+	return seen.length > 0 ? seen : undefined;
 }
 
 /** Sums one raw usage bucket (snake_case JSON key) across a session's events. */
@@ -666,6 +691,10 @@ export async function computeSessionRollup(
 			outputTokens: usageBucketSum("output_tokens"),
 			cacheCreationTokens: usageBucketSum("cache_creation_input_tokens"),
 			cacheReadTokens: usageBucketSum("cache_read_input_tokens"),
+			// Null (not 0) when no event carries a cost: absence and "free" differ.
+			costUsd: sql<number | null>`sum(${agentEvents.costUsd})`.mapWith(
+				(value) => (value == null ? null : Number(value)),
+			),
 			minTs: sql<number | null>`min(${agentEvents.timestamp})`,
 			maxTs: sql<number | null>`max(${agentEvents.timestamp})`,
 			count: sql<number>`count(*)`.mapWith(Number),
@@ -677,13 +706,37 @@ export async function computeSessionRollup(
 		return null;
 	}
 
-	// Model of the most recent event that carries one; undefined when none do.
-	const [latest] = await db
-		.select({ model: agentEvents.model })
+	// One chronological scan yields the latest model (for usage.model) and the
+	// distinct context facets. Attribute values are read defensively — they are
+	// stored verbatim from untrusted input, so json_extract may return anything.
+	const attribute = (key: string) =>
+		sql<unknown>`json_extract(${agentEvents.attributes}, ${`$."${key}"`})`;
+	const facetRows = await db
+		.select({
+			model: agentEvents.model,
+			branch: attribute("vcs.ref.head.name"),
+			repository: attribute("vcs.repository.url.full"),
+		})
 		.from(agentEvents)
-		.where(and(where, isNotNull(agentEvents.model)))
-		.orderBy(desc(agentEvents.timestamp))
-		.limit(1);
+		.where(where)
+		// id breaks timestamp ties so the facet order (and latest model) is stable.
+		.orderBy(asc(agentEvents.timestamp), asc(agentEvents.id));
+
+	let latestModel: string | undefined;
+	for (const row of facetRows) if (row.model) latestModel = row.model;
+	const models = distinctContextValues(facetRows.map((row) => row.model));
+	const branches = distinctContextValues(facetRows.map((row) => row.branch));
+	const repositories = distinctContextValues(
+		facetRows.map((row) => row.repository),
+	);
+	const context: AgentEntryContext | null =
+		models || branches || repositories
+			? {
+					...(models ? { models } : {}),
+					...(branches ? { branches } : {}),
+					...(repositories ? { repositories } : {}),
+				}
+			: null;
 
 	const totalTokens =
 		agg.inputTokens +
@@ -702,8 +755,10 @@ export async function computeSessionRollup(
 			cacheCreationTokens: agg.cacheCreationTokens,
 			cacheReadTokens: agg.cacheReadTokens,
 			totalTokens,
-			...(latest?.model ? { model: latest.model } : {}),
+			...(latestModel ? { model: latestModel } : {}),
+			...(agg.costUsd != null ? { costUsd: agg.costUsd } : {}),
 		},
+		context,
 		startedAt: new Date(agg.minTs),
 		endedAt: new Date(agg.maxTs),
 		durationMinutes,
@@ -714,14 +769,16 @@ export async function computeSessionRollup(
 /**
  * Materializes a session's rollup into `agent_entries`, monotonically. Every
  * ingest re-sends the cumulative transcript, so a later recompute is always a
- * superset of an earlier one — its `endedAt` and `totalTokens` are both
- * non-decreasing. The conflict update is guarded to apply only when both hold,
- * so a stale recompute (computed before a concurrent ingest's events landed)
- * can never overwrite a fuller one, even when the fuller payload added an event
- * whose timestamp is at or before the current `endedAt` (e.g. a subagent turn)
- * — there `endedAt` is unchanged but `totalTokens` still grows. Either ordering
- * converges to the most complete rollup. Returns the current row (ours, or the
- * newer one a concurrent ingest already wrote).
+ * superset of an earlier one — its `totalTokens` is non-decreasing. The
+ * conflict update is guarded on that, so a stale recompute (computed before a
+ * concurrent ingest's events landed) can never overwrite a fuller one; either
+ * ordering converges to the most complete rollup. `endedAt` and
+ * `durationMinutes` only ever grow in SQL (a finalize may have recorded a
+ * wall-clock end past the last event, which a later recompute must not
+ * shrink), and finalize-owned fields are preserved: `description` is never
+ * touched, and `context` is merged key-by-key (the rollup owns the
+ * event-derived facets; keys it doesn't produce, like `refs`, survive).
+ * Returns the current row (ours, or the newer one a concurrent ingest wrote).
  */
 export async function materializeAgentSessionRollup(
 	db: Database,
@@ -736,17 +793,18 @@ export async function materializeAgentSessionRollup(
 				workspaceId: values.workspaceId,
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
-				durationMinutes: values.durationMinutes,
+				durationMinutes: sql`max(excluded.duration_minutes, ${agentEntries.durationMinutes})`,
 				usage: values.usage,
-				description: values.description,
+				context: sql`case
+					when excluded.context is null then ${agentEntries.context}
+					else json_patch(coalesce(${agentEntries.context}, '{}'), excluded.context)
+				end`,
 				startedAt: values.startedAt,
-				endedAt: values.endedAt,
+				endedAt: sql`max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0))`,
 				updatedAt: new Date(),
 			},
-			setWhere: sql`${agentEntries.usage} is null or (
-				excluded.ended_at >= coalesce(${agentEntries.endedAt}, 0)
-				and coalesce(json_extract(excluded.usage, '$.totalTokens'), 0) >= coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)
-			)`,
+			setWhere: sql`${agentEntries.usage} is null
+				or coalesce(json_extract(excluded.usage, '$.totalTokens'), 0) >= coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)`,
 		})
 		.returning();
 	const row = rows[0];
@@ -764,4 +822,55 @@ export async function materializeAgentSessionRollup(
 		.get();
 	if (!current) throw new Error("agent entry rollup returned no row");
 	return current;
+}
+
+/**
+ * Applies a session's closing facts (e.g. Claude Code's SessionEnd hook):
+ * wall-clock end, summary description, extra context. Never touches the usage
+ * rollup, which stays derived from events. Monotonic like the rollup
+ * materialization — `endedAt`/`durationMinutes` only grow, in SQL — so a
+ * finalize racing a late ingest converges regardless of order. Scoped by
+ * workspace like ingest; returns undefined when the session has no entry there
+ * yet (events never arrived), which callers surface as 404.
+ */
+export async function finalizeAgentSession(
+	db: Database,
+	input: {
+		agentId: string;
+		workspaceId: string;
+		sessionId: string;
+		endedAt: Date | null;
+		description: string | null;
+		context: AgentEntryContext | null;
+	},
+): Promise<AgentEntryRow | undefined> {
+	const endedAtMs = input.endedAt?.getTime();
+	const rows = await db
+		.update(agentEntries)
+		.set({
+			updatedAt: new Date(),
+			...(endedAtMs !== undefined
+				? {
+						endedAt: sql`max(${endedAtMs}, coalesce(${agentEntries.endedAt}, 0))`,
+						// Extend the duration to the finalized end; never shrink it.
+						durationMinutes: sql`max(${agentEntries.durationMinutes},
+							cast(round((max(${endedAtMs}, coalesce(${agentEntries.endedAt}, 0)) - ${agentEntries.startedAt}) / 60000.0) as integer))`,
+					}
+				: {}),
+			...(input.description !== null ? { description: input.description } : {}),
+			...(input.context
+				? {
+						context: sql`json_patch(coalesce(${agentEntries.context}, '{}'), ${JSON.stringify(input.context)})`,
+					}
+				: {}),
+		})
+		.where(
+			and(
+				eq(agentEntries.agentId, input.agentId),
+				eq(agentEntries.workspaceId, input.workspaceId),
+				eq(agentEntries.sessionId, input.sessionId),
+			),
+		)
+		.returning();
+	return rows[0];
 }

@@ -85,6 +85,24 @@ export const agentUsageSchema = z.object({
 });
 export type AgentUsage = z.infer<typeof agentUsageSchema>;
 
+/** Bounded list of distinct context values (models, branches, refs, ...). */
+const contextValuesSchema = z.array(z.string().min(1).max(200)).max(20);
+
+/**
+ * Non-usage session context: distinct values aggregated from event attributes
+ * by the rollup (`models`, `branches`, `repositories`) or supplied by the
+ * client (`refs`, and everything on the summary/finalize paths). `refs` are
+ * opaque external references extracted by the client (e.g.
+ * "github:owner/repo#123") — the server never interprets the format.
+ */
+export const agentEntryContextSchema = z.object({
+	models: contextValuesSchema.optional(),
+	branches: contextValuesSchema.optional(),
+	repositories: contextValuesSchema.optional(),
+	refs: contextValuesSchema.optional(),
+});
+export type AgentEntryContext = z.infer<typeof agentEntryContextSchema>;
+
 /** One agent work session, attributed to the owning user and a workspace. */
 export const agentEntrySchema = z.object({
 	id: z.string(),
@@ -102,6 +120,7 @@ export const agentEntrySchema = z.object({
 	durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
 	// Null when the source can't expose token usage locally (e.g. Cursor).
 	usage: agentUsageSchema.nullable(),
+	context: agentEntryContextSchema.nullable(),
 	description: z.string().max(2000).nullable(),
 	startedAt: z.string().nullable(),
 	endedAt: z.string().nullable(),
@@ -125,6 +144,7 @@ export const ingestAgentEntryInputSchema = z
 		sessionId: z.string().min(1).max(200),
 		durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
 		usage: agentUsageSchema.optional(),
+		context: agentEntryContextSchema.optional(),
 		description: z.string().max(2000).optional(),
 		// Format alone is not enough: a leaked write-only token could backdate to
 		// 1970 or forward-date far into the future. `startedAt` is the instant the
@@ -154,6 +174,30 @@ export const ingestAgentEntryInputSchema = z
 export type IngestAgentEntryInput = z.infer<typeof ingestAgentEntryInputSchema>;
 export type IngestAgentEntryInputData = z.input<
 	typeof ingestAgentEntryInputSchema
+>;
+
+/**
+ * Finalize payload for an events-fed session (e.g. Claude Code's SessionEnd
+ * hook): supplements the entry with closing facts — the wall-clock end, a
+ * summary description, extra context — without touching the usage rollup,
+ * which stays derived from events. The session must already have an entry
+ * (events arrived first); finalizing an unknown session is a 404 the client
+ * may ignore, since SessionEnd is best-effort anyway.
+ */
+export const finalizeAgentSessionInputSchema = z.object({
+	workspaceId: z.string().optional(),
+	sessionId: z.string().min(1).max(200),
+	// Bounded like the summary path's timestamps: a leaked write-only token
+	// must not date a session far into the past or future.
+	endedAt: z.iso
+		.datetime()
+		.refine(isTimestampInRange, "must be a plausible timestamp")
+		.optional(),
+	description: z.string().max(2000).optional(),
+	context: agentEntryContextSchema.optional(),
+});
+export type FinalizeAgentSessionInput = z.infer<
+	typeof finalizeAgentSessionInputSchema
 >;
 
 export const listAgentEntriesQuerySchema = z.object({

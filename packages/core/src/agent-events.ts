@@ -4,7 +4,13 @@ import { z } from "zod";
  * Raw per-turn agent telemetry: one event per assistant message (one API
  * response, which carries exactly one usage block). The materialized
  * per-session rollup lives in `agent_entries`; events are the immutable source
- * the rollup is recomputed from. See `local/agent-events-design.md`.
+ * the rollup is recomputed from.
+ *
+ * The shape follows the OTel GenAI semantic conventions loosely (an event maps
+ * to a span, `operation` to `gen_ai.operation.name`, the session to
+ * `gen_ai.conversation.id`); see docs/data-model.md for the full mapping. The
+ * conventions are still in Development status, so nothing here is an enum tied
+ * to them.
  */
 
 /**
@@ -18,6 +24,25 @@ export const agentEventUsageSchema = z.object({}).passthrough();
 export type AgentEventUsage = z.infer<typeof agentEventUsageSchema>;
 
 /**
+ * Non-usage metadata on an event, keyed by OTel attribute names where one
+ * exists (e.g. `vcs.ref.head.name` for the git branch, `app.version` for the
+ * client version); see docs/data-model.md for the recommended keys. Stored
+ * verbatim and read defensively (schema-on-read), like the raw usage — but
+ * bounded, because ingest is the untrusted write path (docs/security.md §1).
+ * Never put transcript content or source code here.
+ */
+export const agentEventAttributesSchema = z
+	.record(
+		z.string().min(1).max(100),
+		z.union([z.string().max(500), z.number(), z.boolean()]),
+	)
+	.refine(
+		(attributes) => Object.keys(attributes).length <= 20,
+		"attributes must have at most 20 entries",
+	);
+export type AgentEventAttributes = z.infer<typeof agentEventAttributesSchema>;
+
+/**
  * One assistant turn: one `message.id` = one API response with one usage. The
  * client (e.g. the Claude Code Stop hook) dedupes the transcript down to one
  * event per message.id before posting — a single message.id repeats across
@@ -28,8 +53,15 @@ export const agentEventSchema = z.object({
 	sourceId: z.string().min(1).max(200),
 	// ISO-8601 (UTC) wall-clock time of the message.
 	timestamp: z.iso.datetime(),
+	// What the event records, in `gen_ai.operation.name` terms ("chat" is an
+	// inference turn). Free-form — the semconv values are still in flux.
+	operation: z.string().min(1).max(100).default("chat"),
 	model: z.string().max(100).optional(),
 	usage: agentEventUsageSchema,
+	// Client-provided cost (e.g. the transcript's `costUSD`), summed into the
+	// session rollup. The server never computes prices itself.
+	costUsd: z.number().min(0).optional(),
+	attributes: agentEventAttributesSchema.optional(),
 });
 export type AgentEventInput = z.infer<typeof agentEventSchema>;
 
