@@ -21,6 +21,21 @@ import {
 	reportTemplates,
 	reportView,
 } from "./commands/report";
+import {
+	reportComment,
+	reportDiscussion,
+	reportReact,
+} from "./commands/report-discussion";
+import {
+	reportRecipients,
+	reportSend,
+	reportSends,
+} from "./commands/report-send";
+import {
+	reportShare,
+	reportShares,
+	reportUnshare,
+} from "./commands/report-share";
 import { workspacesList } from "./commands/workspaces";
 import type { CliContext } from "./context";
 import { CliError, isParseArgsError, UsageError } from "./errors";
@@ -52,6 +67,15 @@ const commands: Record<
 		edit: reportEdit,
 		delete: reportDelete,
 		templates: reportTemplates,
+		recipients: reportRecipients,
+		send: reportSend,
+		sends: reportSends,
+		share: reportShare,
+		shares: reportShares,
+		unshare: reportUnshare,
+		discussion: reportDiscussion,
+		comment: reportComment,
+		react: reportReact,
 	},
 	mcp: mcpCommand,
 };
@@ -80,6 +104,15 @@ Commands:
   report edit       Re-render a report with changed fields
   report delete     Delete a report
   report templates  List the instance's report templates
+  report recipients List a report's candidate recipients
+  report send       Send a report to recipients' inboxes
+  report sends      Show a report's send history
+  report share      Create a public share link for a report
+  report shares     List a report's share links
+  report unshare    Revoke a share link
+  report discussion Show a report's reactions and comments
+  report comment    Add, edit, or delete a comment on a report
+  report react      Toggle a reaction on a report or comment
   mcp               Run a stdio MCP server bridging AI clients to a Spantail instance
 
 Run \`spantail <command> --help\` for command options.
