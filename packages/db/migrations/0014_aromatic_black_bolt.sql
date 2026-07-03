@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `symbol` text DEFAULT 'circle' NOT NULL;

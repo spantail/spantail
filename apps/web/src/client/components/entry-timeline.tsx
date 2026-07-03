@@ -3,10 +3,9 @@ import { formatDuration } from "@spantail/core";
 import { SquarePenIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import { Dot } from "@/components/dot";
 import { EntryActions } from "@/components/entry-actions";
 import { useEntryDialog } from "@/components/entry-dialog";
+import { ProjectMarker } from "@/components/project-marker";
 import { Badge } from "@/components/ui/badge";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { formatEntryDate } from "@/lib/format";
@@ -142,13 +141,15 @@ export function EntryTimeline({
 										>
 											<span className="relative z-10 mt-[3px] flex w-3 shrink-0 justify-center">
 												{project ? (
-													<Dot
-														hue={project.hue}
-														size={12}
-														className="ring-background ring-4 transition-transform group-hover:scale-110"
-													/>
+													<span className="bg-background ring-background flex size-4 items-center justify-center rounded-full ring-4 transition-transform group-hover:scale-110">
+														<ProjectMarker
+															hue={project.hue}
+															symbol={project.symbol}
+															size={16}
+														/>
+													</span>
 												) : (
-													<span className="bg-muted-foreground/40 ring-background size-3 rounded-full ring-4 transition-transform group-hover:scale-110" />
+													<span className="bg-muted-foreground/40 ring-background size-4 rounded-full ring-4 transition-transform group-hover:scale-110" />
 												)}
 											</span>
 											<button
@@ -167,7 +168,11 @@ export function EntryTimeline({
 												<span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
 													<span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs font-medium">
 														{project ? (
-															<Dot hue={project.hue} size={6} />
+															<ProjectMarker
+																hue={project.hue}
+																symbol={project.symbol}
+																size={12}
+															/>
 														) : (
 															<span className="bg-muted-foreground/40 size-1.5 rounded-full" />
 														)}

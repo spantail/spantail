@@ -99,6 +99,13 @@
       "when": 1783009540727,
       "tag": "0013_living_leper_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1783050168288,
+      "tag": "0014_aromatic_black_bolt",
+      "breakpoints": true
     }
   ]
 }

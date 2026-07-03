@@ -1,6 +1,7 @@
 import {
 	formatDuration,
 	formatPeriodLabel,
+	type ProjectSymbol,
 	type ReportMeta,
 	type ReportTemplate,
 } from "@spantail/core";
@@ -18,6 +19,7 @@ import { useTranslation } from "react-i18next";
 import { Dot } from "@/components/dot";
 import { FilterChip } from "@/components/filter-chip";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
+import { ProjectMarker } from "@/components/project-marker";
 import { useReportDialogs } from "@/components/report-dialogs";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,7 +68,7 @@ function ReportListItem({
 	report: ReportMeta;
 	tab: string;
 	templateName: string;
-	projectChip: { name: string; hue: number } | null;
+	projectChip: { name: string; hue: number; symbol: ProjectSymbol } | null;
 	selected: boolean;
 	index: number;
 }) {
@@ -99,7 +101,11 @@ function ReportListItem({
 					{projectChip && <span className="shrink-0 opacity-40">·</span>}
 					{projectChip && (
 						<span className="inline-flex min-w-0 items-center gap-1">
-							<Dot hue={projectChip.hue} size={6} />
+							<ProjectMarker
+								hue={projectChip.hue}
+								symbol={projectChip.symbol}
+								size={12}
+							/>
 							<span className="truncate">{projectChip.name}</span>
 						</span>
 					)}
@@ -282,12 +288,16 @@ export function ReportList({
 			queryFn: () => api.listProjects(workspace.id),
 		})),
 	});
-	const projectById = new Map<string, { name: string; hue: number }>();
+	const projectById = new Map<
+		string,
+		{ name: string; hue: number; symbol: ProjectSymbol }
+	>();
 	for (const query of projectQueries) {
 		for (const project of query.data ?? []) {
 			projectById.set(project.id, {
 				name: project.name,
 				hue: project.hue,
+				symbol: project.symbol,
 			});
 		}
 	}
@@ -299,12 +309,14 @@ export function ReportList({
 	// resolvable project — multi-project / all-project reports stay unlabelled.
 	const projectChipFor = (
 		report: ReportMeta,
-	): { name: string; hue: number } | null => {
+	): { name: string; hue: number; symbol: ProjectSymbol } | null => {
 		const ids = report.filters.projectIds;
 		const id = ids?.length === 1 ? ids[0] : undefined;
 		if (!id) return null;
 		const project = projectById.get(id);
-		return project ? { name: project.name, hue: project.hue } : null;
+		return project
+			? { name: project.name, hue: project.hue, symbol: project.symbol }
+			: null;
 	};
 
 	const periodActive = from !== "" || to !== "";

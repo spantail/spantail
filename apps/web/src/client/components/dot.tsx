@@ -1,3 +1,4 @@
+import { projectColor } from "@/lib/hue";
 import { cn } from "@/lib/utils";
 
 /** Small filled circle in a stable hue — leads template rows in the rail/list
@@ -18,7 +19,7 @@ export function Dot({
 			style={{
 				width: size,
 				height: size,
-				background: `oklch(0.62 0.17 ${hue})`,
+				background: projectColor(hue),
 			}}
 		/>
 	);

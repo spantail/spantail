@@ -1,3 +1,4 @@
+import type { ProjectSymbol } from "@spantail/core";
 import { and, eq, inArray } from "drizzle-orm";
 
 import type { Database } from "../index";
@@ -13,6 +14,7 @@ export async function createProject(
 		name: string;
 		description?: string;
 		hue?: number;
+		symbol?: ProjectSymbol;
 	},
 ): Promise<ProjectRow> {
 	const rows = await db
@@ -68,7 +70,13 @@ export async function updateProject(
 	patch: Partial<
 		Pick<
 			ProjectRow,
-			"name" | "slug" | "description" | "hue" | "status" | "archivedAt"
+			| "name"
+			| "slug"
+			| "description"
+			| "hue"
+			| "symbol"
+			| "status"
+			| "archivedAt"
 		>
 	>,
 ): Promise<ProjectRow | undefined> {

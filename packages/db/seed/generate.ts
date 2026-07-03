@@ -305,6 +305,7 @@ export async function generateDataset(
 			name: p.name,
 			description: p.description ?? null,
 			hue: p.hue,
+			symbol: p.symbol,
 			status: "active",
 			createdAt: baseCreatedAt,
 			archivedAt: null,

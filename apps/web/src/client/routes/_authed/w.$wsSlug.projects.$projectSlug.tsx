@@ -10,10 +10,10 @@ import {
 	type DashboardPeriod,
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
-import { Dot } from "@/components/dot";
 import { EntryList } from "@/components/entry-list";
 import { FilterChip } from "@/components/filter-chip";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
+import { ProjectMarker } from "@/components/project-marker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -174,7 +174,11 @@ function ProjectPage() {
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div className="flex flex-col gap-1.5">
 						<div className="flex items-center gap-2">
-							<Dot hue={project.hue} size={10} />
+							<ProjectMarker
+								hue={project.hue}
+								symbol={project.symbol}
+								size={14}
+							/>
 							<h1 className="font-heading text-xl font-semibold tracking-tight">
 								{project.name}
 							</h1>
