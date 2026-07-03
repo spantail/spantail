@@ -365,12 +365,24 @@ export async function reportPreview(
 		fallbackRange: template.defaultDateRange ?? "today",
 	});
 
-	const preview = await client.previewReport({
+	let preview = await client.previewReport({
 		templateId: template.id,
 		filters,
 		name: values.name,
 		note: values.note,
 	});
+	// Re-render with the adopted suggestions so the preview shows exactly what
+	// `report create` would save (name/note can appear in the rendered body).
+	const name = values.name || preview.suggestedName || undefined;
+	const note = values.note ?? (preview.suggestedNote || undefined);
+	if (name !== values.name || note !== values.note) {
+		preview = await client.previewReport({
+			templateId: template.id,
+			filters,
+			name,
+			note,
+		});
+	}
 	ctx.stdout.write(preview.content);
 	if (!preview.content.endsWith("\n")) ctx.stdout.write("\n");
 	const suggestion = preview.suggestedName

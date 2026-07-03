@@ -330,6 +330,54 @@ it("previews to stdout with stats on stderr", async () => {
 	expect(stderr.text()).toBe(
 		"3 entries, total 1h 30m, suggested name: Weekly 2026-06-08\n",
 	);
+	// The suggested name is adopted and the preview re-rendered with it, so the
+	// output matches what `report create` would save.
+	const previews = api.calls.filter((call) =>
+		call.url.pathname.endsWith("/reports/preview"),
+	);
+	expect(previews.length).toBe(2);
+	expect(previews[1]?.body).toMatchObject({ name: "Weekly 2026-06-08" });
+});
+
+it("previews once when name and note are explicit", async () => {
+	const api = fakeApi([
+		{ path: "/report-templates", body: [templateFixture()] },
+		{ path: "/workspaces", body: [acme] },
+		{
+			method: "POST",
+			path: "/reports/preview",
+			body: {
+				content: "# Preview body",
+				totalMinutes: 90,
+				entryCount: 3,
+				projectCount: 1,
+				suggestedName: "Weekly 2026-06-08",
+				suggestedNote: "",
+			},
+		},
+	]);
+	const { ctx, configDir } = createTestContext({ fetch: api.fetch });
+	loggedInWithDefault(configDir);
+
+	expect(
+		await runCli(
+			[
+				"report",
+				"preview",
+				"--template",
+				"tpl-1",
+				"--name",
+				"Weekly 2026-06-08",
+				"--note",
+				"hand-written",
+			],
+			ctx,
+		),
+	).toBe(0);
+	const previews = api.calls.filter((call) =>
+		call.url.pathname.endsWith("/reports/preview"),
+	);
+	expect(previews.length).toBe(1);
 });
 
 it("edits by merging flags over the current report", async () => {
