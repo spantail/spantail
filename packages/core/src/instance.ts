@@ -46,6 +46,24 @@ export type UpdateAgentsEnabledInput = z.infer<
 	typeof updateAgentsEnabledInputSchema
 >;
 
+/**
+ * Projection of whether realtime SSE updates are on. Read by any client to
+ * decide whether to open the stream; written by an instance admin. Off by
+ * default because every open stream pins a per-user Durable Object, whose
+ * duration (GB-s) can exhaust the Workers Free plan's daily quota.
+ */
+export const realtimeEnabledSchema = z.object({
+	enabled: z.boolean(),
+});
+export type RealtimeEnabled = z.infer<typeof realtimeEnabledSchema>;
+
+export const updateRealtimeEnabledInputSchema = z.object({
+	realtimeEnabled: z.boolean(),
+});
+export type UpdateRealtimeEnabledInput = z.infer<
+	typeof updateRealtimeEnabledInputSchema
+>;
+
 /** Social login providers an instance admin can enable. */
 export const oauthProviderSchema = z.enum(["google", "github"]);
 export type OauthProvider = z.infer<typeof oauthProviderSchema>;

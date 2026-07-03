@@ -26,8 +26,9 @@ export const Route = createFileRoute("/_authed/settings/features")({
 });
 
 // Instance-wide feature toggles, grouped on one admin-only screen: AI agent
-// logging, email delivery, and social login. Each is an independent setting
-// with its own query key, rendered as a stacked card under a single admin gate.
+// logging, realtime updates, email delivery, and social login. Each is an
+// independent setting with its own query key, rendered as a stacked card under
+// a single admin gate.
 function FeaturesSection() {
 	const { t } = useTranslation();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
@@ -51,6 +52,7 @@ function FeaturesSection() {
 		<div className="flex flex-col gap-4">
 			<AdminBanner body={t("settings.features.adminBanner")} />
 			<AgentsAdminCard />
+			<RealtimeAdminCard />
 			<EmailSettingsCard />
 			<OauthSettingsCard />
 		</div>
@@ -133,6 +135,92 @@ function AgentsAdminCard() {
 							disabled={saveMutation.isPending || !settings.data}
 						>
 							{t("settings.agentsAdmin.saveAction")}
+						</Button>
+					</div>
+				</form>
+			</CardContent>
+		</Card>
+	);
+}
+
+function RealtimeAdminCard() {
+	const { t } = useTranslation();
+	const queryClient = useQueryClient();
+
+	const settings = useQuery({
+		queryKey: ["realtime-enabled"],
+		queryFn: () => api.getRealtimeEnabled(),
+	});
+
+	const [enabled, setEnabled] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!settings.data) return;
+		setEnabled(settings.data.enabled);
+	}, [settings.data]);
+
+	const saveMutation = useMutation({
+		mutationFn: () => api.updateRealtimeEnabled({ realtimeEnabled: enabled }),
+		onSuccess: async () => {
+			setError(null);
+			// Also re-runs useRealtimeSync's gate, so this browser connects or
+			// disconnects the SSE stream immediately.
+			await queryClient.invalidateQueries({ queryKey: ["realtime-enabled"] });
+		},
+		onError: (err: Error) => setError(err.message),
+	});
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="font-heading text-base">
+					{t("settings.realtimeAdmin.title")}
+				</CardTitle>
+				<CardDescription>
+					{t("settings.realtimeAdmin.description")}
+				</CardDescription>
+				<CardAction>
+					<Badge variant={enabled ? "default" : "secondary"}>
+						{enabled
+							? t("settings.realtimeAdmin.statusEnabled")
+							: t("settings.realtimeAdmin.statusDisabled")}
+					</Badge>
+				</CardAction>
+			</CardHeader>
+			<CardContent>
+				<form
+					className="flex max-w-md flex-col gap-5"
+					onSubmit={(e) => {
+						e.preventDefault();
+						saveMutation.mutate();
+					}}
+				>
+					<div className="border-border flex flex-col gap-2 rounded-lg border p-3.5">
+						<div className="flex items-center gap-2 text-sm">
+							<Checkbox
+								id="realtime-enabled"
+								checked={enabled}
+								// Block interaction until the current value has loaded, so a
+								// click on the still-default `false` can't disable the feature.
+								disabled={!settings.data}
+								onCheckedChange={(v) => setEnabled(v === true)}
+							/>
+							<Label htmlFor="realtime-enabled">
+								{t("settings.realtimeAdmin.enableLabel")}
+							</Label>
+						</div>
+						<p className="text-muted-foreground text-xs">
+							{t("settings.realtimeAdmin.enableHint")}
+						</p>
+					</div>
+					{error && <p className="text-destructive text-sm">{error}</p>}
+					<div>
+						<Button
+							type="submit"
+							disabled={saveMutation.isPending || !settings.data}
+						>
+							{t("settings.realtimeAdmin.saveAction")}
 						</Button>
 					</div>
 				</form>

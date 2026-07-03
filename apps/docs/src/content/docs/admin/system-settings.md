@@ -1,6 +1,6 @@
 ---
 title: System settings
-description: Configure email delivery, social login, and the AI agents feature.
+description: Configure email delivery, social login, the AI agents feature, and realtime updates.
 ---
 
 The **System** group in Settings holds the instance-wide switches. Every screen here is **instance
@@ -57,6 +57,26 @@ nobody can claim the instance through social sign-in before it is set up. See
 
 :::note[Screenshot]
 *Placeholder — the AI agents page with the feature toggle.*
+:::
+
+## Realtime updates
+
+**Settings → System → Realtime updates.** A single switch for live updates over Server-Sent
+Events.
+
+- **On** — open browser tabs receive changes (new entries, projects, reports, messages) the
+  moment they happen, without a reload.
+- **Off** (default) — screens still refresh whenever a tab regains focus; nothing is pushed in
+  between.
+
+The switch exists because every connected tab keeps a per-user Durable Object running, and that
+duration counts against your Cloudflare account's daily quota — on the **Workers Free plan** a
+handful of active users can exhaust it within hours. Enable it on a Workers Paid plan, or on the
+Free plan when only a few people use the instance. Turning it off applies to new connections;
+already-open tabs keep their stream until they reload.
+
+:::note[Screenshot]
+*Placeholder — the Realtime updates page with the feature toggle.*
 :::
 
 ## About

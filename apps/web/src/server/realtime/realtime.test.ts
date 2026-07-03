@@ -22,6 +22,19 @@ async function nextEvent(
 	}
 }
 
+/** Realtime is off by default; tests exercising the stream opt in as admin. */
+async function enableRealtime(adminCookie: string): Promise<void> {
+	const res = await apiJson(
+		"PATCH",
+		"/api/v1/instance/realtime",
+		{ realtimeEnabled: true },
+		adminCookie,
+	);
+	if (res.status !== 200) {
+		throw new Error(`enabling realtime failed with ${res.status}`);
+	}
+}
+
 it("relays a published event to every open connection of a user's hub", async () => {
 	const stub = env.USER_HUB.getByName("user-1");
 	const a = (await stub.fetch(new Request("https://hub/"))).body?.getReader();
@@ -38,7 +51,9 @@ it("relays a published event to every open connection of a user's hub", async ()
 });
 
 it("returns the event stream content type for a session caller", async () => {
+	// The first user is the instance admin and can turn realtime on.
 	const cookie = await signUpUser("Owner", "owner@example.com");
+	await enableRealtime(cookie);
 	const res = await appFetch("/api/v1/realtime", { headers: { cookie } });
 	expect(res.status).toBe(200);
 	expect(res.headers.get("content-type")).toContain("text/event-stream");
@@ -53,6 +68,7 @@ it("rejects an unauthenticated subscriber", async () => {
 
 it("pushes a workspace write to every member's stream", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
+	await enableRealtime(admin);
 	const member = await signUpUser("Member", "member@example.com");
 	const ws = (await (
 		await apiJson(
@@ -104,5 +120,59 @@ it("pushes a workspace write to every member's stream", async () => {
 
 	const event = await nextEvent(reader);
 	expect(event).toEqual({ type: "work-entry", workspaceId: ws.id });
+	await reader.cancel();
+});
+
+it("suppresses publishes while realtime is disabled", async () => {
+	// Realtime stays off (the default). The stream route would refuse, so
+	// listen on the admin's hub directly through the DO stub.
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const adminId = (
+		(await (await apiGet("/api/v1/me", admin)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	const ws = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "acme", name: "Acme", timezone: "Asia/Tokyo" },
+			admin,
+		)
+	).json()) as { id: string };
+	const project = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "spantail", name: "Spantail" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	const stub = env.USER_HUB.getByName(adminId);
+	const reader = (
+		await stub.fetch(new Request("https://hub/"))
+	).body?.getReader();
+	if (!reader) throw new Error("no SSE body");
+
+	const created = await apiJson(
+		"POST",
+		"/api/v1/work-entries",
+		{
+			workspaceId: ws.id,
+			projectId: project.id,
+			durationMinutes: 30,
+			description: "Written while realtime is off",
+		},
+		admin,
+	);
+	expect(created.status).toBe(201);
+
+	// Give the write's background publish task time to run (an extra API
+	// round-trip), then publish a sentinel directly. The first frame must be
+	// the sentinel — the write's publish was suppressed by the toggle.
+	await apiGet("/api/v1/me", admin);
+	await stub.publish(JSON.stringify({ type: "message" }));
+	expect(await nextEvent(reader)).toEqual({ type: "message" });
 	await reader.cancel();
 });

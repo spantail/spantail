@@ -716,6 +716,15 @@
 			"statusEnabled": "有効",
 			"statusDisabled": "無効"
 		},
+		"realtimeAdmin": {
+			"title": "リアルタイム更新",
+			"description": "Server-Sent Events のストリームで、開いているブラウザタブに更新を即時反映します。既定ではオフです。",
+			"enableLabel": "リアルタイム更新を有効化",
+			"enableHint": "注意: 接続中のタブごとにユーザー単位の Durable Object が常駐し、実行時間クォータを速く消費します。Workers Free プランでは 1 日の上限を数時間で使い切ることがあります。オフの間も、タブがフォーカスを取り戻すと画面は再取得されます。",
+			"saveAction": "保存",
+			"statusEnabled": "有効",
+			"statusDisabled": "無効"
+		},
 		"email": {
 			"title": "メール",
 			"description": "メール配信は Cloudflare Email Service を使用し、Workers Paid プランが必要です。既定ではオフです。",
@@ -740,7 +749,7 @@
 			"statusDisabled": "無効"
 		},
 		"features": {
-			"adminBanner": "AI エージェント・メール配信・ソーシャルログインはインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。"
+			"adminBanner": "AI エージェント・リアルタイム更新・メール配信・ソーシャルログインはインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。"
 		},
 		"system": {
 			"description": "オープンソースの作業可観測性プラットフォーム。",

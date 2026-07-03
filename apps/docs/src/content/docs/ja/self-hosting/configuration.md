@@ -51,6 +51,6 @@ description: 環境変数・シークレット・バインディング。
 | --- | --- | --- |
 | `DB` | D1 データベース | 主データベース。`wrangler d1 create spantail-db` で作成。 |
 | `UPLOADS` | R2 バケット | ユーザーがアップロードしたメディア(アバター、ワークスペースロゴ)。`wrangler r2 bucket create spantail-uploads` で作成。 |
-| `USER_HUB` | Durable Object | SSE 無効化シグナルのユーザー単位リアルタイム配信。SQLite ベースで Workers Free プランで動作。 |
+| `USER_HUB` | Durable Object | SSE 無効化シグナルのユーザー単位リアルタイム配信。管理者がリアルタイム更新を有効化するまではアイドル。開いているストリームは Durable Object の実行時間を消費し、Free プランでは 1 日のクォータに収まる必要があります。 |
 | `EMAIL` | Email Service | 送信メール。Workers Paid プランで送信ドメインを登録するまでは無効(inert)。 |
 | `INGEST_RATE_LIMITER` | レートリミッター | 信頼できない取り込み経路の資格情報単位の上限(120 リクエスト / 60 秒)。漏えいしたトークンが D1 を圧迫しないようにします。 |

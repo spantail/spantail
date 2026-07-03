@@ -5,9 +5,11 @@ import {
 	type EmailSettings,
 	normalizeAllowedDomains,
 	type OauthSettings,
+	type RealtimeEnabled,
 	updateAgentsEnabledInputSchema,
 	updateEmailSettingsInputSchema,
 	updateOauthSettingsInputSchema,
+	updateRealtimeEnabledInputSchema,
 } from "@spantail/core";
 import {
 	countUsers,
@@ -15,6 +17,7 @@ import {
 	type InstanceSettingsRow,
 	upsertInstanceAgentsEnabled,
 	upsertInstanceOauthSettings,
+	upsertInstanceRealtimeEnabled,
 	upsertInstanceSettings,
 } from "@spantail/db";
 import { Hono } from "hono";
@@ -108,6 +111,26 @@ export const instanceRoutes = new Hono<AppEnv>()
 			input.agentsEnabled,
 		);
 		return c.json({ enabled: row.agentsEnabled } satisfies AgentsEnabled);
+	})
+	// Whether realtime SSE updates are on. Read by any caller so the SPA can
+	// decide whether to open the stream; reports only the boolean.
+	.get("/realtime-enabled", async (c) => {
+		const settings = await getInstanceSettings(c.var.db);
+		return c.json({
+			enabled: settings?.realtimeEnabled ?? false,
+		} satisfies RealtimeEnabled);
+	})
+	.patch("/realtime", async (c) => {
+		requireInstanceAdmin(c);
+		const input = validate(
+			updateRealtimeEnabledInputSchema,
+			await c.req.json(),
+		);
+		const row = await upsertInstanceRealtimeEnabled(
+			c.var.db,
+			input.realtimeEnabled,
+		);
+		return c.json({ enabled: row.realtimeEnabled } satisfies RealtimeEnabled);
 	})
 	// Public: tells the login screen which social buttons to show. A provider is
 	// "on" only when an admin enabled it and its credentials are configured.

@@ -1,7 +1,12 @@
 import type { RealtimeEvent } from "@spantail/core";
-import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import {
+	type QueryClient,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { useEffect } from "react";
 
+import { api } from "./api";
 import {
 	invalidateMail,
 	invalidateReportDiscussion,
@@ -49,10 +54,24 @@ function applyRealtimeEvent(qc: QueryClient, ev: RealtimeEvent): void {
  * Subscribes the authenticated user to their realtime SSE stream and applies each
  * invalidation signal to the query cache. One connection per user, independent of
  * the active workspace; the browser's EventSource reconnects on its own.
+ * Connects only when the instance's realtime toggle is on — while off (the
+ * default), no stream is opened and refetch-on-focus keeps screens current.
  */
 export function useRealtimeSync(): void {
 	const qc = useQueryClient();
+	// Instance-wide and admin-controlled, so effectively static for a session:
+	// no background refetching. A toggle flip reaches other browsers on their
+	// next page load; in the admin's own browser the settings card invalidates
+	// this key, which re-runs the effect below.
+	const flag = useQuery({
+		queryKey: ["realtime-enabled"],
+		queryFn: () => api.getRealtimeEnabled(),
+		staleTime: Number.POSITIVE_INFINITY,
+	});
+	const enabled = flag.data?.enabled === true;
 	useEffect(() => {
+		// Also covers the flag still loading: don't connect until it resolves true.
+		if (!enabled) return;
 		// Absent in non-browser environments (SSR, tests); skip rather than throw.
 		if (typeof EventSource === "undefined") return;
 		const source = new EventSource("/api/v1/realtime");
@@ -73,5 +92,5 @@ export function useRealtimeSync(): void {
 			}
 		};
 		return () => source.close();
-	}, [qc]);
+	}, [qc, enabled]);
 }

@@ -115,6 +115,49 @@ curl -X PATCH "https://<your-instance>/api/v1/instance/agents" \
 </TabItem>
 </Tabs>
 
+## Realtime updates
+
+Whether realtime SSE updates are on. Off by default because every open stream keeps a per-user
+Durable Object running, which can exhaust the Workers Free plan's daily duration quota.
+
+### Realtime enabled
+
+`GET /api/v1/instance/realtime-enabled` <Badge text="public" variant="tip" />
+
+Read by any caller so clients can decide whether to open the stream; reports only the boolean.
+
+```json
+{ "enabled": false }
+```
+
+### Update realtime
+
+`PATCH /api/v1/instance/realtime` <Badge text="scope: admin" variant="danger" />
+
+Instance admin only. Toggles the feature.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `realtimeEnabled` | boolean | yes | Turn realtime SSE updates on or off. |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/realtime" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "realtimeEnabled": true }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "enabled": true }
+```
+</TabItem>
+</Tabs>
+
 ## Social login
 
 Google and GitHub sign-in. A provider can only be enabled when its client id and secret are
