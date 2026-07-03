@@ -1,5 +1,6 @@
 import type { RealtimeEvent } from "@spantail/core";
 import {
+	getInstanceSettings,
 	listReportParticipantUserIds,
 	listWorkspaceMemberIds,
 } from "@spantail/db";
@@ -10,10 +11,20 @@ import type { AppEnv } from "../types";
 /**
  * Run a fan-out in the background. Realtime delivery is best-effort: a failure
  * (a transient DB lookup or DO error) must never surface as an unhandled
- * rejection or affect the response, so errors are swallowed.
+ * rejection or affect the response, so errors are swallowed. The work is a
+ * thunk so nothing starts before the instance toggle is checked — when
+ * realtime is off, every publish is a background no-op and no Durable Object
+ * is ever reached. The flag read also runs inside the waitUntil task, keeping
+ * the write response latency untouched.
  */
-function deliver(c: Context<AppEnv>, work: Promise<unknown>): void {
-	c.executionCtx.waitUntil(work.catch(() => {}));
+function deliver(c: Context<AppEnv>, work: () => Promise<unknown>): void {
+	c.executionCtx.waitUntil(
+		(async () => {
+			const settings = await getInstanceSettings(c.var.db);
+			if (!settings?.realtimeEnabled) return;
+			await work();
+		})().catch(() => {}),
+	);
 }
 
 function fanOut(
@@ -37,7 +48,9 @@ export function publishToUser(
 	userId: string,
 	event: RealtimeEvent,
 ): void {
-	deliver(c, c.env.USER_HUB.getByName(userId).publish(JSON.stringify(event)));
+	deliver(c, () =>
+		c.env.USER_HUB.getByName(userId).publish(JSON.stringify(event)),
+	);
 }
 
 /** Relay a signal to several users at once (e.g. a report's recipients). */
@@ -46,7 +59,7 @@ export function publishToUsers(
 	userIds: string[],
 	event: RealtimeEvent,
 ): void {
-	deliver(c, fanOut(c, userIds, JSON.stringify(event)));
+	deliver(c, () => fanOut(c, userIds, JSON.stringify(event)));
 }
 
 /**
@@ -58,13 +71,10 @@ export function publishToWorkspace(
 	event: RealtimeEvent & { workspaceId: string },
 ): void {
 	const payload = JSON.stringify(event);
-	deliver(
-		c,
-		(async () => {
-			const ids = await listWorkspaceMemberIds(c.var.db, event.workspaceId);
-			await fanOut(c, ids, payload);
-		})(),
-	);
+	deliver(c, async () => {
+		const ids = await listWorkspaceMemberIds(c.var.db, event.workspaceId);
+		await fanOut(c, ids, payload);
+	});
 }
 
 /**
@@ -79,11 +89,8 @@ export function publishToReportParticipants(
 		type: "report-discussion",
 		id: reportId,
 	} satisfies RealtimeEvent);
-	deliver(
-		c,
-		(async () => {
-			const ids = await listReportParticipantUserIds(c.var.db, reportId);
-			await fanOut(c, ids, payload);
-		})(),
-	);
+	deliver(c, async () => {
+		const ids = await listReportParticipantUserIds(c.var.db, reportId);
+		await fanOut(c, ids, payload);
+	});
 }

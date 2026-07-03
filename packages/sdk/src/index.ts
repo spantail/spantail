@@ -44,6 +44,7 @@ import type {
 	ProjectMemberAvatar,
 	ReactionEmoji,
 	ReactionSummary,
+	RealtimeEnabled,
 	Recipient,
 	Report,
 	ReportDiscussion,
@@ -62,6 +63,7 @@ import type {
 	UpdateEmailSettingsInput,
 	UpdateOauthSettingsInput,
 	UpdateProjectInput,
+	UpdateRealtimeEnabledInput,
 	UpdateReportInput,
 	UpdateReportTemplateInput,
 	UpdateReportTemplateStateInput,
@@ -468,6 +470,18 @@ export class SpantailClient {
 	/** Instance admin: turn the agents feature on or off. */
 	updateAgentsEnabled(input: UpdateAgentsEnabledInput): Promise<AgentsEnabled> {
 		return this.request("PATCH", "/instance/agents", { body: input });
+	}
+
+	/** Whether the instance has realtime SSE updates enabled (gates the stream). */
+	getRealtimeEnabled(): Promise<RealtimeEnabled> {
+		return this.request("GET", "/instance/realtime-enabled");
+	}
+
+	/** Instance admin: turn realtime updates on or off. */
+	updateRealtimeEnabled(
+		input: UpdateRealtimeEnabledInput,
+	): Promise<RealtimeEnabled> {
+		return this.request("PATCH", "/instance/realtime", { body: input });
 	}
 
 	listReportTemplates(): Promise<ReportTemplate[]> {

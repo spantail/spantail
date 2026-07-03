@@ -93,6 +93,7 @@ const instanceConfigSchema = z.object({
 	googleOAuthEnabled: z.boolean().default(false),
 	githubOAuthEnabled: z.boolean().default(false),
 	agentsEnabled: z.boolean().default(false),
+	realtimeEnabled: z.boolean().default(false),
 });
 
 export type UserConfig = z.infer<typeof userConfigSchema>;

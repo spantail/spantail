@@ -19,7 +19,7 @@ Cloudflare resources:
 | --- | --- | --- |
 | D1 database | `DB` | Primary database. |
 | R2 bucket | `UPLOADS` | User-uploaded media (avatars, workspace logos). |
-| Durable Object | `USER_HUB` | Realtime fan-out for live updates over SSE. SQLite-backed, so it runs on the Free plan. |
+| Durable Object | `USER_HUB` | Realtime fan-out for live updates over SSE. Idle unless an admin enables realtime updates. |
 | Email Service | `EMAIL` | Outbound email. Optional and inert until you onboard a sending domain. |
 | Rate limiter | `INGEST_RATE_LIMITER` | Per-credential cap on the untrusted ingest path. |
 
@@ -30,10 +30,17 @@ See the bindings and secrets in detail on the [Configuration](/self-hosting/conf
 - **Node.js 24+**, **pnpm 10+**, and **Wrangler v4**
 - A **Cloudflare account**
 
-The **Workers Free plan is enough** to run the core: D1 and the SQLite-backed realtime Durable
-Object both work on it. **Email delivery is the only paid extra** — Cloudflare Email Service
-needs a Workers Paid plan and a verified sending domain. It is off by default; until you enable
-it, you add members directly with generated passwords.
+The **Workers Free plan is enough** to run the core. Two optional features are off by default
+because they don't fit the Free plan:
+
+- **Email delivery** — Cloudflare Email Service needs a Workers Paid plan and a verified sending
+  domain. Until you enable it, you add members directly with generated passwords.
+- **Realtime updates** — live updates over SSE keep a per-user Durable Object running for every
+  connected tab, and that duration can exhaust the Free plan's daily quota within hours. While
+  off, screens refresh when a tab regains focus.
+
+Both are single switches in [System settings](/admin/system-settings) once you're on a plan (or
+usage level) that fits.
 
 :::note[Screenshot placeholder]
 📸 _A freshly deployed instance showing the first-run sign-up screen._

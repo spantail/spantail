@@ -43,6 +43,13 @@ export const instanceSettings = sqliteTable("instance_settings", {
 	agentsEnabled: integer("agents_enabled", { mode: "boolean" })
 		.notNull()
 		.default(false),
+	// Realtime SSE updates are off by default: every open stream keeps a per-user
+	// Durable Object pinned in memory, and that duration (GB-s) can exhaust the
+	// Workers Free plan's daily quota within hours. An instance admin opts in.
+	// While off, clients fall back to refetch-on-focus.
+	realtimeEnabled: integer("realtime_enabled", { mode: "boolean" })
+		.notNull()
+		.default(false),
 	updatedAt: updatedAtMs(),
 });
 

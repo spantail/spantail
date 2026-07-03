@@ -3,3 +3,4 @@ emailEnabled: true
 googleOAuthEnabled: true
 githubOAuthEnabled: true
 agentsEnabled: true
+realtimeEnabled: true

@@ -888,6 +888,7 @@ export async function generateDataset(
 			githubOAuthEnabled: config.instance.githubOAuthEnabled,
 			googleAllowedDomains: [],
 			agentsEnabled: config.instance.agentsEnabled,
+			realtimeEnabled: config.instance.realtimeEnabled,
 			updatedAt: baseCreatedAt,
 		},
 	];

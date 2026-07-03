@@ -52,6 +52,6 @@ in your Cloudflare account.
 | --- | --- | --- |
 | `DB` | D1 database | Primary database. Create with `wrangler d1 create spantail-db`. |
 | `UPLOADS` | R2 bucket | User-uploaded media (avatars, workspace logos). Create with `wrangler r2 bucket create spantail-uploads`. |
-| `USER_HUB` | Durable Object | Per-user realtime fan-out for SSE invalidation signals. SQLite-backed; runs on the Workers Free plan. |
+| `USER_HUB` | Durable Object | Per-user realtime fan-out for SSE invalidation signals. Idle until an admin enables realtime updates; each open stream accrues Durable Object duration against the Free plan's daily quota. |
 | `EMAIL` | Email Service | Outbound email. Inert until your account onboards a sending domain on a Workers Paid plan. |
 | `INGEST_RATE_LIMITER` | Rate limiter | Per-credential cap (120 requests / 60s) on the untrusted ingest path, so a leaked token cannot flood D1. |

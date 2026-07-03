@@ -713,6 +713,15 @@
 			"statusEnabled": "Enabled",
 			"statusDisabled": "Disabled"
 		},
+		"realtimeAdmin": {
+			"title": "Realtime updates",
+			"description": "Push live updates to open browser tabs over a server-sent event stream. Off by default.",
+			"enableLabel": "Enable realtime updates",
+			"enableHint": "Heads up: each connected tab keeps a per-user Durable Object running, which consumes duration quota quickly — on the Workers Free plan the daily allowance can run out within hours. While off, screens still refresh when a tab regains focus.",
+			"saveAction": "Save",
+			"statusEnabled": "Enabled",
+			"statusDisabled": "Disabled"
+		},
 		"email": {
 			"title": "Email",
 			"description": "Email delivery uses Cloudflare Email Service and requires a Workers Paid plan. It is off by default.",
@@ -737,7 +746,7 @@
 			"statusDisabled": "Disabled"
 		},
 		"features": {
-			"adminBanner": "AI agents, email delivery and social login apply to the whole instance and are visible only to instance admins."
+			"adminBanner": "AI agents, realtime updates, email delivery and social login apply to the whole instance and are visible only to instance admins."
 		},
 		"system": {
 			"description": "Open-source work observability platform.",

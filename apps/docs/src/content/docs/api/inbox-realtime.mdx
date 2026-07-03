@@ -258,6 +258,13 @@ and Agent Access Token callers are not supported here. A non-session credential 
 `401`.
 </Aside>
 
+<Aside type="caution">
+Realtime updates are an instance-wide feature an admin turns on in
+[System settings](/admin/system-settings#realtime-updates); it is **off by default**. While
+off, this endpoint returns `403 forbidden` and clients fall back to refetching on focus. Check
+`GET /api/v1/instance/realtime-enabled` before connecting.
+</Aside>
+
 A signal names *what* changed (and *where*) — never the changed data itself. On receiving
 one, the client re-fetches the affected queries through the typed API, so authorization and
 shaping stay on the existing REST path. Each event is a JSON object:

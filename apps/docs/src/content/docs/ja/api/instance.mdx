@@ -115,6 +115,50 @@ curl -X PATCH "https://<your-instance>/api/v1/instance/agents" \
 </TabItem>
 </Tabs>
 
+## Realtime updates
+
+リアルタイム SSE 更新がオンかどうか。開いているストリームごとにユーザー単位の Durable Object が
+常駐し、Workers Free プランの 1 日の実行時間クォータを使い切ることがあるため、既定はオフです。
+
+### リアルタイム有効状態
+
+`GET /api/v1/instance/realtime-enabled` <Badge text="public" variant="tip" />
+
+クライアントがストリームを開くかどうかを判断するために任意の呼び出し元が読みます。ブール値のみを
+報告します。
+
+```json
+{ "enabled": false }
+```
+
+### リアルタイムの更新
+
+`PATCH /api/v1/instance/realtime` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者のみ。機能を切り替えます。
+
+**リクエストボディ**
+
+| Field | Type | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `realtimeEnabled` | boolean | はい | リアルタイム SSE 更新のオン／オフを切り替える。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X PATCH "https://<your-instance>/api/v1/instance/realtime" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "realtimeEnabled": true }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "enabled": true }
+```
+</TabItem>
+</Tabs>
+
 ## Social login
 
 Google と GitHub のサインイン。プロバイダは、そのクライアント ID とシークレットが環境に設定されて
