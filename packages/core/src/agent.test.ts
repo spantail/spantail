@@ -86,25 +86,33 @@ it("accepts a bounded context on the summary and finalize paths", () => {
 	expect(
 		ingestAgentEntryInputSchema.safeParse({ ...base, context }).success,
 	).toBe(true);
-	expect(
-		finalizeAgentSessionInputSchema.safeParse({
-			sessionId: "s1",
-			endedAt: minutesAgo(1),
-			description: "Fixed the flaky login test",
-			context,
-		}).success,
-	).toBe(true);
+	const finalized = finalizeAgentSessionInputSchema.parse({
+		sessionId: "s1",
+		endedAt: minutesAgo(1),
+		description: "Fixed the flaky login test",
+		context,
+	});
+	// Finalize only owns refs; rollup-owned facets are stripped, so a
+	// SessionEnd can never overwrite what the events actually said.
+	expect(finalized.context).toEqual({ refs: ["github:acme/app#12"] });
 });
 
 it("bounds context facets: value count and length", () => {
 	const tooMany = { refs: Array.from({ length: 21 }, (_, i) => `r${i}`) };
-	const tooLong = { branches: ["x".repeat(201)] };
+	const tooLong = { refs: ["x".repeat(201)] };
 	for (const context of [tooMany, tooLong]) {
 		expect(
 			finalizeAgentSessionInputSchema.safeParse({ sessionId: "s1", context })
 				.success,
 		).toBe(false);
 	}
+	// The summary path accepts every facet, so bound one there too.
+	expect(
+		ingestAgentEntryInputSchema.safeParse({
+			...base,
+			context: { branches: ["x".repeat(201)] },
+		}).success,
+	).toBe(false);
 });
 
 it("rejects an implausible finalize endedAt", () => {

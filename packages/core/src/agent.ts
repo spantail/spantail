@@ -91,9 +91,10 @@ const contextValuesSchema = z.array(z.string().min(1).max(200)).max(20);
 /**
  * Non-usage session context: distinct values aggregated from event attributes
  * by the rollup (`models`, `branches`, `repositories`) or supplied by the
- * client (`refs`, and everything on the summary/finalize paths). `refs` are
- * opaque external references extracted by the client (e.g.
- * "github:owner/repo#123") — the server never interprets the format.
+ * client (`refs`; the summary path, which has no events, supplies every
+ * facet — the finalize path only `refs`). `refs` are opaque external
+ * references extracted by the client (e.g. "github:owner/repo#123") — the
+ * server never interprets the format.
  */
 export const agentEntryContextSchema = z.object({
 	models: contextValuesSchema.optional(),
@@ -194,7 +195,11 @@ export const finalizeAgentSessionInputSchema = z.object({
 		.refine(isTimestampInRange, "must be a plausible timestamp")
 		.optional(),
 	description: z.string().max(2000).optional(),
-	context: agentEntryContextSchema.optional(),
+	// Only the client-owned facet: the event-derived facets (models, branches,
+	// repositories) belong to the rollup, and a finalize must not be able to
+	// overwrite them with values no event ever carried. Unknown keys are
+	// stripped, not rejected.
+	context: agentEntryContextSchema.pick({ refs: true }).optional(),
 });
 export type FinalizeAgentSessionInput = z.infer<
 	typeof finalizeAgentSessionInputSchema

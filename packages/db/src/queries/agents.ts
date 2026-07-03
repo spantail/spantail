@@ -856,7 +856,10 @@ export async function finalizeAgentSession(
 		sessionId: string;
 		endedAt: Date | null;
 		description: string | null;
-		context: AgentEntryContext | null;
+		// Only the client-owned facet: the rollup owns the event-derived ones,
+		// which a finalize must never overwrite (enforced by the input schema and
+		// this type both).
+		context: Pick<AgentEntryContext, "refs"> | null;
 	},
 ): Promise<AgentEntryRow | undefined> {
 	const endedAtMs = input.endedAt?.getTime();
