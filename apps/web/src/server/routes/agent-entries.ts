@@ -3,10 +3,8 @@ import {
 	ingestAgentEntryInputSchema,
 	listAgentEntriesQuerySchema,
 	resolveUserTimezone,
-	todayInTimezone,
 } from "@spantail/core";
 import {
-	type AgentEntryRow,
 	getAgentEntryStats,
 	getProjectById,
 	listAgentEntries,
@@ -15,6 +13,7 @@ import {
 } from "@spantail/db";
 import { Hono } from "hono";
 
+import { serializeAgentEntry } from "../lib/agent-entry";
 import { AppError } from "../lib/errors";
 import {
 	requireAgentIngestWorkspace,
@@ -28,13 +27,6 @@ import { requireAgentAuth, requireScope } from "../middleware/auth";
 import { ingestRateLimit } from "../middleware/rate-limit";
 import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
-
-// Agent entries store only timestamps; `entryDate` is a read-time projection of
-// `startedAt` into the viewer's timezone (UTC for the ingest echo, where there
-// is no human viewer — readers recompute it in their own timezone).
-function serializeAgentEntry(row: AgentEntryRow, timezone: string) {
-	return { ...row, entryDate: todayInTimezone(timezone, row.startedAt) };
-}
 
 export const agentEntryRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)

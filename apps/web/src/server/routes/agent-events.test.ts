@@ -460,6 +460,8 @@ it("rolls up costUsd and context facets from event metadata", async () => {
 	expect(list[0]?.context.repositories).toEqual([
 		"https://github.com/acme/app",
 	]);
+	// Internal rollup bookkeeping never leaves the server.
+	expect(Object.keys(list[0] ?? {})).not.toContain("rollupEventCount");
 });
 
 it("omits costUsd from the rollup when no event carries one", async () => {

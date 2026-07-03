@@ -1,7 +1,6 @@
 import {
 	finalizeAgentSessionInputSchema,
 	ingestAgentEventsInputSchema,
-	todayInTimezone,
 } from "@spantail/core";
 import {
 	computeSessionRollup,
@@ -12,6 +11,7 @@ import {
 } from "@spantail/db";
 import { Hono } from "hono";
 
+import { serializeAgentEntry } from "../lib/agent-entry";
 import { AppError } from "../lib/errors";
 import {
 	requireAgentIngestWorkspace,
@@ -101,12 +101,9 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			endedAt: rollup.endedAt,
 		});
 		publishToWorkspace(c, { type: "agent-entry", workspaceId });
-		// Echo with a UTC-derived entryDate: this is the ingest path (no human
-		// viewer); readers recompute the day in their own timezone.
-		return c.json({
-			...entry,
-			entryDate: todayInTimezone("UTC", entry.startedAt),
-		});
+		// UTC-derived entryDate: this is the ingest path (no human viewer);
+		// readers recompute the day in their own timezone.
+		return c.json(serializeAgentEntry(entry, "UTC"));
 	})
 	// Finalize an events-fed session (e.g. Claude Code's SessionEnd hook):
 	// supplements the entry with closing facts — wall-clock end, a summary
@@ -134,8 +131,5 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			throw new AppError("not_found", "No entry for this session yet");
 		}
 		publishToWorkspace(c, { type: "agent-entry", workspaceId });
-		return c.json({
-			...entry,
-			entryDate: todayInTimezone("UTC", entry.startedAt),
-		});
+		return c.json(serializeAgentEntry(entry, "UTC"));
 	});
