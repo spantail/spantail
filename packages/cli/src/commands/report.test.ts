@@ -339,6 +339,37 @@ it("previews to stdout with stats on stderr", async () => {
 	expect(previews[1]?.body).toMatchObject({ name: "Weekly 2026-06-08" });
 });
 
+it("falls back to the template name when nothing is suggested", async () => {
+	const api = fakeApi([
+		{ path: "/report-templates", body: [templateFixture()] },
+		{ path: "/workspaces", body: [acme] },
+		{
+			method: "POST",
+			path: "/reports/preview",
+			body: {
+				content: "# Preview body",
+				totalMinutes: 90,
+				entryCount: 3,
+				projectCount: 1,
+				suggestedName: "",
+				suggestedNote: "",
+			},
+		},
+	]);
+	const { ctx, configDir } = createTestContext({ fetch: api.fetch });
+	loggedInWithDefault(configDir);
+
+	expect(await runCli(["report", "preview", "--template", "tpl-1"], ctx)).toBe(
+		0,
+	);
+	// Same fallback as `report create`: the template's own name.
+	const previews = api.calls.filter((call) =>
+		call.url.pathname.endsWith("/reports/preview"),
+	);
+	expect(previews.length).toBe(2);
+	expect(previews[1]?.body).toMatchObject({ name: "Weekly" });
+});
+
 it("previews once when name and note are explicit", async () => {
 	const api = fakeApi([
 		{ path: "/report-templates", body: [templateFixture()] },

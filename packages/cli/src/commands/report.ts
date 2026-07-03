@@ -371,9 +371,9 @@ export async function reportPreview(
 		name: values.name,
 		note: values.note,
 	});
-	// Re-render with the adopted suggestions so the preview shows exactly what
+	// Re-render with the adopted fields so the preview shows exactly what
 	// `report create` would save (name/note can appear in the rendered body).
-	const name = values.name || preview.suggestedName || undefined;
+	const name = values.name || preview.suggestedName || template.name;
 	const note = values.note ?? (preview.suggestedNote || undefined);
 	if (name !== values.name || note !== values.note) {
 		preview = await client.previewReport({
