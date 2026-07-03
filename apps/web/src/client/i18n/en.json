@@ -288,17 +288,6 @@
 			"selfOnly": "Sent to your inbox",
 			"read": "{{read}}/{{total}} read"
 		},
-		"header": {
-			"period": "Period",
-			"total": "Total",
-			"workspaces": "Workspaces",
-			"projects": "Projects",
-			"users": "Users",
-			"tags": "Tags",
-			"timezone": "Timezone",
-			"generatedAt": "Generated",
-			"version": "Version"
-		},
 		"shares": {
 			"title": "Share: {{name}}",
 			"description": "Create a read-only link to this report.",

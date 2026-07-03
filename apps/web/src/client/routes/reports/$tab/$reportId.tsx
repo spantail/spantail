@@ -1,6 +1,6 @@
 import {
-	parseReportFrontMatter,
 	type Report,
+	renderReportFrontMatterYaml,
 	splitFrontMatter,
 } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
@@ -93,6 +93,10 @@ function ReportPane({ report, tab }: { report: Report; tab: string }) {
 	// (this pane remounts on report change via its key).
 	const [showHeader, setShowHeader] = useState(false);
 
+	// The body drives Copy; the header toggle surfaces the version's own
+	// front-matter as validated, sanitized YAML (all fields, verbatim).
+	const { body } = splitFrontMatter(report.renderedMarkdown);
+
 	return (
 		<div className="flex h-full min-h-0 flex-col">
 			<ReportToolbar
@@ -105,7 +109,7 @@ function ReportPane({ report, tab }: { report: Report; tab: string }) {
 				<div className="mx-auto flex w-full max-w-3xl flex-col gap-7 px-8 py-8">
 					{showHeader && (
 						<ReportHeaderMeta
-							frontMatter={parseReportFrontMatter(report.renderedMarkdown)}
+							frontMatter={renderReportFrontMatterYaml(report.renderedMarkdown)}
 							onClose={() => setShowHeader(false)}
 						/>
 					)}
@@ -114,7 +118,7 @@ function ReportPane({ report, tab }: { report: Report; tab: string }) {
 					    `print-area` scopes the Print action to the preview only. */}
 					<div className="print-area relative">
 						<CopyMarkdownButton
-							markdown={splitFrontMatter(report.renderedMarkdown).body}
+							markdown={body}
 							className="absolute top-0 right-0 print:hidden"
 						/>
 						<MarkdownView markdown={report.renderedMarkdown} variant="report" />

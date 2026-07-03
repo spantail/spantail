@@ -100,3 +100,53 @@ export function parseReportFrontMatter(md: string): ReportFrontMatter | null {
 	const result = reportFrontMatterSchema.safeParse(parsed);
 	return result.success ? result.data : null;
 }
+
+// Code points that enable display spoofing (Trojan Source, CVE-2021-42574):
+// C0/C1 controls (except \t and \n, which are legitimate structure), the
+// bidirectional overrides/isolates, and zero-width / other invisible format
+// characters. `yaml.stringify` escapes C0 controls to `\a`-style text but emits
+// bidi/zero-width chars literally, so those must be stripped from the serialized
+// output before it is displayed. A code-point predicate keeps the source free of
+// literal control characters (which a regex character class would require).
+function isUnsafeDisplayChar(cp: number): boolean {
+	return (
+		(cp <= 0x1f && cp !== 0x09 && cp !== 0x0a) || // C0 controls except tab/newline
+		(cp >= 0x7f && cp <= 0x9f) || // DEL + C1 controls
+		cp === 0x061c || // Arabic letter mark
+		(cp >= 0x200b && cp <= 0x200f) || // zero-width chars + LRM/RLM
+		cp === 0x2028 || // line separator
+		cp === 0x2029 || // paragraph separator
+		(cp >= 0x202a && cp <= 0x202e) || // bidi embeddings/overrides
+		cp === 0x2060 || // word joiner
+		(cp >= 0x2066 && cp <= 0x2069) || // bidi isolates
+		cp === 0xfeff // BOM / zero-width no-break space
+	);
+}
+
+function stripUnsafeDisplayChars(value: string): string {
+	let out = "";
+	for (const ch of value) {
+		if (!isUnsafeDisplayChar(ch.codePointAt(0) ?? 0)) out += ch;
+	}
+	return out;
+}
+
+/**
+ * Builds the display string for surfacing a rendered version's own front-matter
+ * (the "show header" toggle) as structured YAML — the whole header, unabridged,
+ * rather than a hand-picked, reformatted subset.
+ *
+ * Front-matter values (`name`, `tags`) originate from ingested, hostile input
+ * (see docs/security.md §1), so this is a safety boundary, not just formatting:
+ * it (1) validates via parseReportFrontMatter, so a malformed or off-shape block
+ * yields null and is never shown; (2) re-serializes the validated object, so
+ * `yaml.stringify` quotes/escapes special characters and only known-schema keys
+ * appear (allowlist); and (3) strips invisible/bidi control characters that
+ * would otherwise spoof the rendered YAML. The caller renders the result as a
+ * React text node (never raw HTML), which escapes the remainder.
+ */
+export function renderReportFrontMatterYaml(md: string): string | null {
+	const meta = parseReportFrontMatter(md);
+	if (meta === null) return null;
+	return stripUnsafeDisplayChars(stringify(meta)).trimEnd();
+}

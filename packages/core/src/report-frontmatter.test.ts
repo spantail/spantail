@@ -4,6 +4,7 @@ import {
 	buildReportFrontMatter,
 	parseReportFrontMatter,
 	type ReportFrontMatter,
+	renderReportFrontMatterYaml,
 	splitFrontMatter,
 } from "./report-frontmatter";
 
@@ -70,5 +71,57 @@ describe("report front-matter", () => {
 		const { frontMatter, body } = splitFrontMatter(legacy);
 		expect(frontMatter).toBeNull();
 		expect(body).toBe(legacy);
+	});
+});
+
+describe("renderReportFrontMatterYaml", () => {
+	it("renders the whole validated header, nothing omitted", () => {
+		const full: ReportFrontMatter = {
+			...meta,
+			filters: {
+				workspaceIds: ["ws-1", "ws-2", "ws-3"],
+				projectIds: ["p-1"],
+				tags: ["api"],
+			},
+		};
+		const content = `${buildReportFrontMatter(full)}# Body\n`;
+		const yaml = renderReportFrontMatterYaml(content);
+		expect(yaml).not.toBeNull();
+		// Every field surfaces verbatim — including each workspace id and the
+		// preset, which the old header abbreviated to a count / dropped.
+		for (const ws of full.filters.workspaceIds) {
+			expect(yaml).toContain(ws);
+		}
+		expect(yaml).toContain("preset: last_week");
+		expect(yaml).toContain("templateId: tmpl-weekly");
+		// It round-trips: the displayed YAML re-parses to the same validated shape.
+		expect(parseReportFrontMatter(`---\n${yaml}\n---\n# Body\n`)).toEqual(full);
+	});
+
+	it("returns null when the document has no system header", () => {
+		expect(renderReportFrontMatterYaml("# Just a body\n")).toBeNull();
+		const legacy = "---\ntitle: Quarterly\nauthor: Mei\n---\n\n# Q\n";
+		expect(renderReportFrontMatterYaml(legacy)).toBeNull();
+	});
+
+	it("strips invisible/bidi control characters from hostile values", () => {
+		const rlo = String.fromCharCode(0x202e); // right-to-left override
+		const zwsp = String.fromCharCode(0x200b); // zero-width space
+		const bell = String.fromCharCode(0x07); // C0 control
+		const hostile: ReportFrontMatter = {
+			...meta,
+			name: `report${rlo}${zwsp}${bell}name`,
+			filters: { workspaceIds: ["ws-1"] },
+		};
+		const content = `${buildReportFrontMatter(hostile)}# Body\n`;
+		const yaml = renderReportFrontMatterYaml(content);
+		expect(yaml).not.toBeNull();
+		const line = yaml as string;
+		// The spoofing/invisible characters are gone; visible letters remain.
+		expect(line).not.toContain(rlo);
+		expect(line).not.toContain(zwsp);
+		expect(line).not.toContain(bell);
+		expect(line).toContain("report");
+		expect(line).toContain("name");
 	});
 });
