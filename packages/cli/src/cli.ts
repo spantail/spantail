@@ -9,6 +9,15 @@ import {
 	entriesTags,
 	entriesView,
 } from "./commands/entries";
+import {
+	inboxCounts,
+	inboxFlag,
+	inboxList,
+	inboxRead,
+	inboxReadAll,
+	inboxUnread,
+	inboxView,
+} from "./commands/inbox";
 import { logCommand } from "./commands/log";
 import { mcpCommand } from "./commands/mcp";
 import { projectsList } from "./commands/projects";
@@ -36,6 +45,7 @@ import {
 	reportShares,
 	reportUnshare,
 } from "./commands/report-share";
+import { searchCommand } from "./commands/search";
 import { workspacesList } from "./commands/workspaces";
 import type { CliContext } from "./context";
 import { CliError, isParseArgsError, UsageError } from "./errors";
@@ -77,6 +87,16 @@ const commands: Record<
 		comment: reportComment,
 		react: reportReact,
 	},
+	inbox: {
+		list: inboxList,
+		view: inboxView,
+		counts: inboxCounts,
+		read: inboxRead,
+		unread: inboxUnread,
+		"read-all": inboxReadAll,
+		flag: inboxFlag,
+	},
+	search: searchCommand,
 	mcp: mcpCommand,
 };
 
@@ -113,6 +133,14 @@ Commands:
   report discussion Show a report's reactions and comments
   report comment    Add, edit, or delete a comment on a report
   report react      Toggle a reaction on a report or comment
+  inbox list        List a mailbox folder
+  inbox view        Print a mailbox item's frozen report snapshot
+  inbox counts      Show per-folder mailbox counts
+  inbox read        Mark an item read
+  inbox unread      Mark an item unread
+  inbox read-all    Mark every unread inbox item read
+  inbox flag        Toggle star/archive/trash flags on an item
+  search            Search your work entries and reports
   mcp               Run a stdio MCP server bridging AI clients to a Spantail instance
 
 Run \`spantail <command> --help\` for command options.
