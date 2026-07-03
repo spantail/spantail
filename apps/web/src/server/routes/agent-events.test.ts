@@ -558,6 +558,22 @@ it("finalizes a session and preserves the closing facts across late ingests", as
 	expect(afterGrowth[0]?.usage.totalTokens).toBe(43);
 	expect(afterGrowth[0]?.description).toBe("Refactored the login flow");
 	expect(new Date(afterGrowth[0]?.endedAt ?? 0).toISOString()).toBe(t(8));
+
+	// A late ingest can also move the START earlier (a backfilled subagent
+	// turn). The duration must then span the new start to the finalized end —
+	// neither the event-derived duration nor the previous stored one covers
+	// that combination.
+	expect(
+		(
+			await ingest(token, {
+				sessionId: "s1",
+				events: [turn("m0", t(-2), { input_tokens: 1, output_tokens: 1 })],
+			})
+		).status,
+	).toBe(200);
+	const afterBackfill = await read();
+	expect(new Date(afterBackfill[0]?.endedAt ?? 0).toISOString()).toBe(t(8));
+	expect(afterBackfill[0]?.durationMinutes).toBe(10); // t(-2) → t(8)
 });
 
 it("clamps a finalize endedAt that lands before the session start", async () => {

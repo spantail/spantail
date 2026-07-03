@@ -12,6 +12,7 @@ import {
 	eq,
 	gte,
 	inArray,
+	isNotNull,
 	isNull,
 	lt,
 	ne,
@@ -645,23 +646,6 @@ export interface SessionRollup {
 const CONTEXT_VALUES_MAX = 20;
 const CONTEXT_VALUE_LENGTH_MAX = 200;
 
-/**
- * First-seen distinct values for one context facet, read defensively: event
- * attributes are stored verbatim from untrusted input, so anything that is not
- * a non-empty string within the schema's bounds is skipped, not coerced.
- */
-function distinctContextValues(values: unknown[]): string[] | undefined {
-	const seen: string[] = [];
-	for (const value of values) {
-		if (typeof value !== "string") continue;
-		if (value.length === 0 || value.length > CONTEXT_VALUE_LENGTH_MAX) continue;
-		if (seen.includes(value)) continue;
-		seen.push(value);
-		if (seen.length >= CONTEXT_VALUES_MAX) break;
-	}
-	return seen.length > 0 ? seen : undefined;
-}
-
 /** Sums one raw usage bucket (snake_case JSON key) across a session's events. */
 function usageBucketSum(key: string) {
 	return sql<number>`coalesce(sum(coalesce(json_extract(${agentEvents.usage}, ${`$.${key}`}), 0)), 0)`.mapWith(
@@ -706,29 +690,50 @@ export async function computeSessionRollup(
 		return null;
 	}
 
-	// One chronological scan yields the latest model (for usage.model) and the
-	// distinct context facets. Attribute values are read defensively — they are
-	// stored verbatim from untrusted input, so json_extract may return anything.
-	const attribute = (key: string) =>
-		sql<unknown>`json_extract(${agentEvents.attributes}, ${`$."${key}"`})`;
-	const facetRows = await db
-		.select({
-			model: agentEvents.model,
-			branch: attribute("vcs.ref.head.name"),
-			repository: attribute("vcs.repository.url.full"),
-		})
+	// Model of the most recent event that carries one; undefined when none do.
+	// id breaks timestamp ties so the pick is stable.
+	const [latest] = await db
+		.select({ model: agentEvents.model })
 		.from(agentEvents)
-		.where(where)
-		// id breaks timestamp ties so the facet order (and latest model) is stable.
-		.orderBy(asc(agentEvents.timestamp), asc(agentEvents.id));
+		.where(and(where, isNotNull(agentEvents.model)))
+		.orderBy(desc(agentEvents.timestamp), desc(agentEvents.id))
+		.limit(1);
 
-	let latestModel: string | undefined;
-	for (const row of facetRows) if (row.model) latestModel = row.model;
-	const models = distinctContextValues(facetRows.map((row) => row.model));
-	const branches = distinctContextValues(facetRows.map((row) => row.branch));
-	const repositories = distinctContextValues(
-		facetRows.map((row) => row.repository),
+	// Context facets are aggregated in SQL (distinct values in first-seen
+	// order, LIMIT-bounded) so the result stays O(1) no matter how many events
+	// a session holds — ingest is the untrusted write path, and a hostile
+	// session must not be able to balloon Worker memory. Values are checked
+	// defensively in SQL: attributes are stored verbatim, so only text values
+	// within the context schema's bounds qualify.
+	const distinctFacet = async (
+		value: SQL<string>,
+		isBoundedText: SQL<unknown>,
+	): Promise<string[] | undefined> => {
+		const rows = await db
+			.select({ value })
+			.from(agentEvents)
+			.where(and(where, isBoundedText))
+			.groupBy(value)
+			.orderBy(sql`min(${agentEvents.timestamp})`, sql`min(${agentEvents.id})`)
+			.limit(CONTEXT_VALUES_MAX);
+		return rows.length > 0 ? rows.map((row) => row.value) : undefined;
+	};
+	const attributeFacet = (key: string) => {
+		const path = `$."${key}"`;
+		const value = sql<string>`json_extract(${agentEvents.attributes}, ${path})`;
+		return distinctFacet(
+			value,
+			sql`json_type(${agentEvents.attributes}, ${path}) = 'text'
+				and length(${value}) between 1 and ${CONTEXT_VALUE_LENGTH_MAX}`,
+		);
+	};
+	const models = await distinctFacet(
+		sql<string>`${agentEvents.model}`,
+		sql`${agentEvents.model} is not null
+			and length(${agentEvents.model}) between 1 and ${CONTEXT_VALUE_LENGTH_MAX}`,
 	);
+	const branches = await attributeFacet("vcs.ref.head.name");
+	const repositories = await attributeFacet("vcs.repository.url.full");
 	const context: AgentEntryContext | null =
 		models || branches || repositories
 			? {
@@ -755,7 +760,7 @@ export async function computeSessionRollup(
 			cacheCreationTokens: agg.cacheCreationTokens,
 			cacheReadTokens: agg.cacheReadTokens,
 			totalTokens,
-			...(latestModel ? { model: latestModel } : {}),
+			...(latest?.model ? { model: latest.model } : {}),
 			...(agg.costUsd != null ? { costUsd: agg.costUsd } : {}),
 		},
 		context,
@@ -796,7 +801,11 @@ export async function materializeAgentSessionRollup(
 				workspaceId: values.workspaceId,
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
-				durationMinutes: sql`max(excluded.duration_minutes, ${agentEntries.durationMinutes})`,
+				// Recomputed from the final bounds rather than max()-ed as a value:
+				// a late ingest can move startedAt earlier while a finalize already
+				// pushed endedAt past the last event, and only (end − start) covers
+				// that combination. Both bounds are monotonic, so the duration is too.
+				durationMinutes: sql`cast(round((max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0)) - excluded.started_at) / 60000.0) as integer)`,
 				usage: values.usage,
 				context: sql`case
 					when excluded.context is null then ${agentEntries.context}
