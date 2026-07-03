@@ -21,7 +21,8 @@ const DEFAULT_LIMIT = 20;
 
 const USAGE = `Usage: spantail entries list [options]
 
-Lists work entries, newest first.
+Lists work entries, newest first. The ID column is the input to
+\`spantail entries view/edit/delete\`.
 
 Options:
   --workspace <slug>   Workspace (default: the configured default workspace)
@@ -102,7 +103,7 @@ export async function entriesList(
 	const slugById = new Map(projects.map((p) => [p.id, p.slug]));
 	ctx.stdout.write(
 		`${formatTable(
-			["DATE", "DURATION", "PROJECT", "DESCRIPTION", "TAGS"],
+			["DATE", "DURATION", "PROJECT", "DESCRIPTION", "TAGS", "ID"],
 			entries.map((entry) => [
 				entry.entryDate,
 				formatDuration(entry.durationMinutes),
@@ -111,6 +112,7 @@ export async function entriesList(
 					: "(no project)",
 				truncate(entry.description, 60),
 				entry.tags.join(","),
+				entry.id,
 			]),
 		)}\n`,
 	);

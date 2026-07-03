@@ -280,6 +280,32 @@ it("updates a report by merging over the current one", async () => {
 	]);
 });
 
+it("drops an inherited project filter when the workspace changes", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { getReport: unknown }).getReport = () =>
+		Promise.resolve({
+			id: "r1",
+			name: "Weekly",
+			templateId: "tmpl-1",
+			note: null,
+			filters: {
+				workspaceIds: ["ws1"],
+				projectIds: ["p1"],
+				dateRange: { from: "2026-06-08", to: "2026-06-14" },
+			},
+		});
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", workspaceId: "ws2" },
+	});
+
+	expect(calls.at(-1)?.args[1]).toMatchObject({
+		filters: { workspaceIds: ["ws2"], projectIds: undefined },
+	});
+});
+
 it("clears report filters with empty arrays", async () => {
 	const { stub, calls } = makeStub();
 	const client = await connect(stub);

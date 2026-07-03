@@ -52,10 +52,13 @@ it("lists entries with project slugs and totals on stderr", async () => {
 
 	expect(await runCli(["entries", "list"], ctx)).toBe(0);
 	const lines = stdout.text().trimEnd().split("\n");
-	expect(lines[0]).toMatch(/^DATE\s+DURATION\s+PROJECT\s+DESCRIPTION\s+TAGS$/);
+	expect(lines[0]).toMatch(
+		/^DATE\s+DURATION\s+PROJECT\s+DESCRIPTION\s+TAGS\s+ID$/,
+	);
 	expect(lines[1]).toContain("2026-06-12  1h 30m    api");
 	expect(lines[1]).toContain("Fixed the build");
 	expect(lines[1]).toContain("ci,infra");
+	expect(lines[1]).toContain("entry-1");
 	expect(lines[2]).toContain(`${"a".repeat(59)}…`);
 	expect(stderr.text()).toBe("2 entries, total 2h\n");
 });

@@ -125,9 +125,13 @@ function assembleReportFilters(
 		workspaceIds = [];
 	}
 
+	// An inherited project filter only makes sense in the workspace it belongs
+	// to; drop it when the workspace scope changes.
+	const sameWorkspace = base && workspaceIds[0] === base.workspaceIds[0];
 	return {
 		workspaceIds,
-		projectIds: args.projectIds ?? base?.projectIds,
+		projectIds:
+			args.projectIds ?? (sameWorkspace ? base.projectIds : undefined),
 		userIds: args.userIds ?? base?.userIds,
 		tags: args.tags ?? base?.tags,
 		dateRange,
