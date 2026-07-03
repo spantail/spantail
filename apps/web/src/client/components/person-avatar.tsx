@@ -33,6 +33,10 @@ export function PersonAvatar({
 	const hue = hueFromString(name);
 	return (
 		<AvatarPrimitive.Root
+			// Remount when the image presence/URL changes so Radix Avatar's internal
+			// load status resets — otherwise switching from an image avatar to an
+			// image-less one keeps the stale "loaded" status and hides the fallback.
+			key={imageUrl ?? name}
 			aria-hidden
 			className={cn("flex shrink-0 overflow-hidden rounded-full", className)}
 			style={{ width: size, height: size }}
