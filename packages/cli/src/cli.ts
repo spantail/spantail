@@ -12,7 +12,15 @@ import {
 import { logCommand } from "./commands/log";
 import { mcpCommand } from "./commands/mcp";
 import { projectsList } from "./commands/projects";
-import { reportList, reportView } from "./commands/report";
+import {
+	reportCreate,
+	reportDelete,
+	reportEdit,
+	reportList,
+	reportPreview,
+	reportTemplates,
+	reportView,
+} from "./commands/report";
 import { workspacesList } from "./commands/workspaces";
 import type { CliContext } from "./context";
 import { CliError, isParseArgsError, UsageError } from "./errors";
@@ -36,7 +44,15 @@ const commands: Record<
 		stats: entriesStats,
 		tags: entriesTags,
 	},
-	report: { list: reportList, view: reportView },
+	report: {
+		list: reportList,
+		view: reportView,
+		create: reportCreate,
+		preview: reportPreview,
+		edit: reportEdit,
+		delete: reportDelete,
+		templates: reportTemplates,
+	},
 	mcp: mcpCommand,
 };
 
@@ -59,6 +75,11 @@ Commands:
   entries tags      List the distinct tags in scope
   report list       List your reports
   report view       Print a report's rendered markdown
+  report create     Create a report from a template and filters
+  report preview    Render a report without saving it
+  report edit       Re-render a report with changed fields
+  report delete     Delete a report
+  report templates  List the instance's report templates
   mcp               Run a stdio MCP server bridging AI clients to a Spantail instance
 
 Run \`spantail <command> --help\` for command options.
