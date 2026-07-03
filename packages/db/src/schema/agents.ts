@@ -112,6 +112,12 @@ export const agentEntries = sqliteTable(
 		context: text("context", {
 			mode: "json",
 		}).$type<AgentEntryContext | null>(),
+		// Internal rollup bookkeeping: how many events the materialized rollup was
+		// computed from. Events are append-only, so this is the exact monotonic
+		// staleness measure for the conflict-update guard (token sums alone can
+		// tie when a new event carries no tokens, e.g. a tool turn). Null on
+		// summary-path rows, which carry no events.
+		rollupEventCount: integer("rollup_event_count"),
 		description: text("description"),
 		// Agent sessions are always timestamped; the calendar day is derived from
 		// startedAt at read time in the viewing user's timezone (no frozen date).

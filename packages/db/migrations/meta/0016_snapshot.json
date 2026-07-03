@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bc1cf34c-c27b-44e3-9057-beba952dacd3",
+  "id": "4fd99ebc-e277-437b-a224-76879e10a250",
   "prevId": "336e728d-014d-481b-a25b-944c17cecc76",
   "tables": {
     "agent_entries": {
@@ -66,6 +66,13 @@
         "context": {
           "name": "context",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rollup_event_count": {
+          "name": "rollup_event_count",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

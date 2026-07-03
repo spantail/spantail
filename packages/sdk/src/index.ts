@@ -450,7 +450,7 @@ export class SpantailClient {
 	/**
 	 * Ingests one session's raw events (agent access token auth) and returns the
 	 * recomputed session entry. Idempotent on (agent, sourceId): re-posting the
-	 * cumulative transcript is safe.
+	 * cumulative event list is safe.
 	 */
 	ingestAgentEvents(input: IngestAgentEventsInputData): Promise<AgentEntry> {
 		return this.request("POST", "/agent-events", { body: input });

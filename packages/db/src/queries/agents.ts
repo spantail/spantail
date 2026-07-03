@@ -767,12 +767,15 @@ export async function computeSessionRollup(
 }
 
 /**
- * Materializes a session's rollup into `agent_entries`, monotonically. Every
- * ingest re-sends the cumulative transcript, so a later recompute is always a
- * superset of an earlier one — its `totalTokens` is non-decreasing. The
- * conflict update is guarded on that, so a stale recompute (computed before a
- * concurrent ingest's events landed) can never overwrite a fuller one; either
- * ordering converges to the most complete rollup. `endedAt` and
+ * Materializes a session's rollup into `agent_entries`, monotonically. Events
+ * are append-only, so a later recompute is always a superset of an earlier
+ * one: its event count is non-decreasing, and an equal count means the same
+ * event set (hence an identical rollup). The conflict update is guarded on
+ * that count — with the token sum kept as a second condition for legacy rows
+ * that predate the count — so a stale recompute (computed before a concurrent
+ * ingest's events landed) can never overwrite a fuller one, even when the
+ * newer events carry no tokens (a tool turn whose cost/context still moved).
+ * Either ordering converges to the most complete rollup. `endedAt` and
  * `durationMinutes` only ever grow in SQL (a finalize may have recorded a
  * wall-clock end past the last event, which a later recompute must not
  * shrink), and finalize-owned fields are preserved: `description` is never
@@ -801,10 +804,13 @@ export async function materializeAgentSessionRollup(
 				end`,
 				startedAt: values.startedAt,
 				endedAt: sql`max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0))`,
+				rollupEventCount: values.rollupEventCount,
 				updatedAt: new Date(),
 			},
-			setWhere: sql`${agentEntries.usage} is null
-				or coalesce(json_extract(excluded.usage, '$.totalTokens'), 0) >= coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)`,
+			setWhere: sql`${agentEntries.usage} is null or (
+				coalesce(excluded.rollup_event_count, 0) >= coalesce(${agentEntries.rollupEventCount}, 0)
+				and coalesce(json_extract(excluded.usage, '$.totalTokens'), 0) >= coalesce(json_extract(${agentEntries.usage}, '$.totalTokens'), 0)
+			)`,
 		})
 		.returning();
 	const row = rows[0];

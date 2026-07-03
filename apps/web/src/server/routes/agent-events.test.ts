@@ -285,19 +285,21 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 		startedAt: new Date("2026-06-20T01:00:00.000Z"),
 	};
 
-	// The full rollup lands first (endedAt 01:10).
+	// The full rollup lands first (3 events, endedAt 01:10).
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 10,
 		usage: { totalTokens: 300 },
+		rollupEventCount: 3,
 		endedAt: new Date("2026-06-20T01:10:00.000Z"),
 	});
-	// A stale concurrent recompute (older endedAt, smaller totals) arrives last
+	// A stale concurrent recompute (fewer events, smaller totals) arrives last
 	// and must be ignored rather than shrink the row.
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 0,
 		usage: { totalTokens: 100 },
+		rollupEventCount: 1,
 		endedAt: new Date("2026-06-20T01:00:00.000Z"),
 	});
 
@@ -310,24 +312,32 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 	expect(afterStale[0]?.usage.totalTokens).toBe(300);
 	expect(afterStale[0]?.durationMinutes).toBe(10);
 
-	// A stale recompute with the SAME endedAt but fewer tokens (the fuller payload
-	// added an earlier-timestamped subagent turn) must also be ignored.
+	// A stale recompute with the SAME token total but fewer events (the fuller
+	// payload added a token-less tool turn whose cost/context still moved) must
+	// also be ignored — the event count, not the token sum, is what decides.
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 10,
-		usage: { totalTokens: 250 },
+		usage: { totalTokens: 300 },
+		rollupEventCount: 2,
 		endedAt: new Date("2026-06-20T01:10:00.000Z"),
+		context: { branches: ["stale-branch"] },
 	});
-	const afterEqualEnded = (await (
+	const afterEqualTokens = (await (
 		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
-	).json()) as Array<{ usage: { totalTokens: number } }>;
-	expect(afterEqualEnded[0]?.usage.totalTokens).toBe(300);
+	).json()) as Array<{
+		usage: { totalTokens: number };
+		context: { branches?: string[] } | null;
+	}>;
+	expect(afterEqualTokens[0]?.usage.totalTokens).toBe(300);
+	expect(afterEqualTokens[0]?.context?.branches).toBeUndefined();
 
-	// A genuinely newer rollup (later endedAt) still moves it forward.
+	// A genuinely newer rollup (more events) still moves it forward.
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 20,
 		usage: { totalTokens: 500 },
+		rollupEventCount: 4,
 		endedAt: new Date("2026-06-20T01:20:00.000Z"),
 	});
 	const afterNewer = (await (
