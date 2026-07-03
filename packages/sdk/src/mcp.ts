@@ -80,6 +80,7 @@ const reportScopeInputs = {
 
 interface ReportScopeArgs {
 	workspaceId?: string;
+	allWorkspaces?: boolean;
 	projectIds?: string[];
 	userIds?: string[];
 	tags?: string[];
@@ -112,7 +113,12 @@ function assembleReportFilters(
 	}
 
 	let workspaceIds: string[];
-	if (args.workspaceId !== undefined) {
+	if (args.allWorkspaces) {
+		if (args.workspaceId !== undefined) {
+			throw new Error("workspaceId and allWorkspaces are mutually exclusive");
+		}
+		workspaceIds = [];
+	} else if (args.workspaceId !== undefined) {
 		workspaceIds = [args.workspaceId];
 	} else if (base) {
 		if (base.workspaceIds.length > 1) {
@@ -434,6 +440,13 @@ export function registerSpantailTools(
 					.string()
 					.optional()
 					.describe("Switch to another template"),
+				allWorkspaces: z
+					.boolean()
+					.optional()
+					.describe(
+						"Switch the report to instance scope (all workspaces the token " +
+							"owner belongs to); omitting workspaceId keeps the current scope",
+					),
 				name: z.string().max(100).optional().describe("New report name"),
 				note: z
 					.string()

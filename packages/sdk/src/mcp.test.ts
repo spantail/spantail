@@ -332,6 +332,38 @@ it("drops an inherited project filter when the workspace changes", async () => {
 	});
 });
 
+it("switches a report to instance scope with allWorkspaces", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { getReport: unknown }).getReport = () =>
+		Promise.resolve({
+			id: "r1",
+			name: "Weekly",
+			templateId: "tmpl-1",
+			note: null,
+			filters: {
+				workspaceIds: ["ws1"],
+				projectIds: ["p1"],
+				dateRange: { from: "2026-06-08", to: "2026-06-14" },
+			},
+		});
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", allWorkspaces: true },
+	});
+
+	expect(calls.at(-1)?.args[1]).toMatchObject({
+		filters: { workspaceIds: [], projectIds: undefined },
+	});
+
+	const conflict = await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", allWorkspaces: true, workspaceId: "ws2" },
+	});
+	expect(conflict.isError).toBe(true);
+});
+
 it("clears report filters with empty arrays", async () => {
 	const { stub, calls } = makeStub();
 	const client = await connect(stub);
