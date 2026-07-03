@@ -1,11 +1,51 @@
 import { SpantailApiError } from "@spantail/sdk";
 
 import { authLogin, authLogout, authStatus } from "./commands/auth";
-import { entriesList } from "./commands/entries";
+import {
+	entriesDelete,
+	entriesEdit,
+	entriesList,
+	entriesStats,
+	entriesTags,
+	entriesView,
+} from "./commands/entries";
+import {
+	inboxCounts,
+	inboxFlag,
+	inboxList,
+	inboxRead,
+	inboxReadAll,
+	inboxUnread,
+	inboxView,
+} from "./commands/inbox";
 import { logCommand } from "./commands/log";
 import { mcpCommand } from "./commands/mcp";
 import { projectsList } from "./commands/projects";
-import { reportList, reportView } from "./commands/report";
+import {
+	reportCreate,
+	reportDelete,
+	reportEdit,
+	reportList,
+	reportPreview,
+	reportTemplates,
+	reportView,
+} from "./commands/report";
+import {
+	reportComment,
+	reportDiscussion,
+	reportReact,
+} from "./commands/report-discussion";
+import {
+	reportRecipients,
+	reportSend,
+	reportSends,
+} from "./commands/report-send";
+import {
+	reportShare,
+	reportShares,
+	reportUnshare,
+} from "./commands/report-share";
+import { searchCommand } from "./commands/search";
 import { workspacesList } from "./commands/workspaces";
 import type { CliContext } from "./context";
 import { CliError, isParseArgsError, UsageError } from "./errors";
@@ -21,8 +61,42 @@ const commands: Record<
 	workspaces: { list: workspacesList },
 	projects: { list: projectsList },
 	log: logCommand,
-	entries: { list: entriesList },
-	report: { list: reportList, view: reportView },
+	entries: {
+		list: entriesList,
+		view: entriesView,
+		edit: entriesEdit,
+		delete: entriesDelete,
+		stats: entriesStats,
+		tags: entriesTags,
+	},
+	report: {
+		list: reportList,
+		view: reportView,
+		create: reportCreate,
+		preview: reportPreview,
+		edit: reportEdit,
+		delete: reportDelete,
+		templates: reportTemplates,
+		recipients: reportRecipients,
+		send: reportSend,
+		sends: reportSends,
+		share: reportShare,
+		shares: reportShares,
+		unshare: reportUnshare,
+		discussion: reportDiscussion,
+		comment: reportComment,
+		react: reportReact,
+	},
+	inbox: {
+		list: inboxList,
+		view: inboxView,
+		counts: inboxCounts,
+		read: inboxRead,
+		unread: inboxUnread,
+		"read-all": inboxReadAll,
+		flag: inboxFlag,
+	},
+	search: searchCommand,
 	mcp: mcpCommand,
 };
 
@@ -38,8 +112,35 @@ Commands:
   projects list     List the projects in a workspace
   log               Log a work entry
   entries list      List recent work entries
+  entries view      Print one work entry in full
+  entries edit      Update fields of a work entry
+  entries delete    Delete a work entry
+  entries stats     Show aggregated work-entry stats
+  entries tags      List the distinct tags in scope
   report list       List your reports
   report view       Print a report's rendered markdown
+  report create     Create a report from a template and filters
+  report preview    Render a report without saving it
+  report edit       Re-render a report with changed fields
+  report delete     Delete a report
+  report templates  List the instance's report templates
+  report recipients List a report's candidate recipients
+  report send       Send a report to recipients' inboxes
+  report sends      Show a report's send history
+  report share      Create a public share link for a report
+  report shares     List a report's share links
+  report unshare    Revoke a share link
+  report discussion Show a report's reactions and comments
+  report comment    Add, edit, or delete a comment on a report
+  report react      Toggle a reaction on a report or comment
+  inbox list        List a mailbox folder
+  inbox view        Print a mailbox item's frozen report snapshot
+  inbox counts      Show per-folder mailbox counts
+  inbox read        Mark an item read
+  inbox unread      Mark an item unread
+  inbox read-all    Mark every unread inbox item read
+  inbox flag        Toggle star/archive/trash flags on an item
+  search            Search your work entries and reports
   mcp               Run a stdio MCP server bridging AI clients to a Spantail instance
 
 Run \`spantail <command> --help\` for command options.

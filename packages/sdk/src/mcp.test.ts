@@ -23,9 +23,32 @@ function makeStub() {
 		}),
 		listWorkEntries: record("listWorkEntries", []),
 		updateWorkEntry: record("updateWorkEntry", { id: "e1" }),
+		deleteWorkEntry: record("deleteWorkEntry", undefined),
 		listReportTemplates: record("listReportTemplates", [{ id: "tmpl-1" }]),
 		listReports: record("listReports", [{ id: "r1" }]),
-		getReport: record("getReport", { id: "r1", renderedMarkdown: "# Report" }),
+		getReport: record("getReport", {
+			id: "r1",
+			name: "Weekly",
+			templateId: "tmpl-1",
+			note: null,
+			filters: {
+				workspaceIds: ["ws1"],
+				tags: ["infra"],
+				dateRange: { from: "2026-06-08", to: "2026-06-14" },
+			},
+			renderedMarkdown: "# Report",
+		}),
+		createReport: record("createReport", { id: "r2", name: "Created" }),
+		updateReport: record("updateReport", { id: "r1", version: 2 }),
+		previewReport: record("previewReport", {
+			content: "# Preview",
+			totalMinutes: 60,
+			entryCount: 1,
+			projectCount: 1,
+			suggestedName: "Weekly 2026-06-08",
+			suggestedNote: "",
+		}),
+		search: record("search", { workEntries: [], reports: [] }),
 	} as unknown as SpantailClient;
 	return { stub, calls };
 }
@@ -43,12 +66,14 @@ async function connect(client: SpantailClient) {
 	return mcpClient;
 }
 
-it("exposes the eight spantail tools", async () => {
+it("exposes the thirteen spantail tools", async () => {
 	const { stub } = makeStub();
 	const client = await connect(stub);
 
 	const { tools } = await client.listTools();
 	expect(tools.map((tool) => tool.name).sort()).toEqual([
+		"create_report",
+		"delete_entry",
 		"get_report",
 		"list_entries",
 		"list_projects",
@@ -56,7 +81,10 @@ it("exposes the eight spantail tools", async () => {
 		"list_reports",
 		"list_workspaces",
 		"log_work",
+		"preview_report",
+		"search",
 		"update_entry",
+		"update_report",
 	]);
 });
 
@@ -117,6 +145,270 @@ it("maps api errors to tool errors", async () => {
 	expect(result.isError).toBe(true);
 	const content = result.content as Array<{ type: string; text: string }>;
 	expect(content[0]?.text).toContain("insufficient_scope");
+});
+
+it("deletes an entry and reports the id", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "delete_entry",
+		arguments: { id: "e1" },
+	});
+
+	expect(calls.at(-1)).toEqual({ method: "deleteWorkEntry", args: ["e1"] });
+	const content = result.content as Array<{ type: string; text: string }>;
+	expect(JSON.parse(content[0]?.text ?? "")).toEqual({ deleted: "e1" });
+});
+
+it("creates a report adopting the suggested name", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "create_report",
+		arguments: {
+			templateId: "tmpl-1",
+			workspaceId: "ws1",
+			dateRangePreset: "last_week",
+			tags: ["infra"],
+		},
+	});
+
+	expect(result.isError).toBeFalsy();
+	expect(calls.map((call) => call.method)).toEqual([
+		"previewReport",
+		"createReport",
+	]);
+	expect(calls.at(-1)?.args[0]).toEqual({
+		name: "Weekly 2026-06-08",
+		templateId: "tmpl-1",
+		filters: {
+			workspaceIds: ["ws1"],
+			projectIds: undefined,
+			userIds: undefined,
+			tags: ["infra"],
+			dateRange: "last_week",
+		},
+		note: undefined,
+	});
+});
+
+it("creates a report with an explicit name and note without previewing", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "create_report",
+		arguments: {
+			templateId: "tmpl-1",
+			name: "June",
+			note: "hand-written",
+			from: "2026-06-01",
+			to: "2026-06-30",
+		},
+	});
+
+	expect(calls.map((call) => call.method)).toEqual(["createReport"]);
+	expect(calls.at(-1)?.args[0]).toMatchObject({
+		name: "June",
+		note: "hand-written",
+		filters: {
+			workspaceIds: [],
+			dateRange: { from: "2026-06-01", to: "2026-06-30" },
+		},
+	});
+});
+
+it("adopts the suggested note even when the name is explicit", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { previewReport: unknown }).previewReport = () =>
+		Promise.resolve({
+			content: "# Preview",
+			totalMinutes: 60,
+			entryCount: 1,
+			projectCount: 1,
+			suggestedName: "Weekly 2026-06-08",
+			suggestedNote: "Covers the week",
+		});
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "create_report",
+		arguments: { templateId: "tmpl-1", name: "June", dateRangePreset: "today" },
+	});
+
+	expect(calls.at(-1)?.args[0]).toMatchObject({
+		name: "June",
+		note: "Covers the week",
+	});
+});
+
+it("falls back to the template name when nothing is suggested", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { previewReport: unknown }).previewReport = () =>
+		Promise.resolve({
+			content: "# Preview",
+			totalMinutes: 0,
+			entryCount: 0,
+			projectCount: 0,
+			suggestedName: "",
+			suggestedNote: "",
+		});
+	(stub as { listReportTemplates: unknown }).listReportTemplates = () =>
+		Promise.resolve([{ id: "tmpl-1", name: "Weekly" }]);
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "create_report",
+		arguments: { templateId: "tmpl-1", dateRangePreset: "today" },
+	});
+
+	expect(result.isError).toBeFalsy();
+	expect(calls.at(-1)?.args[0]).toMatchObject({ name: "Weekly" });
+});
+
+it("rejects a report scope without a period", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "create_report",
+		arguments: { templateId: "tmpl-1" },
+	});
+
+	expect(result.isError).toBe(true);
+	const content = result.content as Array<{ type: string; text: string }>;
+	expect(content[0]?.text).toContain("dateRangePreset or from and to");
+	expect(calls.length).toBe(0);
+});
+
+it("previews a report without saving", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "preview_report",
+		arguments: { templateId: "tmpl-1", dateRangePreset: "today" },
+	});
+
+	expect(calls.map((call) => call.method)).toEqual(["previewReport"]);
+	const content = result.content as Array<{ type: string; text: string }>;
+	expect(JSON.parse(content[0]?.text ?? "")).toMatchObject({
+		content: "# Preview",
+		suggestedName: "Weekly 2026-06-08",
+	});
+});
+
+it("updates a report by merging over the current one", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", dateRangePreset: "this_month" },
+	});
+
+	expect(calls.map((call) => call.method)).toEqual([
+		"getReport",
+		"updateReport",
+	]);
+	expect(calls.at(-1)?.args).toEqual([
+		"r1",
+		{
+			name: "Weekly",
+			templateId: "tmpl-1",
+			filters: {
+				workspaceIds: ["ws1"],
+				projectIds: undefined,
+				userIds: undefined,
+				tags: ["infra"],
+				dateRange: "this_month",
+			},
+			note: undefined,
+		},
+	]);
+});
+
+it("drops an inherited project filter when the workspace changes", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { getReport: unknown }).getReport = () =>
+		Promise.resolve({
+			id: "r1",
+			name: "Weekly",
+			templateId: "tmpl-1",
+			note: null,
+			filters: {
+				workspaceIds: ["ws1"],
+				projectIds: ["p1"],
+				dateRange: { from: "2026-06-08", to: "2026-06-14" },
+			},
+		});
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", workspaceId: "ws2" },
+	});
+
+	expect(calls.at(-1)?.args[1]).toMatchObject({
+		filters: { workspaceIds: ["ws2"], projectIds: undefined },
+	});
+});
+
+it("switches a report to instance scope with allWorkspaces", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { getReport: unknown }).getReport = () =>
+		Promise.resolve({
+			id: "r1",
+			name: "Weekly",
+			templateId: "tmpl-1",
+			note: null,
+			filters: {
+				workspaceIds: ["ws1"],
+				projectIds: ["p1"],
+				dateRange: { from: "2026-06-08", to: "2026-06-14" },
+			},
+		});
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", allWorkspaces: true },
+	});
+
+	expect(calls.at(-1)?.args[1]).toMatchObject({
+		filters: { workspaceIds: [], projectIds: undefined },
+	});
+
+	const conflict = await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", allWorkspaces: true, workspaceId: "ws2" },
+	});
+	expect(conflict.isError).toBe(true);
+});
+
+it("clears report filters with empty arrays", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "update_report",
+		arguments: { id: "r1", tags: [] },
+	});
+
+	expect(calls.at(-1)?.args[1]).toMatchObject({
+		filters: { tags: [], dateRange: { from: "2026-06-08", to: "2026-06-14" } },
+	});
+});
+
+it("routes search to the api client", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	await client.callTool({ name: "search", arguments: { q: "build" } });
+
+	expect(calls.at(-1)).toEqual({ method: "search", args: ["build"] });
 });
 
 it("rejects invalid tool input", async () => {

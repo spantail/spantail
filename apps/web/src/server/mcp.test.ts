@@ -161,6 +161,8 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 	});
 	const tools = await rpcResult<{ tools: Array<{ name: string }> }>(toolsRes);
 	expect(tools.tools.map((tool) => tool.name).sort()).toEqual([
+		"create_report",
+		"delete_entry",
 		"get_report",
 		"list_entries",
 		"list_projects",
@@ -168,7 +170,10 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 		"list_reports",
 		"list_workspaces",
 		"log_work",
+		"preview_report",
+		"search",
 		"update_entry",
+		"update_report",
 	]);
 
 	// tools/call log_work → entry persisted via the REST API loopback
