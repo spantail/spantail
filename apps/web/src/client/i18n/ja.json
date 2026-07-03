@@ -477,17 +477,13 @@
 			"general": "一般",
 			"projects": "プロジェクト",
 			"members": "メンバー",
-			"appearance": "外観",
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
 			"agents": "エージェント",
 			"profile": "プロフィール",
 			"authentication": "認証",
-			"preferences": "環境設定",
 			"systemUsers": "ユーザー管理",
-			"systemAgents": "AI エージェント",
-			"email": "メール",
-			"oauth": "ソーシャルログイン",
+			"features": "機能",
 			"systemAbout": "システム情報"
 		},
 		"systemAdminOnly": "このセクションはインスタンス管理者のみがアクセスできます。",
@@ -718,8 +714,7 @@
 			"enableHint": "注意: 有効にするとデータ量が大きく増える可能性があります（エージェントのセッション、将来的にはターン毎のイベントを保存）。このテレメトリが不要ならオフのままにしてください。",
 			"saveAction": "保存",
 			"statusEnabled": "有効",
-			"statusDisabled": "無効",
-			"adminBanner": "AI エージェント機能はインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。"
+			"statusDisabled": "無効"
 		},
 		"email": {
 			"title": "メール",
@@ -730,13 +725,11 @@
 			"fromName": "送信者名",
 			"saveAction": "保存",
 			"statusEnabled": "有効",
-			"statusDisabled": "無効",
-			"adminBanner": "メール配信はインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。"
+			"statusDisabled": "無効"
 		},
 		"oauth": {
 			"title": "ソーシャルログイン",
 			"description": "Google または GitHub でのログインを許可します。各プロバイダは既定でオフで、有効化するとログインできます。利用するには、このインスタンスに OAuth クライアント認証情報が設定されている必要があります。",
-			"adminBanner": "ソーシャルログインはインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。",
 			"googleLabel": "Google ログインを有効化",
 			"githubLabel": "GitHub ログインを有効化",
 			"notConfiguredHint": "このプロバイダの OAuth 認証情報が設定されていません。環境変数（シークレット）に設定すると有効化できます。",
@@ -745,6 +738,9 @@
 			"saveAction": "保存",
 			"statusEnabled": "有効",
 			"statusDisabled": "無効"
+		},
+		"features": {
+			"adminBanner": "AI エージェント・メール配信・ソーシャルログインはインスタンス全体に適用され、インスタンス管理者のみが閲覧できます。"
 		},
 		"system": {
 			"description": "オープンソースの作業可観測性プラットフォーム。",

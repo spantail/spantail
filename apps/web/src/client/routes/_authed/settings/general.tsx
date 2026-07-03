@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AppearanceCard } from "@/components/appearance-card";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -53,6 +54,7 @@ function GeneralSection() {
 		<div className="grid gap-4" key={current.id}>
 			<EditWorkspaceCard />
 			<WorkspaceLogoCard />
+			<AppearanceCard />
 		</div>
 	);
 }
