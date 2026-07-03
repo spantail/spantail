@@ -1,11 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { AppearanceCard } from "@/components/appearance-card";
-
+// Appearance moved into the General section; keep stale bookmarks working.
 export const Route = createFileRoute("/_authed/settings/appearance")({
-	component: AppearanceSection,
+	beforeLoad: () => {
+		throw redirect({ to: "/settings/general" });
+	},
 });
-
-function AppearanceSection() {
-	return <AppearanceCard />;
-}

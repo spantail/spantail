@@ -474,17 +474,13 @@
 			"general": "General",
 			"projects": "Projects",
 			"members": "Members",
-			"appearance": "Appearance",
 			"templates": "Report templates",
 			"tokens": "API tokens",
 			"agents": "Agents",
 			"profile": "Profile",
 			"authentication": "Authentication",
-			"preferences": "Preferences",
 			"systemUsers": "User management",
-			"systemAgents": "AI agents",
-			"email": "Email",
-			"oauth": "Social login",
+			"features": "Features",
 			"systemAbout": "About"
 		},
 		"systemAdminOnly": "Only instance admins can access this section.",
@@ -715,8 +711,7 @@
 			"enableHint": "Heads up: turning this on can grow data volume substantially — each agent session, and later per-turn events, is stored. Leave it off unless you want this telemetry.",
 			"saveAction": "Save",
 			"statusEnabled": "Enabled",
-			"statusDisabled": "Disabled",
-			"adminBanner": "The AI agents feature applies to the whole instance and is visible only to instance admins."
+			"statusDisabled": "Disabled"
 		},
 		"email": {
 			"title": "Email",
@@ -727,13 +722,11 @@
 			"fromName": "From name",
 			"saveAction": "Save",
 			"statusEnabled": "Enabled",
-			"statusDisabled": "Disabled",
-			"adminBanner": "Email delivery applies to the whole instance and is visible only to instance admins."
+			"statusDisabled": "Disabled"
 		},
 		"oauth": {
 			"title": "Social login",
 			"description": "Let users sign in with Google or GitHub. Each provider is off until you enable it, and only available once its OAuth client credentials are configured on this instance.",
-			"adminBanner": "Social login applies to the whole instance and is visible only to instance admins.",
 			"googleLabel": "Enable Google sign-in",
 			"githubLabel": "Enable GitHub sign-in",
 			"notConfiguredHint": "OAuth credentials are not configured for this provider. Set them as environment secrets to enable it.",
@@ -742,6 +735,9 @@
 			"saveAction": "Save",
 			"statusEnabled": "Enabled",
 			"statusDisabled": "Disabled"
+		},
+		"features": {
+			"adminBanner": "AI agents, email delivery and social login apply to the whole instance and are visible only to instance admins."
 		},
 		"system": {
 			"description": "Open-source work observability platform.",

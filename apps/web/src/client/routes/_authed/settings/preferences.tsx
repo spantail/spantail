@@ -1,11 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { PreferencesCard } from "@/components/preferences-card";
-
+// Preferences moved into the Profile section; keep stale bookmarks working.
 export const Route = createFileRoute("/_authed/settings/preferences")({
-	component: PreferencesSection,
+	beforeLoad: () => {
+		throw redirect({ to: "/settings/profile" });
+	},
 });
-
-function PreferencesSection() {
-	return <PreferencesCard />;
-}

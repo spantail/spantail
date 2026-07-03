@@ -6,12 +6,9 @@ import {
 	FolderIcon,
 	InfoIcon,
 	KeyIcon,
-	KeyRoundIcon,
-	MailIcon,
-	PaletteIcon,
 	SettingsIcon,
 	ShieldIcon,
-	SlidersHorizontalIcon,
+	ToggleRightIcon,
 	UserCircleIcon,
 	UsersIcon,
 } from "lucide-react";
@@ -27,17 +24,13 @@ interface SettingsNavItem {
 		| "/settings/general"
 		| "/settings/projects"
 		| "/settings/members"
-		| "/settings/appearance"
 		| "/settings/templates"
 		| "/settings/tokens"
 		| "/settings/agents"
 		| "/settings/profile"
 		| "/settings/authentication"
-		| "/settings/preferences"
 		| "/settings/users"
-		| "/settings/agents-admin"
-		| "/settings/email"
-		| "/settings/oauth"
+		| "/settings/features"
 		| "/settings/system";
 	labelKey: string;
 	icon: React.ComponentType<{ className?: string }>;
@@ -80,11 +73,6 @@ const GROUPS: SettingsNavGroup[] = [
 				labelKey: "settings.nav.members",
 				icon: UsersIcon,
 			},
-			{
-				to: "/settings/appearance",
-				labelKey: "settings.nav.appearance",
-				icon: PaletteIcon,
-			},
 		],
 	},
 	{
@@ -122,11 +110,6 @@ const GROUPS: SettingsNavGroup[] = [
 				icon: BotIcon,
 				requiresAgents: true,
 			},
-			{
-				to: "/settings/preferences",
-				labelKey: "settings.nav.preferences",
-				icon: SlidersHorizontalIcon,
-			},
 		],
 	},
 	{
@@ -139,19 +122,9 @@ const GROUPS: SettingsNavGroup[] = [
 				icon: ShieldIcon,
 			},
 			{
-				to: "/settings/agents-admin",
-				labelKey: "settings.nav.systemAgents",
-				icon: BotIcon,
-			},
-			{
-				to: "/settings/email",
-				labelKey: "settings.nav.email",
-				icon: MailIcon,
-			},
-			{
-				to: "/settings/oauth",
-				labelKey: "settings.nav.oauth",
-				icon: KeyRoundIcon,
+				to: "/settings/features",
+				labelKey: "settings.nav.features",
+				icon: ToggleRightIcon,
 			},
 			{
 				to: "/settings/system",
