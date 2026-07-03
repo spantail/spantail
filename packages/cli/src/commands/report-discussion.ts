@@ -71,8 +71,7 @@ export async function reportDiscussion(
 		ctx.stdout.write(`Reactions: ${formatReactions(discussion.reactions)}\n`);
 	}
 	for (const comment of discussion.comments) {
-		const edited =
-			comment.updatedAt !== comment.createdAt ? " (edited)" : "";
+		const edited = comment.updatedAt !== comment.createdAt ? " (edited)" : "";
 		ctx.stdout.write(
 			`\n${comment.id}  ${comment.authorName}  ${comment.createdAt}${edited}\n`,
 		);
@@ -194,12 +193,15 @@ export async function reportReact(
 	}
 	const reportId = positionals[0];
 	const emojiArg = positionals[1];
-	if (reportId === undefined || emojiArg === undefined || positionals.length > 2) {
+	if (
+		reportId === undefined ||
+		emojiArg === undefined ||
+		positionals.length > 2
+	) {
 		throw new UsageError("expected a <report-id> and an <emoji>");
 	}
 	const emoji =
-		EMOJI_ALIASES[emojiArg] ??
-		reactionEmojiSchema.safeParse(emojiArg).data;
+		EMOJI_ALIASES[emojiArg] ?? reactionEmojiSchema.safeParse(emojiArg).data;
 	if (emoji === undefined) {
 		throw new UsageError(
 			`invalid emoji "${emojiArg}"; use one of: ${EMOJI_HELP}`,

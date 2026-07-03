@@ -169,7 +169,7 @@ it("requires an explicit scope for a legacy multi-workspace report", async () =>
 		workspaceIds: [acme.id, beta.id],
 		dateRange: { from: "2026-06-01", to: "2026-06-15" },
 	};
-	await expect(
-		buildReportFilters(client, ctx, {}, { base }),
-	).rejects.toThrow("legacy multi-workspace scope");
+	await expect(buildReportFilters(client, ctx, {}, { base })).rejects.toThrow(
+		"legacy multi-workspace scope",
+	);
 });

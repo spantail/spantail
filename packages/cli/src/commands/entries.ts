@@ -265,7 +265,9 @@ export async function entriesEdit(
 			(ws) => ws.id === entry.workspaceId,
 		);
 		if (!workspace) {
-			throw new CliError("you are no longer a member of this entry's workspace");
+			throw new CliError(
+				"you are no longer a member of this entry's workspace",
+			);
 		}
 		patch.projectId = (
 			await resolveProject(client, workspace, values.project)

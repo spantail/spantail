@@ -49,7 +49,11 @@ export async function reportShare(
 	let expiresInDays: number | undefined;
 	if (values["expires-in"] !== undefined) {
 		expiresInDays = Number(values["expires-in"]);
-		if (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 365) {
+		if (
+			!Number.isInteger(expiresInDays) ||
+			expiresInDays < 1 ||
+			expiresInDays > 365
+		) {
 			throw new UsageError(
 				`invalid --expires-in "${values["expires-in"]}"; use an integer between 1 and 365`,
 			);

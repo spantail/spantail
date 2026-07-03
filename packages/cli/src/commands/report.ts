@@ -1,10 +1,6 @@
 import { parseArgs } from "node:util";
 
-import type {
-	AbsoluteDateRange,
-	Report,
-	ReportTemplate,
-} from "@spantail/core";
+import type { AbsoluteDateRange, Report, ReportTemplate } from "@spantail/core";
 import { formatDuration, localDateSchema } from "@spantail/core";
 import type { SpantailClient } from "@spantail/sdk";
 import { SpantailApiError } from "@spantail/sdk";

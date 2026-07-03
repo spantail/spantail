@@ -258,9 +258,7 @@ it("rejects an unknown template with the available ids", async () => {
 	const { ctx, stderr, configDir } = createTestContext({ fetch: api.fetch });
 	loggedInWithDefault(configDir);
 
-	expect(
-		await runCli(["report", "create", "--template", "nope"], ctx),
-	).toBe(1);
+	expect(await runCli(["report", "create", "--template", "nope"], ctx)).toBe(1);
 	expect(stderr.text()).toContain('unknown template "nope" (available: tpl-1)');
 });
 
@@ -286,9 +284,9 @@ it("previews to stdout with stats on stderr", async () => {
 	});
 	loggedInWithDefault(configDir);
 
-	expect(
-		await runCli(["report", "preview", "--template", "tpl-1"], ctx),
-	).toBe(0);
+	expect(await runCli(["report", "preview", "--template", "tpl-1"], ctx)).toBe(
+		0,
+	);
 	expect(stdout.text()).toBe("# Preview body\n");
 	expect(stderr.text()).toBe(
 		"3 entries, total 1h 30m, suggested name: Weekly 2026-06-08\n",
@@ -374,7 +372,9 @@ it("rejects conflicting clear flags", async () => {
 			ctx,
 		),
 	).toBe(2);
-	expect(stderr.text()).toContain("--tag and --clear-tags are mutually exclusive");
+	expect(stderr.text()).toContain(
+		"--tag and --clear-tags are mutually exclusive",
+	);
 });
 
 it("deletes a report after confirmation", async () => {

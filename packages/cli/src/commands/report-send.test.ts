@@ -75,7 +75,10 @@ it("rejects an unknown recipient with the candidates", async () => {
 	loggedIn(configDir);
 
 	expect(
-		await runCli(["report", "send", "rep-1", "--to", "nobody@example.com"], ctx),
+		await runCli(
+			["report", "send", "rep-1", "--to", "nobody@example.com"],
+			ctx,
+		),
 	).toBe(1);
 	expect(stderr.text()).toContain('unknown recipient "nobody@example.com"');
 	expect(stderr.text()).toContain("bob@example.com");

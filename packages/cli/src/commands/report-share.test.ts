@@ -16,7 +16,10 @@ it("creates a share link and prints only the URL on stdout", async () => {
 		{
 			method: "POST",
 			path: "/reports/rep-1/shares",
-			body: shareFixture({ expiresAt: "2026-07-14T00:00:00Z", hasPasscode: true }),
+			body: shareFixture({
+				expiresAt: "2026-07-14T00:00:00Z",
+				hasPasscode: true,
+			}),
 		},
 	]);
 	const { ctx, stdout, stderr, configDir } = createTestContext({

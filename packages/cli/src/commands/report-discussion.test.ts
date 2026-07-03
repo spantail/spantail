@@ -18,7 +18,12 @@ it("shows reactions and comments", async () => {
 			body: {
 				shared: true,
 				reactions: [
-					{ emoji: "+1", count: 2, reactedByMe: true, userNames: ["Alice", "Bob"] },
+					{
+						emoji: "+1",
+						count: 2,
+						reactedByMe: true,
+						userNames: ["Alice", "Bob"],
+					},
 				],
 				comments: [
 					commentFixture(),
@@ -27,7 +32,12 @@ it("shows reactions and comments", async () => {
 						body: "Edited later",
 						updatedAt: "2026-06-14T11:00:00Z",
 						reactions: [
-							{ emoji: "heart", count: 1, reactedByMe: false, userNames: ["Alice"] },
+							{
+								emoji: "heart",
+								count: 1,
+								reactedByMe: false,
+								userNames: ["Alice"],
+							},
 						],
 					}),
 				],
@@ -74,9 +84,9 @@ it("adds a comment", async () => {
 	const { ctx, stdout, configDir } = createTestContext({ fetch: api.fetch });
 	loggedIn(configDir);
 
-	expect(
-		await runCli(["report", "comment", "rep-1", "Looks good"], ctx),
-	).toBe(0);
+	expect(await runCli(["report", "comment", "rep-1", "Looks good"], ctx)).toBe(
+		0,
+	);
 	const post = api.calls.find((call) => call.method === "POST");
 	expect(post?.body).toEqual({ body: "Looks good" });
 	expect(stdout.text()).toBe("Added comment com-9\n");
@@ -138,7 +148,9 @@ it("toggles a reaction on the report body", async () => {
 		{
 			method: "PUT",
 			path: "/reports/rep-1/reactions",
-			body: [{ emoji: "rocket", count: 1, reactedByMe: true, userNames: ["Me"] }],
+			body: [
+				{ emoji: "rocket", count: 1, reactedByMe: true, userNames: ["Me"] },
+			],
 		},
 	]);
 	const { ctx, stdout, configDir } = createTestContext({ fetch: api.fetch });
