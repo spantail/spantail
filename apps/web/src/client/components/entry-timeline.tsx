@@ -141,15 +141,15 @@ export function EntryTimeline({
 										>
 											<span className="relative z-10 mt-[3px] flex w-3 shrink-0 justify-center">
 												{project ? (
-													<span className="bg-background ring-background flex size-3 items-center justify-center rounded-full ring-4 transition-transform group-hover:scale-110">
+													<span className="bg-background ring-background flex size-4 items-center justify-center rounded-full ring-4 transition-transform group-hover:scale-110">
 														<ProjectMarker
 															hue={project.hue}
 															symbol={project.symbol}
-															size={12}
+															size={16}
 														/>
 													</span>
 												) : (
-													<span className="bg-muted-foreground/40 ring-background size-3 rounded-full ring-4 transition-transform group-hover:scale-110" />
+													<span className="bg-muted-foreground/40 ring-background size-4 rounded-full ring-4 transition-transform group-hover:scale-110" />
 												)}
 											</span>
 											<button
