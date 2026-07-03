@@ -48,7 +48,7 @@ function AgentPage() {
 	const workspaceId = current?.id;
 	const timezone = useUserTimezone();
 
-	const [period, setPeriod] = useState<DashboardPeriod>("this_month");
+	const [period, setPeriod] = useState<DashboardPeriod>("last_30_days");
 	const range = resolveDateRange(period, timezone);
 
 	// The agent's name/type come from the workspace-activity list (same query the
