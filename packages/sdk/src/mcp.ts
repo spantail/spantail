@@ -362,9 +362,11 @@ export function registerSpantailTools(
 				const filters = assembleReportFilters(scope);
 				let reportName = name;
 				let reportNote = note;
-				if (!reportName) {
+				// Name and note suggestions are independent (like the web compose
+				// form): an explicit name must not discard a suggested note.
+				if (!reportName || reportNote === undefined) {
 					const preview = await client.previewReport({ templateId, filters });
-					reportName = preview.suggestedName;
+					reportName ||= preview.suggestedName;
 					reportNote ??= preview.suggestedNote || undefined;
 				}
 				if (!reportName) {

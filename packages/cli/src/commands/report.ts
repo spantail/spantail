@@ -270,20 +270,27 @@ export async function reportTemplates(
 	return 0;
 }
 
-/** Compose-time name/note: explicit flags win, the template's suggestion fills. */
+/**
+ * Compose-time name/note: explicit flags win, the template's suggestions fill
+ * the rest (independently, like the web compose form). Previews only when a
+ * suggestion is actually needed.
+ */
 async function composeNameAndNote(
 	client: SpantailClient,
 	template: ReportTemplate,
 	filters: Parameters<SpantailClient["previewReport"]>[0]["filters"],
 	values: { name?: string; note?: string },
 ): Promise<{ name: string; note: string | undefined }> {
-	if (values.name) return { name: values.name, note: values.note };
+	const needsNote = values.note === undefined && template.noteTemplate !== null;
+	if (values.name && !needsNote) {
+		return { name: values.name, note: values.note };
+	}
 	const preview = await client.previewReport({
 		templateId: template.id,
 		filters,
 	});
 	return {
-		name: preview.suggestedName || template.name,
+		name: values.name || preview.suggestedName || template.name,
 		note: values.note ?? (preview.suggestedNote || undefined),
 	};
 }

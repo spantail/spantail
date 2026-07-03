@@ -194,7 +194,7 @@ it("creates a report adopting the suggested name", async () => {
 	});
 });
 
-it("creates a report with an explicit name without previewing", async () => {
+it("creates a report with an explicit name and note without previewing", async () => {
 	const { stub, calls } = makeStub();
 	const client = await connect(stub);
 
@@ -203,6 +203,7 @@ it("creates a report with an explicit name without previewing", async () => {
 		arguments: {
 			templateId: "tmpl-1",
 			name: "June",
+			note: "hand-written",
 			from: "2026-06-01",
 			to: "2026-06-30",
 		},
@@ -211,10 +212,35 @@ it("creates a report with an explicit name without previewing", async () => {
 	expect(calls.map((call) => call.method)).toEqual(["createReport"]);
 	expect(calls.at(-1)?.args[0]).toMatchObject({
 		name: "June",
+		note: "hand-written",
 		filters: {
 			workspaceIds: [],
 			dateRange: { from: "2026-06-01", to: "2026-06-30" },
 		},
+	});
+});
+
+it("adopts the suggested note even when the name is explicit", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { previewReport: unknown }).previewReport = () =>
+		Promise.resolve({
+			content: "# Preview",
+			totalMinutes: 60,
+			entryCount: 1,
+			projectCount: 1,
+			suggestedName: "Weekly 2026-06-08",
+			suggestedNote: "Covers the week",
+		});
+	const client = await connect(stub);
+
+	await client.callTool({
+		name: "create_report",
+		arguments: { templateId: "tmpl-1", name: "June", dateRangePreset: "today" },
+	});
+
+	expect(calls.at(-1)?.args[0]).toMatchObject({
+		name: "June",
+		note: "Covers the week",
 	});
 });
 

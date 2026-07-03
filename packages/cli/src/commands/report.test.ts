@@ -251,6 +251,45 @@ it("creates with an explicit name without previewing", async () => {
 	});
 });
 
+it("adopts the suggested note even when the name is explicit", async () => {
+	const api = fakeApi([
+		{
+			path: "/report-templates",
+			body: [templateFixture({ noteTemplate: "{{ scope.period }}" })],
+		},
+		{ path: "/workspaces", body: [acme] },
+		{
+			method: "POST",
+			path: "/reports/preview",
+			body: {
+				content: "# Preview\n",
+				totalMinutes: 60,
+				entryCount: 1,
+				projectCount: 1,
+				suggestedName: "Weekly 2026-06-08",
+				suggestedNote: "Covers 2026-06-08 – 2026-06-14",
+			},
+		},
+		{ method: "POST", path: "/reports", body: reportFixture({ name: "June" }) },
+	]);
+	const { ctx, configDir } = createTestContext({ fetch: api.fetch });
+	loggedInWithDefault(configDir);
+
+	expect(
+		await runCli(
+			["report", "create", "--template", "tpl-1", "--name", "June"],
+			ctx,
+		),
+	).toBe(0);
+	const post = api.calls.find(
+		(call) => call.method === "POST" && call.url.pathname.endsWith("/reports"),
+	);
+	expect(post?.body).toMatchObject({
+		name: "June",
+		note: "Covers 2026-06-08 – 2026-06-14",
+	});
+});
+
 it("rejects an unknown template with the available ids", async () => {
 	const api = fakeApi([
 		{ path: "/report-templates", body: [templateFixture()] },
