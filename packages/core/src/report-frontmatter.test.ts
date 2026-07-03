@@ -105,24 +105,28 @@ describe("renderReportFrontMatterYaml", () => {
 	});
 
 	it("strips invisible/bidi control characters from hostile values", () => {
-		const rlo = String.fromCharCode(0x202e); // right-to-left override
-		const zwsp = String.fromCharCode(0x200b); // zero-width space
-		const bell = String.fromCharCode(0x07); // C0 control
-		const invPlus = String.fromCharCode(0x2064); // invisible plus (U+206x format char)
+		const hidden = [
+			String.fromCharCode(0x202e), // right-to-left override (bidi)
+			String.fromCharCode(0x200b), // zero-width space
+			String.fromCharCode(0x200d), // zero-width joiner
+			String.fromCharCode(0x07), // C0 control (bell)
+			String.fromCharCode(0x2064), // invisible plus (U+206x format)
+			String.fromCharCode(0x206f), // nominal digit shapes (deprecated U+206x format)
+			String.fromCodePoint(0xe0041), // TAG LATIN CAPITAL A (tag-block format char)
+		];
 		const hostile: ReportFrontMatter = {
 			...meta,
-			name: `report${rlo}${zwsp}${bell}${invPlus}name`,
+			name: `report${hidden.join("")}name`,
 			filters: { workspaceIds: ["ws-1"] },
 		};
 		const content = `${buildReportFrontMatter(hostile)}# Body\n`;
 		const yaml = renderReportFrontMatterYaml(content);
 		expect(yaml).not.toBeNull();
 		const line = yaml as string;
-		// The spoofing/invisible characters are gone; visible letters remain.
-		expect(line).not.toContain(rlo);
-		expect(line).not.toContain(zwsp);
-		expect(line).not.toContain(bell);
-		expect(line).not.toContain(invPlus);
+		// Every spoofing/invisible character is gone; visible letters remain.
+		for (const ch of hidden) {
+			expect(line).not.toContain(ch);
+		}
 		expect(line).toContain("report");
 		expect(line).toContain("name");
 	});

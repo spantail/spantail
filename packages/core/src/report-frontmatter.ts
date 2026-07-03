@@ -101,31 +101,27 @@ export function parseReportFrontMatter(md: string): ReportFrontMatter | null {
 	return result.success ? result.data : null;
 }
 
-// Code points that enable display spoofing (Trojan Source, CVE-2021-42574):
-// C0/C1 controls (except \t and \n, which are legitimate structure), the
-// bidirectional overrides/isolates, and zero-width / other invisible format
-// characters. `yaml.stringify` escapes C0 controls to `\a`-style text but emits
-// bidi/zero-width chars literally, so those must be stripped from the serialized
-// output before it is displayed. A code-point predicate keeps the source free of
-// literal control characters (which a regex character class would require).
-function isUnsafeDisplayChar(cp: number): boolean {
-	return (
-		(cp <= 0x1f && cp !== 0x09 && cp !== 0x0a) || // C0 controls except tab/newline
-		(cp >= 0x7f && cp <= 0x9f) || // DEL + C1 controls
-		cp === 0x061c || // Arabic letter mark
-		(cp >= 0x200b && cp <= 0x200f) || // zero-width chars + LRM/RLM
-		cp === 0x2028 || // line separator
-		cp === 0x2029 || // paragraph separator
-		(cp >= 0x202a && cp <= 0x202e) || // bidi embeddings/overrides
-		(cp >= 0x2060 && cp <= 0x2069) || // word joiner, invisible math ops, bidi isolates
-		cp === 0xfeff // BOM / zero-width no-break space
-	);
+// Characters that enable display spoofing (Trojan Source, CVE-2021-42574) must
+// be removed before the front-matter YAML is shown. `yaml.stringify` escapes C0
+// controls to `\a`-style text but emits format/bidi characters literally, so we
+// strip, by Unicode general category: every format control (`\p{Cf}` — bidi
+// overrides/isolates, zero-width joiners, the whole U+206x range, tag characters,
+// …), other controls (`\p{Cc}`), and the line/paragraph separators
+// (`\p{Zl}`/`\p{Zp}`). `\t` and `\n` are legitimate structure and kept. Matching
+// the categories rather than an enumerated code-point list means the set never
+// drifts as new invisible characters are added. Property escapes also keep the
+// source free of the literal control characters a plain class would require.
+const UNSAFE_DISPLAY_CHAR = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+
+function isUnsafeDisplayChar(ch: string): boolean {
+	if (ch === "\n" || ch === "\t") return false;
+	return UNSAFE_DISPLAY_CHAR.test(ch);
 }
 
 function stripUnsafeDisplayChars(value: string): string {
 	let out = "";
 	for (const ch of value) {
-		if (!isUnsafeDisplayChar(ch.codePointAt(0) ?? 0)) out += ch;
+		if (!isUnsafeDisplayChar(ch)) out += ch;
 	}
 	return out;
 }
