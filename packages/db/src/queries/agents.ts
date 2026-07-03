@@ -851,16 +851,20 @@ export async function finalizeAgentSession(
 	},
 ): Promise<AgentEntryRow | undefined> {
 	const endedAtMs = input.endedAt?.getTime();
+	// Clamp the finalized end to startedAt as well: a bad client clock (or a
+	// hostile token) must not produce a session that ends before it starts.
+	const clampedEnd = (ms: number) =>
+		sql`max(${ms}, coalesce(${agentEntries.endedAt}, 0), ${agentEntries.startedAt})`;
 	const rows = await db
 		.update(agentEntries)
 		.set({
 			updatedAt: new Date(),
 			...(endedAtMs !== undefined
 				? {
-						endedAt: sql`max(${endedAtMs}, coalesce(${agentEntries.endedAt}, 0))`,
+						endedAt: clampedEnd(endedAtMs),
 						// Extend the duration to the finalized end; never shrink it.
 						durationMinutes: sql`max(${agentEntries.durationMinutes},
-							cast(round((max(${endedAtMs}, coalesce(${agentEntries.endedAt}, 0)) - ${agentEntries.startedAt}) / 60000.0) as integer))`,
+							cast(round((${clampedEnd(endedAtMs)} - ${agentEntries.startedAt}) / 60000.0) as integer))`,
 					}
 				: {}),
 			...(input.description !== null ? { description: input.description } : {}),

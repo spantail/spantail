@@ -560,6 +560,33 @@ it("finalizes a session and preserves the closing facts across late ingests", as
 	expect(new Date(afterGrowth[0]?.endedAt ?? 0).toISOString()).toBe(t(8));
 });
 
+it("clamps a finalize endedAt that lands before the session start", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+
+	const anchor = Date.now() - 60 * 60_000;
+	const t = (minutes: number) =>
+		new Date(anchor + minutes * 60_000).toISOString();
+	await ingest(token, {
+		sessionId: "s1",
+		events: [turn("m1", t(0), { output_tokens: 1 })],
+	});
+
+	// In-range but before the session started (a bad client clock): the stored
+	// end must never precede startedAt, and the duration must not go negative.
+	const res = await finalize(token, { sessionId: "s1", endedAt: t(-30) });
+	expect(res.status).toBe(200);
+	const entry = (await res.json()) as {
+		startedAt: string;
+		endedAt: string;
+		durationMinutes: number;
+	};
+	expect(new Date(entry.endedAt).toISOString()).toBe(t(0));
+	expect(entry.durationMinutes).toBe(0);
+});
+
 it("returns 404 when finalizing a session with no entry yet", async () => {
 	const { admin, ws } = await setup();
 	const { token } = await createAgentToken(admin, {

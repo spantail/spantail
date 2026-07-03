@@ -96,6 +96,25 @@ describe("ingestAgentEventsInputSchema", () => {
 		).toBe(false);
 	});
 
+	// Zod 4's z.number() rejects non-finite values by default; these lock that
+	// in, since JSON "1e309" arrives as Infinity and would corrupt SQL sums.
+	it("rejects non-finite numbers in costUsd and attribute values", () => {
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [{ ...validEvent, costUsd: Number.POSITIVE_INFINITY }],
+			}).success,
+		).toBe(false);
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [
+					{ ...validEvent, attributes: { k: Number.POSITIVE_INFINITY } },
+				],
+			}).success,
+		).toBe(false);
+	});
+
 	it("bounds attributes: entry count, value length, scalar values only", () => {
 		const tooMany = Object.fromEntries(
 			Array.from({ length: 21 }, (_, i) => [`k${i}`, "v"]),
