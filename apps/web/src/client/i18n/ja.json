@@ -291,17 +291,6 @@
 			"selfOnly": "自分の受信箱に送信",
 			"read": "{{read}}/{{total}} 既読"
 		},
-		"header": {
-			"period": "期間",
-			"total": "合計",
-			"workspaces": "ワークスペース",
-			"projects": "プロジェクト",
-			"users": "ユーザー",
-			"tags": "タグ",
-			"timezone": "タイムゾーン",
-			"generatedAt": "生成日時",
-			"version": "バージョン"
-		},
 		"shares": {
 			"title": "共有: {{name}}",
 			"description": "このレポートへの読み取り専用リンクを作成します。",

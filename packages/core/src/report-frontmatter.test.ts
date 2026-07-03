@@ -4,6 +4,7 @@ import {
 	buildReportFrontMatter,
 	parseReportFrontMatter,
 	type ReportFrontMatter,
+	renderReportFrontMatterYaml,
 	splitFrontMatter,
 } from "./report-frontmatter";
 
@@ -70,5 +71,63 @@ describe("report front-matter", () => {
 		const { frontMatter, body } = splitFrontMatter(legacy);
 		expect(frontMatter).toBeNull();
 		expect(body).toBe(legacy);
+	});
+});
+
+describe("renderReportFrontMatterYaml", () => {
+	it("renders the whole validated header, nothing omitted", () => {
+		const full: ReportFrontMatter = {
+			...meta,
+			filters: {
+				workspaceIds: ["ws-1", "ws-2", "ws-3"],
+				projectIds: ["p-1"],
+				tags: ["api"],
+			},
+		};
+		const content = `${buildReportFrontMatter(full)}# Body\n`;
+		const yaml = renderReportFrontMatterYaml(content);
+		expect(yaml).not.toBeNull();
+		// Every field surfaces verbatim — including each workspace id and the
+		// preset, which the old header abbreviated to a count / dropped.
+		for (const ws of full.filters.workspaceIds) {
+			expect(yaml).toContain(ws);
+		}
+		expect(yaml).toContain("preset: last_week");
+		expect(yaml).toContain("templateId: tmpl-weekly");
+		// It round-trips: the displayed YAML re-parses to the same validated shape.
+		expect(parseReportFrontMatter(`---\n${yaml}\n---\n# Body\n`)).toEqual(full);
+	});
+
+	it("returns null when the document has no system header", () => {
+		expect(renderReportFrontMatterYaml("# Just a body\n")).toBeNull();
+		const legacy = "---\ntitle: Quarterly\nauthor: Mei\n---\n\n# Q\n";
+		expect(renderReportFrontMatterYaml(legacy)).toBeNull();
+	});
+
+	it("strips invisible/bidi control characters from hostile values", () => {
+		const hidden = [
+			String.fromCharCode(0x202e), // right-to-left override (bidi)
+			String.fromCharCode(0x200b), // zero-width space
+			String.fromCharCode(0x200d), // zero-width joiner
+			String.fromCharCode(0x07), // C0 control (bell)
+			String.fromCharCode(0x2064), // invisible plus (U+206x format)
+			String.fromCharCode(0x206f), // nominal digit shapes (deprecated U+206x format)
+			String.fromCodePoint(0xe0041), // TAG LATIN CAPITAL A (tag-block format char)
+		];
+		const hostile: ReportFrontMatter = {
+			...meta,
+			name: `report${hidden.join("")}name`,
+			filters: { workspaceIds: ["ws-1"] },
+		};
+		const content = `${buildReportFrontMatter(hostile)}# Body\n`;
+		const yaml = renderReportFrontMatterYaml(content);
+		expect(yaml).not.toBeNull();
+		const line = yaml as string;
+		// Every spoofing/invisible character is gone; visible letters remain.
+		for (const ch of hidden) {
+			expect(line).not.toContain(ch);
+		}
+		expect(line).toContain("report");
+		expect(line).toContain("name");
 	});
 });
