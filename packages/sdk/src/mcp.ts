@@ -376,7 +376,14 @@ export function registerSpantailTools(
 					reportNote ??= preview.suggestedNote || undefined;
 				}
 				if (!reportName) {
-					// The template suggests no name (no name Liquid); require one.
+					// No name Liquid on the template: fall back to its display name,
+					// like the CLI does.
+					const templates = await client.listReportTemplates();
+					reportName = templates.find(
+						(template) => template.id === templateId,
+					)?.name;
+				}
+				if (!reportName) {
 					throw new Error("name is required for this template");
 				}
 				return client.createReport({

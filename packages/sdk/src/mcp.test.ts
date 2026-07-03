@@ -244,6 +244,30 @@ it("adopts the suggested note even when the name is explicit", async () => {
 	});
 });
 
+it("falls back to the template name when nothing is suggested", async () => {
+	const { stub, calls } = makeStub();
+	(stub as { previewReport: unknown }).previewReport = () =>
+		Promise.resolve({
+			content: "# Preview",
+			totalMinutes: 0,
+			entryCount: 0,
+			projectCount: 0,
+			suggestedName: "",
+			suggestedNote: "",
+		});
+	(stub as { listReportTemplates: unknown }).listReportTemplates = () =>
+		Promise.resolve([{ id: "tmpl-1", name: "Weekly" }]);
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "create_report",
+		arguments: { templateId: "tmpl-1", dateRangePreset: "today" },
+	});
+
+	expect(result.isError).toBeFalsy();
+	expect(calls.at(-1)?.args[0]).toMatchObject({ name: "Weekly" });
+});
+
 it("rejects a report scope without a period", async () => {
 	const { stub, calls } = makeStub();
 	const client = await connect(stub);
