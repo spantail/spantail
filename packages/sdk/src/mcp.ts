@@ -1,8 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ReportFilters, ReportFiltersInput } from "@spantail/core";
 import {
+	batchWorkEntryItemSchema,
 	dateRangePresetSchema,
 	localDateSchema,
+	MAX_WORK_ENTRIES_PER_BATCH,
 	tagSchema,
 } from "@spantail/core";
 import { z } from "zod";
@@ -35,6 +37,10 @@ async function run(fn: () => Promise<unknown>): Promise<ToolResult> {
 		return fail(error);
 	}
 }
+
+// The stdio CLI server registers extra local tools and reuses the same
+// result/error formatting.
+export { run as runTool };
 
 /**
  * Flattened report-scope arguments shared by the report tools. The wire's
@@ -205,6 +211,32 @@ export function registerSpantailTools(
 			},
 		},
 		(input) => run(() => client.createWorkEntry(input)),
+	);
+
+	server.registerTool(
+		"log_work_batch",
+		{
+			title: "Log multiple work entries",
+			description:
+				"Create up to 100 work entries in one atomic request (all or none) for a " +
+				"single workspace. Each entry needs a projectId and an explicit entryDate " +
+				"(YYYY-MM-DD) — resolve ids with list_workspaces and list_projects first. " +
+				"externalId is normally omitted; set it only to keep a legacy system's id, " +
+				"in which case re-sending the same externalId updates the entry instead of " +
+				"duplicating it. For large file-based migrations prefer the CLI's " +
+				"`spantail entries import`.",
+			inputSchema: {
+				workspaceId: z.string().describe("Workspace id"),
+				entries: z
+					.array(batchWorkEntryItemSchema)
+					.min(1)
+					.max(MAX_WORK_ENTRIES_PER_BATCH)
+					.describe(
+						"Entries; each needs projectId, entryDate, durationMinutes, description",
+					),
+			},
+		},
+		(input) => run(() => client.createWorkEntriesBatch(input)),
 	);
 
 	server.registerTool(

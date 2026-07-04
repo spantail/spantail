@@ -46,6 +46,72 @@ export type CreateWorkEntryInputData = z.input<
 	typeof createWorkEntryInputSchema
 >;
 
+/**
+ * Sized for the tightest D1 budget the app supports (Workers Free: 50 queries
+ * per invocation). A work-entry row binds 12 columns against the 100-bound-
+ * parameter cap, so inserts are chunked at 8 rows per statement — 100 entries
+ * = 13 statements in one db.batch, leaving room for the request's auth,
+ * permission, and ownership queries. Clients importing more auto-split into
+ * multiple requests.
+ */
+export const MAX_WORK_ENTRIES_PER_BATCH = 100;
+
+/**
+ * Distinct projects per batch request: each costs two permission lookups, so
+ * this bounds the request's share of the same Free-plan query budget.
+ */
+export const MAX_PROJECTS_PER_BATCH = 10;
+
+// Ids that could never be addressed as /work-entries/:id — the collection
+// sub-routes are matched before /:id, and "." / ".." are URL dot-segments
+// that normalize away before routing.
+const RESERVED_WORK_ENTRY_IDS = new Set(["stats", "tags", "batch", ".", ".."]);
+
+// Becomes the entry's primary key (and thus appears in /:id URLs), so the
+// charset is restricted to URL-safe id characters, route segments are
+// reserved, and path dot-segments are rejected.
+export const externalIdSchema = z
+	.string()
+	.regex(/^[A-Za-z0-9._:-]{1,200}$/)
+	.refine((id) => !RESERVED_WORK_ENTRY_IDS.has(id), {
+		message:
+			'reserved id; "stats", "tags", "batch", ".", and ".." cannot address an entry',
+	});
+
+// The single-create input minus workspaceId (lifted to the request top level),
+// with entryDate required — a migration must state dates explicitly — and an
+// optional externalId as the idempotency key (same id ⇒ upsert, not duplicate).
+export const batchWorkEntryItemSchema = createWorkEntryInputSchema
+	.omit({ workspaceId: true })
+	.extend({
+		entryDate: localDateSchema,
+		externalId: externalIdSchema.optional(),
+	});
+export type BatchWorkEntryItem = z.infer<typeof batchWorkEntryItemSchema>;
+export type BatchWorkEntryItemData = z.input<typeof batchWorkEntryItemSchema>;
+
+export const createWorkEntriesBatchInputSchema = z.object({
+	workspaceId: z.string(),
+	entries: z
+		.array(batchWorkEntryItemSchema)
+		.min(1)
+		.max(MAX_WORK_ENTRIES_PER_BATCH),
+});
+export type CreateWorkEntriesBatchInput = z.infer<
+	typeof createWorkEntriesBatchInputSchema
+>;
+export type CreateWorkEntriesBatchInputData = z.input<
+	typeof createWorkEntriesBatchInputSchema
+>;
+
+export const createWorkEntriesBatchResultSchema = z.object({
+	// Entries processed (created or updated).
+	count: z.number().int().min(1),
+});
+export type CreateWorkEntriesBatchResult = z.infer<
+	typeof createWorkEntriesBatchResultSchema
+>;
+
 export const updateWorkEntryInputSchema = z
 	.object({
 		// Nullable so an entry orphaned by a project deletion can be edited

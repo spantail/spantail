@@ -19,6 +19,7 @@
 		"db:drop": "tsx packages/db/seed/drop.ts",
 		"db:seed": "tsx packages/db/seed/seed.ts",
 		"db:reset": "pnpm db:drop && pnpm db:migrate:local",
+		"generate-import": "tsx packages/db/seed/generate-import.ts",
 		"deploy": "pnpm --filter web run deploy",
 		"docs:dev": "pnpm --filter docs dev",
 		"docs:build": "pnpm --filter docs build",

@@ -144,6 +144,89 @@ curl -X POST "https://<your-instance>/api/v1/work-entries" \
 Returns `201 Created`. CLI and MCP clients set `X-Spantail-Client: cli|mcp` so the entry's
 `source` reflects the channel; direct callers default to `api`.
 
+## Create work entries in bulk
+
+`POST /api/v1/work-entries/batch` <Badge text="scope: write" variant="caution" />
+
+Bulk-inserts up to **100** entries for one workspace in a single atomic request — either
+every entry is written or none is (a single invalid entry rejects the whole batch with
+`400`). Built for migrating data from an existing system; the
+[CLI's `entries import`](/guides/tools/cli/) reads a JSONL file and auto-splits it into
+requests of this size. Rate-limited per credential: one request consumes one rate-limit
+token regardless of entry count.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `workspaceId` | string | yes | Target workspace for every entry in the batch. |
+| `entries` | object[] | yes | 1–100 entries, spanning at most 10 distinct projects. |
+
+Each entry takes the same fields as single create, with these differences:
+
+- `workspaceId` is lifted to the top level and omitted per entry.
+- `entryDate` is **required** — migrated data must state its dates explicitly; there is no
+  default-to-today.
+- `externalId` (string, optional) — an idempotency key, see below.
+
+**`externalId` semantics**
+
+Normally leave `externalId` out. Set it when you need to keep the source system's id — for
+resuming a partial migration safely, or for an external integration that must map its
+records to Spantail entries.
+
+- The `externalId` becomes the entry's `id`, so the old id addresses the entry directly
+  (`GET /api/v1/work-entries/:id`).
+- Re-sending an entry with the same `externalId` **updates it in place** instead of
+  duplicating it. Entries without one are plain inserts and duplicate on re-send.
+- It must be unique across the instance (it is a primary key). If a source system's ids are
+  weak (e.g. bare numbers), prefix them: `legacy-123`.
+- Allowed charset: `A-Z a-z 0-9 . _ : -`, at most 200 characters (it appears in URLs).
+  The literal values `stats`, `tags`, `batch`, `.`, and `..` are reserved — the first
+  three are route segments under `/work-entries`, and the dot-segments normalize away
+  in URLs.
+- Duplicate `externalId` values within one request are rejected with `400`. An `externalId`
+  that already belongs to another user's or another workspace's entry is rejected with
+  `409` and nothing is written.
+
+The entry's calendar day is taken verbatim from `entryDate` — the importer performs no
+timezone conversion.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/work-entries/batch" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspaceId": "wrk_demo",
+    "entries": [
+      {
+        "projectId": "prj_site",
+        "entryDate": "2024-07-15",
+        "durationMinutes": 90,
+        "description": "Reviewed onboarding flow",
+        "externalId": "legacy-4711"
+      },
+      {
+        "projectId": "prj_site",
+        "entryDate": "2024-07-16",
+        "durationMinutes": 60,
+        "description": "Fixed signup validation"
+      }
+    ]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "count": 2 }
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created` with the number of entries processed (created or updated).
+
 ## Get a work entry
 
 `GET /api/v1/work-entries/:id` <Badge text="scope: read" variant="note" />

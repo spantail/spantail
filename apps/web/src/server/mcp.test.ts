@@ -170,11 +170,16 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 		"list_reports",
 		"list_workspaces",
 		"log_work",
+		"log_work_batch",
 		"preview_report",
 		"search",
 		"update_entry",
 		"update_report",
 	]);
+	// The file-reading import tool is stdio-only and must not exist remotely.
+	expect(tools.tools.map((tool) => tool.name)).not.toContain(
+		"import_work_entries",
+	);
 
 	// tools/call log_work → entry persisted via the REST API loopback
 	const callRes = await rpc(token, {

@@ -94,6 +94,22 @@ to see them all:
 | Messages | Alice's inbox | every teammate's daily internal report |
 | Agent detail | Alice's agent | 3 sessions/weekday over the window |
 
+## Bulk-import verification data
+
+`pnpm generate-import demo` writes `import/work-entries.jsonl` (gitignored):
+three years of weekday entries for the first workspace (Northwind), in the
+format `spantail entries import` consumes. Use it to exercise the batch-import
+path end to end:
+
+```sh
+pnpm generate-import demo
+spantail entries import examples/demo/import/work-entries.jsonl --workspace northwind
+```
+
+The generated lines carry no `externalId`, so re-importing the file duplicates
+entries — that is the documented plain-insert behavior. Add `externalId` fields
+to a hand-made file to see idempotent re-imports instead.
+
 ## Files
 
 `db/seed/` holds one YAML per concern: `users`, `workspaces`, `members`,

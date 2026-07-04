@@ -9,6 +9,7 @@ import {
 	entriesTags,
 	entriesView,
 } from "./commands/entries";
+import { entriesImport } from "./commands/entries-import";
 import {
 	inboxCounts,
 	inboxFlag,
@@ -68,6 +69,7 @@ const commands: Record<
 		delete: entriesDelete,
 		stats: entriesStats,
 		tags: entriesTags,
+		import: entriesImport,
 	},
 	report: {
 		list: reportList,
@@ -117,6 +119,7 @@ Commands:
   entries delete    Delete a work entry
   entries stats     Show aggregated work-entry stats
   entries tags      List the distinct tags in scope
+  entries import    Bulk-import work entries from a JSONL file
   report list       List your reports
   report view       Print a report's rendered markdown
   report create     Create a report from a template and filters
