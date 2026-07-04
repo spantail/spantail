@@ -1,9 +1,16 @@
-import { formatPeriodLabel, type MailFolder } from "@spantail/core";
+import {
+	formatPeriodLabel,
+	type MailFolder,
+	renderReportFrontMatterYaml,
+} from "@spantail/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
 	DownloadIcon,
+	EyeIcon,
+	EyeOffIcon,
 	FileTextIcon,
+	MoreVerticalIcon,
 	PrinterIcon,
 	ShareIcon,
 } from "lucide-react";
@@ -14,8 +21,15 @@ import { MailToolbar } from "@/components/mail-toolbar";
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
 import { ReportDiscussion } from "@/components/report-discussion";
+import { ReportHeaderMeta } from "@/components/report-header-meta";
 import { ShareDialog } from "@/components/share-dialog";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
@@ -33,6 +47,9 @@ function ReadingPane() {
 	const { folder, messageId } = Route.useParams();
 	const folderTyped = folder as MailFolder;
 	const [sharing, setSharing] = useState(false);
+	// Provenance header hidden by default; the overflow menu toggle reveals the
+	// version's own front-matter above the body, mirroring the report view.
+	const [showHeader, setShowHeader] = useState(false);
 
 	const detail = useQuery({
 		queryKey: ["mail-message", messageId],
@@ -176,22 +193,55 @@ function ReadingPane() {
 								>
 									<PrinterIcon className="size-4" />
 								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									aria-label={t("messages.detail.download")}
-									title={t("messages.detail.download")}
-									onClick={() =>
-										downloadMarkdown(
-											`${data.reportName} ${period}.md`,
-											data.renderedMarkdown,
-										)
-									}
-								>
-									<DownloadIcon className="size-4" />
-								</Button>
+								<DropdownMenu>
+									<DropdownMenuTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											aria-label={t("messages.detail.moreActions")}
+											title={t("messages.detail.moreActions")}
+										>
+											<MoreVerticalIcon className="size-4" />
+										</Button>
+									</DropdownMenuTrigger>
+									<DropdownMenuContent align="end" className="w-48">
+										<DropdownMenuItem
+											className="gap-2.5 px-2 py-1.5"
+											onSelect={() =>
+												downloadMarkdown(
+													`${data.reportName} ${period}.md`,
+													data.renderedMarkdown,
+												)
+											}
+										>
+											<DownloadIcon />
+											{t("messages.detail.download")}
+										</DropdownMenuItem>
+										{/* Toggle the version's provenance header above the body.
+										    The eye state icon reads as shown / hidden. */}
+										<DropdownMenuItem
+											className="gap-2.5 px-2 py-1.5"
+											onSelect={() => setShowHeader((v) => !v)}
+										>
+											{showHeader ? <EyeIcon /> : <EyeOffIcon />}
+											{showHeader
+												? t("messages.detail.hideHeader")
+												: t("messages.detail.showHeader")}
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
 							</div>
 						</div>
+						{showHeader && (
+							<div className="pt-6">
+								<ReportHeaderMeta
+									frontMatter={renderReportFrontMatterYaml(
+										data.renderedMarkdown,
+									)}
+									onClose={() => setShowHeader(false)}
+								/>
+							</div>
+						)}
 						<div className="print-area pt-6">
 							{/* A received report: the report variant strips the system
 							    front-matter header and gives it the article look. */}

@@ -393,7 +393,10 @@
 			"attachedReport": "Attached report",
 			"share": "Share",
 			"print": "Print",
-			"download": "Download"
+			"download": "Download",
+			"moreActions": "More actions",
+			"showHeader": "Show header",
+			"hideHeader": "Hide header"
 		}
 	},
 	"discussion": {

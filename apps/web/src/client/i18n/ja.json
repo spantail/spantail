@@ -396,7 +396,10 @@
 			"attachedReport": "添付レポート",
 			"share": "共有",
 			"print": "印刷",
-			"download": "ダウンロード"
+			"download": "ダウンロード",
+			"moreActions": "その他の操作",
+			"showHeader": "ヘッダを表示",
+			"hideHeader": "ヘッダを非表示"
 		}
 	},
 	"discussion": {
