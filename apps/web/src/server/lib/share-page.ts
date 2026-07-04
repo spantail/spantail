@@ -62,9 +62,6 @@ body {
 	margin: 0 auto;
 	padding: 2rem 1rem 4rem;
 }
-header { border-bottom: 1px solid rgba(128, 128, 128, 0.4); margin-bottom: 1.5rem; }
-header h1 { margin-bottom: 0.25rem; }
-header p { margin-top: 0; color: rgba(128, 128, 128, 0.9); }
 table { border-collapse: collapse; }
 th, td { border: 1px solid rgba(128, 128, 128, 0.5); padding: 0.3rem 0.6rem; }
 pre, code { background: rgba(128, 128, 128, 0.15); }
@@ -98,27 +95,17 @@ function layout(
 
 export function renderSharePage(options: {
 	locale: ShareLocale;
-	// Title/period parsed from the version's front matter; null for a legacy
-	// version without a header — the page then renders the body alone.
-	header: {
-		reportName: string;
-		dateRange: { from: string; to: string };
-	} | null;
+	// Browser-tab title only (null falls back to a generic label): the body is
+	// the rendered document, which already opens with its own heading, so the
+	// page adds no visible header of its own.
+	title: string | null;
 	contentHtml: string;
 }) {
-	const { locale, header, contentHtml } = options;
+	const { locale, title, contentHtml } = options;
 	return layout(
 		locale,
-		header?.reportName ?? MESSAGES[locale].sharedReportTitle,
-		html`${
-			header
-				? html`<header>
-			<h1>${header.reportName}</h1>
-			<p>${header.dateRange.from} – ${header.dateRange.to}</p>
-		</header>`
-				: ""
-		}
-		<main>${raw(contentHtml)}</main>`,
+		title ?? MESSAGES[locale].sharedReportTitle,
+		html`<main>${raw(contentHtml)}</main>`,
 	);
 }
 

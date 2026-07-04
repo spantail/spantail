@@ -49,19 +49,13 @@ async function respondWithContent(c: Context<AppEnv>, share: UsableShare) {
 	if (c.req.method !== "HEAD") {
 		await recordShareView(c.var.db, share.id);
 	}
-	// Title/period come from the version's own front matter — the values as
-	// generated, immune to later report-header edits. Null only for a legacy
-	// version without a header; the page then renders the body alone.
-	const meta = parseReportFrontMatter(share.content);
+	// The rendered document already opens with its own heading, so the page
+	// shows the body alone; the version's front-matter name (the value as
+	// generated, immune to later report-header edits) feeds only the tab title.
 	return c.html(
 		renderSharePage({
 			locale: pickShareLocale(c),
-			header: meta
-				? {
-						reportName: meta.name,
-						dateRange: { from: meta.period.from, to: meta.period.to },
-					}
-				: null,
+			title: parseReportFrontMatter(share.content)?.name ?? null,
 			// Hide the system YAML front-matter header on the public page.
 			contentHtml: await renderMarkdownToHtml(
 				splitFrontMatter(share.content).body,

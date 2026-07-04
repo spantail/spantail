@@ -5,7 +5,7 @@ import {
 	DownloadIcon,
 	FileTextIcon,
 	PrinterIcon,
-	Share2Icon,
+	ShareIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -164,7 +164,7 @@ function ReadingPane() {
 										title={t("messages.detail.share")}
 										onClick={() => setSharing(true)}
 									>
-										<Share2Icon className="size-4" />
+										<ShareIcon className="size-4" />
 									</Button>
 								)}
 								<Button
