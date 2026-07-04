@@ -1,25 +1,35 @@
-import { listInboxQuerySchema, setMailFlagsInputSchema } from "@spantail/core";
+import {
+	createReportShareInputSchema,
+	generateShareToken,
+	listInboxQuerySchema,
+	setMailFlagsInputSchema,
+} from "@spantail/core";
 import {
 	countFolders,
 	countUnreadInbox,
+	createReportShare,
 	getDeliveryDetailById,
 	getInboxMessage,
 	getMailItemDetail,
 	listDeliveriesByWorkspace,
 	listMailbox,
+	listReportSharesByContent,
 	type MailItemRow,
 	markAllInboxRead,
 	markInboxRead,
 	markInboxUnread,
+	type ReportDeliveryRow,
 	setDeliveryFlags,
 	userOwnsMailTarget,
 } from "@spantail/db";
+import type { Context } from "hono";
 import { Hono } from "hono";
 
 import { resolveAvatarUrl } from "../lib/avatar";
 import { AppError } from "../lib/errors";
 import { parseOptionalJsonBody } from "../lib/json";
 import { resolveAdminListScope } from "../lib/permissions";
+import { shareAttributesFromInput, toApiShare } from "../lib/share-api";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
 import { publishToUser } from "../realtime/publish";
@@ -42,6 +52,29 @@ function toMailItem(row: MailItemRow) {
 			return id ? resolveAvatarUrl(id, recipientImages[i]) : null;
 		}),
 	};
+}
+
+// Every delivery records the content version it carried; the column is only
+// nullable for rollout ordering (the migration backfills existing rows), so a
+// missing value is a server bug, not a caller error.
+function deliveredContentId(row: ReportDeliveryRow): string {
+	if (!row.reportContentId) {
+		throw new AppError("internal", "Delivery content missing");
+	}
+	return row.reportContentId;
+}
+
+// The recipient-scoped delivery row, or 404. Backs the share routes: only the
+// recipient of a received copy (sent-scope items and other users get the same
+// 404) can mint or list share links on it.
+async function requireReceivedMessage(
+	c: Context<AppEnv>,
+	id: string,
+	userId: string,
+): Promise<ReportDeliveryRow> {
+	const row = await getInboxMessage(c.var.db, id, userId);
+	if (!row) throw new AppError("not_found", "Message not found");
+	return row;
 }
 
 // The caller's mailbox of report deliveries (the "Send to" target). Folders are
@@ -157,6 +190,41 @@ export const inboxRoutes = new Hono<AppEnv>()
 			await requireReportReadAccess(c, adminDetail.reportId);
 		}
 		return c.json(toMailItem(adminDetail));
+	})
+	// Public share links over a received copy. The email model applies: the
+	// delivered version is the recipient's to re-share (they can already
+	// download or print it), so minting re-checks no workspace membership —
+	// the sender's recipient validation at send time was the dissemination
+	// gate. Links reference the delivered content version, so they serve
+	// exactly what was received, and revocation stays with the recipient (the
+	// creator) via POST /api/v1/report-shares/:id/revoke.
+	.post("/:id/shares", async (c) => {
+		const { user } = requireScope(c, "write");
+		const row = await requireReceivedMessage(c, c.req.param("id"), user.id);
+		const input = validate(
+			createReportShareInputSchema,
+			await parseOptionalJsonBody(c),
+		);
+		const share = await createReportShare(c.var.db, {
+			reportContentId: deliveredContentId(row),
+			createdByUserId: user.id,
+			token: generateShareToken(),
+			...(await shareAttributesFromInput(input)),
+		});
+		return c.json(toApiShare(share), 201);
+	})
+	// Only the caller's own links on this delivery's version: links the report
+	// owner (or another recipient of the same version) minted are theirs, not
+	// part of this mailbox view.
+	.get("/:id/shares", async (c) => {
+		const { user } = requireScope(c, "read");
+		const row = await requireReceivedMessage(c, c.req.param("id"), user.id);
+		const shares = await listReportSharesByContent(
+			c.var.db,
+			deliveredContentId(row),
+			user.id,
+		);
+		return c.json(shares.map(toApiShare));
 	})
 	.post("/:id/read", async (c) => {
 		const { user } = requireScope(c, "write");

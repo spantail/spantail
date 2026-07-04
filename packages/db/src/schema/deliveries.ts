@@ -2,7 +2,7 @@ import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 import { createdAtMs } from "./domain";
-import { reports } from "./reports";
+import { reportContent, reports } from "./reports";
 
 // An internal "Send to" delivery: a snapshot of a report dropped into another
 // user's inbox. The body and identifying metadata are frozen at send time, so a
@@ -18,6 +18,14 @@ export const reportDeliveries = sqliteTable(
 		reportId: text("report_id").references(() => reports.id, {
 			onDelete: "cascade",
 		}),
+		// The exact content version that was sent, so recipient actions (e.g.
+		// re-sharing from the inbox) can reference it instead of re-deriving it
+		// from the frozen body. Nullable only for rollout ordering: code always
+		// sets it and the migration backfills existing rows.
+		reportContentId: text("report_content_id").references(
+			() => reportContent.id,
+			{ onDelete: "cascade" },
+		),
 		// Authorship is dropped if the sender's account is deleted; the frozen
 		// senderName/senderEmail keep the message readable.
 		senderUserId: text("sender_user_id").references(() => user.id, {

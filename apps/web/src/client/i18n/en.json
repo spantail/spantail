@@ -391,6 +391,7 @@
 			"selectPrompt": "Select a message to read.",
 			"notFound": "This message is no longer available.",
 			"attachedReport": "Attached report",
+			"share": "Share",
 			"print": "Print",
 			"download": "Download"
 		}

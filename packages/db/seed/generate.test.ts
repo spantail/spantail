@@ -256,23 +256,27 @@ describe("generateDataset", () => {
 		}
 	});
 
-	it("publishes shares only for client monthly reports, each carrying its frozen body", async () => {
+	it("publishes shares only for client monthly reports, each referencing its content version", async () => {
 		const { rows } = await build();
 		const shares = rows("reportShares");
-		// The share's frozen body is the report's current content version.
-		const renderedByReport = new Map(
-			rows("reportContent").map((c) => [
-				c.reportId as string,
-				c.content as string,
-			]),
+		const contentById = new Map(
+			rows("reportContent").map((c) => [c.id as string, c]),
 		);
-		// Every share freezes the parent report's rendered body on its own row.
+		const ownerByReport = new Map(
+			rows("reports").map((r) => [r.id as string, r.ownerUserId as string]),
+		);
+		// Every share references an existing content version of its report and is
+		// minted by that report's owner.
 		for (const s of shares) {
-			expect(typeof s.renderedMarkdown).toBe("string");
-			expect(s.renderedMarkdown).toBe(
-				renderedByReport.get(s.reportId as string),
+			const content = contentById.get(s.reportContentId as string);
+			expect(content).toBeDefined();
+			expect(s.createdByUserId).toBe(
+				ownerByReport.get(content?.reportId as string),
 			);
 		}
+		// Resolves a share back to its report through the referenced version.
+		const shareReportId = (s: Row): string =>
+			contentById.get(s.reportContentId as string)?.reportId as string;
 
 		// Northwind (internal) and Initech (Frank's solo workspace) are the two
 		// non-client workspaces; client workspaces are Acme, Globex, and Meridian.
@@ -288,7 +292,7 @@ describe("generateDataset", () => {
 		).toBe(2);
 		const sharesByReport = new Map<string, number>();
 		for (const s of shares) {
-			const id = s.reportId as string;
+			const id = shareReportId(s);
 			sharesByReport.set(id, (sharesByReport.get(id) ?? 0) + 1);
 		}
 

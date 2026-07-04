@@ -230,7 +230,7 @@ export function shareFixture(
 ): ReportShare {
 	return {
 		id: "share-1",
-		reportId: "rep-1",
+		reportContentId: "rep-1-v1",
 		token: "tok_abcdefghijklmnopqr",
 		hasPasscode: false,
 		expiresAt: null,

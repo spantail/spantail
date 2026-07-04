@@ -1,14 +1,20 @@
 import { formatPeriodLabel, type MailFolder } from "@spantail/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { DownloadIcon, FileTextIcon, PrinterIcon } from "lucide-react";
-import { useEffect } from "react";
+import {
+	DownloadIcon,
+	FileTextIcon,
+	PrinterIcon,
+	Share2Icon,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { MailToolbar } from "@/components/mail-toolbar";
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
 import { ReportDiscussion } from "@/components/report-discussion";
+import { ShareDialog } from "@/components/share-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api";
@@ -26,6 +32,7 @@ function ReadingPane() {
 	const queryClient = useQueryClient();
 	const { folder, messageId } = Route.useParams();
 	const folderTyped = folder as MailFolder;
+	const [sharing, setSharing] = useState(false);
 
 	const detail = useQuery({
 		queryKey: ["mail-message", messageId],
@@ -147,6 +154,19 @@ function ReadingPane() {
 								</div>
 							</div>
 							<div className="flex shrink-0 items-center gap-2">
+								{/* Re-sharing is a recipient action on the received copy, so
+								    it is offered on received messages only. */}
+								{data.scope === "received" && (
+									<Button
+										variant="outline"
+										size="sm"
+										aria-label={t("messages.detail.share")}
+										title={t("messages.detail.share")}
+										onClick={() => setSharing(true)}
+									>
+										<Share2Icon className="size-4" />
+									</Button>
+								)}
 								<Button
 									variant="outline"
 									size="sm"
@@ -182,6 +202,18 @@ function ReadingPane() {
 					{data.reportId && <ReportDiscussion reportId={data.reportId} />}
 				</div>
 			</div>
+			{sharing && data.scope === "received" && (
+				<ShareDialog
+					source={{
+						kind: "delivery",
+						id: data.id,
+						reportName: data.reportName,
+						dateFrom: data.dateFrom,
+						dateTo: data.dateTo,
+					}}
+					onClose={() => setSharing(false)}
+				/>
+			)}
 		</div>
 	);
 }

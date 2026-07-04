@@ -1,5 +1,6 @@
 import {
 	isShareTokenFormat,
+	parseReportFrontMatter,
 	splitFrontMatter,
 	verifySharePasscode,
 } from "@spantail/core";
@@ -17,6 +18,9 @@ import {
 } from "../lib/share-page";
 import type { AppEnv } from "../types";
 
+// The share row joined with the body of the immutable version it references.
+type UsableShare = ReportShareRow & { content: string };
+
 /**
  * Resolves the token to a viewable share. Malformed, unknown, revoked, and
  * expired links all collapse to null so the public 404 page never reveals
@@ -24,7 +28,7 @@ import type { AppEnv } from "../types";
  */
 async function loadUsableShare(
 	c: Context<AppEnv>,
-): Promise<ReportShareRow | null> {
+): Promise<UsableShare | null> {
 	const token = c.req.param("token") ?? "";
 	if (!isShareTokenFormat(token)) return null;
 	const share = await getReportShareByToken(c.var.db, token);
@@ -36,23 +40,31 @@ async function loadUsableShare(
 	return share;
 }
 
-async function respondWithContent(c: Context<AppEnv>, share: ReportShareRow) {
-	// The body is the copy frozen onto the share row at mint time, so later
-	// report edits never change a published page.
+async function respondWithContent(c: Context<AppEnv>, share: UsableShare) {
+	// The body is the immutable content version the share references, so later
+	// report edits (which append new versions) never change a published page.
 	// hono re-dispatches HEAD requests to the GET handler; link unfurlers
 	// probing the URL must not inflate the view count. Counting is awaited
 	// inline (not waitUntil) so the count is durable when the response lands.
 	if (c.req.method !== "HEAD") {
 		await recordShareView(c.var.db, share.id);
 	}
+	// Title/period come from the version's own front matter — the values as
+	// generated, immune to later report-header edits. Null only for a legacy
+	// version without a header; the page then renders the body alone.
+	const meta = parseReportFrontMatter(share.content);
 	return c.html(
 		renderSharePage({
 			locale: pickShareLocale(c),
-			reportName: share.reportName,
-			dateRange: { from: share.dateFrom, to: share.dateTo },
+			header: meta
+				? {
+						reportName: meta.name,
+						dateRange: { from: meta.period.from, to: meta.period.to },
+					}
+				: null,
 			// Hide the system YAML front-matter header on the public page.
 			contentHtml: await renderMarkdownToHtml(
-				splitFrontMatter(share.renderedMarkdown).body,
+				splitFrontMatter(share.content).body,
 			),
 		}),
 	);

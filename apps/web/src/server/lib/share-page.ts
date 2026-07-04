@@ -17,6 +17,7 @@ const MESSAGES: Record<
 		passcodeLabel: string;
 		passcodeSubmit: string;
 		passcodeIncorrect: string;
+		sharedReportTitle: string;
 		footer: string;
 	}
 > = {
@@ -27,6 +28,7 @@ const MESSAGES: Record<
 		passcodeLabel: "Passcode",
 		passcodeSubmit: "View report",
 		passcodeIncorrect: "Incorrect passcode.",
+		sharedReportTitle: "Shared report",
 		footer: "Shared via Spantail",
 	},
 	ja: {
@@ -36,6 +38,7 @@ const MESSAGES: Record<
 		passcodeLabel: "パスコード",
 		passcodeSubmit: "レポートを表示",
 		passcodeIncorrect: "パスコードが正しくありません。",
+		sharedReportTitle: "共有レポート",
 		footer: "Spantail で共有",
 	},
 };
@@ -95,18 +98,26 @@ function layout(
 
 export function renderSharePage(options: {
 	locale: ShareLocale;
-	reportName: string;
-	dateRange: { from: string; to: string };
+	// Title/period parsed from the version's front matter; null for a legacy
+	// version without a header — the page then renders the body alone.
+	header: {
+		reportName: string;
+		dateRange: { from: string; to: string };
+	} | null;
 	contentHtml: string;
 }) {
-	const { locale, reportName, dateRange, contentHtml } = options;
+	const { locale, header, contentHtml } = options;
 	return layout(
 		locale,
-		reportName,
-		html`<header>
-			<h1>${reportName}</h1>
-			<p>${dateRange.from} – ${dateRange.to}</p>
-		</header>
+		header?.reportName ?? MESSAGES[locale].sharedReportTitle,
+		html`${
+			header
+				? html`<header>
+			<h1>${header.reportName}</h1>
+			<p>${header.dateRange.from} – ${header.dateRange.to}</p>
+		</header>`
+				: ""
+		}
 		<main>${raw(contentHtml)}</main>`,
 	);
 }
