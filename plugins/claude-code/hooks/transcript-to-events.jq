@@ -18,11 +18,14 @@
 # format changes are inert.
 
 # Normalize a git remote URL for the vcs.repository.url.full attribute:
-# scp-like ssh forms (git@host:org/repo.git) become https, a trailing .git is
-# dropped, and the value is capped at the API's 500-char attribute limit.
+# scp-like ssh forms (git@host:org/repo.git) become https, URL userinfo is
+# stripped (an https remote can embed credentials — user:token@host — which
+# must never reach telemetry), a trailing .git is dropped, and the value is
+# capped at the API's 500-char attribute limit.
 def normalize_repo_url:
 	sub("^git@(?<host>[^:/]+):"; "https://\(.host)/")
-	| sub("^ssh://(git@)?"; "https://")
+	| sub("^ssh://(?<u>[^/@]*@)?"; "https://")
+	| sub("^(?<scheme>https?://)[^/@]*@"; "\(.scheme)")
 	| sub("\\.git$"; "")
 	| .[0:500];
 

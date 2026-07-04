@@ -89,6 +89,25 @@ else
 	fail=1
 fi
 
+# Credentials embedded in a remote (PAT-backed https clones, ssh userinfo)
+# are stripped before the URL becomes telemetry.
+cred_form="$(jq -n --arg repo_url "https://x-token:ghp_secret123@github.com/acme/site.git" \
+	-f "$here/transcript-to-events.jq" "$fixture")"
+if [ "$(jq -r '.[0].attributes["vcs.repository.url.full"]' <<<"$cred_form")" = "https://github.com/acme/site" ]; then
+	echo "ok   - https userinfo credentials stripped"
+else
+	echo "FAIL - https userinfo credentials stripped"
+	fail=1
+fi
+ssh_user_form="$(jq -n --arg repo_url "ssh://ana@github.com/acme/site.git" \
+	-f "$here/transcript-to-events.jq" "$fixture")"
+if [ "$(jq -r '.[0].attributes["vcs.repository.url.full"]' <<<"$ssh_user_form")" = "https://github.com/acme/site" ]; then
+	echo "ok   - ssh userinfo stripped"
+else
+	echo "FAIL - ssh userinfo stripped"
+	fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
 	echo "transcript-to-events.jq: FAILED"
 	exit 1

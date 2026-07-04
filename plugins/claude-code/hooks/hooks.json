@@ -5,7 +5,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "${CLAUDE_PLUGIN_ROOT}/hooks/spantail-session-start.sh"
+						"command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/spantail-session-start.sh"
 					}
 				]
 			}
@@ -15,7 +15,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "${CLAUDE_PLUGIN_ROOT}/hooks/spantail-agent-stop.sh"
+						"command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/spantail-agent-stop.sh"
 					}
 				]
 			}
@@ -25,7 +25,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "${CLAUDE_PLUGIN_ROOT}/hooks/spantail-session-end.sh"
+						"command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/spantail-session-end.sh"
 					}
 				]
 			}
