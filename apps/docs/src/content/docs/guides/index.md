@@ -54,6 +54,10 @@ reports, inbox, and user menu in the top-right corner.
 | **Agent activity** | AI-agent sessions captured as spans, shown on the timeline alongside human work. |
 | **Report** | A snapshot built from a template, filters, and a date range — readable, shareable, and discussable. |
 
+Everything you log lives in a workspace. Reports are the exception: a report can
+pull together your own work across all your workspaces, and the reports you
+create are yours to share.
+
 ## Log your first entry
 
 1. Open your workspace dashboard from the sidebar.

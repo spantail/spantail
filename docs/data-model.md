@@ -18,11 +18,18 @@ vocabulary in [`permissions.md`](./permissions.md). All timestamps are UTC; see
 
 ## Scope hierarchy
 
-Every resource belongs to exactly one **scope**. Scopes nest: an instance contains workspaces, a
-workspace contains projects. Users are instance-wide principals that own their personal resources;
-a report owns its shares and discussion. Each user account, with its sessions and OAuth links, is
-also a single user's own resource. This is the same five-scope model
-[`permissions.md`](./permissions.md#scopes) gates access by.
+The short version: **work data lives in a workspace** — entries, agent activity, and projects all
+belong to the workspace where the work happened. The instance level above is administration: user
+accounts, invitations, instance settings, and report templates. Alongside, each user owns their
+account and credentials. **Reports are the deliberate exception** — the one work-data surface that
+can cut across a user's workspaces (their own data, by default) and the unit of sharing.
+
+The precise form of that rule is the five-scope model below, the same one
+[`permissions.md`](./permissions.md#scopes) gates access by. Every resource belongs to exactly one
+**scope**. Scopes nest: an instance contains workspaces, a workspace contains projects. Users are
+instance-wide principals that own their personal resources; a report owns its shares and
+discussion. Each user account, with its sessions and OAuth links, is also a single user's own
+resource.
 
 ```mermaid
 flowchart TB
