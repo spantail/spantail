@@ -6,22 +6,27 @@ description: Public share links for reports, the public viewer, and the report d
 import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
 A [report](/api/reports/) can be exposed two ways. A **public share** mints a capability link
-that anyone with the URL (and optional passcode) can open — a frozen copy of the report, served by
-the public viewer with no Spantail account. A **discussion** lets the report's participants
-(the owner and Send-to recipients) react to the body and leave threaded comments.
+that anyone with the URL (and optional passcode) can open — one immutable version of the report,
+served by the public viewer with no Spantail account. A **discussion** lets the report's
+participants (the owner and Send-to recipients) react to the body and leave threaded comments.
 
 ## Public shares
 
-A share freezes the report's current rendered body onto the share row at mint time, so a later
-report edit never changes a published page. The plaintext token is the capability — treat the URL
-as a secret.
+A share references one immutable content version of the report — the current version when the
+owner mints from the report screen, or the delivered version when a recipient mints from a
+received [inbox message](#share-a-received-message). Versions never change and are never
+individually deleted, so a later report edit never changes a published page. The plaintext token
+is the capability — treat the URL as a secret.
+
+Every share is managed by whoever minted it: only the creator can list or revoke their links, and
+the owner's and a recipient's lists never mix.
 
 ### The share object
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `id` | string | Unique identifier. |
-| `reportId` | string | The report this link exposes. |
+| `reportContentId` | string | The immutable report version this link serves. |
 | `token` | string | The capability token (a 22-char base64url string). The public URL is `/share/<token>`. |
 | `hasPasscode` | boolean | Whether a passcode is required to view. The passcode itself never leaves the server. |
 | `expiresAt` | string \| null | ISO 8601 expiry, or `null` for no expiry. |
@@ -34,15 +39,16 @@ as a secret.
 
 `GET /api/v1/reports/:id/shares` <Badge text="scope: read" variant="note" />
 
-Returns the report's shares (including plaintext tokens). Follows the report's read access: the
-owner (re-checked against current workspace membership), an instance admin, or a workspace
-admin/owner of a single-workspace report. Anyone else gets `404`.
+Returns the shares the report's **owner** minted (including plaintext tokens); links minted by
+delivery recipients belong to their inbox view and never appear here. Follows the report's read
+access: the owner (re-checked against current workspace membership), an instance admin, or a
+workspace admin/owner of a single-workspace report. Anyone else gets `404`.
 
 ```json
 [
   {
     "id": "shr_ab12cd",
-    "reportId": "rep_q2",
+    "reportContentId": "rct_q2v3",
     "token": "Hs9Kp2mNv8rT3wYbL6dQx7",
     "hasPasscode": true,
     "expiresAt": "2026-07-28T00:00:00.000Z",
@@ -58,8 +64,8 @@ admin/owner of a single-workspace report. Anyone else gets `404`.
 
 `POST /api/v1/reports/:id/shares` <Badge text="scope: write" variant="caution" />
 
-Owner only (re-checked against current workspace membership). Mints a link backed by a frozen copy
-of the report's current version. Both fields are optional; an empty body mints a no-passcode,
+Owner only (re-checked against current workspace membership). Mints a link over the report's
+current immutable version. Both fields are optional; an empty body mints a no-passcode,
 no-expiry link.
 
 **Request body**
@@ -82,7 +88,7 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/shares" \
 ```json
 {
   "id": "shr_ab12cd",
-  "reportId": "rep_q2",
+  "reportContentId": "rct_q2v3",
   "token": "Hs9Kp2mNv8rT3wYbL6dQx7",
   "hasPasscode": true,
   "expiresAt": "2026-07-28T00:00:00.000Z",
@@ -97,13 +103,26 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/shares" \
 
 Returns `201 Created`.
 
+### Share a received message
+
+`POST /api/v1/inbox/:id/shares` <Badge text="scope: write" variant="caution" />
+`GET /api/v1/inbox/:id/shares` <Badge text="scope: read" variant="note" />
+
+A [Send-to recipient](/api/inbox-realtime/) can mint the same kind of public link over a message
+in their inbox; the link serves exactly the **delivered version**. Recipient only — the sender
+and everyone else get `404`. The received copy is the recipient's to re-share (they can already
+download it), so minting re-checks no workspace membership; the sender's recipient validation at
+send time is the dissemination gate. `POST` takes the same body as [Create a
+share](#create-a-share); `GET` lists the links the caller minted on this message's version.
+
 ### Revoke a share
 
 `POST /api/v1/report-shares/:id/revoke` <Badge text="scope: write" variant="caution" />
 
-Owner only. Revocation only reduces exposure, so it skips the workspace membership re-check.
-Idempotent — re-revoking keeps the first `revokedAt`. A revoked link immediately stops serving its
-frozen body. Returns the updated share object.
+Creator only — the report owner or the delivery recipient who minted the link. Revocation only
+reduces exposure, so it skips the workspace membership re-check. Idempotent — re-revoking keeps
+the first `revokedAt`. A revoked link immediately stops serving its content. Returns the updated
+share object.
 
 ```bash
 curl -X POST "https://<your-instance>/api/v1/report-shares/shr_ab12cd/revoke" \
@@ -112,7 +131,7 @@ curl -X POST "https://<your-instance>/api/v1/report-shares/shr_ab12cd/revoke" \
 
 ## The public viewer
 
-The public viewer serves the frozen page as HTML at `/share/:token` — no `/api/v1` prefix, no
+The public viewer serves the shared version as HTML at `/share/:token` — no `/api/v1` prefix, no
 authentication. Malformed, unknown, revoked, and expired tokens all return the same HTML `404`, so
 a link's past existence is never revealed. The page is served `noindex`, `no-store`, with a strict
 Content-Security-Policy.

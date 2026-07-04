@@ -54,6 +54,9 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 レンダリング済み本文）が返ります。送信アイテムにはさらに `recipients`（受信者の全リスト。各要素は
 `id`、`name`、`email`、`imageUrl`）が含まれます。
 
+受信者は `POST`/`GET /api/v1/inbox/:id/shares` で、受信メッセージの配信バージョンに対する公開共有
+リンクも発行できます — [共有とディスカッション](/ja/api/report-sharing/#受信メッセージの共有)を参照。
+
 ## メールボックスの一覧
 
 `GET /api/v1/inbox` <Badge text="scope: read" variant="note" />

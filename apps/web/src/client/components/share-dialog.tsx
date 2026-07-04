@@ -39,11 +39,26 @@ const STATUS_VARIANT: Record<
 	revoked: "destructive",
 };
 
+/**
+ * What the dialog shares: a report (the owner's report screen) or a received
+ * delivery (the recipient's message view). Both mint the same kind of link;
+ * only the API endpoints and the title fields differ.
+ */
+export type ShareSource =
+	| { kind: "report"; report: ReportMeta }
+	| {
+			kind: "delivery";
+			id: string;
+			reportName: string;
+			dateFrom: string;
+			dateTo: string;
+	  };
+
 export function ShareDialog({
-	report,
+	source,
 	onClose,
 }: {
-	report: ReportMeta;
+	source: ShareSource;
 	onClose: () => void;
 }) {
 	const { t } = useTranslation();
@@ -54,22 +69,36 @@ export function ShareDialog({
 	const [copiedId, setCopiedId] = useState<string | null>(null);
 
 	// "Monthly report 2026-06" — the report name plus its period label.
-	const title = `${report.name} ${formatPeriodLabel(report.filters.dateRange)}`;
+	const title =
+		source.kind === "report"
+			? `${source.report.name} ${formatPeriodLabel(source.report.filters.dateRange)}`
+			: `${source.reportName} ${formatPeriodLabel({ from: source.dateFrom, to: source.dateTo })}`;
+
+	const queryKey =
+		source.kind === "report"
+			? ["report-shares", source.report.id]
+			: ["delivery-shares", source.id];
 
 	const shares = useQuery({
-		queryKey: ["report-shares", report.id],
-		queryFn: () => api.listReportShares(report.id),
+		queryKey,
+		queryFn: () =>
+			source.kind === "report"
+				? api.listReportShares(source.report.id)
+				: api.listDeliveryShares(source.id),
 	});
 
-	const invalidate = () =>
-		queryClient.invalidateQueries({ queryKey: ["report-shares", report.id] });
+	const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
 	const createMutation = useMutation({
-		mutationFn: () =>
-			api.createReportShare(report.id, {
+		mutationFn: () => {
+			const input = {
 				expiresInDays: expiry === "none" ? undefined : Number(expiry),
 				passcode: passcode === "" ? undefined : passcode,
-			}),
+			};
+			return source.kind === "report"
+				? api.createReportShare(source.report.id, input)
+				: api.createDeliveryShare(source.id, input);
+		},
 		onSuccess: async () => {
 			await invalidate();
 			setPasscode("");

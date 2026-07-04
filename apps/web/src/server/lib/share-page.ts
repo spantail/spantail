@@ -17,6 +17,7 @@ const MESSAGES: Record<
 		passcodeLabel: string;
 		passcodeSubmit: string;
 		passcodeIncorrect: string;
+		sharedReportTitle: string;
 		footer: string;
 	}
 > = {
@@ -27,6 +28,7 @@ const MESSAGES: Record<
 		passcodeLabel: "Passcode",
 		passcodeSubmit: "View report",
 		passcodeIncorrect: "Incorrect passcode.",
+		sharedReportTitle: "Shared report",
 		footer: "Shared via Spantail",
 	},
 	ja: {
@@ -36,6 +38,7 @@ const MESSAGES: Record<
 		passcodeLabel: "パスコード",
 		passcodeSubmit: "レポートを表示",
 		passcodeIncorrect: "パスコードが正しくありません。",
+		sharedReportTitle: "共有レポート",
 		footer: "Spantail で共有",
 	},
 };
@@ -59,9 +62,6 @@ body {
 	margin: 0 auto;
 	padding: 2rem 1rem 4rem;
 }
-header { border-bottom: 1px solid rgba(128, 128, 128, 0.4); margin-bottom: 1.5rem; }
-header h1 { margin-bottom: 0.25rem; }
-header p { margin-top: 0; color: rgba(128, 128, 128, 0.9); }
 table { border-collapse: collapse; }
 th, td { border: 1px solid rgba(128, 128, 128, 0.5); padding: 0.3rem 0.6rem; }
 pre, code { background: rgba(128, 128, 128, 0.15); }
@@ -95,19 +95,17 @@ function layout(
 
 export function renderSharePage(options: {
 	locale: ShareLocale;
-	reportName: string;
-	dateRange: { from: string; to: string };
+	// Browser-tab title only (null falls back to a generic label): the body is
+	// the rendered document, which already opens with its own heading, so the
+	// page adds no visible header of its own.
+	title: string | null;
 	contentHtml: string;
 }) {
-	const { locale, reportName, dateRange, contentHtml } = options;
+	const { locale, title, contentHtml } = options;
 	return layout(
 		locale,
-		reportName,
-		html`<header>
-			<h1>${reportName}</h1>
-			<p>${dateRange.from} – ${dateRange.to}</p>
-		</header>
-		<main>${raw(contentHtml)}</main>`,
+		title ?? MESSAGES[locale].sharedReportTitle,
+		html`<main>${raw(contentHtml)}</main>`,
 	);
 }
 

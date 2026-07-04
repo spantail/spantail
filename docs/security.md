@@ -89,15 +89,23 @@ new public surface must satisfy:
   restrictive CSP, so the content is never indexed or cached and the token never leaks via
   `Referer`.
 - Revocable and expirable; optional passcode gate.
-- Only the intended snapshot body is exposed — the machine-readable front-matter
-  (filters, ids, provenance) is stripped before a share is rendered.
+- Only the intended version body is exposed — a share references one immutable
+  `report_content` version, and the machine-readable front-matter (filters, ids,
+  provenance) is stripped before it is rendered.
 
-Send-to deliveries and public shares enforce an ACL computed from the report's **frozen**
-snapshot (`snapshotProjectIds` + `snapshotWorkspaceIds`): a recipient must be a member of the
-snapshot's rendered workspaces and able to read every project in it, and the owner must still
-cover that frozen workspace scope to disseminate — checked at send/share time against the
-frozen sets, not the stored filter (empty for instance scope) or live memberships, so there is
-no live/stored drift. See [`permissions.md`](./permissions.md) for the full matrix.
+Send-to deliveries and owner-minted public shares enforce an ACL computed from the report's
+**frozen** snapshot (`snapshotProjectIds` + `snapshotWorkspaceIds`): a recipient must be a
+member of the snapshot's rendered workspaces and able to read every project in it, and the
+owner must still cover that frozen workspace scope to disseminate — checked at send/share time
+against the frozen sets, not the stored filter (empty for instance scope) or live memberships,
+so there is no live/stored drift. See [`permissions.md`](./permissions.md) for the full matrix.
+
+There is a **second mint path**: a Send-to recipient may re-share their received copy from the
+Messages view (the email model — the delivered version is theirs, and they can already download
+or print it). That mint deliberately re-checks no workspace membership; the sender's recipient
+validation at send time is the dissemination gate, and the resulting link serves exactly the
+delivered version. Each link is managed only by its creator; revocation remains the containment
+tool for both paths.
 
 ## 5. Snapshots are point-in-time and intentionally not re-filtered
 
@@ -120,7 +128,9 @@ This is a usability-vs-exposure trade-off, not a leak: a saved link must not bre
 unpredictably, and the stored snapshot is disconnected from live access control.
 Contributors must not "fix" it by re-filtering stored content, and operators should know to
 **revoke existing shares** when membership changes if the historical content is sensitive.
-(Creating *new* shares after access loss is correctly blocked; revoking is still allowed.)
+(For the owner's report-screen path, creating *new* shares after access loss is correctly
+blocked; a delivery recipient retains re-share capability over their received copy like any
+email recipient — see §4. Revoking is always allowed.)
 
 ## 6. Authorization scoping (summary)
 

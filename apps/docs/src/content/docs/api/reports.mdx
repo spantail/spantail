@@ -252,16 +252,16 @@ curl -X PATCH "https://<your-instance>/api/v1/reports/rep_q2" \
 ```
 
 <Aside type="note">
-Earlier shares and deliveries keep the exact body they froze; re-rendering only changes the
-report's current version.
+Earlier shares keep serving the version they reference, and deliveries keep the exact body they
+froze; re-rendering only changes the report's current version.
 </Aside>
 
 ## Delete a report
 
 `DELETE /api/v1/reports/:id` <Badge text="scope: write" variant="caution" />
 
-Owner only. Shares and deliveries — each holding its own frozen copy — cascade away with the
-report. Returns `204 No Content`.
+Owner only. Shares (references to the report's versions) and deliveries (frozen copies) cascade
+away with the report. Returns `204 No Content`.
 
 ## Recipients
 

@@ -54,6 +54,10 @@ Opening a single item (`GET /inbox/:id`) returns the same fields plus `renderedM
 (the frozen rendered body); a sent item also carries `recipients` (the full recipient list,
 each with `id`, `name`, `email`, `imageUrl`).
 
+A recipient can also mint public share links over a received message's delivered version via
+`POST`/`GET /api/v1/inbox/:id/shares` — see
+[Sharing & discussion](/api/report-sharing/#share-a-received-message).
+
 ## List the mailbox
 
 `GET /api/v1/inbox` <Badge text="scope: read" variant="note" />

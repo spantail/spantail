@@ -521,6 +521,9 @@ export async function generateDataset(
 			deliveryRows.push({
 				id: randomUUID(),
 				reportId: report.id,
+				// Seed reports are all version 1, so the delivered version is the
+				// deterministic content id addReport minted.
+				reportContentId: `${report.id}-v1`,
 				senderUserId: report.sender.id,
 				recipientUserId: r.id,
 				batchId,
@@ -859,12 +862,11 @@ export async function generateDataset(
 					const viewCount = (shareRows.length % 5) + 1;
 					shareRows.push({
 						id: randomUUID(),
-						reportId: id,
+						// The share references the report's only (version 1) content row
+						// minted by addReport; the owner is the one who published it.
+						reportContentId: `${id}-v1`,
+						createdByUserId: user.id,
 						token,
-						renderedMarkdown: content,
-						reportName: name,
-						dateFrom: month.first,
-						dateTo: month.last,
 						passcodeHash: null,
 						expiresAt: null,
 						revokedAt: null,

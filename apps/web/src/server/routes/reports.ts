@@ -5,7 +5,6 @@ import {
 	createReportShareInputSchema,
 	filterEntriesByTags,
 	generateShareToken,
-	hashSharePasscode,
 	listReportsQuerySchema,
 	MAX_REPORT_MARKDOWN_LENGTH,
 	MAX_REPORT_WORKSPACES,
@@ -57,13 +56,11 @@ import {
 	resolveAdminListScope,
 	resolveEntryAccessForWorkspaces,
 } from "../lib/permissions";
-import { toApiShare } from "../lib/share-api";
+import { shareAttributesFromInput, toApiShare } from "../lib/share-api";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
 import { publishToUsers } from "../realtime/publish";
 import type { AppEnv } from "../types";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Owner-only access; existence is not revealed to other users. */
 export async function requireReportOwner(
@@ -649,50 +646,46 @@ export const reportRoutes = new Hono<AppEnv>()
 		await deleteReport(c.var.db, report.id);
 		return c.body(null, 204);
 	})
-	// Minting a public link disseminates the frozen snapshot, so the owner must
+	// Minting a public link disseminates the rendered document, so the owner must
 	// still cover its rendered scope (not the stored filter, which is empty for
 	// instance scope).
 	.post("/:id/shares", async (c) => {
-		requireScope(c, "write");
+		const { user } = requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
 		await requireScopeWorkspaces(c, frozenReportScope(report));
 		const input = validate(
 			createReportShareInputSchema,
 			await parseOptionalJsonBody(c),
 		);
-		const token = generateShareToken();
-		// Share the current content version: its body is copied onto the share row
-		// in a single atomic insert, so a later edit (new version) never changes a
-		// published page.
+		// Share the current content version by reference: versions are immutable
+		// and never individually deleted, so a later edit (new version) never
+		// changes a published page.
 		const current = await getCurrentReportContent(c.var.db, report.id);
 		if (!current) throw new AppError("internal", "Report content missing");
 		const share = await createReportShare(c.var.db, {
-			reportId: report.id,
-			token,
-			renderedMarkdown: current.content,
-			reportName: report.name,
-			dateFrom: report.filters.dateRange.from,
-			dateTo: report.filters.dateRange.to,
-			passcodeHash: input.passcode
-				? await hashSharePasscode(input.passcode)
-				: null,
-			expiresAt: input.expiresInDays
-				? new Date(Date.now() + input.expiresInDays * DAY_MS)
-				: null,
+			reportContentId: current.id,
+			createdByUserId: user.id,
+			token: generateShareToken(),
+			...(await shareAttributesFromInput(input)),
 		});
 		return c.json(toApiShare(share), 201);
 	})
 	// Listed shares include plaintext tokens (content capabilities); reading them
 	// follows the report's read access. The owner path re-checks the frozen
 	// dissemination scope (the tokens are capabilities over workspace data); admin
-	// readers are already authorized.
+	// readers are already authorized. Only owner-minted links are listed —
+	// links minted by delivery recipients belong to their inbox view.
 	.get("/:id/shares", async (c) => {
 		const { user } = requireScope(c, "read");
 		const report = await requireReportReadAccess(c, c.req.param("id"));
 		if (report.ownerUserId === user.id) {
 			await requireScopeWorkspaces(c, frozenReportScope(report));
 		}
-		const shares = await listReportSharesByReport(c.var.db, report.id);
+		const shares = await listReportSharesByReport(
+			c.var.db,
+			report.id,
+			report.ownerUserId,
+		);
 		return c.json(shares.map(toApiShare));
 	})
 	// Recipient picker for "Send to": the union of members across the report's
@@ -743,6 +736,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		const base = {
 			batchId,
 			reportId: report.id,
+			reportContentId: current.id,
 			senderUserId: user.id,
 			senderName: user.name,
 			senderEmail: user.email,

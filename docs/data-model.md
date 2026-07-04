@@ -226,8 +226,10 @@ erDiagram
     user ||--o{ reports : "owns"
     report_templates |o..o{ reports : "format (templateId, no FK)"
     reports ||--o{ report_content : "versions"
-    reports ||--o{ report_shares : "published as"
+    report_content ||--o{ report_shares : "published as"
+    report_content ||--o{ report_deliveries : "sent as (recorded version)"
     reports ||--o{ report_deliveries : "sent as"
+    user ||--o{ report_shares : "minted by"
     reports ||--o{ report_comments : "discussed in"
     reports ||--o{ report_reactions : "reacted to"
     report_comments |o--o{ report_reactions : "reacted to"
@@ -241,8 +243,8 @@ erDiagram
 | `report_templates` | Instance | Presentation format (Markdown + Liquid). A fresh instance is seeded with one default template from `@spantail/templates`. Exactly one row is the instance default (`is_default`) — the compose fallback; it cannot be deleted or disabled. `name_template` / `note_template` are optional Liquid that produce a new report's initial name/note at compose time (rendered with a scope-only context: `user`, `workspaces`, `projects`, `users`, `period`). `default_date_range` is an optional `DateRangePreset` (`today`, `yesterday`, `this_week`, `last_week`, `this_month`, `last_month`) seeding the compose dialog's initial date range; null falls back to `today`. | optional author `user` (set null) |
 | `reports` | User | Mutable report header: `templateId` + `filters` + note. Scope is a single workspace (`filters.workspaceIds === [id]`), or instance scope (`filters.workspaceIds === []`). Instance scope is owner-scoped and spans every workspace the running user belongs to, resolved to a concrete membership set only transiently to bound the entry query at render — that resolved set is **not** persisted, so the stored filter keeps the empty set (a legacy report may still hold a resolved multi-workspace set). Entries are scoped to the owner's **own** work by default: when `filters.userIds` is empty the render restricts to the owner (so the web app, which never sets `userIds`, always produces an own-only report — even an instance-scope one, even for an instance admin); the API can pass explicit `userIds` for a cross-user report, still bounded by the owner's entry access. `version` points at the current snapshot. `snapshot_workspace_ids` freezes the workspace set the current snapshot was rendered against (alongside `snapshot_project_ids`): every membership gate on the report — owner read/edit, list redaction, the Send-to / share ACL, and the recipient pool — is bounded by this frozen scope, not the empty stored filter or live memberships, so access stays stable and cross-user snapshots are never left ungated (null on legacy rows falls back to `filters.workspaceIds`). | owner `user`; `templateId` is a `report_templates` id (no FK) |
 | `report_content` | User (per report) | Immutable rendered snapshot per version: YAML front-matter + Markdown body. | belongs to `reports` (cascade) |
-| `report_shares` | Report | Public capability link to a frozen snapshot; optional passcode (hashed), expiry, revoke; view counter. | belongs to `reports` (cascade) |
-| `report_deliveries` | User (recipient) | "Send to" inbox copy, frozen at send time (email model). One send fans out to N rows grouped by `batchId`. | source `reports` (cascade); sender + recipient `user` |
+| `report_shares` | Content version | Public capability link over one immutable `report_content` version (no copied body — the referenced version can never change). Minted by the report owner (report screen) or a delivery recipient (Messages); `created_by_user_id` is the sole ownership anchor and listings scope by (content, creator). Optional passcode (hashed), expiry, revoke; view counter. | belongs to `report_content` (cascade); creator `user` (cascade) |
+| `report_deliveries` | User (recipient) | "Send to" inbox copy, frozen at send time (email model). One send fans out to N rows grouped by `batchId`. `report_content_id` records the exact version sent (recipient re-sharing references it). | source `reports` (cascade); sent version `report_content` (cascade); sender + recipient `user` |
 | `delivery_flags` | User | Per-viewer star / archive / trash on a mailbox item. `scope` is `received` (a delivery id) or `sent` (a batch id) — `targetId` is **not** a FK. | belongs to `user` |
 | `report_comments` | Report | Markdown discussion shared by the owner and all Send-to recipients. Author name frozen if the account is deleted. | belongs to `reports`; author `user` (set null) |
 | `report_reactions` | Report | Emoji reaction on the report body (`commentId` null) or on a comment (`commentId` set). | belongs to `reports`; optional `report_comments`; `user` |
@@ -296,8 +298,9 @@ flowchart TB
     FILT["Filters<br/>workspaces · projects · users · tags · date range"] --> RUN["Render<br/>template + filters to Markdown"]
     TPL["report_templates<br/>(Liquid)"] --> RUN
     RUN --> REP["reports (header)<br/>+ report_content (version N, frozen)"]
-    REP -->|"Share"| SH["report_shares<br/>public link · passcode · expiry"]
+    REP -->|"Share (owner)"| SH["report_shares<br/>public link over one version<br/>passcode · expiry"]
     REP -->|"Send to"| DEL["report_deliveries<br/>recipient inbox (frozen copy)"]
+    DEL -->|"Share (recipient)"| SH
     REP -->|"Discuss"| DIS["report_comments + report_reactions"]
     DEL --> FLAG["delivery_flags<br/>star / archive / trash, per viewer"]
 ```
@@ -324,9 +327,10 @@ summarized here for the data model.
 - **Archival vs deletion.** `archivedAt` / `status = "archived"` hide a workspace, project, or agent
   while preserving data; `disabledAt` reversibly rejects an agent's token. Deleting a project does
   **not** cascade to its entries — `projectId` is set to null, leaving them as unassigned history.
-- **Frozen snapshots.** Shares, deliveries, and report content freeze their rendered Markdown (and
-  identifying metadata) at mint/send/render time. A later edit or account deletion never rewrites a
-  copy someone already received; the project ACL is captured at render time via `snapshotProjectIds`.
+- **Frozen snapshots.** Deliveries freeze their rendered Markdown (and identifying metadata) at
+  send time; shares reference an immutable `report_content` version instead of copying it — same
+  guarantee, by construction. A later edit or account deletion never rewrites what someone already
+  received or published; the project ACL is captured at render time via `snapshotProjectIds`.
 - **Secrets are write-once.** API tokens and agent tokens store only a SHA-256 hash; the plaintext is
   shown once and never returned. Passcodes on shares are KDF-hashed. See
   [`permissions.md`](./permissions.md) for the full secret-handling rules.

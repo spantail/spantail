@@ -1,31 +1,14 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, isNull, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
+import { reportContent } from "../schema/reports";
 import { reportShares } from "../schema/shares";
 
 export type ReportShareRow = typeof reportShares.$inferSelect;
-/** A share row without its (potentially large) frozen body, for list payloads. */
-export type ReportShareMetaRow = Omit<ReportShareRow, "renderedMarkdown">;
 export type ReportShareInsert = Omit<
 	typeof reportShares.$inferInsert,
 	"id" | "createdAt" | "viewCount" | "lastViewedAt" | "revokedAt"
 >;
-
-/** Every column except the frozen body — used by owner-facing share listings. */
-const shareMetaColumns = {
-	id: reportShares.id,
-	reportId: reportShares.reportId,
-	token: reportShares.token,
-	reportName: reportShares.reportName,
-	dateFrom: reportShares.dateFrom,
-	dateTo: reportShares.dateTo,
-	passcodeHash: reportShares.passcodeHash,
-	expiresAt: reportShares.expiresAt,
-	revokedAt: reportShares.revokedAt,
-	viewCount: reportShares.viewCount,
-	lastViewedAt: reportShares.lastViewedAt,
-	createdAt: reportShares.createdAt,
-} as const;
 
 export async function createReportShare(
 	db: Database,
@@ -47,33 +30,70 @@ export async function getReportShareById(
 	return db.select().from(reportShares).where(eq(reportShares.id, id)).get();
 }
 
+/**
+ * A report's share links as minted by one user — in practice the owner's
+ * report-screen list. Scoping by creator keeps links minted by delivery
+ * recipients (from their inbox copies) out of the owner's view, and vice
+ * versa: each party manages only the links they issued.
+ */
 export async function listReportSharesByReport(
 	db: Database,
 	reportId: string,
-): Promise<ReportShareMetaRow[]> {
-	// Metadata only: the owner's share list never needs the frozen bodies, which
-	// can be large after a hand-edit.
+	createdByUserId: string,
+): Promise<ReportShareRow[]> {
 	return db
-		.select(shareMetaColumns)
+		.select(getTableColumns(reportShares))
 		.from(reportShares)
-		.where(eq(reportShares.reportId, reportId))
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportShares.reportContentId),
+		)
+		.where(
+			and(
+				eq(reportContent.reportId, reportId),
+				eq(reportShares.createdByUserId, createdByUserId),
+			),
+		)
+		.orderBy(desc(reportShares.createdAt));
+}
+
+/** One user's share links over one content version (the inbox-message list). */
+export async function listReportSharesByContent(
+	db: Database,
+	reportContentId: string,
+	createdByUserId: string,
+): Promise<ReportShareRow[]> {
+	return db
+		.select()
+		.from(reportShares)
+		.where(
+			and(
+				eq(reportShares.reportContentId, reportContentId),
+				eq(reportShares.createdByUserId, createdByUserId),
+			),
+		)
 		.orderBy(desc(reportShares.createdAt));
 }
 
 /**
- * The public share view reads everything off the share row: title/period and
- * the rendered body are all frozen on it at mint, so a later report edit never
- * changes a published link.
+ * The public share view: the share row plus the body of the immutable content
+ * version it references. The version can never change or be individually
+ * deleted, so a published link always serves what was minted.
  */
 export async function getReportShareByToken(
 	db: Database,
 	token: string,
-): Promise<ReportShareRow | undefined> {
-	return db
-		.select()
+): Promise<(ReportShareRow & { content: string }) | undefined> {
+	const row = await db
+		.select({ share: reportShares, content: reportContent.content })
 		.from(reportShares)
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportShares.reportContentId),
+		)
 		.where(eq(reportShares.token, token))
 		.get();
+	return row ? { ...row.share, content: row.content } : undefined;
 }
 
 /** Idempotent: re-revoking keeps the original revocation timestamp. */

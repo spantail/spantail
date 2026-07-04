@@ -13,7 +13,7 @@ import type { Database } from "../index";
 import { user } from "../schema/auth";
 import { reportDeliveries } from "../schema/deliveries";
 import { deliveryFlags } from "../schema/delivery-flags";
-import { reports } from "../schema/reports";
+import { reportContent, reports } from "../schema/reports";
 
 // Deliveries belong to exactly one source report; a report scoped to a single
 // workspace is the unit a workspace admin may read (`R*`). Multi-workspace
@@ -638,6 +638,44 @@ export async function getInboxMessage(
 			),
 		)
 		.get();
+}
+
+/**
+ * The content version a delivery carried. Normally the recorded
+ * `reportContentId`; a row inserted by a pre-column Worker during rollout
+ * (after the migration backfill already ran) is resolved by content equality
+ * instead — the frozen body is a byte-for-byte copy of the sent version.
+ * Versions are normally distinct byte-wise (the front matter embeds the
+ * version number); legacy pre-front-matter content can repeat, so the highest
+ * matching version is picked for determinism (any match serves the same
+ * bytes). The resolved id is written back so the repair runs once per row.
+ * Null only when no version matches (which cascade rules make unreachable
+ * while the delivery exists).
+ */
+export async function resolveDeliveredContentId(
+	db: Database,
+	delivery: ReportDeliveryRow,
+): Promise<string | null> {
+	if (delivery.reportContentId) return delivery.reportContentId;
+	if (!delivery.reportId) return null;
+	const version = await db
+		.select({ id: reportContent.id })
+		.from(reportContent)
+		.where(
+			and(
+				eq(reportContent.reportId, delivery.reportId),
+				eq(reportContent.content, delivery.renderedMarkdown),
+			),
+		)
+		.orderBy(desc(reportContent.version))
+		.limit(1)
+		.get();
+	if (!version) return null;
+	await db
+		.update(reportDeliveries)
+		.set({ reportContentId: version.id })
+		.where(eq(reportDeliveries.id, delivery.id));
+	return version.id;
 }
 
 /**

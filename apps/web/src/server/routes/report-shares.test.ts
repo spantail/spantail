@@ -83,7 +83,7 @@ async function mintToken(
 	return token;
 }
 
-it("creates and lists shares, freezing the body on the share row", async () => {
+it("creates and lists shares, referencing the minted content version", async () => {
 	const { admin, ws, project } = await setup();
 	const report = await createReport(admin, ws.id, project.id);
 
@@ -98,15 +98,16 @@ it("creates and lists shares, freezing the body on the share row", async () => {
 	const token = share.token as string;
 	expect(isShareTokenFormat(token)).toBe(true);
 	expect(share.hasPasscode).toBe(true);
+	expect(typeof share.reportContentId).toBe("string");
 	expect(share).not.toHaveProperty("passcodeHash");
-	expect(share).not.toHaveProperty("renderedMarkdown");
+	expect(share).not.toHaveProperty("createdByUserId");
 	const expiresAt = new Date(share.expiresAt as string).getTime();
 	expect(expiresAt).toBeGreaterThan(Date.now() + 6 * 24 * 60 * 60 * 1000);
 	expect(expiresAt).toBeLessThan(Date.now() + 8 * 24 * 60 * 60 * 1000);
 
-	// The rendered markdown was frozen onto the share row at mint time.
+	// The share references the content version that was current at mint time.
 	const row = await getReportShareByToken(createDb(env.DB), token);
-	expect(row?.renderedMarkdown).toBe(report.renderedMarkdown);
+	expect(row?.content).toBe(report.renderedMarkdown);
 
 	// A body-less POST is fine: every field is optional.
 	const bare = await appFetch(`/api/v1/reports/${report.id}/shares`, {
@@ -124,7 +125,7 @@ it("creates and lists shares, freezing the body on the share row", async () => {
 	expect(list).toHaveLength(2);
 	for (const row of list) {
 		expect(row).not.toHaveProperty("passcodeHash");
-		expect(row).not.toHaveProperty("renderedMarkdown");
+		expect(row).not.toHaveProperty("createdByUserId");
 		expect(row.viewCount).toBe(0);
 	}
 });
@@ -149,9 +150,9 @@ it("keeps a published share frozen when the report is edited", async () => {
 	);
 	expect(edited.status).toBe(200);
 
-	// The frozen copy on the share row is unchanged by the edit (still version 1).
+	// The share still references version 1, untouched by the edit's new version.
 	const row = await getReportShareByToken(createDb(env.DB), share.token);
-	expect(row?.renderedMarkdown).toBe(report.renderedMarkdown);
+	expect(row?.content).toBe(report.renderedMarkdown);
 });
 
 it("validates share inputs", async () => {

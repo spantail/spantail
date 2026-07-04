@@ -86,10 +86,14 @@ export async function verifySharePasscode(
 	return (await derivePasscodeKey(passcode, salt)) === derivedPart;
 }
 
-/** Share as exposed by the API: the passcode hash never leaves the server. */
+/**
+ * Share as exposed by the API: the passcode hash and the minting user never
+ * leave the server (every listing is already scoped to the caller's own
+ * shares). `reportContentId` names the immutable version the link serves.
+ */
 export const reportShareSchema = z.object({
 	id: z.string(),
-	reportId: z.string(),
+	reportContentId: z.string(),
 	token: z.string(),
 	hasPasscode: z.boolean(),
 	expiresAt: z.string().nullable(),

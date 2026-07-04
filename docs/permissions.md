@@ -100,7 +100,8 @@ of the project in question (always also a workspace member) · **Self** = the re
 | Agents (user) | R | R* | – | – | – | RW (own) |
 | Account / profile / avatar (user) | R | R | – | R | R | RW (own) |
 | Password (secret) | – | – | – | – | – | W (own, value never visible) |
-| Report shares (report) | R | R* | – | – | – | RW (own report) |
+| Report shares (content version) | R | R* | – | – | – | RW (own report) |
+| Delivery shares (delivery) | – | – | – | – | – | RW (own received copy) |
 | Report discussion: comments / reactions (report) | R | R* | – | – | – | RW (participants; comments editable by author only) |
 
 Notes:
@@ -134,6 +135,14 @@ Notes:
   a workspace/instance admin reads all agent activity in the workspace (`R`/`R*`), a member reads
   only their projects' activity plus their own. Raw agent **events** (per-turn telemetry) have **no
   read route** for any role — only aggregated agent entries are readable.
+- **Share links are creator-owned.** A share references an immutable content version and is
+  managed (listed, revoked) only by whoever minted it — the report owner from the report screen,
+  or a delivery recipient from a received message. The two mint paths never see each other's
+  links. **Delivery shares follow the email model**: the received copy is the recipient's (they
+  can already download it), so minting re-checks no workspace membership — the sender's
+  recipient validation at send time is the dissemination gate. Admin visibility of delivery
+  shares is deliberately not provided (v1); admins can read the delivery body itself via the
+  inbox rows above.
 - **Agent entries/events are written only by the agent's Access Token (AAT).** Ingest goes through
   `POST /api/v1/agent-entries`, `/api/v1/agent-events`, and `/api/v1/agent-events/finalize` guarded
   by `requireAgentAuth`, not by the owner's normal session/user permissions; each ingest is checked

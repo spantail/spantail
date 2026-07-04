@@ -1,6 +1,10 @@
 import { env } from "cloudflare:workers";
 import { generateShareToken } from "@spantail/core";
-import { createDb, createReportShare } from "@spantail/db";
+import {
+	createDb,
+	createReportShare,
+	getCurrentReportContent,
+} from "@spantail/db";
 import { expect, it } from "vitest";
 
 import {
@@ -171,14 +175,18 @@ it("returns a uniform 404 for invalid, unknown, revoked, and expired links", asy
 	).toBe(200);
 
 	// An expired share cannot be minted via the API; insert it directly. The
-	// expiry check fires before the body is read, so its content is irrelevant.
-	const expired = await createReportShare(createDb(env.DB), {
-		reportId,
+	// expiry check fires before the body is read, so which version it points at
+	// is irrelevant.
+	const db = createDb(env.DB);
+	const current = await getCurrentReportContent(db, reportId);
+	if (!current) throw new Error("report content missing");
+	const me = (await (await apiGet("/api/v1/me", admin)).json()) as {
+		user: { id: string };
+	};
+	const expired = await createReportShare(db, {
+		reportContentId: current.id,
+		createdByUserId: me.user.id,
 		token: generateShareToken(),
-		renderedMarkdown: "# Expired",
-		reportName: "Expired",
-		dateFrom: "2026-01-01",
-		dateTo: "2026-01-01",
 		passcodeHash: null,
 		expiresAt: new Date(Date.now() - 1000),
 	});

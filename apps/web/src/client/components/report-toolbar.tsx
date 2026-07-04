@@ -242,7 +242,10 @@ export function ReportToolbar({
 				<SendReportDialog report={report} onClose={() => setSending(false)} />
 			)}
 			{sharing && (
-				<ShareDialog report={report} onClose={() => setSharing(false)} />
+				<ShareDialog
+					source={{ kind: "report", report }}
+					onClose={() => setSharing(false)}
+				/>
 			)}
 		</div>
 	);

@@ -684,6 +684,21 @@ export class SpantailClient {
 		return this.request("POST", "/inbox/read-all");
 	}
 
+	/** Your share links over a received message's delivered version. */
+	listDeliveryShares(deliveryId: string): Promise<ReportShare[]> {
+		return this.request("GET", `/inbox/${deliveryId}/shares`);
+	}
+
+	/** Mints a public share link over a received message's delivered version. */
+	createDeliveryShare(
+		deliveryId: string,
+		input: CreateReportShareInput = {},
+	): Promise<ReportShare> {
+		return this.request("POST", `/inbox/${deliveryId}/shares`, {
+			body: input,
+		});
+	}
+
 	// --- Report discussion (reactions + comments on Send-to-shared reports) ---
 
 	getReportDiscussion(reportId: string): Promise<ReportDiscussion> {
