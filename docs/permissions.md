@@ -132,9 +132,9 @@ Notes:
   only their projects' activity plus their own. Raw agent **events** (per-turn telemetry) have **no
   read route** for any role — only aggregated agent entries are readable.
 - **Agent entries/events are written only by the agent's Access Token (AAT).** Ingest goes through
-  `POST /api/v1/agent-entries` and `/api/v1/agent-events` guarded by `requireAgentAuth`, not by the
-  owner's normal session/user permissions; each ingest is checked against the owner's live
-  workspace membership. No human role writes these rows directly.
+  `POST /api/v1/agent-entries`, `/api/v1/agent-events`, and `/api/v1/agent-events/finalize` guarded
+  by `requireAgentAuth`, not by the owner's normal session/user permissions; each ingest is checked
+  against the owner's live workspace membership. No human role writes these rows directly.
 
 ## UI vs API/MCP
 

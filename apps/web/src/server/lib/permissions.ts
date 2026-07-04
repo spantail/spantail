@@ -13,7 +13,7 @@ import {
 import type { Context } from "hono";
 
 import { requireAuth, requireScope } from "../middleware/auth";
-import type { AppEnv, UserAuthContext } from "../types";
+import type { AgentAuthContext, AppEnv, UserAuthContext } from "../types";
 import { AppError } from "./errors";
 
 /** Workspace admins/owners read every project; members are scoped by ACL. */
@@ -94,6 +94,38 @@ export async function requireWorkspaceAccess(
 		throw new AppError("forbidden", `Requires workspace ${minRole} role`);
 	}
 	return { workspace, membership };
+}
+
+/**
+ * Resolves and authorizes the workspace an agent ingest targets: the explicit
+ * input workspace, or the token's default binding when omitted. Live
+ * delegation check — the agent may only write where its owner is currently a
+ * member, even if the token was bound earlier. No instance-admin bypass:
+ * ingest always acts as the owner, never as an admin.
+ */
+export async function requireAgentIngestWorkspace(
+	c: Context<AppEnv>,
+	auth: AgentAuthContext,
+	inputWorkspaceId: string | undefined,
+): Promise<{ workspaceId: string; membership: MembershipRow }> {
+	const workspaceId = inputWorkspaceId ?? auth.defaultWorkspaceId;
+	if (!workspaceId) {
+		throw new AppError(
+			"bad_request",
+			"No workspace: provide workspaceId or bind a default to the token",
+		);
+	}
+	const workspace = await getWorkspaceById(c.var.db, workspaceId);
+	const membership = workspace
+		? await getMembership(c.var.db, workspaceId, auth.ownerUserId)
+		: undefined;
+	if (!workspace || !membership) {
+		throw new AppError(
+			"forbidden",
+			"The agent's owner is not a member of this workspace",
+		);
+	}
+	return { workspaceId, membership };
 }
 
 /**

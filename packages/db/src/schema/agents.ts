@@ -1,9 +1,14 @@
-import { type AgentUsage, agentTypes } from "@spantail/core";
+import {
+	type AgentEntryContext,
+	type AgentUsage,
+	agentTypes,
+} from "@spantail/core";
 import { sql } from "drizzle-orm";
 import {
 	index,
 	integer,
 	primaryKey,
+	real,
 	sqliteTable,
 	text,
 	uniqueIndex,
@@ -102,6 +107,17 @@ export const agentEntries = sqliteTable(
 		durationMinutes: integer("duration_minutes").notNull(),
 		// Null when the source can't expose token usage locally (e.g. Cursor).
 		usage: text("usage", { mode: "json" }).$type<AgentUsage | null>(),
+		// Non-usage session context (distinct models, branches, refs, ...). The
+		// rollup owns the event-derived facets; finalize/summary input is merged in.
+		context: text("context", {
+			mode: "json",
+		}).$type<AgentEntryContext | null>(),
+		// Internal rollup bookkeeping: how many events the materialized rollup was
+		// computed from. Events are append-only, so this is the exact monotonic
+		// staleness measure for the conflict-update guard (token sums alone can
+		// tie when a new event carries no tokens, e.g. a tool turn). Null on
+		// summary-path rows, which carry no events.
+		rollupEventCount: integer("rollup_event_count"),
 		description: text("description"),
 		// Agent sessions are always timestamped; the calendar day is derived from
 		// startedAt at read time in the viewing user's timezone (no frozen date).
@@ -146,6 +162,9 @@ export const agentEvents = sqliteTable(
 		sourceId: text("source_id").notNull(),
 		// Wall-clock time of the assistant message (transcript `timestamp`, UTC).
 		timestamp: integer("timestamp", { mode: "timestamp_ms" }).notNull(),
+		// What the event records, in gen_ai.operation.name terms ("chat" is an
+		// inference turn). Free-form text: the semconv values are still in flux.
+		operation: text("operation").notNull().default("chat"),
 		// Latest model on the message; null when the source line omits it.
 		model: text("model"),
 		// The raw `message.usage` object, stored verbatim (schema-on-read). Its
@@ -154,6 +173,16 @@ export const agentEvents = sqliteTable(
 		usage: text("usage", { mode: "json" })
 			.$type<Record<string, unknown>>()
 			.notNull(),
+		// Client-provided cost for this turn (e.g. the transcript's costUSD);
+		// summed into the rollup. The server never computes prices.
+		costUsd: real("cost_usd"),
+		// Non-usage metadata keyed by OTel attribute names where one exists
+		// (vcs.ref.head.name, app.version, ...). Verbatim, bounded at ingest,
+		// read defensively via json_extract like the raw usage.
+		attributes: text("attributes", { mode: "json" }).$type<Record<
+			string,
+			unknown
+		> | null>(),
 		createdAt: createdAtMs(),
 	},
 	(table) => [

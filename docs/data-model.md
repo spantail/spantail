@@ -172,8 +172,39 @@ erDiagram
 | `agents` | User | A registered AI coding agent — a delegated identity of one user, not an independent principal. Type `claude_code` / `codex` / `cursor` / `other`. `disabledAt` (reversible) vs `archivedAt`. | belongs to `user` (cascade) |
 | `agent_tokens` | User | Agent Access Token (AAT): a write-only **ingest** credential bound to one agent; optional `defaultWorkspaceId`. Hashed; one active token per agent in practice. | belongs to `agents` (cascade) |
 | `agent_projects` | Project | Presentation grouping of an agent to projects — no rows means "all projects". Does **not** gate or default ingest. | joins `agents` and `projects` |
-| `agent_entries` | Project / Workspace | One agent **session** rollup: duration and token usage. Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entry_date` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
-| `agent_events` | Workspace | Raw **per-turn** telemetry — one row per assistant message, native usage stored verbatim. Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
+| `agent_entries` | Project / Workspace | One agent **session** rollup: duration, token usage (plus summed `costUsd` when events carry one), and `context` — distinct non-usage facets (`models`, `branches`, `repositories`, client-supplied `refs`). Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entry_date` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
+| `agent_events` | Workspace | Raw **per-turn** telemetry — one row per assistant message: `operation` (what the turn is, `chat` by default), native usage stored verbatim, optional client-provided `costUsd`, and `attributes` (bounded key/value metadata, OTel attribute names where one exists — see the mapping below). Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
+
+### OTel GenAI mapping
+
+Agent telemetry follows the [OTel GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai)
+loosely — the conventions are still in Development status, so Spantail borrows the concepts and
+attribute names without hard-coding their enums. The correspondence:
+
+| Spantail | OTel semconv | Notes |
+|---|---|---|
+| one `agent_events` row | a span | Point-in-time (`timestamp` only); no trace/parent ids |
+| `agent_events.operation` | `gen_ai.operation.name` | Free-form; `chat` = one inference turn |
+| `agent_events.sessionId` / `agent_entries.sessionId` | `gen_ai.conversation.id` | A real client identifier (Claude Code's `session_id`), never a synthesized one |
+| `agents.type` | `gen_ai.provider.name` | e.g. `claude_code` → `anthropic` |
+| `agent_events.model` / `usage.model` | `gen_ai.request.model` / `gen_ai.response.model` | One field; the response model when the source reports it |
+| `usage.inputTokens` | (part of `gen_ai.usage.input_tokens`) | Spantail keeps the provider's **disjoint** buckets and `totalTokens` = sum of all four; OTel's `input_tokens` *includes* the cache buckets — convert with `input_tokens = inputTokens + cacheCreationTokens + cacheReadTokens` |
+| `usage.cacheCreationTokens` / `cacheReadTokens` | `gen_ai.usage.cache_creation.input_tokens` / `gen_ai.usage.cache_read.input_tokens` | Same values; only the containment semantics differ (see above) |
+| `usage.outputTokens` | `gen_ai.usage.output_tokens` | |
+
+Recommended `agent_events.attributes` keys (stored verbatim and read defensively — the server
+validates bounds, not names):
+
+| Key | Source (Claude Code) | Origin |
+|---|---|---|
+| `vcs.ref.head.name` | transcript `gitBranch` | OTel semconv (VCS) |
+| `vcs.repository.url.full` | hook: `git remote get-url origin` | OTel semconv (VCS) |
+| `process.working_directory` | hook input / transcript `cwd` | OTel semconv |
+| `app.version` | transcript `version` | same name as Claude Code's own telemetry |
+| `request.id` | transcript `requestId` | Spantail-specific (traceability) |
+
+Transcript content and source code are never ingested — only usage and the bounded metadata
+above (the OTel content-capture guidance and [`security.md`](./security.md) §2 both demand this).
 
 ## Domain: Reports & distribution
 
@@ -229,7 +260,10 @@ flowchart LR
 ### AI agent telemetry to session entries
 
 A registered agent streams activity using its AAT. Raw per-turn `agent_events` are ingested and the
-per-session `agent_entries` rollup is recomputed from them. Events are write-only; only the
+per-session `agent_entries` rollup is recomputed from them — on **every** ingest, so the entry is
+always current even if the session never ends cleanly. A best-effort finalize (e.g. Claude Code's
+SessionEnd hook) can then supplement the entry with closing facts (wall-clock end, description,
+extra context) without touching the events-derived usage rollup. Events are write-only; only the
 aggregated entries are ever read.
 
 ```mermaid
@@ -238,6 +272,8 @@ flowchart TB
     HOOK -->|"per turn · AAT"| ING["POST /api/v1/agent-events"]
     ING --> EV["agent_events<br/>raw per-turn usage<br/>idempotent (agentId, sourceId)"]
     EV -->|"recompute rollup"| EN["agent_entries<br/>one per session<br/>idempotent (agentId, sessionId)"]
+    FIN["SessionEnd hook (best-effort)"] -->|"AAT"| FR["POST /api/v1/agent-events/finalize"]
+    FR -->|"endedAt · description · context"| EN
     EN --> TL["Unified timeline<br/>read beside human work"]
     EV -. "write-only: no read route" .-> NOTE["aggregates exposed only via agent_entries"]
 ```

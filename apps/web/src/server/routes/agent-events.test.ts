@@ -241,7 +241,7 @@ it("ingests a session spanning multiple insert chunks", async () => {
 		defaultWorkspaceId: ws.id,
 	});
 
-	// More events than one insert chunk (10), to exercise chunking under D1's
+	// More events than one insert chunk (8), to exercise chunking under D1's
 	// 100-bound-parameter cap. Every turn must be counted exactly once.
 	const N = 25;
 	const events = Array.from({ length: N }, (_, i) =>
@@ -285,19 +285,21 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 		startedAt: new Date("2026-06-20T01:00:00.000Z"),
 	};
 
-	// The full rollup lands first (endedAt 01:10).
+	// The full rollup lands first (3 events, endedAt 01:10).
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 10,
 		usage: { totalTokens: 300 },
+		rollupEventCount: 3,
 		endedAt: new Date("2026-06-20T01:10:00.000Z"),
 	});
-	// A stale concurrent recompute (older endedAt, smaller totals) arrives last
+	// A stale concurrent recompute (fewer events, smaller totals) arrives last
 	// and must be ignored rather than shrink the row.
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 0,
 		usage: { totalTokens: 100 },
+		rollupEventCount: 1,
 		endedAt: new Date("2026-06-20T01:00:00.000Z"),
 	});
 
@@ -310,24 +312,32 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 	expect(afterStale[0]?.usage.totalTokens).toBe(300);
 	expect(afterStale[0]?.durationMinutes).toBe(10);
 
-	// A stale recompute with the SAME endedAt but fewer tokens (the fuller payload
-	// added an earlier-timestamped subagent turn) must also be ignored.
+	// A stale recompute with the SAME token total but fewer events (the fuller
+	// payload added a token-less tool turn whose cost/context still moved) must
+	// also be ignored — the event count, not the token sum, is what decides.
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 10,
-		usage: { totalTokens: 250 },
+		usage: { totalTokens: 300 },
+		rollupEventCount: 2,
 		endedAt: new Date("2026-06-20T01:10:00.000Z"),
+		context: { branches: ["stale-branch"] },
 	});
-	const afterEqualEnded = (await (
+	const afterEqualTokens = (await (
 		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
-	).json()) as Array<{ usage: { totalTokens: number } }>;
-	expect(afterEqualEnded[0]?.usage.totalTokens).toBe(300);
+	).json()) as Array<{
+		usage: { totalTokens: number };
+		context: { branches?: string[] } | null;
+	}>;
+	expect(afterEqualTokens[0]?.usage.totalTokens).toBe(300);
+	expect(afterEqualTokens[0]?.context?.branches).toBeUndefined();
 
-	// A genuinely newer rollup (later endedAt) still moves it forward.
+	// A genuinely newer rollup (more events) still moves it forward.
 	await materializeAgentSessionRollup(db, {
 		...base,
 		durationMinutes: 20,
 		usage: { totalTokens: 500 },
+		rollupEventCount: 4,
 		endedAt: new Date("2026-06-20T01:20:00.000Z"),
 	});
 	const afterNewer = (await (
@@ -387,6 +397,224 @@ it("rejects ingest once the agent's owner loses workspace membership", async () 
 		events: [turn("b", "2026-06-20T01:00:00.000Z", { output_tokens: 1 })],
 	});
 	expect(denied.status).toBe(403);
+});
+
+it("rolls up costUsd and context facets from event metadata", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+
+	const res = await ingest(token, {
+		sessionId: "s1",
+		events: [
+			{
+				...turn(
+					"m1",
+					"2026-06-20T01:00:00.000Z",
+					{ input_tokens: 10, output_tokens: 20 },
+					"claude-haiku-4-5",
+				),
+				costUsd: 0.1,
+				attributes: {
+					"vcs.ref.head.name": "feature/123-foo",
+					"vcs.repository.url.full": "https://github.com/acme/app",
+					"app.version": "2.1.0",
+				},
+			},
+			{
+				...turn(
+					"m2",
+					"2026-06-20T01:05:00.000Z",
+					{ input_tokens: 1, output_tokens: 2 },
+					"claude-opus-4-8",
+				),
+				costUsd: 0.25,
+				// A schema-legal but non-string attribute value must be skipped by
+				// the facet read (defensive schema-on-read), never coerced.
+				attributes: { "vcs.ref.head.name": 123 },
+			},
+		],
+	});
+	expect(res.status).toBe(200);
+
+	const list = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{
+		usage: { costUsd: number; model: string };
+		context: {
+			models: string[];
+			branches: string[];
+			repositories: string[];
+		};
+	}>;
+	expect(list).toHaveLength(1);
+	expect(list[0]?.usage.costUsd).toBeCloseTo(0.35);
+	expect(list[0]?.usage.model).toBe("claude-opus-4-8");
+	// Distinct, first-seen order; the non-string branch value is ignored.
+	expect(list[0]?.context.models).toEqual([
+		"claude-haiku-4-5",
+		"claude-opus-4-8",
+	]);
+	expect(list[0]?.context.branches).toEqual(["feature/123-foo"]);
+	expect(list[0]?.context.repositories).toEqual([
+		"https://github.com/acme/app",
+	]);
+	// Internal rollup bookkeeping never leaves the server.
+	expect(Object.keys(list[0] ?? {})).not.toContain("rollupEventCount");
+});
+
+it("omits costUsd from the rollup when no event carries one", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	await ingest(token, {
+		sessionId: "s1",
+		events: [turn("m1", "2026-06-20T01:00:00.000Z", { output_tokens: 1 })],
+	});
+	const list = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{ usage: { costUsd?: number } }>;
+	expect(list[0]?.usage.costUsd).toBeUndefined();
+});
+
+function finalize(token: string, body: unknown): Promise<Response> {
+	return appFetch("/api/v1/agent-events/finalize", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify(body),
+	});
+}
+
+it("finalizes a session and preserves the closing facts across late ingests", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+
+	// Finalize timestamps run through isTimestampInRange, so the session must
+	// sit near the test-time clock. Anchor once so every t(n) is stable across
+	// calls (the assertions re-derive the same instants).
+	const anchor = Date.now() - 60 * 60_000;
+	const t = (minutes: number) =>
+		new Date(anchor + minutes * 60_000).toISOString();
+	const events = [
+		turn("m1", t(0), { input_tokens: 10, output_tokens: 20 }),
+		turn("m2", t(5), { input_tokens: 1, output_tokens: 2 }),
+	];
+	expect((await ingest(token, { sessionId: "s1", events })).status).toBe(200);
+
+	// SessionEnd: wall-clock end 3 minutes past the last event, a summary, refs.
+	const fin = await finalize(token, {
+		sessionId: "s1",
+		endedAt: t(8),
+		description: "Refactored the login flow",
+		context: { refs: ["github:acme/app#12"] },
+	});
+	expect(fin.status).toBe(200);
+
+	const read = async () =>
+		(await (
+			await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		).json()) as Array<{
+			durationMinutes: number;
+			description: string | null;
+			endedAt: string;
+			usage: { totalTokens: number };
+			context: { refs?: string[] } | null;
+		}>;
+
+	const finalized = await read();
+	expect(finalized[0]?.description).toBe("Refactored the login flow");
+	expect(finalized[0]?.context?.refs).toEqual(["github:acme/app#12"]);
+	expect(new Date(finalized[0]?.endedAt ?? 0).toISOString()).toBe(t(8));
+	// Duration extends to the finalized end (8 min), never shrinks.
+	expect(finalized[0]?.durationMinutes).toBe(8);
+
+	// A late Stop re-post (retry) must not erase the closing facts nor shrink
+	// endedAt back to the last event's timestamp.
+	expect((await ingest(token, { sessionId: "s1", events })).status).toBe(200);
+	const afterLate = await read();
+	expect(afterLate[0]?.description).toBe("Refactored the login flow");
+	expect(afterLate[0]?.context?.refs).toEqual(["github:acme/app#12"]);
+	expect(new Date(afterLate[0]?.endedAt ?? 0).toISOString()).toBe(t(8));
+	expect(afterLate[0]?.usage.totalTokens).toBe(33);
+
+	// A genuinely new turn still grows the rollup without touching the facts.
+	expect(
+		(
+			await ingest(token, {
+				sessionId: "s1",
+				events: [
+					...events,
+					turn("m3", t(6), { input_tokens: 5, output_tokens: 5 }),
+				],
+			})
+		).status,
+	).toBe(200);
+	const afterGrowth = await read();
+	expect(afterGrowth[0]?.usage.totalTokens).toBe(43);
+	expect(afterGrowth[0]?.description).toBe("Refactored the login flow");
+	expect(new Date(afterGrowth[0]?.endedAt ?? 0).toISOString()).toBe(t(8));
+
+	// A late ingest can also move the START earlier (a backfilled subagent
+	// turn). The duration must then span the new start to the finalized end —
+	// neither the event-derived duration nor the previous stored one covers
+	// that combination.
+	expect(
+		(
+			await ingest(token, {
+				sessionId: "s1",
+				events: [turn("m0", t(-2), { input_tokens: 1, output_tokens: 1 })],
+			})
+		).status,
+	).toBe(200);
+	const afterBackfill = await read();
+	expect(new Date(afterBackfill[0]?.endedAt ?? 0).toISOString()).toBe(t(8));
+	expect(afterBackfill[0]?.durationMinutes).toBe(10); // t(-2) → t(8)
+});
+
+it("clamps a finalize endedAt that lands before the session start", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+
+	const anchor = Date.now() - 60 * 60_000;
+	const t = (minutes: number) =>
+		new Date(anchor + minutes * 60_000).toISOString();
+	await ingest(token, {
+		sessionId: "s1",
+		events: [turn("m1", t(0), { output_tokens: 1 })],
+	});
+
+	// In-range but before the session started (a bad client clock): the stored
+	// end must never precede startedAt, and the duration must not go negative.
+	const res = await finalize(token, { sessionId: "s1", endedAt: t(-30) });
+	expect(res.status).toBe(200);
+	const entry = (await res.json()) as {
+		startedAt: string;
+		endedAt: string;
+		durationMinutes: number;
+	};
+	expect(new Date(entry.endedAt).toISOString()).toBe(t(0));
+	expect(entry.durationMinutes).toBe(0);
+});
+
+it("returns 404 when finalizing a session with no entry yet", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const res = await finalize(token, {
+		sessionId: "never-seen",
+		description: "irrelevant",
+	});
+	expect(res.status).toBe(404);
 });
 
 it("treats agent tokens as write-only ingest credentials", async () => {

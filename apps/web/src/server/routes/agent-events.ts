@@ -1,16 +1,22 @@
-import { ingestAgentEventsInputSchema, todayInTimezone } from "@spantail/core";
+import {
+	finalizeAgentSessionInputSchema,
+	ingestAgentEventsInputSchema,
+} from "@spantail/core";
 import {
 	computeSessionRollup,
-	getMembership,
+	finalizeAgentSession,
 	getProjectById,
-	getWorkspaceById,
 	insertAgentEventsIgnoreConflicts,
 	materializeAgentSessionRollup,
 } from "@spantail/db";
 import { Hono } from "hono";
 
+import { serializeAgentEntry } from "../lib/agent-entry";
 import { AppError } from "../lib/errors";
-import { requireProjectAccess } from "../lib/permissions";
+import {
+	requireAgentIngestWorkspace,
+	requireProjectAccess,
+} from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth } from "../middleware/auth";
@@ -31,26 +37,11 @@ export const agentEventRoutes = new Hono<AppEnv>()
 	.post("/", ingestRateLimit, async (c) => {
 		const auth = requireAgentAuth(c);
 		const input = validate(ingestAgentEventsInputSchema, await c.req.json());
-
-		const workspaceId = input.workspaceId ?? auth.defaultWorkspaceId;
-		if (!workspaceId) {
-			throw new AppError(
-				"bad_request",
-				"No workspace: provide workspaceId or bind a default to the token",
-			);
-		}
-		// Live delegation check: the agent may only write where its owner is
-		// currently a member, even if the token was bound earlier.
-		const workspace = await getWorkspaceById(c.var.db, workspaceId);
-		const membership = workspace
-			? await getMembership(c.var.db, workspaceId, auth.ownerUserId)
-			: undefined;
-		if (!workspace || !membership) {
-			throw new AppError(
-				"forbidden",
-				"The agent's owner is not a member of this workspace",
-			);
-		}
+		const { workspaceId, membership } = await requireAgentIngestWorkspace(
+			c,
+			auth,
+			input.workspaceId,
+		);
 
 		const projectId = input.projectId ?? null;
 		if (projectId) {
@@ -74,8 +65,11 @@ export const agentEventRoutes = new Hono<AppEnv>()
 				sessionId: input.sessionId,
 				sourceId: e.sourceId,
 				timestamp: new Date(e.timestamp),
+				operation: e.operation,
 				model: e.model ?? null,
 				usage: e.usage,
+				costUsd: e.costUsd ?? null,
+				attributes: e.attributes ?? null,
 			})),
 		);
 
@@ -100,15 +94,42 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			sessionId: input.sessionId,
 			durationMinutes: rollup.durationMinutes,
 			usage: rollup.usage,
+			context: rollup.context,
+			rollupEventCount: rollup.eventCount,
 			description: null,
 			startedAt: rollup.startedAt,
 			endedAt: rollup.endedAt,
 		});
 		publishToWorkspace(c, { type: "agent-entry", workspaceId });
-		// Echo with a UTC-derived entryDate: this is the ingest path (no human
-		// viewer); readers recompute the day in their own timezone.
-		return c.json({
-			...entry,
-			entryDate: todayInTimezone("UTC", entry.startedAt),
+		// UTC-derived entryDate: this is the ingest path (no human viewer);
+		// readers recompute the day in their own timezone.
+		return c.json(serializeAgentEntry(entry, "UTC"));
+	})
+	// Finalize an events-fed session (e.g. Claude Code's SessionEnd hook):
+	// supplements the entry with closing facts — wall-clock end, a summary
+	// description, extra context (refs) — while the usage rollup stays derived
+	// from events. 404 when the session has no entry in the workspace yet
+	// (SessionEnd is best-effort; the client may ignore it).
+	.post("/finalize", ingestRateLimit, async (c) => {
+		const auth = requireAgentAuth(c);
+		const input = validate(finalizeAgentSessionInputSchema, await c.req.json());
+		const { workspaceId } = await requireAgentIngestWorkspace(
+			c,
+			auth,
+			input.workspaceId,
+		);
+
+		const entry = await finalizeAgentSession(c.var.db, {
+			agentId: auth.agentId,
+			workspaceId,
+			sessionId: input.sessionId,
+			endedAt: input.endedAt ? new Date(input.endedAt) : null,
+			description: input.description ?? null,
+			context: input.context ?? null,
 		});
+		if (!entry) {
+			throw new AppError("not_found", "No entry for this session yet");
+		}
+		publishToWorkspace(c, { type: "agent-entry", workspaceId });
+		return c.json(serializeAgentEntry(entry, "UTC"));
 	});

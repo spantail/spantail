@@ -3,22 +3,20 @@ import {
 	ingestAgentEntryInputSchema,
 	listAgentEntriesQuerySchema,
 	resolveUserTimezone,
-	todayInTimezone,
 } from "@spantail/core";
 import {
-	type AgentEntryRow,
 	getAgentEntryStats,
-	getMembership,
 	getProjectById,
-	getWorkspaceById,
 	listAgentEntries,
 	listWorkspaceAgents,
 	upsertAgentEntry,
 } from "@spantail/db";
 import { Hono } from "hono";
 
+import { serializeAgentEntry } from "../lib/agent-entry";
 import { AppError } from "../lib/errors";
 import {
+	requireAgentIngestWorkspace,
 	requireProjectAccess,
 	requireWorkspaceAccess,
 	resolveEntryAccess,
@@ -30,13 +28,6 @@ import { ingestRateLimit } from "../middleware/rate-limit";
 import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
 
-// Agent entries store only timestamps; `entryDate` is a read-time projection of
-// `startedAt` into the viewer's timezone (UTC for the ingest echo, where there
-// is no human viewer — readers recompute it in their own timezone).
-function serializeAgentEntry(row: AgentEntryRow, timezone: string) {
-	return { ...row, entryDate: todayInTimezone(timezone, row.startedAt) };
-}
-
 export const agentEntryRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
 	// Ingest (agent access token only). Idempotent on (agent, sessionId).
@@ -45,26 +36,11 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 	.post("/", ingestRateLimit, async (c) => {
 		const auth = requireAgentAuth(c);
 		const input = validate(ingestAgentEntryInputSchema, await c.req.json());
-
-		const workspaceId = input.workspaceId ?? auth.defaultWorkspaceId;
-		if (!workspaceId) {
-			throw new AppError(
-				"bad_request",
-				"No workspace: provide workspaceId or bind a default to the token",
-			);
-		}
-		// Live delegation check: the agent may only write where its owner is
-		// currently a member, even if the token was bound earlier.
-		const workspace = await getWorkspaceById(c.var.db, workspaceId);
-		const membership = workspace
-			? await getMembership(c.var.db, workspaceId, auth.ownerUserId)
-			: undefined;
-		if (!workspace || !membership) {
-			throw new AppError(
-				"forbidden",
-				"The agent's owner is not a member of this workspace",
-			);
-		}
+		const { workspaceId, membership } = await requireAgentIngestWorkspace(
+			c,
+			auth,
+			input.workspaceId,
+		);
 
 		// A project is recorded only when the ingest names one; there is no
 		// token-level default. An omitted project records workspace-level work.
@@ -98,6 +74,7 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			sessionId: input.sessionId,
 			durationMinutes: input.durationMinutes,
 			usage: input.usage ?? null,
+			context: input.context ?? null,
 			description: input.description ?? null,
 			startedAt,
 			endedAt: input.endedAt ? new Date(input.endedAt) : null,

@@ -54,4 +54,82 @@ describe("ingestAgentEventsInputSchema", () => {
 			}).success,
 		).toBe(false);
 	});
+
+	it("defaults operation to chat and accepts a custom one", () => {
+		const parsed = ingestAgentEventsInputSchema.parse({
+			sessionId: "s1",
+			events: [
+				validEvent,
+				{ ...validEvent, sourceId: "msg_B", operation: "execute_tool" },
+			],
+		});
+		expect(parsed.events[0]?.operation).toBe("chat");
+		expect(parsed.events[1]?.operation).toBe("execute_tool");
+	});
+
+	it("accepts bounded attributes and a costUsd", () => {
+		const parsed = ingestAgentEventsInputSchema.parse({
+			sessionId: "s1",
+			events: [
+				{
+					...validEvent,
+					costUsd: 0.42,
+					attributes: {
+						"vcs.ref.head.name": "feature/123-foo",
+						"app.version": "2.1.0",
+					},
+				},
+			],
+		});
+		expect(parsed.events[0]?.costUsd).toBe(0.42);
+		expect(parsed.events[0]?.attributes?.["vcs.ref.head.name"]).toBe(
+			"feature/123-foo",
+		);
+	});
+
+	it("rejects a negative costUsd", () => {
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [{ ...validEvent, costUsd: -1 }],
+			}).success,
+		).toBe(false);
+	});
+
+	// Zod 4's z.number() rejects non-finite values by default; these lock that
+	// in, since JSON "1e309" arrives as Infinity and would corrupt SQL sums.
+	it("rejects non-finite numbers in costUsd and attribute values", () => {
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [{ ...validEvent, costUsd: Number.POSITIVE_INFINITY }],
+			}).success,
+		).toBe(false);
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [
+					{ ...validEvent, attributes: { k: Number.POSITIVE_INFINITY } },
+				],
+			}).success,
+		).toBe(false);
+	});
+
+	it("bounds attributes: entry count, value length, scalar values only", () => {
+		const tooMany = Object.fromEntries(
+			Array.from({ length: 21 }, (_, i) => [`k${i}`, "v"]),
+		);
+		for (const attributes of [
+			tooMany,
+			{ k: "x".repeat(501) },
+			{ k: { nested: true } },
+		]) {
+			expect(
+				ingestAgentEventsInputSchema.safeParse({
+					sessionId: "s1",
+					events: [{ ...validEvent, attributes }],
+				}).success,
+			).toBe(false);
+		}
+	});
 });

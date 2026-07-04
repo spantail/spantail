@@ -1,6 +1,9 @@
 import { expect, it } from "vitest";
 
-import { ingestAgentEntryInputSchema } from "./agent";
+import {
+	finalizeAgentSessionInputSchema,
+	ingestAgentEntryInputSchema,
+} from "./agent";
 import { MAX_DURATION_MINUTES } from "./duration";
 
 // Timestamps are validated relative to "now". Build them at test-time off the
@@ -76,4 +79,47 @@ it("rejects endedAt before startedAt", () => {
 			true,
 		);
 	}
+});
+
+it("accepts a bounded context on the summary and finalize paths", () => {
+	const context = { models: ["gpt-5"], refs: ["github:acme/app#12"] };
+	expect(
+		ingestAgentEntryInputSchema.safeParse({ ...base, context }).success,
+	).toBe(true);
+	const finalized = finalizeAgentSessionInputSchema.parse({
+		sessionId: "s1",
+		endedAt: minutesAgo(1),
+		description: "Fixed the flaky login test",
+		context,
+	});
+	// Finalize only owns refs; rollup-owned facets are stripped, so a
+	// SessionEnd can never overwrite what the events actually said.
+	expect(finalized.context).toEqual({ refs: ["github:acme/app#12"] });
+});
+
+it("bounds context facets: value count and length", () => {
+	const tooMany = { refs: Array.from({ length: 21 }, (_, i) => `r${i}`) };
+	const tooLong = { refs: ["x".repeat(201)] };
+	for (const context of [tooMany, tooLong]) {
+		expect(
+			finalizeAgentSessionInputSchema.safeParse({ sessionId: "s1", context })
+				.success,
+		).toBe(false);
+	}
+	// The summary path accepts every facet, so bound one there too.
+	expect(
+		ingestAgentEntryInputSchema.safeParse({
+			...base,
+			context: { branches: ["x".repeat(201)] },
+		}).success,
+	).toBe(false);
+});
+
+it("rejects an implausible finalize endedAt", () => {
+	expect(
+		finalizeAgentSessionInputSchema.safeParse({
+			sessionId: "s1",
+			endedAt: "1970-01-01T00:00:00.000Z",
+		}).success,
+	).toBe(false);
 });
