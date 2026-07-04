@@ -74,19 +74,31 @@ export async function getWorkEntryOwnersByIds(
 	return owners;
 }
 
+/** A batch row's id conflicted with an entry of another user or workspace. */
+export class WorkEntryOwnershipConflictError extends Error {
+	constructor() {
+		super("an externalId in the batch belongs to another user or workspace");
+		this.name = "WorkEntryOwnershipConflictError";
+	}
+}
+
 /**
  * Upserts all rows in one db.batch (D1's implicit transaction): any failure
  * rolls back every chunk. A caller-supplied id is the import's externalId, so
  * an id conflict means "the same imported entry, sent again" and updates the
- * row in place. The setWhere guard keeps a row owned by another user or
- * workspace untouched even if the route's ownership pre-check races. Callers
- * must reject duplicate ids within `rows` beforehand — SQLite errors when one
+ * row in place. Overwriting is only legal for the same user and workspace:
+ * the CASE in the SET forces user_id to NULL — violating its NOT NULL
+ * constraint — when a foreign row conflicts, so the statement fails and the
+ * whole batch rolls back (surfaced as WorkEntryOwnershipConflictError) even
+ * when the conflict raced past the route's friendlier pre-check. Callers must
+ * reject duplicate ids within `rows` beforehand — SQLite errors when one
  * statement touches the same row twice.
  */
 export async function createWorkEntriesBatch(
 	db: Database,
 	rows: WorkEntryBatchRow[],
 ): Promise<void> {
+	const sameOwner = sql`${workEntries.userId} = excluded.user_id AND ${workEntries.workspaceId} = excluded.workspace_id`;
 	const statements = [];
 	for (let i = 0; i < rows.length; i += WORK_ENTRY_INSERT_CHUNK) {
 		statements.push(
@@ -96,6 +108,7 @@ export async function createWorkEntriesBatch(
 				.onConflictDoUpdate({
 					target: workEntries.id,
 					set: {
+						userId: sql`CASE WHEN ${sameOwner} THEN excluded.user_id ELSE NULL END`,
 						projectId: sql`excluded.project_id`,
 						entryDate: sql`excluded.entry_date`,
 						durationMinutes: sql`excluded.duration_minutes`,
@@ -109,13 +122,22 @@ export async function createWorkEntriesBatch(
 						// explicitly (and binds no parameter).
 						updatedAt: sql`(cast(unixepoch('subsecond') * 1000 as integer))`,
 					},
-					setWhere: sql`${workEntries.workspaceId} = excluded.workspace_id AND ${workEntries.userId} = excluded.user_id`,
 				}),
 		);
 	}
 	const [first, ...rest] = statements;
 	if (!first) return;
-	await db.batch([first, ...rest]);
+	try {
+		await db.batch([first, ...rest]);
+	} catch (error) {
+		if (
+			error instanceof Error &&
+			error.message.includes("NOT NULL constraint failed: work_entries.user_id")
+		) {
+			throw new WorkEntryOwnershipConflictError();
+		}
+		throw error;
+	}
 }
 
 export async function getWorkEntryById(

@@ -21,6 +21,7 @@ import {
 	listWorkEntries,
 	listWorkEntryTags,
 	updateWorkEntry,
+	WorkEntryOwnershipConflictError,
 	type WorkEntryRow,
 } from "@spantail/db";
 import type { Context } from "hono";
@@ -200,7 +201,16 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			tags: e.tags,
 			source,
 		}));
-		await createWorkEntriesBatch(c.var.db, rows);
+		try {
+			await createWorkEntriesBatch(c.var.db, rows);
+		} catch (error) {
+			// A conflict that raced past the pre-check above: the batch rolled
+			// back, so the promised all-or-nothing semantics still hold.
+			if (error instanceof WorkEntryOwnershipConflictError) {
+				throw new AppError("conflict", error.message);
+			}
+			throw error;
+		}
 		publishToWorkspace(c, {
 			type: "work-entry",
 			workspaceId: input.workspaceId,

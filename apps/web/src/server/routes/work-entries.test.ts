@@ -1,4 +1,10 @@
+import { env } from "cloudflare:workers";
 import { todayInTimezone } from "@spantail/core";
+import {
+	createDb,
+	createWorkEntriesBatch,
+	WorkEntryOwnershipConflictError,
+} from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -745,6 +751,53 @@ it("rejects an externalId owned by another user or workspace with 409", async ()
 			])
 		).status,
 	).toBe(409);
+});
+
+it("rolls back the whole batch when a foreign-id conflict races past the pre-check", async () => {
+	const { admin, member, ws, project } = await setup();
+	const mine: BatchEntry = {
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 30,
+		description: "member's entry",
+		externalId: "legacy-raced",
+	};
+	expect((await postBatch(member, ws.id, [mine])).status).toBe(201);
+	const adminId = (
+		(await (await apiGet("/api/v1/me", admin)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+
+	// Call the query layer directly, standing in for a request that passed the
+	// route's ownership pre-check before the member's insert committed. The
+	// conflicting statement must fail the whole batch, not silently skip.
+	const db = createDb(env.DB as D1Database);
+	const row = (id: string, description: string) => ({
+		id,
+		workspaceId: ws.id,
+		projectId: project.id,
+		userId: adminId,
+		entryDate: "2026-06-02",
+		durationMinutes: 10,
+		startedAt: null,
+		endedAt: null,
+		description,
+		note: null,
+		tags: [],
+		source: "api" as const,
+	});
+	await expect(
+		createWorkEntriesBatch(db, [
+			row(crypto.randomUUID(), "innocent bystander"),
+			row("legacy-raced", "hijack attempt"),
+		]),
+	).rejects.toBeInstanceOf(WorkEntryOwnershipConflictError);
+
+	// Atomic: the member's entry is untouched and the bystander row rolled back.
+	const listed = await listEntries(admin, ws.id);
+	expect(listed).toHaveLength(1);
+	expect(listed[0]?.description).toBe("member's entry");
 });
 
 it("rejects duplicate and malformed externalIds in one batch", async () => {
