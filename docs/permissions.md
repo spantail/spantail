@@ -31,7 +31,10 @@ Workspace roles are ranked `member < admin < owner` (`apps/web/src/server/lib/pe
 
 ## Scopes
 
-Every resource belongs to exactly one scope:
+The short version: work data lives in a workspace, the instance level is administration, and
+reports are the deliberate exception — cross-workspace and shareable. See the
+[scope hierarchy](./data-model.md#scope-hierarchy) in `data-model.md` for that mental model in
+full. Every resource belongs to exactly one scope:
 
 - **Instance** — one per deployment (users, invitations, instance settings, report templates).
 - **Workspace** — owned by a workspace (settings, members, projects, unassigned work entries).
