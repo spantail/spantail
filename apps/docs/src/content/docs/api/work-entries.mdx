@@ -160,7 +160,7 @@ token regardless of entry count.
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `workspaceId` | string | yes | Target workspace for every entry in the batch. |
-| `entries` | object[] | yes | 1–100 entries. |
+| `entries` | object[] | yes | 1–100 entries, spanning at most 10 distinct projects. |
 
 Each entry takes the same fields as single create, with these differences:
 

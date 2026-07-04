@@ -160,7 +160,7 @@ curl -X POST "https://<your-instance>/api/v1/work-entries" \
 | フィールド | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `workspaceId` | string | はい | バッチ内すべてのエントリの対象ワークスペース。 |
-| `entries` | object[] | はい | 1〜100 件のエントリ。 |
+| `entries` | object[] | はい | 1〜100 件のエントリ（プロジェクトは最大 10 種類まで）。 |
 
 各エントリのフィールドは単発作成と同じですが、次の点が異なります。
 

@@ -1,6 +1,7 @@
 import {
 	type BatchWorkEntryItem,
 	batchWorkEntryItemSchema,
+	MAX_PROJECTS_PER_BATCH,
 	MAX_WORK_ENTRIES_PER_BATCH,
 } from "@spantail/core";
 import type { SpantailClient } from "@spantail/sdk";
@@ -155,7 +156,26 @@ export async function importEntries(
 				.filter((slug): slug is string => slug !== undefined),
 		),
 	];
-	const requests = Math.ceil(resolved.length / MAX_WORK_ENTRIES_PER_BATCH);
+	// Chunk in file order, closing a request when it would exceed either the
+	// entry cap or the distinct-project cap the API enforces per request.
+	const chunks: (typeof resolved)[] = [];
+	let current: typeof resolved = [];
+	let currentProjects = new Set<string>();
+	for (const item of resolved) {
+		const overProjects =
+			!currentProjects.has(item.entry.projectId) &&
+			currentProjects.size >= MAX_PROJECTS_PER_BATCH;
+		if (current.length >= MAX_WORK_ENTRIES_PER_BATCH || overProjects) {
+			chunks.push(current);
+			current = [];
+			currentProjects = new Set<string>();
+		}
+		current.push(item);
+		currentProjects.add(item.entry.projectId);
+	}
+	if (current.length > 0) chunks.push(current);
+
+	const requests = chunks.length;
 	const summary: ImportSummary = {
 		imported: resolved.length,
 		requests,
@@ -169,11 +189,7 @@ export async function importEntries(
 		(item) => item.entry.externalId !== undefined,
 	);
 	let sent = 0;
-	for (let request = 0; request < requests; request++) {
-		const chunk = resolved.slice(
-			request * MAX_WORK_ENTRIES_PER_BATCH,
-			(request + 1) * MAX_WORK_ENTRIES_PER_BATCH,
-		);
+	for (const [request, chunk] of chunks.entries()) {
 		try {
 			await client.createWorkEntriesBatch({
 				workspaceId: workspace.id,

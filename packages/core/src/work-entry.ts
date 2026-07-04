@@ -56,6 +56,12 @@ export type CreateWorkEntryInputData = z.input<
  */
 export const MAX_WORK_ENTRIES_PER_BATCH = 100;
 
+/**
+ * Distinct projects per batch request: each costs two permission lookups, so
+ * this bounds the request's share of the same Free-plan query budget.
+ */
+export const MAX_PROJECTS_PER_BATCH = 10;
+
 // Ids that could never be addressed as /work-entries/:id — the collection
 // sub-routes are matched before /:id, and "." / ".." are URL dot-segments
 // that normalize away before routing.

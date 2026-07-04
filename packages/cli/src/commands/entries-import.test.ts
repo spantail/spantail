@@ -159,6 +159,41 @@ it("splits large files into batches of 100 preserving order", async () => {
 	);
 });
 
+it("splits a chunk that would exceed the per-request project cap", async () => {
+	const projects = Array.from({ length: 12 }, (_, i) =>
+		projectFixture(`p${i}`, acme.id),
+	);
+	const stub = fakeApi([
+		{ path: "/workspaces", body: [acme] },
+		{ path: `/workspaces/${acme.id}/projects`, body: projects },
+		{
+			method: "POST",
+			path: "/work-entries/batch",
+			status: 201,
+			body: { count: 1 },
+		},
+	]);
+	const { ctx, configDir } = createTestContext({ fetch: stub.fetch });
+	loggedIn(configDir);
+
+	// 12 distinct projects fit in one 100-entry window but exceed the API's
+	// 10-projects-per-request cap, so the import must split at project 11.
+	const file = jsonlFile(projects.map((p) => entryLine({ project: p.slug })));
+	expect(await runCli(["entries", "import", file], ctx)).toBe(0);
+
+	const posts = stub.calls.filter((call) => call.method === "POST");
+	expect(posts).toHaveLength(2);
+	const projectCounts = posts.map(
+		(post) =>
+			new Set(
+				(post.body as { entries: Array<{ projectId: string }> }).entries.map(
+					(e) => e.projectId,
+				),
+			).size,
+	);
+	expect(projectCounts).toEqual([10, 2]);
+});
+
 it("reports the resume point when a later batch fails", async () => {
 	const stub = api([
 		{

@@ -2,6 +2,7 @@ import {
 	createWorkEntriesBatchInputSchema,
 	createWorkEntryInputSchema,
 	listWorkEntriesQuerySchema,
+	MAX_PROJECTS_PER_BATCH,
 	resolveUserTimezone,
 	todayInTimezone,
 	updateWorkEntryInputSchema,
@@ -161,10 +162,10 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		// batch cannot exhaust the D1 per-invocation query budget (50 on Workers
 		// Free; each project costs two lookups).
 		const projectIds = [...new Set(input.entries.map((e) => e.projectId))];
-		if (projectIds.length > 10) {
+		if (projectIds.length > MAX_PROJECTS_PER_BATCH) {
 			throw new AppError(
 				"bad_request",
-				"Too many distinct projects in one batch (max 10)",
+				`Too many distinct projects in one batch (max ${MAX_PROJECTS_PER_BATCH})`,
 			);
 		}
 		for (const projectId of projectIds) {
