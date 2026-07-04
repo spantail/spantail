@@ -148,7 +148,7 @@ Returns `201 Created`. CLI and MCP clients set `X-Spantail-Client: cli|mcp` so t
 
 `POST /api/v1/work-entries/batch` <Badge text="scope: write" variant="caution" />
 
-Bulk-inserts up to **1000** entries for one workspace in a single atomic request — either
+Bulk-inserts up to **100** entries for one workspace in a single atomic request — either
 every entry is written or none is (a single invalid entry rejects the whole batch with
 `400`). Built for migrating data from an existing system; the
 [CLI's `entries import`](/guides/tools/cli/) reads a JSONL file and auto-splits it into
@@ -160,7 +160,7 @@ token regardless of entry count.
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `workspaceId` | string | yes | Target workspace for every entry in the batch. |
-| `entries` | object[] | yes | 1–1000 entries. |
+| `entries` | object[] | yes | 1–100 entries. |
 
 Each entry takes the same fields as single create, with these differences:
 

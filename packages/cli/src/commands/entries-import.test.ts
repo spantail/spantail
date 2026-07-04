@@ -131,13 +131,13 @@ it("fails before any request on a missing or unknown project", async () => {
 	expect(unknown.calls.some((call) => call.method === "POST")).toBe(false);
 });
 
-it("splits large files into batches of 1000 preserving order", async () => {
+it("splits large files into batches of 100 preserving order", async () => {
 	const stub = api();
 	const { ctx, stdout, configDir } = createTestContext({ fetch: stub.fetch });
 	loggedIn(configDir);
 
 	const file = jsonlFile(
-		Array.from({ length: 2500 }, (_, i) =>
+		Array.from({ length: 250 }, (_, i) =>
 			entryLine({ project: "api", description: `entry ${i}` }),
 		),
 	);
@@ -148,14 +148,14 @@ it("splits large files into batches of 1000 preserving order", async () => {
 	const sizes = posts.map(
 		(post) => (post.body as { entries: unknown[] }).entries.length,
 	);
-	expect(sizes).toEqual([1000, 1000, 500]);
+	expect(sizes).toEqual([100, 100, 50]);
 	const firstOfSecond = (
 		posts[1]?.body as { entries: Array<{ description: string }> }
 	).entries[0];
-	expect(firstOfSecond?.description).toBe("entry 1000");
-	expect(stdout.text()).toContain("imported 1000/2500 (request 1/3)");
+	expect(firstOfSecond?.description).toBe("entry 100");
+	expect(stdout.text()).toContain("imported 100/250 (request 1/3)");
 	expect(stdout.text()).toContain(
-		"Imported 2500 entries into acme (3 requests)",
+		"Imported 250 entries into acme (3 requests)",
 	);
 });
 
@@ -165,7 +165,7 @@ it("reports the resume point when a later batch fails", async () => {
 			method: "POST",
 			path: "/work-entries/batch",
 			status: 201,
-			body: { count: 1000 },
+			body: { count: 100 },
 			once: true,
 		},
 		{
@@ -180,16 +180,14 @@ it("reports the resume point when a later batch fails", async () => {
 	loggedIn(configDir);
 
 	const file = jsonlFile(
-		Array.from({ length: 1500 }, () => entryLine({ project: "api" })),
+		Array.from({ length: 150 }, () => entryLine({ project: "api" })),
 	);
 	expect(await runCli(["entries", "import", file], ctx)).toBe(1);
 	expect(stderr.text()).toContain("request 2/2 failed");
 	expect(stderr.text()).toContain(
-		"1000 of 1500 entries were imported (through line 1000)",
+		"100 of 150 entries were imported (through line 100)",
 	);
-	expect(stderr.text()).toContain(
-		"Entries from line 1001 on were NOT imported",
-	);
+	expect(stderr.text()).toContain("Entries from line 101 on were NOT imported");
 
 	// With externalIds on every line the guidance flips to "just re-run".
 	const idsStub = api([

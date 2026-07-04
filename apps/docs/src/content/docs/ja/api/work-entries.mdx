@@ -147,7 +147,7 @@ curl -X POST "https://<your-instance>/api/v1/work-entries" \
 
 `POST /api/v1/work-entries/batch` <Badge text="scope: write" variant="caution" />
 
-1 つのワークスペースに対して最大 **1000** 件のエントリを、単一のアトミックな
+1 つのワークスペースに対して最大 **100** 件のエントリを、単一のアトミックな
 リクエストで一括登録します — 全件書き込まれるか、1 件も書き込まれないかの
 どちらかです（1 件でも不正なエントリがあればバッチ全体が `400` で拒否されます）。
 既存システムからのデータ移行のために設計されており、
@@ -160,7 +160,7 @@ curl -X POST "https://<your-instance>/api/v1/work-entries" \
 | フィールド | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `workspaceId` | string | はい | バッチ内すべてのエントリの対象ワークスペース。 |
-| `entries` | object[] | はい | 1〜1000 件のエントリ。 |
+| `entries` | object[] | はい | 1〜100 件のエントリ。 |
 
 各エントリのフィールドは単発作成と同じですが、次の点が異なります。
 

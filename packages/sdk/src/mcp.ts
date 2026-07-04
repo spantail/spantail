@@ -4,6 +4,7 @@ import {
 	batchWorkEntryItemSchema,
 	dateRangePresetSchema,
 	localDateSchema,
+	MAX_WORK_ENTRIES_PER_BATCH,
 	tagSchema,
 } from "@spantail/core";
 import { z } from "zod";
@@ -229,7 +230,7 @@ export function registerSpantailTools(
 				entries: z
 					.array(batchWorkEntryItemSchema)
 					.min(1)
-					.max(100)
+					.max(MAX_WORK_ENTRIES_PER_BATCH)
 					.describe(
 						"Entries; each needs projectId, entryDate, durationMinutes, description",
 					),

@@ -875,7 +875,7 @@ it("writes nothing when any batch entry is invalid", async () => {
 it("bounds the batch size", async () => {
 	const { admin, ws, project } = await setup();
 	expect((await postBatch(admin, ws.id, [])).status).toBe(400);
-	const tooMany: BatchEntry[] = Array.from({ length: 1001 }, () => ({
+	const tooMany: BatchEntry[] = Array.from({ length: 101 }, () => ({
 		projectId: project.id,
 		entryDate: "2026-06-01",
 		durationMinutes: 1,

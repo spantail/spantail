@@ -16,7 +16,7 @@ Bulk-imports work entries from a JSONL file (one JSON object per line):
 Fields: entryDate (required), durationMinutes, description, and optional
 project (slug), note, tags, startedAt, endedAt, externalId. The whole file is
 validated before anything is sent; entries are then posted in atomic batches
-of 1000. An externalId becomes the entry's id, so re-importing the same file
+of 100. An externalId becomes the entry's id, so re-importing the same file
 updates those entries instead of duplicating them.
 
 Options:

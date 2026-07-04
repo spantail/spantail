@@ -158,12 +158,13 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		}
 
 		// Permission checks once per distinct project, not per row. Capped so a
-		// batch cannot exhaust the D1 per-invocation query budget.
+		// batch cannot exhaust the D1 per-invocation query budget (50 on Workers
+		// Free; each project costs two lookups).
 		const projectIds = [...new Set(input.entries.map((e) => e.projectId))];
-		if (projectIds.length > 50) {
+		if (projectIds.length > 10) {
 			throw new AppError(
 				"bad_request",
-				"Too many distinct projects in one batch (max 50)",
+				"Too many distinct projects in one batch (max 10)",
 			);
 		}
 		for (const projectId of projectIds) {

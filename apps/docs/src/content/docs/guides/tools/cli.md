@@ -88,7 +88,7 @@ lines without one use `--project`), `note`, `tags`, `startedAt`, `endedAt`,
 
 The whole file is validated first — any bad line fails the run with its line
 number before anything is sent. Entries are then posted in atomic batches of
-1000 (each request fully succeeds or fully fails). Use `--dry-run` to validate
+100 (each request fully succeeds or fully fails). Use `--dry-run` to validate
 and resolve project slugs without importing.
 
 `externalId` is normally omitted. Set it to keep the source system's id: it

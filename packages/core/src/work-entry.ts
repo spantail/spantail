@@ -47,12 +47,14 @@ export type CreateWorkEntryInputData = z.input<
 >;
 
 /**
- * D1 caps a query at 100 bound parameters; a work-entry row binds 12 columns,
- * so inserts are chunked at 8 rows (96 params) per statement. 1000 entries =
- * 125 statements in one db.batch, well inside D1's per-invocation query
- * budget. Clients importing more auto-split into multiple requests.
+ * Sized for the tightest D1 budget the app supports (Workers Free: 50 queries
+ * per invocation). A work-entry row binds 12 columns against the 100-bound-
+ * parameter cap, so inserts are chunked at 8 rows per statement — 100 entries
+ * = 13 statements in one db.batch, leaving room for the request's auth,
+ * permission, and ownership queries. Clients importing more auto-split into
+ * multiple requests.
  */
-export const MAX_WORK_ENTRIES_PER_BATCH = 1000;
+export const MAX_WORK_ENTRIES_PER_BATCH = 100;
 
 // Ids that could never be addressed as /work-entries/:id — the collection
 // sub-routes are matched before /:id, and "." / ".." are URL dot-segments
