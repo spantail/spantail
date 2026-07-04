@@ -94,8 +94,9 @@ export const mailItemSchema = z.object({
 	id: z.string(),
 	scope: mailScopeSchema,
 	batchId: z.string(),
-	// Null once the source report has been deleted; the snapshot stands alone.
-	reportId: z.string().nullable(),
+	// Always present: the sent version's source report. A delivery cascades
+	// away with its report, so it can never outlive it.
+	reportId: z.string(),
 	senderName: z.string(),
 	senderEmail: z.string(),
 	// Received scope: the sender's ready-to-use avatar URL, or null when the

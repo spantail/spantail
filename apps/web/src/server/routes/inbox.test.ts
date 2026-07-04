@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { expect, it } from "vitest";
 
 import {
@@ -150,6 +151,79 @@ it("delivers a frozen snapshot to a recipient's inbox", async () => {
 	expect(
 		((await (await apiGet("/api/v1/inbox", owner)).json()) as unknown[]).length,
 	).toBe(0);
+});
+
+it("keeps showing the sent name and period after the report is edited", async () => {
+	const { owner, member, ws, report, memberId } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ recipientUserIds: [memberId] },
+		owner,
+	);
+	// Rename after the send: a new content version is appended, but the
+	// delivery still references the sent one, whose front matter carries the
+	// original name.
+	const edited = await apiJson(
+		"PATCH",
+		`/api/v1/reports/${report.id}`,
+		{
+			name: "Renamed",
+			templateId: await defaultTemplateId(owner),
+			filters: { workspaceIds: [ws.id], dateRange: "today" },
+		},
+		owner,
+	);
+	expect(edited.status).toBe(200);
+
+	const inbox = (await (await apiGet("/api/v1/inbox", member)).json()) as Array<
+		Record<string, unknown>
+	>;
+	expect(inbox[0]?.reportName).toBe("Daily");
+	const detail = (await (
+		await apiGet(`/api/v1/inbox/${inbox[0]?.id}`, member)
+	).json()) as { reportName: string; renderedMarkdown: string };
+	expect(detail.reportName).toBe("Daily");
+	expect(detail.renderedMarkdown).toBe(report.renderedMarkdown);
+});
+
+it("falls back to the report header for legacy content without front matter", async () => {
+	const { owner, member, report, memberId } = await setup();
+	await apiJson(
+		"POST",
+		`/api/v1/reports/${report.id}/send`,
+		{ recipientUserIds: [memberId] },
+		owner,
+	);
+	// Simulate a version rendered before front matter existed: a bare body.
+	await env.DB.prepare(
+		`UPDATE report_content SET content = ? WHERE id =
+			(SELECT report_content_id FROM report_deliveries LIMIT 1)`,
+	)
+		.bind("# Legacy body\n")
+		.run();
+	const { filters } = (await (
+		await apiGet(`/api/v1/reports/${report.id}`, owner)
+	).json()) as { filters: { dateRange: { from: string; to: string } } };
+
+	// Both the list and the detail derive name/period from the live report
+	// header when the version itself carries none.
+	const inbox = (await (await apiGet("/api/v1/inbox", member)).json()) as Array<
+		Record<string, unknown>
+	>;
+	expect(inbox[0]?.reportName).toBe("Daily");
+	expect(inbox[0]?.dateFrom).toBe(filters.dateRange.from);
+	expect(inbox[0]?.dateTo).toBe(filters.dateRange.to);
+	const detail = (await (
+		await apiGet(`/api/v1/inbox/${inbox[0]?.id}`, member)
+	).json()) as {
+		reportName: string;
+		dateFrom: string;
+		renderedMarkdown: string;
+	};
+	expect(detail.reportName).toBe("Daily");
+	expect(detail.dateFrom).toBe(filters.dateRange.from);
+	expect(detail.renderedMarkdown).toBe("# Legacy body\n");
 });
 
 it("surfaces sender and recipient avatars across list and detail", async () => {

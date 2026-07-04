@@ -1,4 +1,8 @@
-import type { MailFolder, MailScope } from "@spantail/core";
+import {
+	type MailFolder,
+	type MailScope,
+	parseReportFrontMatter,
+} from "@spantail/core";
 import {
 	and,
 	desc,
@@ -28,6 +32,25 @@ export type ReportDeliveryInsert = Omit<
 	typeof reportDeliveries.$inferInsert,
 	"id" | "createdAt" | "readAt"
 >;
+
+/**
+ * A delivery's displayed report metadata, read from the sent version itself:
+ * the front matter freezes name and period together with the content. Legacy
+ * pre-front-matter versions fall back to the live report header — the report
+ * row always exists while the delivery does (deliveries cascade with their
+ * content version, content with its report).
+ */
+function deriveDeliveryMeta(
+	content: string,
+	fallback: { name: string; from: string; to: string },
+): { reportName: string; dateFrom: string; dateTo: string } {
+	const meta = parseReportFrontMatter(content);
+	return {
+		reportName: meta?.name ?? fallback.name,
+		dateFrom: meta?.period.from ?? fallback.from,
+		dateTo: meta?.period.to ?? fallback.to,
+	};
+}
 
 // Names in a Sent "To: …" summary are joined with the ASCII unit separator so a
 // comma (or any printable char) inside a name never splits a recipient.
@@ -92,7 +115,9 @@ export interface MailItemRow {
 	id: string;
 	scope: MailScope;
 	batchId: string;
-	reportId: string | null;
+	// Always present: the sent version's source report. A delivery cascades
+	// away with its report, so it can never outlive it.
+	reportId: string;
 	senderName: string;
 	senderEmail: string;
 	// Received scope: the sender's user id + stored image (live-joined, so a
@@ -128,14 +153,14 @@ async function listReceived(
 		.select({
 			id: reportDeliveries.id,
 			batchId: reportDeliveries.batchId,
-			reportId: reportDeliveries.reportId,
+			reportId: reportContent.reportId,
 			senderName: reportDeliveries.senderName,
 			senderEmail: reportDeliveries.senderEmail,
 			senderUserId: reportDeliveries.senderUserId,
 			senderImage: user.image,
-			reportName: reportDeliveries.reportName,
-			dateFrom: reportDeliveries.dateFrom,
-			dateTo: reportDeliveries.dateTo,
+			content: reportContent.content,
+			fallbackName: reports.name,
+			fallbackFilters: reports.filters,
 			message: reportDeliveries.message,
 			readAt: reportDeliveries.readAt,
 			createdAt: reportDeliveries.createdAt,
@@ -144,6 +169,11 @@ async function listReceived(
 			trashedAt: deliveryFlags.trashedAt,
 		})
 		.from(reportDeliveries)
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
+		.innerJoin(reports, eq(reports.id, reportContent.reportId))
 		// Live-join the sender for their current avatar; left so a deleted sender
 		// (senderUserId set null) still returns the row with a null image.
 		.leftJoin(user, eq(user.id, reportDeliveries.senderUserId))
@@ -173,9 +203,11 @@ async function listReceived(
 		senderEmail: r.senderEmail,
 		senderUserId: r.senderUserId,
 		senderImage: r.senderImage,
-		reportName: r.reportName,
-		dateFrom: r.dateFrom,
-		dateTo: r.dateTo,
+		...deriveDeliveryMeta(r.content, {
+			name: r.fallbackName,
+			from: r.fallbackFilters.dateRange.from,
+			to: r.fallbackFilters.dateRange.to,
+		}),
 		message: r.message,
 		readAt: r.readAt,
 		createdAt: r.createdAt,
@@ -203,13 +235,19 @@ async function listSent(
 			// opens it and the server resolves the sent scope from the sender.
 			id: sql<string>`min(${reportDeliveries.id})`,
 			batchId: batchKey,
-			reportId: sql<string | null>`max(${reportDeliveries.reportId})`,
+			// One send = one content version, so every joined value below is
+			// identical across the batch; max() is a pick-one aggregate, exactly
+			// like max(senderName).
+			reportId: sql<string>`max(${reportContent.reportId})`,
 			senderName: sql<string>`max(${reportDeliveries.senderName})`,
 			senderEmail: sql<string>`max(${reportDeliveries.senderEmail})`,
 			senderUserId: sql<string | null>`max(${reportDeliveries.senderUserId})`,
-			reportName: sql<string>`max(${reportDeliveries.reportName})`,
-			dateFrom: sql<string>`max(${reportDeliveries.dateFrom})`,
-			dateTo: sql<string>`max(${reportDeliveries.dateTo})`,
+			content: sql<string>`max(${reportContent.content})`,
+			fallbackName: sql<string>`max(${reports.name})`,
+			// json_extract instead of aggregating the whole filters blob and
+			// JSON.parsing it back.
+			fallbackFrom: sql<string>`max(json_extract(${reports.filters}, '$.dateRange.from'))`,
+			fallbackTo: sql<string>`max(json_extract(${reports.filters}, '$.dateRange.to'))`,
 			message: sql<string | null>`max(${reportDeliveries.message})`,
 			createdAt: sql<number>`min(${reportDeliveries.createdAt})`,
 			// Three concats over the same grouped rows stay index-aligned: SQLite
@@ -226,6 +264,11 @@ async function listSent(
 		})
 		.from(reportDeliveries)
 		.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
+		.innerJoin(reports, eq(reports.id, reportContent.reportId))
 		.leftJoin(
 			deliveryFlags,
 			and(
@@ -259,9 +302,11 @@ async function listSent(
 		// sender id for shape uniformity but no sender image is joined here.
 		senderUserId: r.senderUserId,
 		senderImage: null,
-		reportName: r.reportName,
-		dateFrom: r.dateFrom,
-		dateTo: r.dateTo,
+		...deriveDeliveryMeta(r.content, {
+			name: r.fallbackName,
+			from: r.fallbackFrom,
+			to: r.fallbackTo,
+		}),
 		message: r.message,
 		readAt: null,
 		createdAt: new Date(r.createdAt),
@@ -318,9 +363,14 @@ export async function listReportSendsByReport(
 		})
 		.from(reportDeliveries)
 		.innerJoin(user, eq(user.id, reportDeliveries.recipientUserId))
+		// A batch belongs to the report whose version it delivered.
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
 		.where(
 			and(
-				eq(reportDeliveries.reportId, reportId),
+				eq(reportContent.reportId, reportId),
 				eq(reportDeliveries.senderUserId, senderUserId),
 			),
 		)
@@ -420,12 +470,29 @@ export async function getMailItemDetail(
 	id: string,
 	userId: string,
 ): Promise<ReceivedDetailRow | SentDetailRow | undefined> {
-	const row = await db
-		.select()
+	const found = await db
+		.select({
+			d: reportDeliveries,
+			reportId: reportContent.reportId,
+			content: reportContent.content,
+			fallbackName: reports.name,
+			fallbackFilters: reports.filters,
+		})
 		.from(reportDeliveries)
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
+		.innerJoin(reports, eq(reports.id, reportContent.reportId))
 		.where(eq(reportDeliveries.id, id))
 		.get();
-	if (!row) return undefined;
+	if (!found) return undefined;
+	const { d: row, reportId, content } = found;
+	const meta = deriveDeliveryMeta(content, {
+		name: found.fallbackName,
+		from: found.fallbackFilters.dateRange.from,
+		to: found.fallbackFilters.dateRange.to,
+	});
 
 	if (row.recipientUserId === userId) {
 		const flags = await getDeliveryFlags(db, userId, "received", row.id);
@@ -441,14 +508,12 @@ export async function getMailItemDetail(
 			id: row.id,
 			scope: "received",
 			batchId: row.batchId ?? row.id,
-			reportId: row.reportId,
+			reportId,
 			senderName: row.senderName,
 			senderEmail: row.senderEmail,
 			senderUserId: row.senderUserId,
 			senderImage: sender?.image ?? null,
-			reportName: row.reportName,
-			dateFrom: row.dateFrom,
-			dateTo: row.dateTo,
+			...meta,
 			message: row.message,
 			readAt: row.readAt,
 			createdAt: row.createdAt,
@@ -457,7 +522,7 @@ export async function getMailItemDetail(
 			recipientIds: [],
 			recipientImages: [],
 			recipientCount: 0,
-			renderedMarkdown: row.renderedMarkdown,
+			renderedMarkdown: content,
 		};
 	}
 
@@ -486,12 +551,10 @@ export async function getMailItemDetail(
 			id: row.id,
 			scope: "sent",
 			batchId: key,
-			reportId: row.reportId,
+			reportId,
 			senderName: row.senderName,
 			senderEmail: row.senderEmail,
-			reportName: row.reportName,
-			dateFrom: row.dateFrom,
-			dateTo: row.dateTo,
+			...meta,
 			message: row.message,
 			senderUserId: row.senderUserId,
 			senderImage: null,
@@ -502,7 +565,7 @@ export async function getMailItemDetail(
 			recipientIds: recipients.map((r) => r.id),
 			recipientImages: recipients.map((r) => r.image),
 			recipientCount: recipients.length,
-			renderedMarkdown: row.renderedMarkdown,
+			renderedMarkdown: content,
 			recipients,
 		};
 	}
@@ -525,19 +588,23 @@ export async function listDeliveriesByWorkspace(
 		.select({
 			id: reportDeliveries.id,
 			batchId: reportDeliveries.batchId,
-			reportId: reportDeliveries.reportId,
+			reportId: reportContent.reportId,
 			senderName: reportDeliveries.senderName,
 			senderEmail: reportDeliveries.senderEmail,
 			senderUserId: reportDeliveries.senderUserId,
 			senderImage: user.image,
-			reportName: reportDeliveries.reportName,
-			dateFrom: reportDeliveries.dateFrom,
-			dateTo: reportDeliveries.dateTo,
+			content: reportContent.content,
+			fallbackName: reports.name,
+			fallbackFilters: reports.filters,
 			message: reportDeliveries.message,
 			createdAt: reportDeliveries.createdAt,
 		})
 		.from(reportDeliveries)
-		.innerJoin(reports, eq(reports.id, reportDeliveries.reportId))
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
+		.innerJoin(reports, eq(reports.id, reportContent.reportId))
 		.leftJoin(user, eq(user.id, reportDeliveries.senderUserId))
 		.where(singleWorkspaceReport(workspaceId))
 		// id breaks createdAt ties so offset paging is stable.
@@ -554,9 +621,11 @@ export async function listDeliveriesByWorkspace(
 		senderEmail: r.senderEmail,
 		senderUserId: r.senderUserId,
 		senderImage: r.senderImage,
-		reportName: r.reportName,
-		dateFrom: r.dateFrom,
-		dateTo: r.dateTo,
+		...deriveDeliveryMeta(r.content, {
+			name: r.fallbackName,
+			from: r.fallbackFilters.dateRange.from,
+			to: r.fallbackFilters.dateRange.to,
+		}),
 		message: r.message,
 		// readAt is the recipient's own read-state; an admin is not the recipient,
 		// so it is never surfaced in this cross-recipient view.
@@ -582,12 +651,24 @@ export async function getDeliveryDetailById(
 	db: Database,
 	id: string,
 ): Promise<ReceivedDetailRow | undefined> {
-	const row = await db
-		.select()
+	const found = await db
+		.select({
+			d: reportDeliveries,
+			reportId: reportContent.reportId,
+			content: reportContent.content,
+			fallbackName: reports.name,
+			fallbackFilters: reports.filters,
+		})
 		.from(reportDeliveries)
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
+		.innerJoin(reports, eq(reports.id, reportContent.reportId))
 		.where(eq(reportDeliveries.id, id))
 		.get();
-	if (!row) return undefined;
+	if (!found) return undefined;
+	const { d: row, reportId, content } = found;
 	const sender = row.senderUserId
 		? await db
 				.select({ image: user.image })
@@ -599,14 +680,16 @@ export async function getDeliveryDetailById(
 		id: row.id,
 		scope: "received",
 		batchId: row.batchId ?? row.id,
-		reportId: row.reportId,
+		reportId,
 		senderName: row.senderName,
 		senderEmail: row.senderEmail,
 		senderUserId: row.senderUserId,
 		senderImage: sender?.image ?? null,
-		reportName: row.reportName,
-		dateFrom: row.dateFrom,
-		dateTo: row.dateTo,
+		...deriveDeliveryMeta(content, {
+			name: found.fallbackName,
+			from: found.fallbackFilters.dateRange.from,
+			to: found.fallbackFilters.dateRange.to,
+		}),
 		message: row.message,
 		// readAt is the recipient's own read-state, not the admin's; never leak it.
 		readAt: null,
@@ -618,7 +701,7 @@ export async function getDeliveryDetailById(
 		recipientIds: [],
 		recipientImages: [],
 		recipientCount: 0,
-		renderedMarkdown: row.renderedMarkdown,
+		renderedMarkdown: content,
 	};
 }
 
@@ -638,44 +721,6 @@ export async function getInboxMessage(
 			),
 		)
 		.get();
-}
-
-/**
- * The content version a delivery carried. Normally the recorded
- * `reportContentId`; a row inserted by a pre-column Worker during rollout
- * (after the migration backfill already ran) is resolved by content equality
- * instead — the frozen body is a byte-for-byte copy of the sent version.
- * Versions are normally distinct byte-wise (the front matter embeds the
- * version number); legacy pre-front-matter content can repeat, so the highest
- * matching version is picked for determinism (any match serves the same
- * bytes). The resolved id is written back so the repair runs once per row.
- * Null only when no version matches (which cascade rules make unreachable
- * while the delivery exists).
- */
-export async function resolveDeliveredContentId(
-	db: Database,
-	delivery: ReportDeliveryRow,
-): Promise<string | null> {
-	if (delivery.reportContentId) return delivery.reportContentId;
-	if (!delivery.reportId) return null;
-	const version = await db
-		.select({ id: reportContent.id })
-		.from(reportContent)
-		.where(
-			and(
-				eq(reportContent.reportId, delivery.reportId),
-				eq(reportContent.content, delivery.renderedMarkdown),
-			),
-		)
-		.orderBy(desc(reportContent.version))
-		.limit(1)
-		.get();
-	if (!version) return null;
-	await db
-		.update(reportDeliveries)
-		.set({ reportContentId: version.id })
-		.where(eq(reportDeliveries.id, delivery.id));
-	return version.id;
 }
 
 /**
