@@ -51,11 +51,18 @@ reason="$(jq -r '.reason // "unknown"' <<<"$hook_payload")"
 printf '%s' "$hook_payload" | "$here/spantail-agent-stop.sh"
 
 # Summary opt-in: per-session marker > env var > user config, default off.
+# The session id becomes part of the marker path, so only accept the expected
+# id charset — a hostile payload must not steer the rm below.
 send_summary="false"
 marker=""
-if [ -n "${CLAUDE_PLUGIN_DATA:-}" ]; then
-	marker="$CLAUDE_PLUGIN_DATA/summary-$session"
-fi
+case "$session" in
+*[!A-Za-z0-9._-]*) ;;
+*)
+	if [ -n "${CLAUDE_PLUGIN_DATA:-}" ]; then
+		marker="$CLAUDE_PLUGIN_DATA/summary-$session"
+	fi
+	;;
+esac
 if [ -n "$marker" ] && [ -f "$marker" ]; then
 	[ "$(cat "$marker" 2>/dev/null)" = "on" ] && send_summary="true"
 else

@@ -20,12 +20,15 @@
 # Normalize a git remote URL for the vcs.repository.url.full attribute:
 # scp-like ssh forms (git@host:org/repo.git) become https, URL userinfo is
 # stripped (an https remote can embed credentials — user:token@host — which
-# must never reach telemetry), and a trailing .git is dropped.
+# must never reach telemetry), and a trailing .git is dropped. Anything that
+# doesn't come out as http(s) — e.g. a local-path remote like /home/me/repo —
+# is dropped entirely: it isn't a repository URL and may leak private paths.
 def normalize_repo_url:
 	sub("^git@(?<host>[^:/]+):"; "https://\(.host)/")
 	| sub("^ssh://(?<u>[^/@]*@)?"; "https://")
 	| sub("^(?<scheme>https?://)[^/@]*@"; "\(.scheme)")
-	| sub("\\.git$"; "");
+	| sub("\\.git$"; "")
+	| (if test("^https?://") then . else null end);
 
 # First non-null value of a field across the message's transcript lines.
 def first_of(f): [ .[] | f ] | map(select(. != null)) | first;
@@ -35,6 +38,8 @@ def first_of(f): [ .[] | f ] | map(select(. != null)) | first;
     .type == "assistant"
     and (.message.id != null)
     and (.message.usage != null)
+    # timestamp is required by the ingest schema; one null would 400 the batch.
+    and (.timestamp != null and .timestamp != "")
   ))
 | group_by(.message.id)
 | map(

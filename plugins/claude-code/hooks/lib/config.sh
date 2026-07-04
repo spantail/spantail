@@ -21,11 +21,12 @@ spantail_load_user_config() {
 	local settings="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
 	_spantail_plugin_options_json="{}"
 	[ -f "$settings" ] || return 0
-	# The store is keyed by plugin id; match on the "spantail" prefix so the
-	# exact id format (name@marketplace) never breaks resolution.
+	# The store is keyed by plugin id — "spantail" or "spantail@<marketplace>".
+	# Match exactly those forms so another plugin whose name merely starts
+	# with "spantail" can't shadow this one's options.
 	_spantail_plugin_options_json="$(jq -c '
 		(.pluginConfigs // {}) | to_entries
-		| map(select(.key | startswith("spantail")))
+		| map(select(.key == "spantail" or (.key | startswith("spantail@"))))
 		| (first.value.options // {})
 	' "$settings" 2>/dev/null || printf '{}')"
 }

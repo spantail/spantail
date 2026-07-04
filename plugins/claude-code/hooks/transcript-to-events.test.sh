@@ -108,6 +108,28 @@ else
 	fail=1
 fi
 
+# A local-path remote is not a repository URL — the attribute is dropped
+# rather than leaking a filesystem path.
+local_form="$(jq -n --arg repo_url "/home/me/repos/site" \
+	-f "$here/transcript-to-events.jq" "$fixture")"
+if [ "$(jq -r '.[0].attributes["vcs.repository.url.full"] // "absent"' <<<"$local_form")" = "absent" ]; then
+	echo "ok   - local-path remote omitted"
+else
+	echo "FAIL - local-path remote omitted"
+	fail=1
+fi
+
+# A line without a timestamp cannot form a valid event (the ingest schema
+# requires one) and is dropped instead of 400ing the whole batch.
+no_ts="$(jq -nc '{type: "assistant", message: {id: "msg_NOTS", model: "m", usage: {input_tokens: 1}}}' |
+	jq -n --arg repo_url "" -f "$here/transcript-to-events.jq")"
+if [ "$(jq -r 'length' <<<"$no_ts")" = "0" ]; then
+	echo "ok   - missing timestamp drops the line"
+else
+	echo "FAIL - missing timestamp drops the line"
+	fail=1
+fi
+
 # Every attribute value is capped at the API's 500-char limit — an oversized
 # cwd must not 400 the whole batch.
 long_cwd="$(printf 'x%.0s' $(seq 1 600))"
