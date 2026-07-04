@@ -644,9 +644,11 @@ export async function getInboxMessage(
  * The content version a delivery carried. Normally the recorded
  * `reportContentId`; a row inserted by a pre-column Worker during rollout
  * (after the migration backfill already ran) is resolved by content equality
- * instead — the frozen body is a byte-for-byte copy of the sent version, and
- * version bodies are unique per report (the front matter embeds the version
- * number). The resolved id is written back so the repair runs once per row.
+ * instead — the frozen body is a byte-for-byte copy of the sent version.
+ * Versions are normally distinct byte-wise (the front matter embeds the
+ * version number); legacy pre-front-matter content can repeat, so the highest
+ * matching version is picked for determinism (any match serves the same
+ * bytes). The resolved id is written back so the repair runs once per row.
  * Null only when no version matches (which cascade rules make unreachable
  * while the delivery exists).
  */
@@ -665,6 +667,8 @@ export async function resolveDeliveredContentId(
 				eq(reportContent.content, delivery.renderedMarkdown),
 			),
 		)
+		.orderBy(desc(reportContent.version))
+		.limit(1)
 		.get();
 	if (!version) return null;
 	await db
