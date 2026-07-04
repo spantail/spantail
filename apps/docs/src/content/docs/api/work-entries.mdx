@@ -182,6 +182,8 @@ records to Spantail entries.
 - It must be unique across the instance (it is a primary key). If a source system's ids are
   weak (e.g. bare numbers), prefix them: `legacy-123`.
 - Allowed charset: `A-Z a-z 0-9 . _ : -`, at most 200 characters (it appears in URLs).
+  The literal values `stats`, `tags`, and `batch` are reserved — they are route segments
+  under `/work-entries`.
 - Duplicate `externalId` values within one request are rejected with `400`. An `externalId`
   that already belongs to another user's or another workspace's entry is rejected with
   `409` and nothing is written.

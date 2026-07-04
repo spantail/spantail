@@ -759,6 +759,11 @@ it("rejects duplicate and malformed externalIds in one batch", async () => {
 	expect(
 		(await postBatch(admin, ws.id, [entry("dup"), entry("dup")])).status,
 	).toBe(400);
+	// Collection sub-routes are matched before /:id, so an entry with one of
+	// their names could never be fetched by its URL.
+	for (const reserved of ["stats", "tags", "batch"]) {
+		expect((await postBatch(admin, ws.id, [entry(reserved)])).status).toBe(400);
+	}
 	expect((await postBatch(admin, ws.id, [entry("a/b")])).status).toBe(400);
 	expect((await postBatch(admin, ws.id, [entry("a b")])).status).toBe(400);
 	expect(await listEntries(admin, ws.id)).toHaveLength(0);
