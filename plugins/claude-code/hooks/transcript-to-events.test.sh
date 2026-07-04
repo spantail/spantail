@@ -108,6 +108,18 @@ else
 	fail=1
 fi
 
+# Every attribute value is capped at the API's 500-char limit — an oversized
+# cwd must not 400 the whole batch.
+long_cwd="$(printf 'x%.0s' $(seq 1 600))"
+capped="$(jq -nc --arg cwd "/$long_cwd" '{type: "assistant", timestamp: "2026-06-21T11:00:00.000Z", cwd: $cwd, message: {id: "msg_L", model: "m", usage: {input_tokens: 1}}}' |
+	jq -n --arg repo_url "" -f "$here/transcript-to-events.jq")"
+if [ "$(jq -r '.[0].attributes["process.working_directory"] | length' <<<"$capped")" = "500" ]; then
+	echo "ok   - long cwd capped at 500 chars"
+else
+	echo "FAIL - long cwd capped at 500 chars"
+	fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
 	echo "transcript-to-events.jq: FAILED"
 	exit 1

@@ -3,10 +3,10 @@
 # Resolution order per value:
 #   1. The SPANTAIL_* environment variable (manual wiring; always wins).
 #   2. The plugin user config, which Claude Code exports to plugin
-#      subprocesses as CLAUDE_PLUGIN_OPTION_<KEY> environment variables
-#      (sensitive values are resolved from the system keychain). The exact
-#      casing of <KEY> for camelCase config keys is not documented, so both
-#      the verbatim-uppercase and SNAKE_CASE forms are checked.
+#      subprocesses as CLAUDE_PLUGIN_OPTION_<KEY> environment variables with
+#      the manifest key verbatim (CLAUDE_PLUGIN_OPTION_agentToken); sensitive
+#      values are resolved from the system keychain. Uppercased key forms are
+#      also checked defensively.
 #   3. settings.json's pluginConfigs[<plugin-id>].options — a fallback for
 #      non-sensitive values when the option env vars are absent (e.g. a
 #      future execution path that doesn't export them).
@@ -38,12 +38,12 @@ spantail_config() {
 		return 0
 	fi
 
-	# CLAUDE_PLUGIN_OPTION_<KEY>: try APIURL (verbatim upper) and API_URL
-	# (camelCase split) — the docs don't pin the casing rule.
+	# CLAUDE_PLUGIN_OPTION_<KEY> uses the manifest key verbatim (documented);
+	# the uppercased forms are checked as a defensive fallback.
 	local key="$2" upper snake opt_val
 	upper="$(printf '%s' "$key" | tr '[:lower:]' '[:upper:]')"
 	snake="$(printf '%s' "$key" | sed 's/\([A-Z]\)/_\1/g' | tr '[:lower:]' '[:upper:]')"
-	for candidate in "CLAUDE_PLUGIN_OPTION_$upper" "CLAUDE_PLUGIN_OPTION_$snake"; do
+	for candidate in "CLAUDE_PLUGIN_OPTION_$key" "CLAUDE_PLUGIN_OPTION_$upper" "CLAUDE_PLUGIN_OPTION_$snake"; do
 		opt_val="${!candidate:-}"
 		if [ -n "$opt_val" ]; then
 			printf '%s' "$opt_val"

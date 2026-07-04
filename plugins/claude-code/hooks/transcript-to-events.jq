@@ -20,14 +20,12 @@
 # Normalize a git remote URL for the vcs.repository.url.full attribute:
 # scp-like ssh forms (git@host:org/repo.git) become https, URL userinfo is
 # stripped (an https remote can embed credentials — user:token@host — which
-# must never reach telemetry), a trailing .git is dropped, and the value is
-# capped at the API's 500-char attribute limit.
+# must never reach telemetry), and a trailing .git is dropped.
 def normalize_repo_url:
 	sub("^git@(?<host>[^:/]+):"; "https://\(.host)/")
 	| sub("^ssh://(?<u>[^/@]*@)?"; "https://")
 	| sub("^(?<scheme>https?://)[^/@]*@"; "\(.scheme)")
-	| sub("\\.git$"; "")
-	| .[0:500];
+	| sub("\\.git$"; "");
 
 # First non-null value of a field across the message's transcript lines.
 def first_of(f): [ .[] | f ] | map(select(. != null)) | first;
@@ -46,6 +44,8 @@ def first_of(f): [ .[] | f ] | map(select(. != null)) | first;
       timestamp: (min_by(.timestamp) | .timestamp),
       model: first_of(.message.model),
       usage: .[0].message.usage,
+      # Every value is capped at the API's 500-char attribute limit — one
+      # oversized value (e.g. a deep cwd) would 400 the whole batch.
       attributes: ({
         "vcs.ref.head.name": first_of(.gitBranch),
         "vcs.repository.url.full":
@@ -53,7 +53,9 @@ def first_of(f): [ .[] | f ] | map(select(. != null)) | first;
         "process.working_directory": first_of(.cwd),
         "app.version": first_of(.version),
         "request.id": first_of(.requestId),
-      } | with_entries(select(.value != null and .value != ""))),
+      }
+        | with_entries(select(.value != null and .value != ""))
+        | map_values(.[0:500])),
     }
   )
 # Drop a null model rather than send it, and an empty attributes object rather
