@@ -19,6 +19,7 @@ import {
 	markInboxRead,
 	markInboxUnread,
 	type ReportDeliveryRow,
+	resolveDeliveredContentId,
 	setDeliveryFlags,
 	userOwnsMailTarget,
 } from "@spantail/db";
@@ -54,14 +55,19 @@ function toMailItem(row: MailItemRow) {
 	};
 }
 
-// Every delivery records the content version it carried; the column is only
-// nullable for rollout ordering (the migration backfills existing rows), so a
-// missing value is a server bug, not a caller error.
-function deliveredContentId(row: ReportDeliveryRow): string {
-	if (!row.reportContentId) {
+// Every delivery records the content version it carried; a rollout-window row
+// (inserted by a pre-column Worker after the migration backfill) is resolved
+// and repaired by resolveDeliveredContentId. A null after that is a server
+// bug, not a caller error.
+async function deliveredContentId(
+	c: Context<AppEnv>,
+	row: ReportDeliveryRow,
+): Promise<string> {
+	const contentId = await resolveDeliveredContentId(c.var.db, row);
+	if (!contentId) {
 		throw new AppError("internal", "Delivery content missing");
 	}
-	return row.reportContentId;
+	return contentId;
 }
 
 // The recipient-scoped delivery row, or 404. Backs the share routes: only the
@@ -206,7 +212,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 			await parseOptionalJsonBody(c),
 		);
 		const share = await createReportShare(c.var.db, {
-			reportContentId: deliveredContentId(row),
+			reportContentId: await deliveredContentId(c, row),
 			createdByUserId: user.id,
 			token: generateShareToken(),
 			...(await shareAttributesFromInput(input)),
@@ -221,7 +227,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 		const row = await requireReceivedMessage(c, c.req.param("id"), user.id);
 		const shares = await listReportSharesByContent(
 			c.var.db,
-			deliveredContentId(row),
+			await deliveredContentId(c, row),
 			user.id,
 		);
 		return c.json(shares.map(toApiShare));
