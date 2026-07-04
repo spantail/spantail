@@ -1,0 +1,13 @@
+{
+	"name": "spantail",
+	"description": "Official Spantail plugins for Claude Code.",
+	"owner": { "name": "Spantail" },
+	"plugins": [
+		{
+			"name": "spantail",
+			"source": "./plugins/claude-code",
+			"description": "Capture Claude Code sessions as Spantail agent telemetry, log work entries, and build reports.",
+			"category": "productivity"
+		}
+	]
+}

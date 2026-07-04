@@ -3,17 +3,18 @@
 # Claude Code "Stop" hook → Spantail agent-events ingest.
 #
 # Reads the hook payload (JSON on stdin), extracts per-assistant-message token
-# usage from the transcript with jq (conversation bodies never leave this
-# machine), and POSTs the compact events to Spantail. Idempotent on (agent,
-# message.id), so it is safe to run on every Stop. Never fails the turn: any
-# problem logs to stderr and exits 0.
+# usage and non-usage attributes from the transcript with jq (conversation
+# bodies never leave this machine), and POSTs the compact events to Spantail.
+# Idempotent on (agent, message.id), so it is safe to run on every Stop.
+# Never fails the turn: any problem logs to stderr and exits 0.
 #
 # Requirements: bash, jq, curl.
-# Environment (set these in your Claude Code settings.json "env" block):
-#   SPANTAIL_API_URL        Base URL, e.g. https://spantail.example.com
-#   SPANTAIL_AGENT_TOKEN    An agent access token (write-only ingest credential)
-#   SPANTAIL_WORKSPACE_ID   Optional; defaults to the token's bound workspace
-#   SPANTAIL_PROJECT_ID     Optional; records the work against a project
+# Configuration, each resolved as the SPANTAIL_* env var first, then the
+# plugin's user config (see lib/config.sh):
+#   SPANTAIL_API_URL        / apiUrl        Base URL, e.g. https://spantail.example.com
+#   SPANTAIL_AGENT_TOKEN    / agentToken    Agent access token (write-only ingest credential)
+#   SPANTAIL_WORKSPACE_ID   / workspaceId   Optional; defaults to the token's bound workspace
+#   SPANTAIL_PROJECT_ID     / projectId     Optional; records the work against a project
 set -u
 
 skip() {
@@ -23,18 +24,35 @@ skip() {
 
 command -v jq >/dev/null 2>&1 || skip "jq not found; skipping"
 command -v curl >/dev/null 2>&1 || skip "curl not found; skipping"
-[ -n "${SPANTAIL_API_URL:-}" ] || skip "SPANTAIL_API_URL not set; skipping"
-[ -n "${SPANTAIL_AGENT_TOKEN:-}" ] || skip "SPANTAIL_AGENT_TOKEN not set; skipping"
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/config.sh
+. "$here/lib/config.sh"
+spantail_load_user_config
+SPANTAIL_API_URL="$(spantail_config SPANTAIL_API_URL apiUrl)"
+SPANTAIL_AGENT_TOKEN="$(spantail_config SPANTAIL_AGENT_TOKEN agentToken)"
+SPANTAIL_WORKSPACE_ID="$(spantail_config SPANTAIL_WORKSPACE_ID workspaceId)"
+SPANTAIL_PROJECT_ID="$(spantail_config SPANTAIL_PROJECT_ID projectId)"
+[ -n "$SPANTAIL_API_URL" ] || skip "SPANTAIL_API_URL not configured; skipping"
+[ -n "$SPANTAIL_AGENT_TOKEN" ] || skip "SPANTAIL_AGENT_TOKEN not configured; skipping"
 
 hook_payload="$(cat)"
 transcript="$(jq -r '.transcript_path // empty' <<<"$hook_payload")"
 session="$(jq -r '.session_id // empty' <<<"$hook_payload")"
+cwd="$(jq -r '.cwd // empty' <<<"$hook_payload")"
 [ -n "$transcript" ] || skip "no transcript_path in hook payload; skipping"
 [ -f "$transcript" ] || skip "transcript not found: $transcript; skipping"
 [ -n "$session" ] || skip "no session_id in hook payload; skipping"
 
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-events="$(jq -n -f "$here/transcript-to-events.jq" "$transcript")" ||
+# The repository URL is the one attribute the transcript doesn't carry; read
+# it once from the local git config (no network). Missing git, a non-repo
+# cwd, or no origin remote all degrade to omitting the attribute.
+repo_url=""
+if command -v git >/dev/null 2>&1 && [ -n "$cwd" ] && [ -d "$cwd" ]; then
+	repo_url="$(git -C "$cwd" remote get-url origin 2>/dev/null || true)"
+fi
+
+events="$(jq -n --arg repo_url "$repo_url" -f "$here/transcript-to-events.jq" "$transcript")" ||
 	skip "failed to parse transcript; skipping"
 
 count="$(jq 'length' <<<"$events")"
@@ -47,11 +65,11 @@ count="$(jq 'length' <<<"$events")"
 # argv.
 jq_args=(--arg s "$session")
 filter='{sessionId: $s, events: .}'
-if [ -n "${SPANTAIL_WORKSPACE_ID:-}" ]; then
+if [ -n "$SPANTAIL_WORKSPACE_ID" ]; then
 	jq_args+=(--arg w "$SPANTAIL_WORKSPACE_ID")
 	filter+=' + {workspaceId: $w}'
 fi
-if [ -n "${SPANTAIL_PROJECT_ID:-}" ]; then
+if [ -n "$SPANTAIL_PROJECT_ID" ]; then
 	jq_args+=(--arg p "$SPANTAIL_PROJECT_ID")
 	filter+=' + {projectId: $p}'
 fi
