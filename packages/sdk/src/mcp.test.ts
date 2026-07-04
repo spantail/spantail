@@ -50,6 +50,19 @@ function makeStub() {
 			suggestedNote: "",
 		}),
 		search: record("search", { workEntries: [], reports: [] }),
+		listAgentEntries: record("listAgentEntries", [{ id: "ae1" }]),
+		getAgentEntryStats: record("getAgentEntryStats", {
+			totalMinutes: 42,
+			totalTokens: 18400,
+			totalInputTokens: 12000,
+			totalOutputTokens: 6400,
+			entryCount: 1,
+			byDate: [],
+			byAgent: [],
+		}),
+		listWorkspaceAgents: record("listWorkspaceAgents", [
+			{ id: "agt1", type: "claude_code", name: "Build bot" },
+		]),
 	} as unknown as SpantailClient;
 	return { stub, calls };
 }
@@ -67,7 +80,7 @@ async function connect(client: SpantailClient) {
 	return mcpClient;
 }
 
-it("exposes the fourteen spantail tools", async () => {
+it("exposes the seventeen spantail tools", async () => {
 	const { stub } = makeStub();
 	const client = await connect(stub);
 
@@ -75,7 +88,10 @@ it("exposes the fourteen spantail tools", async () => {
 	expect(tools.map((tool) => tool.name).sort()).toEqual([
 		"create_report",
 		"delete_entry",
+		"get_agent_stats",
 		"get_report",
+		"list_agent_entries",
+		"list_agents",
 		"list_entries",
 		"list_projects",
 		"list_report_templates",
@@ -458,6 +474,68 @@ it("routes search to the api client", async () => {
 	await client.callTool({ name: "search", arguments: { q: "build" } });
 
 	expect(calls.at(-1)).toEqual({ method: "search", args: ["build"] });
+});
+
+it("routes the agent read tools to the api client", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const agents = await client.callTool({
+		name: "list_agents",
+		arguments: { workspaceId: "ws1" },
+	});
+	expect(calls.at(-1)).toEqual({
+		method: "listWorkspaceAgents",
+		args: ["ws1"],
+	});
+	const agentsContent = agents.content as Array<{ type: string; text: string }>;
+	expect(JSON.parse(agentsContent[0]?.text ?? "")).toEqual([
+		{ id: "agt1", type: "claude_code", name: "Build bot" },
+	]);
+
+	await client.callTool({
+		name: "get_agent_stats",
+		arguments: {
+			workspaceId: "ws1",
+			agentId: "agt1",
+			from: "2026-06-01",
+			to: "2026-06-30",
+		},
+	});
+	expect(calls.at(-1)?.method).toBe("getAgentEntryStats");
+	expect(calls.at(-1)?.args[0]).toEqual({
+		workspaceId: "ws1",
+		agentId: "agt1",
+		from: "2026-06-01",
+		to: "2026-06-30",
+	});
+
+	const entries = await client.callTool({
+		name: "list_agent_entries",
+		arguments: { workspaceId: "ws1", from: "2026-06-01", limit: 10 },
+	});
+	expect(calls.at(-1)?.method).toBe("listAgentEntries");
+	expect(calls.at(-1)?.args[0]).toEqual({
+		workspaceId: "ws1",
+		from: "2026-06-01",
+		limit: 10,
+	});
+	expect(entries.isError).toBeFalsy();
+});
+
+it("requires a date window for get_agent_stats", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const result = await client.callTool({
+		name: "get_agent_stats",
+		arguments: { workspaceId: "ws1" },
+	});
+
+	expect(result.isError).toBe(true);
+	expect(calls.some((call) => call.method === "getAgentEntryStats")).toBe(
+		false,
+	);
 });
 
 it("rejects invalid tool input", async () => {

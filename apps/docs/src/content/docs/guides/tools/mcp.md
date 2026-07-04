@@ -4,9 +4,9 @@ description: Remote /mcp and stdio MCP servers for AI clients.
 ---
 
 Spantail speaks the **Model Context Protocol (MCP)**, so AI clients can log and
-manage work entries, search, and create and read reports against your instance
-through their own tools. MCP is a client of the same REST API, so it respects
-the same permissions as your token.
+manage work entries, search, read agent activity, and create and read reports
+against your instance through their own tools. MCP is a client of the same
+REST API, so it respects the same permissions as your token.
 
 The tool set is deliberately smaller than the [CLI](/guides/tools/cli/):
 operations with interpersonal side effects — sending reports, share links,
@@ -59,6 +59,9 @@ token as a Bearer credential instead.
 | `preview_report` | Render a report from a template, scope, and period without saving it. |
 | `create_report` | Create a report; adopts the template's suggested name when none is given. |
 | `update_report` | Re-render an existing report with changed fields (new version). |
+| `list_agents` | List your AI agents in a workspace (to resolve agent ids). |
+| `get_agent_stats` | Aggregated AI-agent activity for a date window (totals, by date, by agent). |
+| `list_agent_entries` | List AI-agent session entries with duration, token usage, and context. |
 
 ### Stdio-only tools
 
