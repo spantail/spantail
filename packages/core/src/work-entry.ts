@@ -54,18 +54,20 @@ export type CreateWorkEntryInputData = z.input<
  */
 export const MAX_WORK_ENTRIES_PER_BATCH = 1000;
 
-// Collection sub-routes of /work-entries; they are matched before /:id, so an
-// entry whose id equals one of them could never be addressed by its URL.
-const RESERVED_WORK_ENTRY_IDS = new Set(["stats", "tags", "batch"]);
+// Ids that could never be addressed as /work-entries/:id — the collection
+// sub-routes are matched before /:id, and "." / ".." are URL dot-segments
+// that normalize away before routing.
+const RESERVED_WORK_ENTRY_IDS = new Set(["stats", "tags", "batch", ".", ".."]);
 
 // Becomes the entry's primary key (and thus appears in /:id URLs), so the
-// charset is restricted to URL-safe id characters and route segments are
-// reserved.
+// charset is restricted to URL-safe id characters, route segments are
+// reserved, and path dot-segments are rejected.
 export const externalIdSchema = z
 	.string()
 	.regex(/^[A-Za-z0-9._:-]{1,200}$/)
 	.refine((id) => !RESERVED_WORK_ENTRY_IDS.has(id), {
-		message: 'reserved id; "stats", "tags", and "batch" are route segments',
+		message:
+			'reserved id; "stats", "tags", "batch", ".", and ".." cannot address an entry',
 	});
 
 // The single-create input minus workspaceId (lifted to the request top level),
