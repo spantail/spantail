@@ -14,6 +14,9 @@ coverage/
 # Seed tooling scratch output (generated SQL / share bodies)
 packages/db/seed/.tmp/
 
+# Generated import datasets (pnpm generate-import)
+examples/*/import/
+
 # Local secrets
 .dev.vars
 .dev.vars.*

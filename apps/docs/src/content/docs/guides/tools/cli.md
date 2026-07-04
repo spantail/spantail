@@ -70,6 +70,32 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 | `spantail entries delete <id>` | Delete one of your entries (asks unless `--yes`). |
 | `spantail entries stats` | Aggregated totals with by-date/project/user breakdowns. |
 | `spantail entries tags` | List the distinct tags in scope, one per line. |
+| `spantail entries import <file.jsonl>` | Bulk-import work entries from a JSONL file (`--workspace`, `--project`, `--dry-run`). |
+
+#### Bulk import (JSONL)
+
+`spantail entries import` migrates work entries from another system. The file
+holds one JSON object per line:
+
+```json
+{"project":"website","entryDate":"2024-07-15","durationMinutes":90,"description":"Reviewed onboarding flow","tags":["review"]}
+```
+
+Fields per line: `entryDate` (required — dates are taken verbatim, no timezone
+conversion), `durationMinutes`, `description`, and optional `project` (slug;
+lines without one use `--project`), `note`, `tags`, `startedAt`, `endedAt`,
+`externalId`.
+
+The whole file is validated first — any bad line fails the run with its line
+number before anything is sent. Entries are then posted in atomic batches of
+1000 (each request fully succeeds or fully fails). Use `--dry-run` to validate
+and resolve project slugs without importing.
+
+`externalId` is normally omitted. Set it to keep the source system's id: it
+becomes the entry's id (unique across the instance; charset `A-Za-z0-9._:-`;
+prefix weak ids, e.g. `legacy-123`), and re-importing the same file then
+updates those entries instead of duplicating them. Lines without an
+`externalId` duplicate when imported again.
 
 ### Reports
 

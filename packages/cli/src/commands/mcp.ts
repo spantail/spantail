@@ -8,6 +8,7 @@ import { registerSpantailTools } from "@spantail/sdk/mcp";
 import { resolveConnection } from "../client";
 import type { CliContext } from "../context";
 import { CliError } from "../errors";
+import { registerStdioTools } from "../mcp-tools";
 import { VERSION } from "../version";
 
 const USAGE = `Usage: spantail mcp
@@ -38,14 +39,14 @@ export async function mcpCommand(
 	}
 
 	const server = new McpServer({ name: "spantail", version: VERSION });
-	registerSpantailTools(
-		server,
-		new SpantailClient({
-			baseUrl: connection.baseUrl,
-			token: connection.token,
-			client: "mcp",
-		}),
-	);
+	const client = new SpantailClient({
+		baseUrl: connection.baseUrl,
+		token: connection.token,
+		client: "mcp",
+	});
+	registerSpantailTools(server, client);
+	// File-based tools exist only here: the remote /mcp Worker has no filesystem.
+	registerStdioTools(server, client);
 	await server.connect(new StdioServerTransport());
 	return 0;
 }

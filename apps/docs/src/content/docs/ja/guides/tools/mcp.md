@@ -44,6 +44,7 @@ claude mcp add spantail -- spantail mcp
 | `list_workspaces` | ワークスペースを一覧（ID を解決するため最初に呼びます）。 |
 | `list_projects` | ワークスペース内のプロジェクトを一覧。 |
 | `log_work` | 作業記録を作成。 |
+| `log_work_batch` | 最大 100 件の作業記録を 1 回のアトミックなリクエストで作成（全件か 0 件か）。`externalId` 付きのエントリは重複せずアップサートされます。 |
 | `list_entries` | 作業記録を一覧（任意のフィルタ付き）。 |
 | `update_entry` | 自分の作業記録を更新。 |
 | `delete_entry` | 自分の作業記録を削除。 |
@@ -54,3 +55,13 @@ claude mcp add spantail -- spantail mcp
 | `preview_report` | テンプレート・スコープ・期間からレポートを保存せずに描画。 |
 | `create_report` | レポートを作成（名前を省略するとテンプレートの提案名を採用）。 |
 | `update_report` | 既存レポートを変更したフィールドで再描画（新しいバージョンを追加）。 |
+
+### stdio 専用ツール
+
+stdio サーバー（`spantail mcp`）は、ローカルのファイルシステムを読むツールを
+追加で登録します — リモートの `/mcp` エンドポイントはサーバー上で動くため、
+これらのツールは提供されません。
+
+| ツール | 動作 |
+|---|---|
+| `import_work_entries` | ローカルの JSONL ファイルから作業記録を一括インポート（形式と挙動は [`spantail entries import`](/ja/guides/tools/cli/) と同じ）。 |

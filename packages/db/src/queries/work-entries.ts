@@ -36,6 +36,88 @@ export async function createWorkEntry(
 	return row;
 }
 
+// D1 caps a query at 100 bound parameters; each work-entry row binds 12
+// columns (id + 11 fields; createdAt/updatedAt use SQL defaults), so a chunk
+// of 8 stays under the cap (96).
+const WORK_ENTRY_INSERT_CHUNK = 8;
+
+// The same cap applies to the ids of the ownership pre-check select.
+const WORK_ENTRY_ID_SELECT_CHUNK = 100;
+
+/** Insert row with a caller-controlled id (= externalId for idempotent import). */
+export type WorkEntryBatchRow = WorkEntryInsert & { id: string };
+
+/**
+ * Existing rows for the given ids, reduced to ownership fields. Backs the
+ * batch route's guard against client-supplied ids colliding with entries of
+ * another user or workspace.
+ */
+export async function getWorkEntryOwnersByIds(
+	db: Database,
+	ids: string[],
+): Promise<Array<Pick<WorkEntryRow, "id" | "workspaceId" | "userId">>> {
+	const owners: Array<Pick<WorkEntryRow, "id" | "workspaceId" | "userId">> = [];
+	for (let i = 0; i < ids.length; i += WORK_ENTRY_ID_SELECT_CHUNK) {
+		owners.push(
+			...(await db
+				.select({
+					id: workEntries.id,
+					workspaceId: workEntries.workspaceId,
+					userId: workEntries.userId,
+				})
+				.from(workEntries)
+				.where(
+					inArray(workEntries.id, ids.slice(i, i + WORK_ENTRY_ID_SELECT_CHUNK)),
+				)),
+		);
+	}
+	return owners;
+}
+
+/**
+ * Upserts all rows in one db.batch (D1's implicit transaction): any failure
+ * rolls back every chunk. A caller-supplied id is the import's externalId, so
+ * an id conflict means "the same imported entry, sent again" and updates the
+ * row in place. The setWhere guard keeps a row owned by another user or
+ * workspace untouched even if the route's ownership pre-check races. Callers
+ * must reject duplicate ids within `rows` beforehand — SQLite errors when one
+ * statement touches the same row twice.
+ */
+export async function createWorkEntriesBatch(
+	db: Database,
+	rows: WorkEntryBatchRow[],
+): Promise<void> {
+	const statements = [];
+	for (let i = 0; i < rows.length; i += WORK_ENTRY_INSERT_CHUNK) {
+		statements.push(
+			db
+				.insert(workEntries)
+				.values(rows.slice(i, i + WORK_ENTRY_INSERT_CHUNK))
+				.onConflictDoUpdate({
+					target: workEntries.id,
+					set: {
+						projectId: sql`excluded.project_id`,
+						entryDate: sql`excluded.entry_date`,
+						durationMinutes: sql`excluded.duration_minutes`,
+						startedAt: sql`excluded.started_at`,
+						endedAt: sql`excluded.ended_at`,
+						description: sql`excluded.description`,
+						note: sql`excluded.note`,
+						tags: sql`excluded.tags`,
+						source: sql`excluded.source`,
+						// $onUpdate only fires on update(); the upsert path sets it
+						// explicitly (and binds no parameter).
+						updatedAt: sql`(cast(unixepoch('subsecond') * 1000 as integer))`,
+					},
+					setWhere: sql`${workEntries.workspaceId} = excluded.workspace_id AND ${workEntries.userId} = excluded.user_id`,
+				}),
+		);
+	}
+	const [first, ...rest] = statements;
+	if (!first) return;
+	await db.batch([first, ...rest]);
+}
+
 export async function getWorkEntryById(
 	db: Database,
 	id: string,

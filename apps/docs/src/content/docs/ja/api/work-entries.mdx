@@ -143,6 +143,87 @@ curl -X POST "https://<your-instance>/api/v1/work-entries" \
 `201 Created` を返します。CLI・MCP クライアントは `X-Spantail-Client: cli|mcp` を送るため、エントリの
 `source` がチャネルを反映します。直接の呼び出しは `api` が既定です。
 
+## 作業エントリの一括作成
+
+`POST /api/v1/work-entries/batch` <Badge text="scope: write" variant="caution" />
+
+1 つのワークスペースに対して最大 **1000** 件のエントリを、単一のアトミックな
+リクエストで一括登録します — 全件書き込まれるか、1 件も書き込まれないかの
+どちらかです（1 件でも不正なエントリがあればバッチ全体が `400` で拒否されます）。
+既存システムからのデータ移行のために設計されており、
+[CLI の `entries import`](/ja/guides/tools/cli/) は JSONL ファイルを読んで
+このサイズのリクエストに自動分割します。レート制限はクレデンシャル単位で、
+エントリ数にかかわらず 1 リクエスト = 1 トークンを消費します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `workspaceId` | string | はい | バッチ内すべてのエントリの対象ワークスペース。 |
+| `entries` | object[] | はい | 1〜1000 件のエントリ。 |
+
+各エントリのフィールドは単発作成と同じですが、次の点が異なります。
+
+- `workspaceId` はトップレベルに置き、エントリごとには指定しません。
+- `entryDate` は**必須**です — 移行データは日付を明示する必要があり、
+  「省略時は今日」の既定は適用されません。
+- `externalId`（string、任意）— 冪等キー。下記を参照。
+
+**`externalId` の意味**
+
+通常は `externalId` を指定しません。移行元システムの ID を保持する必要が
+ある場合 — 部分的な移行を安全に再開したい場合や、外部連携でレコードと
+Spantail エントリの対応付けが必要な場合 — にのみ指定します。
+
+- `externalId` はそのままエントリの `id` になるため、旧 ID でエントリを
+  直接参照できます（`GET /api/v1/work-entries/:id`）。
+- 同じ `externalId` のエントリを再送すると、重複作成ではなく**その場で更新**
+  されます。`externalId` のないエントリは素の insert で、再送すると重複します。
+- インスタンス全体でユニークである必要があります（主キーのため）。移行元の
+  ID が弱い場合（例: 数値のみ）はプレフィックスを付けてください: `legacy-123`。
+- 使える文字は `A-Z a-z 0-9 . _ : -`、最大 200 文字です（URL に現れるため）。
+- 1 リクエスト内で `externalId` が重複していると `400` になります。他の
+  ユーザーや他のワークスペースのエントリが既に使っている `externalId` は
+  `409` で拒否され、何も書き込まれません。
+
+エントリの日付は `entryDate` の値がそのまま使われます — インポータは
+タイムゾーン変換を行いません。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/work-entries/batch" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspaceId": "wrk_demo",
+    "entries": [
+      {
+        "projectId": "prj_site",
+        "entryDate": "2024-07-15",
+        "durationMinutes": 90,
+        "description": "オンボーディングフローをレビュー",
+        "externalId": "legacy-4711"
+      },
+      {
+        "projectId": "prj_site",
+        "entryDate": "2024-07-16",
+        "durationMinutes": 60,
+        "description": "サインアップのバリデーションを修正"
+      }
+    ]
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "count": 2 }
+```
+</TabItem>
+</Tabs>
+
+処理されたエントリ数（作成または更新）とともに `201 Created` を返します。
+
 ## 作業エントリの取得
 
 `GET /api/v1/work-entries/:id` <Badge text="scope: read" variant="note" />

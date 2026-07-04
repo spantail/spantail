@@ -21,6 +21,7 @@ function makeStub() {
 			id: "e1",
 			entryDate: "2026-06-11",
 		}),
+		createWorkEntriesBatch: record("createWorkEntriesBatch", { count: 2 }),
 		listWorkEntries: record("listWorkEntries", []),
 		updateWorkEntry: record("updateWorkEntry", { id: "e1" }),
 		deleteWorkEntry: record("deleteWorkEntry", undefined),
@@ -66,7 +67,7 @@ async function connect(client: SpantailClient) {
 	return mcpClient;
 }
 
-it("exposes the thirteen spantail tools", async () => {
+it("exposes the fourteen spantail tools", async () => {
 	const { stub } = makeStub();
 	const client = await connect(stub);
 
@@ -81,11 +82,59 @@ it("exposes the thirteen spantail tools", async () => {
 		"list_reports",
 		"list_workspaces",
 		"log_work",
+		"log_work_batch",
 		"preview_report",
 		"search",
 		"update_entry",
 		"update_report",
 	]);
+});
+
+it("routes log_work_batch to the api client and validates entries", async () => {
+	const { stub, calls } = makeStub();
+	const client = await connect(stub);
+
+	const entries = [
+		{
+			projectId: "p1",
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "migrated a",
+			externalId: "legacy-1",
+		},
+		{
+			projectId: "p1",
+			entryDate: "2026-06-02",
+			durationMinutes: 45,
+			description: "migrated b",
+		},
+	];
+	const result = await client.callTool({
+		name: "log_work_batch",
+		arguments: { workspaceId: "ws1", entries },
+	});
+
+	expect(calls.at(-1)?.method).toBe("createWorkEntriesBatch");
+	expect(calls.at(-1)?.args[0]).toMatchObject({
+		workspaceId: "ws1",
+		entries: [
+			expect.objectContaining({ externalId: "legacy-1" }),
+			expect.objectContaining({ description: "migrated b" }),
+		],
+	});
+	const content = result.content as Array<{ type: string; text: string }>;
+	expect(JSON.parse(content[0]?.text ?? "")).toEqual({ count: 2 });
+	expect(result.isError).toBeFalsy();
+
+	// entryDate is required per entry — the tool schema rejects it up front.
+	const invalid = await client.callTool({
+		name: "log_work_batch",
+		arguments: {
+			workspaceId: "ws1",
+			entries: [{ projectId: "p1", durationMinutes: 30, description: "x" }],
+		},
+	});
+	expect(invalid.isError).toBe(true);
 });
 
 it("routes get_report to the api client", async () => {

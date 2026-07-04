@@ -51,6 +51,21 @@ seed 用 YAML は [`db/seed/`](./db/seed) にあります。**宣言的なデー
 `report-routes.yaml` は送信者と、まとめる対象のワークスペース（先頭がタイム
 ゾーン・言語のアンカー）だけを宣言します。受信者はメンバーシップから導出されます。
 
+## 一括インポートの検証データ
+
+`pnpm generate-import demo-ja` が `import/work-entries.jsonl`（git 管理外）を
+生成します。最初のワークスペース（あづみ野）向けの平日エントリ 3 年分で、
+`spantail entries import` が読み込む形式です。
+
+```sh
+pnpm generate-import demo-ja
+spantail entries import examples/demo-ja/import/work-entries.jsonl --workspace azumino
+```
+
+生成される行には `externalId` を付けていないため、同じファイルを再インポート
+するとエントリは重複します（素の insert 経路の仕様どおり）。冪等な再インポート
+を試す場合は、手作りのファイルに `externalId` を付けてください。
+
 ## ファイル
 
 `db/seed/` には関心ごとに 1 つずつ YAML があります: `users` / `workspaces` /

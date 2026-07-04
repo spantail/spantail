@@ -46,6 +46,52 @@ export type CreateWorkEntryInputData = z.input<
 	typeof createWorkEntryInputSchema
 >;
 
+/**
+ * D1 caps a query at 100 bound parameters; a work-entry row binds 12 columns,
+ * so inserts are chunked at 8 rows (96 params) per statement. 1000 entries =
+ * 125 statements in one db.batch, well inside D1's per-invocation query
+ * budget. Clients importing more auto-split into multiple requests.
+ */
+export const MAX_WORK_ENTRIES_PER_BATCH = 1000;
+
+// Becomes the entry's primary key (and thus appears in /:id URLs), so the
+// charset is restricted to URL-safe id characters.
+export const externalIdSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,200}$/);
+
+// The single-create input minus workspaceId (lifted to the request top level),
+// with entryDate required — a migration must state dates explicitly — and an
+// optional externalId as the idempotency key (same id ⇒ upsert, not duplicate).
+export const batchWorkEntryItemSchema = createWorkEntryInputSchema
+	.omit({ workspaceId: true })
+	.extend({
+		entryDate: localDateSchema,
+		externalId: externalIdSchema.optional(),
+	});
+export type BatchWorkEntryItem = z.infer<typeof batchWorkEntryItemSchema>;
+export type BatchWorkEntryItemData = z.input<typeof batchWorkEntryItemSchema>;
+
+export const createWorkEntriesBatchInputSchema = z.object({
+	workspaceId: z.string(),
+	entries: z
+		.array(batchWorkEntryItemSchema)
+		.min(1)
+		.max(MAX_WORK_ENTRIES_PER_BATCH),
+});
+export type CreateWorkEntriesBatchInput = z.infer<
+	typeof createWorkEntriesBatchInputSchema
+>;
+export type CreateWorkEntriesBatchInputData = z.input<
+	typeof createWorkEntriesBatchInputSchema
+>;
+
+export const createWorkEntriesBatchResultSchema = z.object({
+	// Entries processed (created or updated).
+	count: z.number().int().min(1),
+});
+export type CreateWorkEntriesBatchResult = z.infer<
+	typeof createWorkEntriesBatchResultSchema
+>;
+
 export const updateWorkEntryInputSchema = z
 	.object({
 		// Nullable so an entry orphaned by a project deletion can be edited

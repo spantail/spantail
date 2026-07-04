@@ -24,6 +24,7 @@ pnpm db:generate        # drizzle-kit generate (after editing packages/db/src/sc
 pnpm db:migrate:local   # apply migrations to local D1
 pnpm db:migrate:remote  # apply migrations to remote D1
 pnpm db:seed [name]     # seed local D1 from examples/<name>/db/seed (default: demo; see packages/db/seed)
+pnpm generate-import [name] # write examples/<name>/import/work-entries.jsonl (gitignored) for `spantail entries import`
 pnpm db:drop            # wipe local D1 state
 pnpm db:reset           # db:drop → db:migrate:local (schema only, no seed; local only)
 pnpm deploy             # wrangler deploy (apps/web)

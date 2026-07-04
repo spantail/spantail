@@ -561,6 +561,346 @@ it("lets an entry orphaned by project deletion be edited without a project", asy
 	expect(body.description).toBe("Edited while unassigned");
 });
 
+// --- POST /work-entries/batch (bulk import) -------------------------------
+
+type BatchEntry = {
+	projectId: string;
+	entryDate: string;
+	durationMinutes: number;
+	description: string;
+	externalId?: string;
+	note?: string;
+	tags?: string[];
+	startedAt?: string;
+	endedAt?: string;
+};
+
+const postBatch = (
+	cookie: string,
+	workspaceId: string,
+	entries: BatchEntry[],
+) =>
+	apiJson(
+		"POST",
+		"/api/v1/work-entries/batch",
+		{ workspaceId, entries },
+		cookie,
+	);
+
+const listEntries = async (cookie: string, workspaceId: string) =>
+	(await (
+		await apiGet(
+			`/api/v1/work-entries?workspaceId=${workspaceId}&limit=200`,
+			cookie,
+		)
+	).json()) as Array<{
+		id: string;
+		description: string;
+		entryDate: string;
+		tags: string[];
+		note: string | null;
+	}>;
+
+it("bulk-inserts entries across projects and insert chunks atomically", async () => {
+	const { admin, ws, project } = await setup();
+	const p2 = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "ops", name: "Ops" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	// 20 entries cross the 8-row insert-chunk boundary (3 statements in one
+	// D1 batch) and span two projects.
+	const entries: BatchEntry[] = Array.from({ length: 20 }, (_, i) => ({
+		projectId: i % 2 === 0 ? project.id : p2.id,
+		entryDate: `2026-06-${String((i % 28) + 1).padStart(2, "0")}`,
+		durationMinutes: 30 + i,
+		description: `imported ${i}`,
+		note: i === 0 ? "with a note" : undefined,
+		tags: i === 0 ? ["migrated"] : undefined,
+	}));
+	const res = await postBatch(admin, ws.id, entries);
+	expect(res.status).toBe(201);
+	expect(await res.json()).toEqual({ count: 20 });
+
+	const listed = await listEntries(admin, ws.id);
+	expect(listed).toHaveLength(20);
+	const first = listed.find((e) => e.description === "imported 0");
+	expect(first?.tags).toEqual(["migrated"]);
+	expect(first?.note).toBe("with a note");
+});
+
+it("upserts entries by externalId instead of duplicating", async () => {
+	const { admin, ws, project } = await setup();
+	const entries: BatchEntry[] = Array.from({ length: 10 }, (_, i) => ({
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 60,
+		description: `v1 ${i}`,
+		externalId: `legacy-${i}`,
+	}));
+	expect((await postBatch(admin, ws.id, entries)).status).toBe(201);
+
+	// The externalId is the entry id, addressable directly.
+	const before = await apiGet("/api/v1/work-entries/legacy-3", admin);
+	expect(before.status).toBe(200);
+	const beforeBody = (await before.json()) as {
+		id: string;
+		createdAt: string;
+	};
+	expect(beforeBody.id).toBe("legacy-3");
+
+	// Re-send the same batch with changed content: same count, no duplicates,
+	// content updated, identity preserved.
+	const res = await postBatch(
+		admin,
+		ws.id,
+		entries.map((e) => ({
+			...e,
+			description: e.description.replace("v1", "v2"),
+		})),
+	);
+	expect(res.status).toBe(201);
+	const listed = await listEntries(admin, ws.id);
+	expect(listed).toHaveLength(10);
+	expect(listed.every((e) => e.description.startsWith("v2"))).toBe(true);
+
+	const after = (await (
+		await apiGet("/api/v1/work-entries/legacy-3", admin)
+	).json()) as { createdAt: string; description: string };
+	expect(after.description).toBe("v2 3");
+	expect(after.createdAt).toBe(beforeBody.createdAt);
+
+	// Without an externalId a re-sent entry is a plain insert and duplicates.
+	const plain: BatchEntry = {
+		projectId: project.id,
+		entryDate: "2026-06-02",
+		durationMinutes: 15,
+		description: "no id",
+	};
+	await postBatch(admin, ws.id, [plain]);
+	await postBatch(admin, ws.id, [plain]);
+	expect(
+		(await listEntries(admin, ws.id)).filter((e) => e.description === "no id"),
+	).toHaveLength(2);
+});
+
+it("rejects an externalId owned by another user or workspace with 409", async () => {
+	const { admin, member, memberId, ws, project } = await setup();
+	const mine: BatchEntry = {
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 30,
+		description: "member's entry",
+		externalId: "legacy-shared",
+	};
+	expect((await postBatch(member, ws.id, [mine])).status).toBe(201);
+
+	// Another user in the same workspace cannot claim or overwrite that id;
+	// the whole batch is rejected (atomic), including unrelated entries.
+	const res = await postBatch(admin, ws.id, [
+		{ ...mine, description: "hijack attempt" },
+		{
+			projectId: project.id,
+			entryDate: "2026-06-02",
+			durationMinutes: 10,
+			description: "innocent bystander",
+		},
+	]);
+	expect(res.status).toBe(409);
+	const listed = await listEntries(admin, ws.id);
+	expect(listed).toHaveLength(1);
+	expect(listed[0]?.description).toBe("member's entry");
+
+	// Same user, different workspace: the id is still taken.
+	const otherWs = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "other", name: "Other" },
+			admin,
+		)
+	).json()) as { id: string };
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${otherWs.id}/members`,
+		{ email: "member@example.com" },
+		admin,
+	);
+	const otherProject = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${otherWs.id}/projects`,
+			{ slug: "p", name: "P", memberUserIds: [memberId] },
+			admin,
+		)
+	).json()) as { id: string };
+	expect(
+		(
+			await postBatch(member, otherWs.id, [
+				{ ...mine, projectId: otherProject.id },
+			])
+		).status,
+	).toBe(409);
+});
+
+it("rejects duplicate and malformed externalIds in one batch", async () => {
+	const { admin, ws, project } = await setup();
+	const entry = (externalId: string): BatchEntry => ({
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 30,
+		description: "x",
+		externalId,
+	});
+	expect(
+		(await postBatch(admin, ws.id, [entry("dup"), entry("dup")])).status,
+	).toBe(400);
+	expect((await postBatch(admin, ws.id, [entry("a/b")])).status).toBe(400);
+	expect((await postBatch(admin, ws.id, [entry("a b")])).status).toBe(400);
+	expect(await listEntries(admin, ws.id)).toHaveLength(0);
+});
+
+it("writes nothing when any batch entry is invalid", async () => {
+	const { admin, ws, project } = await setup();
+	const otherWs = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "other", name: "Other" },
+			admin,
+		)
+	).json()) as { id: string };
+	const foreignProject = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${otherWs.id}/projects`,
+			{ slug: "p", name: "P" },
+			admin,
+		)
+	).json()) as { id: string };
+
+	const good: BatchEntry[] = Array.from({ length: 19 }, (_, i) => ({
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 30,
+		description: `ok ${i}`,
+	}));
+
+	// One project from another workspace poisons the whole batch.
+	expect(
+		(
+			await postBatch(admin, ws.id, [
+				...good,
+				{ ...(good[0] as BatchEntry), projectId: foreignProject.id },
+			])
+		).status,
+	).toBe(400);
+
+	// entryDate is required per entry — no default-to-today in bulk.
+	const missingDate = { ...(good[0] as BatchEntry) } as Record<string, unknown>;
+	delete missingDate.entryDate;
+	const res = await apiJson(
+		"POST",
+		"/api/v1/work-entries/batch",
+		{ workspaceId: ws.id, entries: [...good, missingDate] },
+		admin,
+	);
+	expect(res.status).toBe(400);
+
+	expect(await listEntries(admin, ws.id)).toHaveLength(0);
+});
+
+it("bounds the batch size", async () => {
+	const { admin, ws, project } = await setup();
+	expect((await postBatch(admin, ws.id, [])).status).toBe(400);
+	const tooMany: BatchEntry[] = Array.from({ length: 1001 }, () => ({
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 1,
+		description: "x",
+	}));
+	expect((await postBatch(admin, ws.id, tooMany)).status).toBe(400);
+	expect(await listEntries(admin, ws.id)).toHaveLength(0);
+});
+
+it("enforces workspace membership, project access, and write scope on batch", async () => {
+	const { admin, member, ws, project } = await setup();
+
+	// Non-member: the workspace's existence is hidden.
+	const outsider = await signUpUser("Outsider3", "out3@example.com");
+	expect(
+		(
+			await postBatch(outsider, ws.id, [
+				{
+					projectId: project.id,
+					entryDate: "2026-06-01",
+					durationMinutes: 30,
+					description: "x",
+				},
+			])
+		).status,
+	).toBe(404);
+
+	// A member without access to one project in the batch: 403, nothing written.
+	const restricted = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "private", name: "Private" },
+			admin,
+		)
+	).json()) as { id: string };
+	const res = await postBatch(member, ws.id, [
+		{
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "allowed",
+		},
+		{
+			projectId: restricted.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "denied",
+		},
+	]);
+	expect(res.status).toBe(403);
+	expect(await listEntries(admin, ws.id)).toHaveLength(0);
+
+	// A read-only token lacks the write scope.
+	const { token } = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/tokens",
+			{ name: "ro", scopes: ["read"] },
+			admin,
+		)
+	).json()) as { token: string };
+	const scoped = await appFetch("/api/v1/work-entries/batch", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			authorization: `Bearer ${token}`,
+		},
+		body: JSON.stringify({
+			workspaceId: ws.id,
+			entries: [
+				{
+					projectId: project.id,
+					entryDate: "2026-06-01",
+					durationMinutes: 30,
+					description: "x",
+				},
+			],
+		}),
+	});
+	expect(scoped.status).toBe(403);
+});
+
 it("rejects unassigning a live entry from its project", async () => {
 	const { admin, ws, project } = await setup();
 	const entry = (await (

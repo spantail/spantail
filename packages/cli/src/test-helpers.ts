@@ -52,6 +52,8 @@ export interface FakeRoute {
 	path: string;
 	status?: number;
 	body: unknown;
+	/** Consume this route after one match, so sequential calls can differ. */
+	once?: boolean;
 }
 
 export interface FakeCall {
@@ -64,6 +66,7 @@ export interface FakeCall {
 /** A fetch stub serving canned /api/v1 responses and recording calls. */
 export function fakeApi(routes: FakeRoute[]) {
 	const calls: FakeCall[] = [];
+	const consumed = new Set<FakeRoute>();
 	const fetchImpl = (async (input: unknown, init?: RequestInit) => {
 		const url = new URL(String(input));
 		const method = init?.method ?? "GET";
@@ -77,8 +80,10 @@ export function fakeApi(routes: FakeRoute[]) {
 		const route = routes.find(
 			(candidate) =>
 				(candidate.method ?? "GET") === method &&
-				url.pathname === `/api/v1${candidate.path}`,
+				url.pathname === `/api/v1${candidate.path}` &&
+				!consumed.has(candidate),
 		);
+		if (route?.once) consumed.add(route);
 		if (!route) {
 			return new Response(
 				JSON.stringify({

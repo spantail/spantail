@@ -48,6 +48,7 @@ token as a Bearer credential instead.
 | `list_workspaces` | List your workspaces (call first to resolve ids). |
 | `list_projects` | List the projects in a workspace. |
 | `log_work` | Create a work entry. |
+| `log_work_batch` | Create up to 100 work entries in one atomic request (all or none). Entries with an `externalId` upsert instead of duplicating. |
 | `list_entries` | List work entries, with optional filters. |
 | `update_entry` | Update one of your work entries. |
 | `delete_entry` | Delete one of your work entries. |
@@ -58,3 +59,13 @@ token as a Bearer credential instead.
 | `preview_report` | Render a report from a template, scope, and period without saving it. |
 | `create_report` | Create a report; adopts the template's suggested name when none is given. |
 | `update_report` | Re-render an existing report with changed fields (new version). |
+
+### Stdio-only tools
+
+The stdio server (`spantail mcp`) additionally registers tools that read the
+local filesystem — the remote `/mcp` endpoint runs on the server and never
+offers them:
+
+| Tool | What it does |
+|---|---|
+| `import_work_entries` | Bulk-import work entries from a local JSONL file (same format and semantics as [`spantail entries import`](/guides/tools/cli/)). |

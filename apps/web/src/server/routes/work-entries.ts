@@ -1,4 +1,5 @@
 import {
+	createWorkEntriesBatchInputSchema,
 	createWorkEntryInputSchema,
 	listWorkEntriesQuerySchema,
 	resolveUserTimezone,
@@ -9,10 +10,12 @@ import {
 	workEntryTagsQuerySchema,
 } from "@spantail/core";
 import {
+	createWorkEntriesBatch,
 	createWorkEntry,
 	deleteWorkEntry,
 	getProjectById,
 	getWorkEntryById,
+	getWorkEntryOwnersByIds,
 	getWorkEntryStats,
 	isProjectMember,
 	listWorkEntries,
@@ -128,6 +131,81 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			workspaceId: input.workspaceId,
 		});
 		return c.json(entry, 201);
+	})
+	// Bulk import for data migration: one workspace per request, all entries
+	// inserted atomically (one D1 batch), entryDate always explicit. An entry
+	// with an externalId uses it as its primary key, so re-sending the same
+	// batch upserts instead of duplicating.
+	.post("/batch", ingestRateLimit, async (c) => {
+		const { user } = requireScope(c, "write");
+		const input = validate(
+			createWorkEntriesBatchInputSchema,
+			await c.req.json(),
+		);
+		const { membership } = await requireWorkspaceAccess(c, input.workspaceId);
+
+		// One statement must not touch the same row twice (SQLite errors), so
+		// duplicate externalIds within a request are rejected up front.
+		const externalIds = input.entries
+			.map((e) => e.externalId)
+			.filter((id): id is string => id !== undefined);
+		if (new Set(externalIds).size !== externalIds.length) {
+			throw new AppError(
+				"bad_request",
+				"Duplicate externalId values in one batch",
+			);
+		}
+
+		// Permission checks once per distinct project, not per row. Capped so a
+		// batch cannot exhaust the D1 per-invocation query budget.
+		const projectIds = [...new Set(input.entries.map((e) => e.projectId))];
+		if (projectIds.length > 50) {
+			throw new AppError(
+				"bad_request",
+				"Too many distinct projects in one batch (max 50)",
+			);
+		}
+		for (const projectId of projectIds) {
+			await requireProjectInWorkspace(c, projectId, input.workspaceId);
+			await requireProjectAccess(c, projectId, membership, user.id);
+		}
+
+		// Client-supplied primary keys: reject any externalId that already exists
+		// as another user's or another workspace's entry (409, nothing written).
+		if (externalIds.length > 0) {
+			const owners = await getWorkEntryOwnersByIds(c.var.db, externalIds);
+			const foreign = owners.find(
+				(o) => o.workspaceId !== input.workspaceId || o.userId !== user.id,
+			);
+			if (foreign) {
+				throw new AppError(
+					"conflict",
+					`externalId "${foreign.id}" already exists and belongs to another user or workspace`,
+				);
+			}
+		}
+
+		const source = resolveSource(c);
+		const rows = input.entries.map((e) => ({
+			id: e.externalId ?? crypto.randomUUID(),
+			workspaceId: input.workspaceId,
+			projectId: e.projectId,
+			userId: user.id,
+			entryDate: e.entryDate,
+			durationMinutes: e.durationMinutes,
+			startedAt: e.startedAt ? new Date(e.startedAt) : null,
+			endedAt: e.endedAt ? new Date(e.endedAt) : null,
+			description: e.description,
+			note: e.note ?? null,
+			tags: e.tags,
+			source,
+		}));
+		await createWorkEntriesBatch(c.var.db, rows);
+		publishToWorkspace(c, {
+			type: "work-entry",
+			workspaceId: input.workspaceId,
+		});
+		return c.json({ count: rows.length }, 201);
 	})
 	// Registered before "/:id" so "stats" is not captured as an entry id.
 	.get("/stats", async (c) => {

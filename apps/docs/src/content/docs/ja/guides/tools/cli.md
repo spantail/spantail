@@ -69,6 +69,32 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 | `spantail entries delete <id>` | 自分の記録を削除（`--yes` がなければ確認）。 |
 | `spantail entries stats` | 合計と日別／プロジェクト別／ユーザー別の集計。 |
 | `spantail entries tags` | スコープ内のタグを 1 行 1 つで一覧。 |
+| `spantail entries import <file.jsonl>` | JSONL ファイルから作業記録を一括インポート（`--workspace`、`--project`、`--dry-run`）。 |
+
+#### 一括インポート（JSONL）
+
+`spantail entries import` は、別のシステムから作業記録を移行するための
+コマンドです。ファイルは 1 行につき 1 つの JSON オブジェクトです。
+
+```json
+{"project":"website","entryDate":"2024-07-15","durationMinutes":90,"description":"オンボーディングフローをレビュー","tags":["review"]}
+```
+
+各行のフィールド: `entryDate`（必須 — 日付は値のまま使われ、タイムゾーン
+変換は行われません）、`durationMinutes`、`description`、および任意の
+`project`（スラッグ。ない行は `--project` を使用）、`note`、`tags`、
+`startedAt`、`endedAt`、`externalId`。
+
+まずファイル全体を検証します — 不正な行が 1 つでもあれば、何も送信する前に
+行番号付きで失敗します。その後、エントリは 1000 件ずつのアトミックなバッチで
+送信されます（各リクエストは全件成功か全件失敗）。`--dry-run` を使うと、
+インポートせずに検証とプロジェクトスラッグの解決だけを行えます。
+
+`externalId` は通常は省略します。移行元システムの ID を保持したい場合に
+指定すると、その値がエントリの id になり（インスタンス全体でユニーク、
+使える文字は `A-Za-z0-9._:-`、弱い ID には `legacy-123` のようにプレフィックス
+を付けてください）、同じファイルを再インポートしたときに該当エントリは
+重複ではなく更新になります。`externalId` のない行は再インポートで重複します。
 
 ### レポート
 

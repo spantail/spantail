@@ -21,6 +21,8 @@ import type {
 	CreateReportTemplateInput,
 	CreateTokenInput,
 	CreateUserInputData,
+	CreateWorkEntriesBatchInputData,
+	CreateWorkEntriesBatchResult,
 	CreateWorkEntryInputData,
 	CreateWorkspaceInput,
 	EmailEnabled,
@@ -399,6 +401,16 @@ export class SpantailClient {
 
 	createWorkEntry(input: CreateWorkEntryInputData): Promise<WorkEntry> {
 		return this.request("POST", "/work-entries", { body: input });
+	}
+
+	/**
+	 * Atomic bulk insert for data migration: all entries or none are created.
+	 * Entries carrying an externalId upsert instead of duplicating on re-send.
+	 */
+	createWorkEntriesBatch(
+		input: CreateWorkEntriesBatchInputData,
+	): Promise<CreateWorkEntriesBatchResult> {
+		return this.request("POST", "/work-entries/batch", { body: input });
 	}
 
 	getWorkEntry(id: string): Promise<WorkEntry> {
