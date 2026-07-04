@@ -16,6 +16,10 @@ one of them:
 - `POST /agent-events` — the agent posts raw per-turn telemetry; the server rolls it up into
   the session entry (e.g. Claude Code via a Stop hook).
 
+An events-fed session can additionally be **finalized** (`POST /agent-events/finalize`) with
+closing facts when the session ends — this supplements the entry without touching the
+events-derived rollup.
+
 Reads go through the regular user credentials (session or PAT) and follow the project ACL.
 
 <Aside type="danger">
@@ -39,6 +43,7 @@ belongs. A disabled or archived agent's token is rejected.
 | `entryDate` | string | Local date `YYYY-MM-DD`, derived from `startedAt` in the viewer's timezone at read time. |
 | `durationMinutes` | integer | Session duration in minutes. |
 | `usage` | object \| null | Token-usage totals (see below), or `null` when the source can't expose them. |
+| `context` | object \| null | Non-usage session context (see below), or `null` when none was captured. |
 | `description` | string \| null | Optional short summary (≤ 2000 chars). |
 | `startedAt` | string \| null | ISO 8601 session start. |
 | `endedAt` | string \| null | ISO 8601 session end. |
@@ -56,7 +61,18 @@ so only `totalTokens` is required:
 | `cacheCreationTokens` | integer | no | Cache-creation tokens. |
 | `cacheReadTokens` | integer | no | Cache-read tokens. |
 | `model` | string | no | Model name (≤ 100 chars). |
-| `costUsd` | number | no | Cost in USD, only when the source provides it. |
+| `costUsd` | number | no | Cost in USD, only when the source provides it (summed from per-event costs on the events path). |
+
+The `context` object carries distinct non-usage facets of the session. Each facet is a list
+of up to 20 strings (each ≤ 200 chars). On the events path the server derives `models`,
+`branches`, and `repositories` from the events; `refs` always comes from the client:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `models` | string[] | Distinct models seen in the session, in first-seen order. |
+| `branches` | string[] | Distinct git branches (from the `vcs.ref.head.name` event attribute). |
+| `repositories` | string[] | Distinct repository URLs (from the `vcs.repository.url.full` event attribute). |
+| `refs` | string[] | Opaque external references extracted by the client (e.g. `github:owner/repo#123`). The server never interprets the format. |
 
 ## Ingest a session summary
 
@@ -81,6 +97,7 @@ it is derived from `startedAt` at read time. When `startedAt` is omitted it fall
 | `workspaceId` | string | no | Target workspace. Defaults to the token's bound workspace. |
 | `projectId` | string | no | Target project (must belong to the workspace). Omit for workspace-level work. |
 | `usage` | object | no | Token-usage totals (see above). |
+| `context` | object | no | Non-usage session context (see above); the summary path supplies every facet itself. |
 | `description` | string | no | Short summary (≤ 2000 chars). |
 | `startedAt` | string | no | ISO 8601 session start. |
 | `endedAt` | string | no | ISO 8601 session end (must not precede `startedAt`). |
@@ -113,6 +130,7 @@ curl -X POST "https://<your-instance>/api/v1/agent-entries" \
   "sessionId": "sess_8f21",
   "durationMinutes": 42,
   "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+  "context": null,
   "description": "Refactored the auth middleware",
   "startedAt": "2026-06-28T09:00:00.000Z",
   "endedAt": "2026-06-28T09:42:00.000Z",
@@ -160,6 +178,20 @@ Each **event** is one assistant turn (one API response, one usage block):
 | `timestamp` | string | yes | ISO 8601 (UTC) time of the message. |
 | `usage` | object | yes | The agent's native usage object, stored verbatim. |
 | `model` | string | no | Model name (≤ 100 chars). |
+| `operation` | string | no | What the event records, in [`gen_ai.operation.name`](https://github.com/open-telemetry/semantic-conventions-genai) terms. Defaults to `chat` (one inference turn). |
+| `costUsd` | number | no | Cost of this turn in USD, when the source provides it. Summed into the session's `usage.costUsd`. |
+| `attributes` | object | no | Non-usage metadata: up to 20 string/number/boolean values (strings ≤ 500 chars), keyed by OTel attribute names where one exists. |
+
+Recommended `attributes` keys — the server validates bounds, not names, so anything within
+the limits is stored; these are the keys it aggregates into the entry's `context`:
+
+| Key | Meaning |
+| --- | --- |
+| `vcs.ref.head.name` | Git branch the agent worked on. |
+| `vcs.repository.url.full` | Repository URL (e.g. from `git remote get-url origin`). |
+| `process.working_directory` | Working directory of the session. |
+| `app.version` | Agent client version. |
+| `request.id` | Provider request id, for traceability. |
 
 <Tabs>
 <TabItem label="curl">
@@ -175,13 +207,15 @@ curl -X POST "https://<your-instance>/api/v1/agent-events" \
         "sourceId": "msg_01a",
         "timestamp": "2026-06-28T09:00:00.000Z",
         "model": "claude-opus-4",
-        "usage": { "input_tokens": 8000, "output_tokens": 3200 }
+        "usage": { "input_tokens": 8000, "output_tokens": 3200 },
+        "attributes": { "vcs.ref.head.name": "feature/auth-refactor" }
       },
       {
         "sourceId": "msg_01b",
         "timestamp": "2026-06-28T09:12:00.000Z",
         "model": "claude-opus-4",
-        "usage": { "input_tokens": 4000, "output_tokens": 3200 }
+        "usage": { "input_tokens": 4000, "output_tokens": 3200 },
+        "attributes": { "vcs.ref.head.name": "feature/auth-refactor" }
       }
     ]
   }'
@@ -198,6 +232,7 @@ curl -X POST "https://<your-instance>/api/v1/agent-events" \
   "sessionId": "sess_8f21",
   "durationMinutes": 12,
   "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
+  "context": { "models": ["claude-opus-4"], "branches": ["feature/auth-refactor"] },
   "description": null,
   "startedAt": "2026-06-28T09:00:00.000Z",
   "endedAt": "2026-06-28T09:12:00.000Z",
@@ -208,6 +243,43 @@ curl -X POST "https://<your-instance>/api/v1/agent-events" \
 ```
 </TabItem>
 </Tabs>
+
+## Finalize a session
+
+`POST /api/v1/agent-events/finalize` <Badge text="agent token" variant="danger" />
+
+Supplements an **events-fed** session with closing facts when it ends (e.g. from Claude
+Code's SessionEnd hook): the wall-clock end, a summary description, and external references.
+The usage rollup stays derived from events — a finalize never changes it, and a late event
+re-post never erases the finalized facts. `endedAt` never moves the entry backward: it is
+clamped so the session cannot end before it started or earlier than already recorded.
+
+Finalizing is best-effort: if the session has no entry yet (its events never arrived), the
+request returns `404` and the client may simply ignore it.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `sessionId` | string | yes | External session id (1–200 chars). |
+| `workspaceId` | string | no | Target workspace. Defaults to the token's bound workspace. |
+| `endedAt` | string | no | ISO 8601 wall-clock session end. |
+| `description` | string | no | Session summary (≤ 2000 chars). |
+| `context` | object | no | Only the `refs` facet — the other facets are server-derived from events and cannot be overridden here. |
+
+```bash
+curl -X POST "https://<your-instance>/api/v1/agent-events/finalize" \
+  -H "Authorization: Bearer spantail_aat_youragenttoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "sess_8f21",
+    "endedAt": "2026-06-28T09:15:00.000Z",
+    "description": "Refactored the auth middleware",
+    "context": { "refs": ["github:acme/site#128"] }
+  }'
+```
+
+The response is the updated agent entry, in the same shape as the ingest responses.
 
 ## List agent entries
 
