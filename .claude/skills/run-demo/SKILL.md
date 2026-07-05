@@ -54,8 +54,10 @@ pnpm dev                     # Vite + Worker on http://localhost:5173
   (Alice) is the instance admin; other users are plain members.
 - **Instance feature flags** (email, social login, agents, realtime) live in
   the `instance_settings` singleton row: flip them at `/settings/features` as
-  the instance admin, or directly in D1 (see below). OAuth screenshots only
-  need the flag — the buttons render without provider credentials.
+  the instance admin, or directly in D1 (see below). Social-login buttons
+  render only when the flag is on AND the provider's client id/secret are set
+  in `apps/web/.dev.vars` (blank in `.dev.vars.example`) — dummy values are
+  enough to show the buttons, though not to complete a sign-in.
 - **UI language** follows the browser locale. Quick switch for signed-in
   screens: `localStorage["spantail.lang"] = "ja" | "en"` and reload. Full
   locale switch (logged-out screens, and the Accept-Language header that
