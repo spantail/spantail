@@ -18,9 +18,9 @@ export function ClaudeIcon({ className = "size-4" }: { className?: string }) {
 	);
 }
 
-// Single source for the sidebar's per-type agent icon. Only Claude has a brand
-// mark today; the other types fall back to a generic bot, so adding a codex or
-// cursor mark later is a one-line entry here.
+// Single source for the sidebar's per-type agent icon. v1 targets Claude Code
+// only; any other type falls back to a generic bot, so adding a brand mark for a
+// future agent kind is a one-line entry here.
 export function AgentTypeIcon({
 	type,
 	className,
