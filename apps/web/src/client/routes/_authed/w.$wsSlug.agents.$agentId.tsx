@@ -192,28 +192,12 @@ function AgentPage() {
 	const [active, setActive] = useState(-1);
 	// The session whose read-only detail is shown; opened by row click or `o`.
 	const [viewEntry, setViewEntry] = useState<AgentEntry | null>(null);
-	useListKeyboardNav({
-		length: list.length,
-		index: active,
-		onMove: setActive,
-		onOpen: () => {
-			const entry = list[active];
-			if (entry) setViewEntry(entry);
-		},
-		onReachEnd: loadMore,
-		containerRef: tableRef,
-	});
-
 	// Bulk selection over the loaded rows. Only the raw id set is state; the
 	// effective selection is its intersection with the loaded list, so rows
 	// that vanish (deleted, or dropped by a period change) fall out on their own.
 	const { session } = useRouteContext({ from: "/_authed" });
 	const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
 		new Set(),
-	);
-	const selectedEntries = useMemo(
-		() => list.filter((entry) => selectedIds.has(entry.id)),
-		[list, selectedIds],
 	);
 	const toggleSelected = (id: string, checked: boolean) => {
 		setSelectedIds((prev) => {
@@ -223,6 +207,29 @@ function AgentPage() {
 			return next;
 		});
 	};
+	useListKeyboardNav({
+		length: list.length,
+		index: active,
+		onMove: setActive,
+		onOpen: () => {
+			const entry = list[active];
+			if (entry) setViewEntry(entry);
+		},
+		// `x` toggles the active row's checkbox — only where one is offered
+		// (the viewer's own sessions; see the cell below).
+		onToggle: () => {
+			const entry = list[active];
+			if (entry && entry.ownerUserId === session.user.id) {
+				toggleSelected(entry.id, !selectedIds.has(entry.id));
+			}
+		},
+		onReachEnd: loadMore,
+		containerRef: tableRef,
+	});
+	const selectedEntries = useMemo(
+		() => list.filter((entry) => selectedIds.has(entry.id)),
+		[list, selectedIds],
+	);
 	const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 	// Both bulk actions are owner-only server-side, so selection is offered only
 	// on the viewer's own sessions (an agent belongs to one user, so in practice

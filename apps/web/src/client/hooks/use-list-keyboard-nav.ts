@@ -11,6 +11,8 @@ interface UseListKeyboardNavOptions<E extends HTMLElement> {
 	onMove: (nextIndex: number) => void;
 	/** `o` pressed on the active item. Omit where moving already opens. */
 	onOpen?: () => void;
+	/** `x` pressed on the active item — toggle its selection. */
+	onToggle?: () => void;
 	/** `j` pressed at the last item — a chance to load the next page. */
 	onReachEnd?: () => void;
 	/** Wraps the rows; each carries `data-nav-index={i}` for scroll-into-view. */
@@ -19,16 +21,18 @@ interface UseListKeyboardNavOptions<E extends HTMLElement> {
 }
 
 /**
- * Vim-style list navigation: `j`/`k` move the selection, `o` opens it. One
- * `window` keydown listener, guarded like the app's other global shortcuts
- * (yields to text inputs and to any open dialog/menu). The active row is
- * scrolled into view whenever `index` changes.
+ * Vim-style list navigation: `j`/`k` move the selection, `o` opens it, `x`
+ * toggles it (where the list supports selection). One `window` keydown
+ * listener, guarded like the app's other global shortcuts (yields to text
+ * inputs and to any open dialog/menu). The active row is scrolled into view
+ * whenever `index` changes.
  */
 export function useListKeyboardNav<E extends HTMLElement>({
 	length,
 	index,
 	onMove,
 	onOpen,
+	onToggle,
 	onReachEnd,
 	containerRef,
 	enabled = true,
@@ -36,9 +40,16 @@ export function useListKeyboardNav<E extends HTMLElement>({
 	// Latest values, read inside a listener that's bound once per `enabled`.
 	// Synced in a layout effect (not during render) so the handler only ever
 	// observes values from a committed render — safe under concurrent rendering.
-	const latest = useRef({ length, index, onMove, onOpen, onReachEnd });
+	const latest = useRef({
+		length,
+		index,
+		onMove,
+		onOpen,
+		onToggle,
+		onReachEnd,
+	});
 	useLayoutEffect(() => {
-		latest.current = { length, index, onMove, onOpen, onReachEnd };
+		latest.current = { length, index, onMove, onOpen, onToggle, onReachEnd };
 	});
 
 	useEffect(() => {
@@ -48,7 +59,8 @@ export function useListKeyboardNav<E extends HTMLElement>({
 			if (e.defaultPrevented || isTypingTarget(e.target)) return;
 			// Inert while a dialog/menu is open: a bare key may be Radix typeahead.
 			if (document.querySelector('[role="dialog"], [role="menu"]')) return;
-			const { length, index, onMove, onOpen, onReachEnd } = latest.current;
+			const { length, index, onMove, onOpen, onToggle, onReachEnd } =
+				latest.current;
 			if (e.key === "j" || e.key === "k") {
 				if (length === 0) return;
 				e.preventDefault();
@@ -60,6 +72,10 @@ export function useListKeyboardNav<E extends HTMLElement>({
 				if (index < 0) return;
 				e.preventDefault();
 				onOpen();
+			} else if (e.key === "x" && onToggle && !e.repeat) {
+				if (index < 0) return;
+				e.preventDefault();
+				onToggle();
 			}
 		}
 		window.addEventListener("keydown", onKeyDown);
