@@ -118,7 +118,7 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 | `spantail report share <id>` | 公開共有リンクを作成（`--expires-in`、`--passcode`）。 |
 | `spantail report shares <id>` | 共有リンクと状態を一覧。 |
 | `spantail report unshare <share-id>` | 共有リンクを失効。 |
-| `spantail report discussion <id>` | レポートの現行バージョンのリアクションとコメントを表示。 |
+| `spantail report discussion <id>` | スレッドのリアクションとコメントを表示。`<id>` はレポート ID（現行バージョン）か、受信者の場合は受信箱のメッセージ ID（配信されたバージョン）。 |
 | `spantail report comment <id> <body>` | コメントを追加（自分のものは `--edit`/`--delete`）。 |
 | `spantail report react <id> <emoji>` | 現行バージョンやコメントへのリアクションを切り替え（`--comment`）。 |
 

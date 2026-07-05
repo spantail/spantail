@@ -6,6 +6,7 @@ import {
 	commentFixture,
 	createTestContext,
 	fakeApi,
+	mailItemFixture,
 	reportFixture,
 } from "../test-helpers";
 
@@ -65,6 +66,28 @@ it("shows reactions and comments", async () => {
 	expect(text).toContain("Nice work!");
 	expect(text).toContain("com-2  Bob  2026-06-14T10:00:00Z (edited)");
 	expect(text).toContain("  reactions: heart x1 (Alice)");
+});
+
+it("falls back to a mailbox message id for a recipient", async () => {
+	// A recipient cannot read the report itself (404), so the id resolves
+	// through their mailbox message to the delivered version's thread.
+	const api = fakeApi([
+		{ path: "/inbox/msg-1", body: mailItemFixture({ id: "msg-1" }) },
+		{
+			path: "/report-contents/rep-1-v1/discussion",
+			body: { shared: true, reactions: [], comments: [commentFixture()] },
+		},
+	]);
+	const { ctx, stdout, configDir } = createTestContext({ fetch: api.fetch });
+	loggedIn(configDir);
+
+	expect(await runCli(["report", "discussion", "msg-1"], ctx)).toBe(0);
+	expect(stdout.text()).toContain("Nice work!");
+	expect(api.calls.map((call) => call.url.pathname)).toEqual([
+		"/api/v1/reports/msg-1",
+		"/api/v1/inbox/msg-1",
+		"/api/v1/report-contents/rep-1-v1/discussion",
+	]);
 });
 
 it("explains an empty discussion of an unsent report", async () => {

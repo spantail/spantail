@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 
 import type { ReactionEmoji, ReactionSummary } from "@spantail/core";
 import { reactionEmojiSchema } from "@spantail/core";
-import type { SpantailClient } from "@spantail/sdk";
+import { SpantailApiError, type SpantailClient } from "@spantail/sdk";
 
 import { createClient, requireConnection } from "../client";
 import { confirmAction } from "../confirm";
@@ -10,16 +10,25 @@ import type { CliContext } from "../context";
 import { UsageError } from "../errors";
 
 /**
- * Discussion threads are keyed by content version, while the CLI keeps the
- * report id as its user-facing argument: resolve the report's *current*
- * version, whose thread these commands read and write.
+ * Discussion threads are keyed by content version, while the CLI keeps report
+ * and mailbox ids as its user-facing arguments. An owner passes a report id
+ * (`spantail report list`) and gets the *current* version's thread; a
+ * recipient — who cannot read the report itself — passes a mailbox message id
+ * (`spantail inbox`) and gets the *delivered* version's thread. Try the
+ * report first, then fall back to the mailbox on 404.
  */
 async function resolveReportContentId(
 	client: SpantailClient,
-	reportId: string,
+	id: string,
 ): Promise<string> {
-	const report = await client.getReport(reportId);
-	return report.reportContentId;
+	try {
+		return (await client.getReport(id)).reportContentId;
+	} catch (error) {
+		if (!(error instanceof SpantailApiError) || error.status !== 404) {
+			throw error;
+		}
+	}
+	return (await client.getInboxMessage(id)).reportContentId;
 }
 
 /**
@@ -47,10 +56,12 @@ function formatReactions(reactions: ReactionSummary[]): string {
 
 const DISCUSSION_USAGE = `Usage: spantail report discussion <id>
 
-Shows the discussion of a report's current version: body reactions and
-comments. Threads are per sent version, so an edited report starts a new
-thread. The comment ids are inputs to \`spantail report comment
---edit/--delete\` and \`spantail report react --comment\`.
+Shows a discussion: body reactions and comments. Threads are per sent
+version, so an edited report starts a new thread. <id> is a report id
+(the current version's thread) or, for a recipient, a mailbox message id
+from \`spantail inbox\` (the delivered version's thread). The comment ids
+are inputs to \`spantail report comment --edit/--delete\` and
+\`spantail report react --comment\`.
 `;
 
 export async function reportDiscussion(
@@ -68,7 +79,7 @@ export async function reportDiscussion(
 	}
 	const id = positionals[0];
 	if (id === undefined || positionals.length > 1) {
-		throw new UsageError("expected a single report <id>");
+		throw new UsageError("expected a single <id> (report or mailbox message)");
 	}
 
 	const client = createClient(ctx, requireConnection(ctx));
@@ -99,12 +110,13 @@ export async function reportDiscussion(
 	return 0;
 }
 
-const COMMENT_USAGE = `Usage: spantail report comment <report-id> <body>
-       spantail report comment <report-id> --edit <comment-id> <new-body>
-       spantail report comment <report-id> --delete <comment-id> [--yes]
+const COMMENT_USAGE = `Usage: spantail report comment <id> <body>
+       spantail report comment <id> --edit <comment-id> <new-body>
+       spantail report comment <id> --delete <comment-id> [--yes]
 
-Adds, edits, or deletes a comment on the discussion of a report's current
-version. You can only edit or delete your own comments.
+Adds, edits, or deletes a comment on a discussion. <id> is a report id
+(the current version's thread) or, for a recipient, a mailbox message id
+from \`spantail inbox\`. You can only edit or delete your own comments.
 
 Options:
   --edit <comment-id>    Replace the body of one of your comments
@@ -134,9 +146,9 @@ export async function reportComment(
 	if (values.edit && values.delete) {
 		throw new UsageError("--edit and --delete are mutually exclusive");
 	}
-	const reportId = positionals[0];
-	if (reportId === undefined) {
-		throw new UsageError("expected a <report-id>");
+	const id = positionals[0];
+	if (id === undefined) {
+		throw new UsageError("expected an <id> (report or mailbox message)");
 	}
 
 	const client = createClient(ctx, requireConnection(ctx));
@@ -153,7 +165,7 @@ export async function reportComment(
 			ctx.stderr.write("Cancelled.\n");
 			return 1;
 		}
-		const contentId = await resolveReportContentId(client, reportId);
+		const contentId = await resolveReportContentId(client, id);
 		await client.deleteReportComment(contentId, values.delete);
 		ctx.stdout.write(`Deleted comment ${values.delete}\n`);
 		return 0;
@@ -165,7 +177,7 @@ export async function reportComment(
 			"expected a single <body>; quote it if it contains spaces",
 		);
 	}
-	const contentId = await resolveReportContentId(client, reportId);
+	const contentId = await resolveReportContentId(client, id);
 	if (values.edit) {
 		const comment = await client.updateReportComment(
 			contentId,
@@ -180,10 +192,12 @@ export async function reportComment(
 	return 0;
 }
 
-const REACT_USAGE = `Usage: spantail report react <report-id> <emoji> [options]
+const REACT_USAGE = `Usage: spantail report react <id> <emoji> [options]
 
-Toggles your reaction on a report's current version (or on one of its
-comments): reacting twice with the same emoji removes it.
+Toggles your reaction on a discussion's body (or on one of its comments):
+reacting twice with the same emoji removes it. <id> is a report id (the
+current version's thread) or, for a recipient, a mailbox message id from
+\`spantail inbox\`.
 
 <emoji> is one of: ${EMOJI_HELP}
 (thumbs-down stands for -1, which cannot be typed as an argument)
@@ -209,14 +223,10 @@ export async function reportReact(
 		ctx.stdout.write(REACT_USAGE);
 		return 0;
 	}
-	const reportId = positionals[0];
+	const id = positionals[0];
 	const emojiArg = positionals[1];
-	if (
-		reportId === undefined ||
-		emojiArg === undefined ||
-		positionals.length > 2
-	) {
-		throw new UsageError("expected a <report-id> and an <emoji>");
+	if (id === undefined || emojiArg === undefined || positionals.length > 2) {
+		throw new UsageError("expected an <id> and an <emoji>");
 	}
 	const emoji =
 		EMOJI_ALIASES[emojiArg] ?? reactionEmojiSchema.safeParse(emojiArg).data;
@@ -227,7 +237,7 @@ export async function reportReact(
 	}
 
 	const client = createClient(ctx, requireConnection(ctx));
-	const contentId = await resolveReportContentId(client, reportId);
+	const contentId = await resolveReportContentId(client, id);
 	const reactions = values.comment
 		? await client.toggleReportCommentReaction(contentId, values.comment, emoji)
 		: await client.toggleReportReaction(contentId, emoji);

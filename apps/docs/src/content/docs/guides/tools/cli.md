@@ -119,7 +119,7 @@ updates those entries instead of duplicating them. Lines without an
 | `spantail report share <id>` | Create a public share link (`--expires-in`, `--passcode`). |
 | `spantail report shares <id>` | List a report's share links and their status. |
 | `spantail report unshare <share-id>` | Revoke a share link. |
-| `spantail report discussion <id>` | Show the reactions and comments on the report's current version. |
+| `spantail report discussion <id>` | Show a thread's reactions and comments. `<id>` is a report id (current version) or, for a recipient, a mailbox message id (delivered version). |
 | `spantail report comment <id> <body>` | Add a comment (`--edit`/`--delete` for your own). |
 | `spantail report react <id> <emoji>` | Toggle a reaction on the current version or a comment (`--comment`). |
 
