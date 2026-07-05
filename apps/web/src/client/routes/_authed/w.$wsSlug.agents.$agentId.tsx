@@ -1,9 +1,11 @@
+import type { AgentEntry } from "@spantail/core";
 import { formatDuration, resolveDateRange } from "@spantail/core";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SparklesIcon } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AgentEntryDialog } from "@/components/agent-entry-dialog";
 import { AgentTypeIcon } from "@/components/agent-icon";
 import { AgentStats } from "@/components/agent-stats";
 import {
@@ -114,10 +116,16 @@ function AgentPage() {
 	// pulls the next page so keyboard users aren't stuck at the scroll sentinel.
 	const tableRef = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(-1);
+	// The session whose read-only detail is shown; opened by row click or `o`.
+	const [viewEntry, setViewEntry] = useState<AgentEntry | null>(null);
 	useListKeyboardNav({
 		length: list.length,
 		index: active,
 		onMove: setActive,
+		onOpen: () => {
+			const entry = list[active];
+			if (entry) setViewEntry(entry);
+		},
 		onReachEnd: loadMore,
 		containerRef: tableRef,
 	});
@@ -223,7 +231,7 @@ function AgentPage() {
 											key={entry.id}
 											data-nav-index={index}
 											data-nav-active={active === index ? "" : undefined}
-											className="data-[nav-active]:bg-muted"
+											className="group data-[nav-active]:bg-muted relative cursor-pointer"
 										>
 											<TableCell className="whitespace-nowrap">
 												<div>
@@ -241,13 +249,30 @@ function AgentPage() {
 												)}
 											</TableCell>
 											<TableCell className="whitespace-normal break-words">
-												{/* Ingest preserves an empty-string description, so treat
-											    blank/whitespace as missing to show the em dash. */}
-												{entry.description?.trim() ? (
-													entry.description
-												) : (
-													<span className="text-muted-foreground/40">—</span>
-												)}
+												{/* The whole row opens the detail dialog: this button's
+											    stretched overlay (`before:inset-0`) covers the relative
+											    row, keeping it keyboard-accessible with no click handler
+											    on the <tr>. Ingest preserves an empty-string
+											    description, so treat blank/whitespace as missing — the
+											    em dash still opens, hence the aria-label. */}
+												<button
+													type="button"
+													onClick={() => setViewEntry(entry)}
+													aria-label={
+														entry.description?.trim()
+															? undefined
+															: t("agents.detail.open")
+													}
+													className="flex text-left before:absolute before:inset-0 before:content-['']"
+												>
+													{entry.description?.trim() ? (
+														<span className="min-w-0 break-words underline-offset-4 group-hover:underline">
+															{entry.description}
+														</span>
+													) : (
+														<span className="text-muted-foreground/40">—</span>
+													)}
+												</button>
 											</TableCell>
 											<TableCell className="whitespace-nowrap">
 												<span className="flex items-center gap-1.5">
@@ -290,6 +315,18 @@ function AgentPage() {
 					</div>
 				)}
 			</section>
+
+			<AgentEntryDialog
+				entry={viewEntry}
+				onClose={() => setViewEntry(null)}
+				project={
+					viewEntry?.projectId
+						? projectById.get(viewEntry.projectId)
+						: undefined
+				}
+				projectName={projectName(viewEntry?.projectId ?? null)}
+				timezone={timezone}
+			/>
 		</div>
 	);
 }

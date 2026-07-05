@@ -14,5 +14,5 @@ you're **not** typing in a text field and **no** dialog or menu is open.
 | <kbd>O</kbd> | Open the highlighted item. |
 
 The list shortcuts (<kbd>J</kbd> / <kbd>K</kbd> / <kbd>O</kbd>) apply to the
-lists that support selection, such as the timeline, the reports list, and your
-inbox.
+lists that support selection, such as the timeline, the reports list, your
+inbox, and an agent's sessions list.

@@ -103,6 +103,21 @@
 			"project": "Project",
 			"input": "Input",
 			"output": "Output"
+		},
+		"detail": {
+			"open": "Open session details",
+			"noDescription": "Untitled session",
+			"usage": "Usage",
+			"cacheWrite": "Cache write",
+			"cacheRead": "Cache read",
+			"totalTokens": "Total",
+			"cost": "Cost",
+			"context": "Context",
+			"repositories": "Repositories",
+			"branches": "Branches",
+			"refs": "References",
+			"models": "Models",
+			"sessionId": "Session ID"
 		}
 	},
 	"workspace": {
