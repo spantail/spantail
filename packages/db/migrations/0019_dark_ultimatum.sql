@@ -17,6 +17,24 @@
 -- with multiple versions but no discussion rows are unaffected (the guard is
 -- per row). Comments are rebuilt before reactions so the rebuilt
 -- report_comments table exists for the comment_id FK.
+--
+-- Preflight: fail before either rebuild if any discussion row is ambiguous.
+-- The CHECK trips on a non-zero count of comments/reactions whose report has
+-- more than one version. wrangler applies a migration file transactionally
+-- (a failure rolls the whole file back), but a manual, non-transactional
+-- apply would otherwise stop between the two rebuilds with report_comments
+-- already re-keyed and report_reactions still report-scoped; tripping here
+-- guarantees nothing has been touched yet either way. The IF EXISTS drop
+-- only matters after such a manual failed run, where the guard table is
+-- left behind (a transactional apply rolls it back).
+DROP TABLE IF EXISTS `__guard_0019_ambiguous_discussions`;--> statement-breakpoint
+CREATE TABLE `__guard_0019_ambiguous_discussions` (`n` integer NOT NULL CHECK (`n` = 0));--> statement-breakpoint
+INSERT INTO `__guard_0019_ambiguous_discussions` SELECT count(*) FROM (
+	SELECT `report_id` FROM `report_comments`
+	UNION ALL
+	SELECT `report_id` FROM `report_reactions`
+) d WHERE (SELECT count(*) FROM `report_content` rc WHERE rc.`report_id` = d.`report_id`) > 1;--> statement-breakpoint
+DROP TABLE `__guard_0019_ambiguous_discussions`;--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_report_comments` (
 	`id` text PRIMARY KEY NOT NULL,
