@@ -9,24 +9,29 @@
 -- versions and a discussion is genuinely ambiguous — guessing (e.g. the
 -- latest version) could attach comments written about one version to
 -- another's thread, the exact mix-up this migration exists to end. The
--- subquery therefore resolves only when the report has exactly one version
--- and yields NULL otherwise (also when a version is somehow missing — a
--- state the cascade rules make unreachable), and the NOT NULL constraint
--- aborts this INSERT before the DROP below, leaving the old tables intact:
--- the migration fails loudly instead of guessing or losing data. Reports
--- with multiple versions but no discussion rows are unaffected (the guard is
--- per row). Comments are rebuilt before reactions so the rebuilt
--- report_comments table exists for the comment_id FK.
+-- re-key subquery therefore resolves only when the report has exactly one
+-- version and yields NULL otherwise (also when a version is somehow missing —
+-- a state the cascade rules make unreachable), and the NOT NULL constraint
+-- aborts the copy: the migration fails loudly instead of guessing or losing
+-- data. Reports with multiple versions but no discussion rows are unaffected
+-- (the guard is per row).
 --
--- Preflight: fail before either rebuild if any discussion row is ambiguous.
+-- Statement order is chosen to be safe whether or not foreign keys are
+-- enforced while it runs. D1 applies a migration inside a transaction, where
+-- `PRAGMA foreign_keys=OFF` is a no-op — and with foreign keys enabled,
+-- DROP TABLE performs an implicit DELETE FROM, so dropping the old
+-- report_comments while any table still holds an ON DELETE CASCADE reference
+-- to it would silently cascade-delete comment-level reactions. So: both
+-- copies run first (reactions into a stage table with no FK clauses), every
+-- failure mode (the guard, the NOT NULL re-key) trips before anything is
+-- dropped, the child table drops before its parent, and the final reactions
+-- table — the only one referencing report_comments — is created only after
+-- the old report_comments is gone.
+--
+-- Preflight: fail before anything else if any discussion row is ambiguous.
 -- The CHECK trips on a non-zero count of comments/reactions whose report has
--- more than one version. wrangler applies a migration file transactionally
--- (a failure rolls the whole file back), but a manual, non-transactional
--- apply would otherwise stop between the two rebuilds with report_comments
--- already re-keyed and report_reactions still report-scoped; tripping here
--- guarantees nothing has been touched yet either way. The IF EXISTS drop
--- only matters after such a manual failed run, where the guard table is
--- left behind (a transactional apply rolls it back).
+-- more than one version. The IF EXISTS drop only matters after a failed
+-- non-transactional (manual) run, where the guard table is left behind.
 DROP TABLE IF EXISTS `__guard_0019_ambiguous_discussions`;--> statement-breakpoint
 CREATE TABLE `__guard_0019_ambiguous_discussions` (`n` integer NOT NULL CHECK (`n` = 0));--> statement-breakpoint
 INSERT INTO `__guard_0019_ambiguous_discussions` SELECT count(*) FROM (
@@ -54,9 +59,24 @@ INSERT INTO `__new_report_comments`("id", "report_content_id", "author_user_id",
 	WHERE rc.`report_id` = `report_comments`.`report_id`
 	HAVING count(*) = 1
 ), "author_user_id", "author_name", "author_email", "body", "created_at", "updated_at" FROM `report_comments`;--> statement-breakpoint
+CREATE TABLE `__stage_report_reactions` (
+	`id` text PRIMARY KEY NOT NULL,
+	`report_content_id` text NOT NULL,
+	`comment_id` text,
+	`user_id` text NOT NULL,
+	`user_name` text NOT NULL,
+	`emoji` text NOT NULL,
+	`created_at` integer NOT NULL
+);
+--> statement-breakpoint
+INSERT INTO `__stage_report_reactions`("id", "report_content_id", "comment_id", "user_id", "user_name", "emoji", "created_at") SELECT "id", (
+	SELECT max(rc.`id`) FROM `report_content` rc
+	WHERE rc.`report_id` = `report_reactions`.`report_id`
+	HAVING count(*) = 1
+), "comment_id", "user_id", "user_name", "emoji", "created_at" FROM `report_reactions`;--> statement-breakpoint
+DROP TABLE `report_reactions`;--> statement-breakpoint
 DROP TABLE `report_comments`;--> statement-breakpoint
 ALTER TABLE `__new_report_comments` RENAME TO `report_comments`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `report_comments_content_idx` ON `report_comments` (`report_content_id`,`created_at`);--> statement-breakpoint
 CREATE TABLE `__new_report_reactions` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -71,13 +91,10 @@ CREATE TABLE `__new_report_reactions` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-INSERT INTO `__new_report_reactions`("id", "report_content_id", "comment_id", "user_id", "user_name", "emoji", "created_at") SELECT "id", (
-	SELECT max(rc.`id`) FROM `report_content` rc
-	WHERE rc.`report_id` = `report_reactions`.`report_id`
-	HAVING count(*) = 1
-), "comment_id", "user_id", "user_name", "emoji", "created_at" FROM `report_reactions`;--> statement-breakpoint
-DROP TABLE `report_reactions`;--> statement-breakpoint
+INSERT INTO `__new_report_reactions`("id", "report_content_id", "comment_id", "user_id", "user_name", "emoji", "created_at") SELECT "id", "report_content_id", "comment_id", "user_id", "user_name", "emoji", "created_at" FROM `__stage_report_reactions`;--> statement-breakpoint
+DROP TABLE `__stage_report_reactions`;--> statement-breakpoint
 ALTER TABLE `__new_report_reactions` RENAME TO `report_reactions`;--> statement-breakpoint
+PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `report_reactions_content_idx` ON `report_reactions` (`report_content_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `report_reactions_content_uq` ON `report_reactions` (`report_content_id`,`user_id`,`emoji`) WHERE comment_id is null;--> statement-breakpoint
 CREATE UNIQUE INDEX `report_reactions_comment_uq` ON `report_reactions` (`comment_id`,`user_id`,`emoji`) WHERE comment_id is not null;
