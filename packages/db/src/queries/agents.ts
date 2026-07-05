@@ -415,6 +415,45 @@ export async function upsertAgentEntry(
 	return row;
 }
 
+/**
+ * Rows for the given ids, backing the ownership pre-checks of work-entry
+ * linking and bulk deletion. Both callers cap `ids` at
+ * MAX_LINKED_AGENT_ENTRIES (50), well under D1's 100-bound-parameter cap, so
+ * one statement suffices.
+ */
+export async function getAgentEntriesByIds(
+	db: Database,
+	ids: string[],
+): Promise<AgentEntryRow[]> {
+	if (ids.length === 0) return [];
+	return db.select().from(agentEntries).where(inArray(agentEntries.id, ids));
+}
+
+/**
+ * Deletes the caller-owned agent entries among `ids`, returning how many rows
+ * went away. The workspace + owner scope is applied in SQL, so the delete
+ * stays safe even if a row changed hands between the route's pre-check and
+ * this statement. Link rows in work_entry_agent_entries cascade away.
+ */
+export async function deleteAgentEntries(
+	db: Database,
+	ids: string[],
+	scope: { workspaceId: string; ownerUserId: string },
+): Promise<number> {
+	if (ids.length === 0) return 0;
+	const rows = await db
+		.delete(agentEntries)
+		.where(
+			and(
+				inArray(agentEntries.id, ids),
+				eq(agentEntries.workspaceId, scope.workspaceId),
+				eq(agentEntries.ownerUserId, scope.ownerUserId),
+			),
+		)
+		.returning({ id: agentEntries.id });
+	return rows.length;
+}
+
 interface AgentEntryFilter {
 	workspaceId: string;
 	// When set, restricts to entries logged for this owner. Callers scope it to

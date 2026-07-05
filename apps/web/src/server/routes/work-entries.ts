@@ -14,6 +14,7 @@ import {
 	createWorkEntriesBatch,
 	createWorkEntry,
 	deleteWorkEntry,
+	getAgentEntriesByIds,
 	getProjectById,
 	getWorkEntryById,
 	getWorkEntryOwnersByIds,
@@ -114,20 +115,51 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		await requireProjectInWorkspace(c, input.projectId, input.workspaceId);
 		await requireProjectAccess(c, input.projectId, membership, user.id);
 
-		const entry = await createWorkEntry(c.var.db, {
-			workspaceId: input.workspaceId,
-			projectId: input.projectId,
-			userId: user.id,
-			entryDate:
-				input.entryDate ?? todayInTimezone(resolveUserTimezone(user.timezone)),
-			durationMinutes: input.durationMinutes,
-			startedAt: input.startedAt ? new Date(input.startedAt) : null,
-			endedAt: input.endedAt ? new Date(input.endedAt) : null,
-			description: input.description,
-			note: input.note ?? null,
-			tags: input.tags,
-			source: resolveSource(c),
-		});
+		// Linked agent entries must be the caller's own, in the same workspace.
+		// Reading a colleague's session (admins and project members can) is not
+		// enough: a link asserts "my work came from this session", so linking
+		// foreign sessions would misattribute their work. One uniform message —
+		// missing and foreign ids are indistinguishable, so the endpoint cannot
+		// be used to probe other users' session ids.
+		const agentEntryIds = [...new Set(input.agentEntryIds ?? [])];
+		if (agentEntryIds.length > 0) {
+			const rows = await getAgentEntriesByIds(c.var.db, agentEntryIds);
+			const byId = new Map(rows.map((row) => [row.id, row]));
+			const linkable = agentEntryIds.every((id) => {
+				const row = byId.get(id);
+				return (
+					row !== undefined &&
+					row.workspaceId === input.workspaceId &&
+					row.ownerUserId === user.id
+				);
+			});
+			if (!linkable) {
+				throw new AppError(
+					"bad_request",
+					"agentEntryIds contains an unknown or inaccessible agent entry",
+				);
+			}
+		}
+
+		const entry = await createWorkEntry(
+			c.var.db,
+			{
+				workspaceId: input.workspaceId,
+				projectId: input.projectId,
+				userId: user.id,
+				entryDate:
+					input.entryDate ??
+					todayInTimezone(resolveUserTimezone(user.timezone)),
+				durationMinutes: input.durationMinutes,
+				startedAt: input.startedAt ? new Date(input.startedAt) : null,
+				endedAt: input.endedAt ? new Date(input.endedAt) : null,
+				description: input.description,
+				note: input.note ?? null,
+				tags: input.tags,
+				source: resolveSource(c),
+			},
+			agentEntryIds,
+		);
 		publishToWorkspace(c, {
 			type: "work-entry",
 			workspaceId: input.workspaceId,

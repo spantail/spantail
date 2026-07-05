@@ -24,6 +24,21 @@ export function invalidateWorkEntryData(
 }
 
 /**
+ * Refreshes everything derived from a workspace's agent activity after a
+ * mutation: the session lists (every agent/range/timezone page set), the stats
+ * widgets, and the sidebar's active-agents roster (an agent may have lost its
+ * last activity).
+ */
+export function invalidateAgentEntryData(
+	client: QueryClient,
+	workspaceId: string,
+): void {
+	client.invalidateQueries({ queryKey: ["agent-entries", workspaceId] });
+	client.invalidateQueries({ queryKey: ["agent-entry-stats", workspaceId] });
+	client.invalidateQueries({ queryKey: ["workspace-agents", workspaceId] });
+}
+
+/**
  * Refreshes the mailbox after a change. Star/archive/trash move an item between
  * folders, so every folder list is invalidated (prefix match), along with the
  * sidebar counts, the header unread badge, and any open message detail (whose

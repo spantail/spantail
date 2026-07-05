@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
 import type { Database } from "../index";
+import { workEntryAgentEntries } from "../schema/agents";
 import { workEntries } from "../schema/domain";
 import { type EntryAccessScope, entryAccessCondition } from "./entry-access";
 
@@ -23,14 +24,39 @@ export type WorkEntryPatch = Partial<
 	>
 >;
 
+/**
+ * Inserts a work entry, optionally linking the agent entries it was logged
+ * from. Entry and links go in one db.batch (D1's implicit transaction), so an
+ * agent entry deleted between the route's ownership pre-check and this insert
+ * fails the FK and rolls back the entry too — nothing half-written. Callers
+ * validate ownership of `agentEntryIds` and cap them at
+ * MAX_LINKED_AGENT_ENTRIES (2 bound parameters per link row keeps one insert
+ * statement under D1's 100-parameter cap).
+ */
 export async function createWorkEntry(
 	db: Database,
 	values: WorkEntryInsert,
+	agentEntryIds: string[] = [],
 ): Promise<WorkEntryRow> {
-	const rows = await db
+	const id = crypto.randomUUID();
+	const insertEntry = db
 		.insert(workEntries)
-		.values({ id: crypto.randomUUID(), ...values })
+		.values({ id, ...values })
 		.returning();
+	const rows =
+		agentEntryIds.length === 0
+			? await insertEntry
+			: (
+					await db.batch([
+						insertEntry,
+						db.insert(workEntryAgentEntries).values(
+							agentEntryIds.map((agentEntryId) => ({
+								workEntryId: id,
+								agentEntryId,
+							})),
+						),
+					])
+				)[0];
 	const row = rows[0];
 	if (!row) throw new Error("work entry insert returned no row");
 	return row;

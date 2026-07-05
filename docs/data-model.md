@@ -57,7 +57,7 @@ flowchart TB
 | Scope | Resources that live here |
 |---|---|
 | **Instance** | `user`, `verification`, `instance_settings`, `user_invitations`, `report_templates` |
-| **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events` |
+| **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events`, `work_entry_agent_entries` (follows its parents) |
 | **Project** | `project_members`, `agent_projects`, project-assigned `work_entries` / `agent_entries` |
 | **User** | `session`, `account`, `api_tokens`, `agents`, `agent_tokens`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), profile |
 | **Report** | `report_shares`, `report_comments`, `report_reactions` |
@@ -91,6 +91,7 @@ flowchart LR
     user -->|"registers"| agent
     agent -->|"produces"| ae
     ae -->|"scoped to"| ws
+    we -. "created from (m:n)" .-> ae
     we -->|"scoped to"| ws
     user -->|"owns"| report
     report -. "picks (no FK)" .-> tpl
@@ -172,6 +173,8 @@ erDiagram
     agents ||--o{ agent_events : "emits"
     workspaces ||--o{ agent_events : "scopes"
     agent_entries ||..o{ agent_events : "rolled up from (by sessionId, not FK)"
+    work_entries ||--o{ work_entry_agent_entries : "logged from"
+    agent_entries ||--o{ work_entry_agent_entries : "feeds"
 ```
 
 | Entity | Scope | Purpose | Key relationships |
@@ -181,6 +184,7 @@ erDiagram
 | `agent_projects` | Project | Presentation grouping of an agent to projects — no rows means "all projects". Does **not** gate or default ingest. | joins `agents` and `projects` |
 | `agent_entries` | Project / Workspace | One agent **session** rollup: duration, token usage (plus summed `costUsd` when events carry one), and `context` — distinct non-usage facets (`models`, `branches`, `repositories`, client-supplied `refs`). Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entry_date` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
 | `agent_events` | Workspace | Raw **per-turn** telemetry — one row per assistant message: `operation` (what the turn is, `chat` by default), native usage stored verbatim, optional client-provided `costUsd`, and `attributes` (bounded key/value metadata, OTel attribute names where one exists — see the mapping below). Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
+| `work_entry_agent_entries` | Workspace (via parents) | Provenance link (m:n): which agent sessions a human work entry was logged from. Written when a work entry is created from selected sessions; currently **write-only (no read route)**. PK (workEntryId, agentEntryId). | joins `work_entries` and `agent_entries` (cascade on both sides) |
 
 ### OTel GenAI mapping
 

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { isTimestampInRange, localDateSchema } from "./common";
 import { MAX_DURATION_MINUTES } from "./duration";
+import { MAX_LINKED_AGENT_ENTRIES } from "./work-entry";
 
 /** Coding-agent kind. Drives per-type grouping and ingest tooling. */
 export const agentTypes = ["claude_code", "codex", "cursor", "other"] as const;
@@ -203,6 +204,20 @@ export const finalizeAgentSessionInputSchema = z.object({
 });
 export type FinalizeAgentSessionInput = z.infer<
 	typeof finalizeAgentSessionInputSchema
+>;
+
+/**
+ * Bulk delete of the caller's own agent entries. All-or-nothing: if any id is
+ * missing, foreign, or outside the workspace, nothing is deleted. The cap is
+ * shared with work-entry linking so both fit D1's bound-parameter budget in a
+ * single statement.
+ */
+export const deleteAgentEntriesInputSchema = z.object({
+	workspaceId: z.string(),
+	ids: z.array(z.string()).min(1).max(MAX_LINKED_AGENT_ENTRIES),
+});
+export type DeleteAgentEntriesInput = z.infer<
+	typeof deleteAgentEntriesInputSchema
 >;
 
 export const listAgentEntriesQuerySchema = z.object({

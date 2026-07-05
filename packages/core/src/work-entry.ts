@@ -29,6 +29,13 @@ export const workEntrySchema = z.object({
 });
 export type WorkEntry = z.infer<typeof workEntrySchema>;
 
+/**
+ * Agent entries one work entry can be created from. Each link binds 2
+ * parameters against D1's 100-bound-parameter cap, and the ownership
+ * pre-check selects the same ids in one statement.
+ */
+export const MAX_LINKED_AGENT_ENTRIES = 50;
+
 export const createWorkEntryInputSchema = z.object({
 	workspaceId: z.string(),
 	projectId: z.string(),
@@ -40,6 +47,8 @@ export const createWorkEntryInputSchema = z.object({
 	description: z.string().min(1).max(2000),
 	note: z.string().max(10000).optional(),
 	tags: z.array(tagSchema).max(20).default([]),
+	// Agent entries this work entry was logged from; must be the caller's own.
+	agentEntryIds: z.array(z.string()).max(MAX_LINKED_AGENT_ENTRIES).optional(),
 });
 export type CreateWorkEntryInput = z.infer<typeof createWorkEntryInputSchema>;
 export type CreateWorkEntryInputData = z.input<
@@ -78,11 +87,12 @@ export const externalIdSchema = z
 			'reserved id; "stats", "tags", "batch", ".", and ".." cannot address an entry',
 	});
 
-// The single-create input minus workspaceId (lifted to the request top level),
-// with entryDate required — a migration must state dates explicitly — and an
+// The single-create input minus workspaceId (lifted to the request top level)
+// and agentEntryIds (linking is a web-create concern, not an import one), with
+// entryDate required — a migration must state dates explicitly — and an
 // optional externalId as the idempotency key (same id ⇒ upsert, not duplicate).
 export const batchWorkEntryItemSchema = createWorkEntryInputSchema
-	.omit({ workspaceId: true })
+	.omit({ workspaceId: true, agentEntryIds: true })
 	.extend({
 		entryDate: localDateSchema,
 		externalId: externalIdSchema.optional(),

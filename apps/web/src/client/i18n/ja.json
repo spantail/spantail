@@ -121,6 +121,19 @@
 			"refs": "参照",
 			"models": "モデル",
 			"sessionId": "セッション ID"
+		},
+		"selection": {
+			"selectEntry": "セッションを選択",
+			"count_other": "{{count}}件選択中",
+			"logWork": "選択から作業を記録",
+			"mixedProjects": "異なるプロジェクトのセッションは組み合わせられません。",
+			"tooMany": "一度に選択できるのは{{max}}件までです。",
+			"deleteAction": "セッションを削除",
+			"deleteTitle": "選択したセッションを削除しますか？",
+			"deleteDescription_other": "{{count}}件のセッションを完全に削除します。この操作は取り消せません。",
+			"deleteConfirm": "削除",
+			"deleteCancel": "キャンセル",
+			"deletedToast_other": "{{count}}件のセッションを削除しました"
 		}
 	},
 	"workspace": {

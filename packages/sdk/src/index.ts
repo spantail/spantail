@@ -25,6 +25,7 @@ import type {
 	CreateWorkEntriesBatchResult,
 	CreateWorkEntryInputData,
 	CreateWorkspaceInput,
+	DeleteAgentEntriesInput,
 	EmailEnabled,
 	EmailSettings,
 	FinalizeAgentSessionInput,
@@ -483,6 +484,13 @@ export class SpantailClient {
 
 	getAgentEntryStats(query: AgentEntryStatsQuery): Promise<AgentEntryStats> {
 		return this.request("GET", "/agent-entries/stats", { query });
+	}
+
+	/** Bulk-deletes the caller's own agent entries. All-or-nothing. */
+	deleteAgentEntries(input: DeleteAgentEntriesInput): Promise<{
+		count: number;
+	}> {
+		return this.request("POST", "/agent-entries/delete", { body: input });
 	}
 
 	/** Agents with activity in a workspace (for the sidebar's Agents group). */

@@ -31,12 +31,28 @@ import { invalidateWorkEntryData } from "@/lib/query";
 // Sentinel select value for "no project" (Radix Select forbids an empty value).
 const NO_PROJECT = "__none__";
 
+/**
+ * Create-mode initial values derived from selected agent entries. Every field
+ * lands in ordinary form state, so all of them stay manually editable; the
+ * agentEntryIds ride along to be linked to the created entry on submit.
+ */
+export interface EntryCreatePrefill {
+	// Omitted when the selection's shared project is null (the user must pick).
+	projectId?: string;
+	entryDate?: string;
+	durationMinutes?: number;
+	description?: string;
+	note?: string;
+	agentEntryIds?: string[];
+}
+
 interface EntryFormProps {
 	workspaceId: string;
 	timezone: string;
 	projects: Project[];
 	initial: WorkEntry | null;
 	defaultProjectId?: string;
+	prefill?: EntryCreatePrefill;
 	onSuccess: (opts: { keepOpen: boolean }) => void;
 	onCancel: () => void;
 }
@@ -99,6 +115,7 @@ export function EntryForm({
 	projects,
 	initial,
 	defaultProjectId,
+	prefill,
 	onSuccess,
 	onCancel,
 }: EntryFormProps) {
@@ -108,13 +125,19 @@ export function EntryForm({
 	// "no project" so its other fields stay editable without forcing a project.
 	const canUnassign = Boolean(initial) && initial?.projectId == null;
 	const [projectId, setProjectId] = useState(
-		initial ? (initial.projectId ?? NO_PROJECT) : (defaultProjectId ?? ""),
+		initial
+			? (initial.projectId ?? NO_PROJECT)
+			: (prefill?.projectId ?? defaultProjectId ?? ""),
 	);
 	const [entryDate, setEntryDate] = useState(
-		initial?.entryDate ?? todayInTimezone(timezone),
+		initial?.entryDate ?? prefill?.entryDate ?? todayInTimezone(timezone),
 	);
 	const [duration, setDuration] = useState(
-		initial ? String(initial.durationMinutes) : "",
+		initial
+			? String(initial.durationMinutes)
+			: prefill?.durationMinutes != null
+				? String(prefill.durationMinutes)
+				: "",
 	);
 	const [startTime, setStartTime] = useState(
 		initial?.startedAt ? utcToZonedTime(initial.startedAt, timezone) : "",
@@ -122,9 +145,17 @@ export function EntryForm({
 	const [endTime, setEndTime] = useState(
 		initial?.endedAt ? utcToZonedTime(initial.endedAt, timezone) : "",
 	);
-	const [description, setDescription] = useState(initial?.description ?? "");
-	const [note, setNote] = useState(initial?.note ?? "");
+	const [description, setDescription] = useState(
+		initial?.description ?? prefill?.description ?? "",
+	);
+	const [note, setNote] = useState(initial?.note ?? prefill?.note ?? "");
 	const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
+	// Held in state (not read from the prefill at submit) so the keep-entering
+	// reset can drop them: a second entry logged from the kept-open form must
+	// not re-link the same sessions.
+	const [agentEntryIds, setAgentEntryIds] = useState(
+		initial ? [] : (prefill?.agentEntryIds ?? []),
+	);
 	const [error, setError] = useState<string | null>(null);
 	// Create mode only: keep the dialog open after logging to enter another entry,
 	// preserving project and date while the other fields are cleared.
@@ -207,6 +238,7 @@ export function EntryForm({
 						...payload,
 						startedAt,
 						endedAt,
+						agentEntryIds: agentEntryIds.length > 0 ? agentEntryIds : undefined,
 					});
 		},
 		onSuccess: () => {
@@ -221,6 +253,7 @@ export function EntryForm({
 				setTags("");
 				setDescription("");
 				setNote("");
+				setAgentEntryIds([]);
 				setError(null);
 				// Land the cursor on duration so the next entry starts there.
 				durationRef.current?.focus();

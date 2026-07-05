@@ -1,10 +1,13 @@
 import {
 	agentEntryStatsQuerySchema,
+	deleteAgentEntriesInputSchema,
 	ingestAgentEntryInputSchema,
 	listAgentEntriesQuerySchema,
 	resolveUserTimezone,
 } from "@spantail/core";
 import {
+	deleteAgentEntries,
+	getAgentEntriesByIds,
 	getAgentEntryStats,
 	getProjectById,
 	listAgentEntries,
@@ -81,6 +84,40 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 		});
 		publishToWorkspace(c, { type: "agent-entry", workspaceId });
 		return c.json(serializeAgentEntry(entry, resolveUserTimezone(null)));
+	})
+	// Bulk delete, owner-only: agent entries are the caller's own telemetry, and
+	// admins read but never write user data (self-service principle). POST with
+	// a body rather than DELETE — intermediaries handle DELETE bodies poorly.
+	// All-or-nothing: if any id is missing, foreign, or outside the workspace,
+	// nothing is deleted and the caller gets 404 (not 403), so foreign session
+	// ids are never confirmed to exist.
+	.post("/delete", async (c) => {
+		const { user } = requireScope(c, "write");
+		const input = validate(deleteAgentEntriesInputSchema, await c.req.json());
+		await requireWorkspaceAccess(c, input.workspaceId);
+		const ids = [...new Set(input.ids)];
+		const rows = await getAgentEntriesByIds(c.var.db, ids);
+		const byId = new Map(rows.map((row) => [row.id, row]));
+		const deletable = ids.every((id) => {
+			const row = byId.get(id);
+			return (
+				row !== undefined &&
+				row.workspaceId === input.workspaceId &&
+				row.ownerUserId === user.id
+			);
+		});
+		if (!deletable) {
+			throw new AppError("not_found", "Agent entry not found");
+		}
+		const count = await deleteAgentEntries(c.var.db, ids, {
+			workspaceId: input.workspaceId,
+			ownerUserId: user.id,
+		});
+		publishToWorkspace(c, {
+			type: "agent-entry",
+			workspaceId: input.workspaceId,
+		});
+		return c.json({ count });
 	})
 	// Reads follow the project ACL: a member sees agent activity in the projects
 	// they belong to plus their own agents' activity (unassigned activity stays
