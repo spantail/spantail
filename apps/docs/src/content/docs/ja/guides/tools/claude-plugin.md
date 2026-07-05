@@ -22,7 +22,9 @@ Claude Code v2.1.143 以降が必要です。
 （[スキルとエージェント](#スキルとエージェント)を参照）の入力を求められます。各設定は環境変数
 （`SPANTAIL_API_URL`、`SPANTAIL_AGENT_TOKEN`、`SPANTAIL_WORKSPACE_ID`、
 `SPANTAIL_PROJECT_ID`、`SPANTAIL_SEND_SESSION_SUMMARY`）で上書きでき、環境変数が
-優先されます。
+優先されます。これらの上書きは**フックにのみ**適用されます。同梱の MCP サーバーは
+プラグインの `apiUrl` / `apiToken` の設定を読むため、`SPANTAIL_API_URL` でインスタンスを
+上書きする場合は、プラグイン設定側も同じ値に揃えてください。
 
 フックの動作には `bash`・`jq`・`curl` が `PATH` に必要です。フックがターンを失敗
 させたり、セッションの終了を妨げたりすることはありません。問題があれば stderr に

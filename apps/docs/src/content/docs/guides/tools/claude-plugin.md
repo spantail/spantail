@@ -22,6 +22,9 @@ workspace and project ids and a personal API token for the skills' MCP server
 (see [Skills and agents](#skills-and-agents)). Each setting can be overridden with an environment
 variable (`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_WORKSPACE_ID`,
 `SPANTAIL_PROJECT_ID`, `SPANTAIL_SEND_SESSION_SUMMARY`) — the environment wins.
+These overrides apply to the **hooks** only; the bundled MCP server reads the
+plugin's `apiUrl` and `apiToken` config, so keep them in sync if you override
+the instance via `SPANTAIL_API_URL`.
 
 The hooks need `bash`, `jq`, and `curl` on `PATH`. They never fail a turn or
 block a session from ending: on any problem they log to stderr and skip.

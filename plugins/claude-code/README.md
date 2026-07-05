@@ -53,6 +53,11 @@ Every setting can be overridden with an environment variable
 (`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_WORKSPACE_ID`,
 `SPANTAIL_PROJECT_ID`, `SPANTAIL_SEND_SESSION_SUMMARY`), e.g. in a
 `settings.json` `env` block; the environment wins over the plugin config.
+These overrides feed the **hooks** only — the bundled MCP server always reads
+the plugin's `apiUrl` and `apiToken` config, so if you point the hooks at a
+different instance via `SPANTAIL_API_URL`, set the matching `apiUrl` (and
+`apiToken`) in the plugin config too, or the skills and agents will act
+against the plugin-configured instance instead.
 
 The skills and agents use the Spantail MCP connection, which the plugin
 bundles. With `apiToken` set, the plugin registers an HTTP MCP server
