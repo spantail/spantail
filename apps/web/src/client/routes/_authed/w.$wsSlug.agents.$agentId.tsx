@@ -58,6 +58,7 @@ import {
 	formatCompactNumber,
 	formatEntryDate,
 } from "@/lib/format";
+import { isTypingTarget } from "@/lib/keyboard";
 import { invalidateAgentEntryData } from "@/lib/query";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -268,6 +269,32 @@ function AgentPage() {
 	}, [setCreatePrefillSource, clearSelection]);
 
 	const [confirmDelete, setConfirmDelete] = useState(false);
+	// `d` opens the delete confirmation while a selection exists, mirroring the
+	// delete button (inert over the cap, like the button is disabled). Guarded
+	// like the app's other global shortcuts; alertdialog covers this page's own
+	// confirmation dialog.
+	useEffect(() => {
+		function onKeyDown(e: KeyboardEvent) {
+			if (e.key !== "d" || e.metaKey || e.ctrlKey || e.altKey) return;
+			if (e.repeat || e.isComposing || e.defaultPrevented) return;
+			if (isTypingTarget(e.target)) return;
+			if (
+				document.querySelector(
+					'[role="dialog"], [role="alertdialog"], [role="menu"]',
+				)
+			) {
+				return;
+			}
+			const { entries } = selectionRef.current;
+			if (entries.length === 0 || entries.length > MAX_LINKED_AGENT_ENTRIES) {
+				return;
+			}
+			e.preventDefault();
+			setConfirmDelete(true);
+		}
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, []);
 	const queryClient = useQueryClient();
 	const deleteMutation = useMutation({
 		mutationFn: (ids: string[]) =>
