@@ -94,7 +94,7 @@ it("requires a default workspace the issuer belongs to", async () => {
 	const missing = await apiJson(
 		"POST",
 		"/api/v1/agents",
-		{ type: "codex", name: "CC" },
+		{ type: "claude_code", name: "CC" },
 		alice,
 	);
 	expect(missing.status).toBe(400);
@@ -105,7 +105,7 @@ it("requires a default workspace the issuer belongs to", async () => {
 	const denied = await apiJson(
 		"POST",
 		"/api/v1/agents",
-		{ type: "codex", name: "CC", defaultWorkspaceId: wsId },
+		{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
 		bob,
 	);
 	expect(denied.status).toBe(404);
@@ -294,7 +294,7 @@ it("cannot manage another user's agent", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "codex", name: "Codex", defaultWorkspaceId: wsId },
+			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
 			alice,
 		)
 	).json()) as { id: string };

@@ -3,8 +3,8 @@ import { z } from "zod";
 import { isTimestampInRange, localDateSchema } from "./common";
 import { MAX_DURATION_MINUTES } from "./duration";
 
-/** Coding-agent kind. Drives per-type grouping and ingest tooling. */
-export const agentTypes = ["claude_code", "codex", "cursor", "other"] as const;
+/** Coding-agent kind. v1 targets Claude Code only; more kinds may return later. */
+export const agentTypes = ["claude_code"] as const;
 export const agentTypeSchema = z.enum(agentTypes);
 export type AgentType = z.infer<typeof agentTypeSchema>;
 

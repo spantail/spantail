@@ -619,10 +619,7 @@
 			"deleteAction": "削除",
 			"empty": "エージェントはまだありません。",
 			"types": {
-				"claude_code": "Claude Code",
-				"codex": "Codex",
-				"cursor": "Cursor",
-				"other": "その他"
+				"claude_code": "Claude Code"
 			},
 			"secretTitle": "アクセストークンを作成しました",
 			"secretDescription": "「{{name}}」のトークンを今すぐコピーしてください。二度と表示されません。",

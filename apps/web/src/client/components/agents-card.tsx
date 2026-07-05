@@ -1,4 +1,8 @@
-import type { AgentType, AgentWithToken } from "@spantail/core";
+import {
+	type AgentType,
+	type AgentWithToken,
+	agentTypes,
+} from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	BanIcon,
@@ -73,8 +77,6 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-
-const AGENT_TYPES: AgentType[] = ["claude_code", "codex", "cursor", "other"];
 
 /** A freshly issued secret to surface once, with the agent it belongs to. */
 type IssuedSecret = { agentName: string; secret: string };
@@ -204,7 +206,7 @@ export function AgentsCard() {
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								{AGENT_TYPES.map((value) => (
+								{agentTypes.map((value) => (
 									<SelectItem key={value} value={value}>
 										{t(`settings.agents.types.${value}`)}
 									</SelectItem>

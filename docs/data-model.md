@@ -176,7 +176,7 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `agents` | User | A registered AI coding agent — a delegated identity of one user, not an independent principal. Type `claude_code` / `codex` / `cursor` / `other`. `disabledAt` (reversible) vs `archivedAt`. | belongs to `user` (cascade) |
+| `agents` | User | A registered AI coding agent — a delegated identity of one user, not an independent principal. Type `claude_code` (v1 targets Claude Code only). `disabledAt` (reversible) vs `archivedAt`. | belongs to `user` (cascade) |
 | `agent_tokens` | User | Agent Access Token (AAT): a write-only **ingest** credential bound to one agent; optional `defaultWorkspaceId`. Hashed; one active token per agent in practice. | belongs to `agents` (cascade) |
 | `agent_projects` | Project | Presentation grouping of an agent to projects — no rows means "all projects". Does **not** gate or default ingest. | joins `agents` and `projects` |
 | `agent_entries` | Project / Workspace | One agent **session** rollup: duration, token usage (plus summed `costUsd` when events carry one), and `context` — distinct non-usage facets (`models`, `branches`, `repositories`, client-supplied `refs`). Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entry_date` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |

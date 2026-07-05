@@ -616,10 +616,7 @@
 			"deleteAction": "Delete",
 			"empty": "No agents yet.",
 			"types": {
-				"claude_code": "Claude Code",
-				"codex": "Codex",
-				"cursor": "Cursor",
-				"other": "Other"
+				"claude_code": "Claude Code"
 			},
 			"secretTitle": "Access token created",
 			"secretDescription": "Copy the token for \"{{name}}\" now — it will not be shown again.",
