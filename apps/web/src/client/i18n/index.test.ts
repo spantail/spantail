@@ -1,6 +1,10 @@
-import { expect, it } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
 import i18n from "./index";
+
+// Restore the shared i18n singleton to the default language so switching here
+// never leaks a non-default locale into other client tests.
+afterEach(() => i18n.changeLanguage("en"));
 
 it("syncs document.documentElement.lang with the active language", async () => {
 	await i18n.changeLanguage("ja");
