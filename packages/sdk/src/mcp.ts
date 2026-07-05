@@ -269,6 +269,84 @@ export function registerSpantailTools(
 	);
 
 	server.registerTool(
+		"list_agents",
+		{
+			title: "List agents",
+			description:
+				"List the token owner's AI agents under a workspace (id, type, name) — " +
+				"those with activity there plus the ones registered to it. Call this " +
+				"before filtering agent activity by agentId. Agent activity exists only " +
+				"on instances with the agents feature enabled.",
+			inputSchema: {
+				workspaceId: z.string().describe("Workspace id from list_workspaces"),
+			},
+		},
+		({ workspaceId }) => run(() => client.listWorkspaceAgents(workspaceId)),
+	);
+
+	server.registerTool(
+		"get_agent_stats",
+		{
+			title: "Get agent activity stats",
+			description:
+				"Aggregated AI-agent session activity in a workspace over a date window: " +
+				"total minutes, token usage, and session counts, bucketed by date and by " +
+				"agent. These are agent sessions (not human work entries). Prefer this " +
+				"over list_agent_entries for overviews; drill into sessions afterwards.",
+			inputSchema: {
+				workspaceId: z.string().describe("Workspace id"),
+				agentId: z
+					.string()
+					.optional()
+					.describe("Filter to a single agent (from list_agents)"),
+				from: localDateSchema.describe("Start date YYYY-MM-DD (inclusive)"),
+				to: localDateSchema.describe("End date YYYY-MM-DD (inclusive)"),
+			},
+		},
+		(input) => run(() => client.getAgentEntryStats(input)),
+	);
+
+	server.registerTool(
+		"list_agent_entries",
+		{
+			title: "List agent entries",
+			description:
+				"List AI-agent session entries in a workspace, newest first — one entry " +
+				"per agent session with duration, token usage, and context (models, " +
+				"branches, repositories, refs). These are agent sessions, separate from " +
+				"human work entries (use list_entries for those). For totals over a " +
+				"period use get_agent_stats instead.",
+			inputSchema: {
+				workspaceId: z.string().describe("Workspace id"),
+				agentId: z
+					.string()
+					.optional()
+					.describe("Filter to a single agent (from list_agents)"),
+				from: localDateSchema
+					.optional()
+					.describe("Start date YYYY-MM-DD (inclusive)"),
+				to: localDateSchema
+					.optional()
+					.describe("End date YYYY-MM-DD (inclusive)"),
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(200)
+					.optional()
+					.describe("Max results, default 50"),
+				offset: z
+					.number()
+					.int()
+					.min(0)
+					.optional()
+					.describe("Rows to skip for pagination"),
+			},
+		},
+		(input) => run(() => client.listAgentEntries(input)),
+	);
+
+	server.registerTool(
 		"list_report_templates",
 		{
 			title: "List report templates",

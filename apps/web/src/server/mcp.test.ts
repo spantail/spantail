@@ -163,7 +163,10 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 	expect(tools.tools.map((tool) => tool.name).sort()).toEqual([
 		"create_report",
 		"delete_entry",
+		"get_agent_stats",
 		"get_report",
+		"list_agent_entries",
+		"list_agents",
 		"list_entries",
 		"list_projects",
 		"list_report_templates",
