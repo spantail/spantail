@@ -46,10 +46,13 @@ export function invalidateReports(client: QueryClient): void {
 	client.invalidateQueries({ queryKey: ["report-template-ids"] });
 }
 
-/** Refreshes a report's discussion (reactions + comments) after a change. */
+/** Refreshes a content version's discussion (reactions + comments) after a
+ * change. */
 export function invalidateReportDiscussion(
 	client: QueryClient,
-	reportId: string,
+	reportContentId: string,
 ): void {
-	client.invalidateQueries({ queryKey: ["report-discussion", reportId] });
+	client.invalidateQueries({
+		queryKey: ["report-discussion", reportContentId],
+	});
 }

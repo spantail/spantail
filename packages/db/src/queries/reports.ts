@@ -79,6 +79,23 @@ export async function getCurrentReportContent(
 		.get();
 }
 
+/**
+ * The owning report id of a content version. Backs the admin read fallback on
+ * content-scoped resources (discussion): the report id feeds the report-level
+ * access check.
+ */
+export async function getReportIdForContent(
+	db: Database,
+	reportContentId: string,
+): Promise<string | undefined> {
+	const row = await db
+		.select({ reportId: reportContent.reportId })
+		.from(reportContent)
+		.where(eq(reportContent.id, reportContentId))
+		.get();
+	return row?.reportId;
+}
+
 export interface ListReportsFilter {
 	templateId?: string;
 	projectId?: string;

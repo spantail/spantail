@@ -1,4 +1,4 @@
-import type { ReportMeta } from "@spantail/core";
+import type { Report } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon, SearchIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
@@ -30,7 +30,7 @@ export function SendReportDialog({
 	report,
 	onClose,
 }: {
-	report: ReportMeta;
+	report: Report;
 	onClose: () => void;
 }) {
 	const { t } = useTranslation();
@@ -54,9 +54,9 @@ export function SendReportDialog({
 				message: message.trim() === "" ? undefined : message,
 			}),
 		onSuccess: (result) => {
-			// The report is now shared, so a cached {shared:false} discussion
-			// (owner opened it before sending) must refetch.
-			invalidateReportDiscussion(queryClient, report.id);
+			// The current version is now shared, so a cached {shared:false}
+			// discussion (owner opened it before sending) must refetch.
+			invalidateReportDiscussion(queryClient, report.reportContentId);
 			// Reflect this send in the reading pane's inline send history.
 			queryClient.invalidateQueries({
 				queryKey: ["report-sends", report.id],

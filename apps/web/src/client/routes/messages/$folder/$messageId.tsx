@@ -249,7 +249,7 @@ function ReadingPane() {
 						</div>
 					</section>
 
-					{data.reportId && <ReportDiscussion reportId={data.reportId} />}
+					<ReportDiscussion reportContentId={data.reportContentId} />
 				</div>
 			</div>
 			{sharing && data.scope === "received" && (

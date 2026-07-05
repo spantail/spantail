@@ -17,8 +17,8 @@ export const realtimeEventSchema = z.object({
 	// Set for workspace-scoped signals; absent for user-scoped ones ("message" is
 	// the mailbox / report_deliveries, which spans a user's workspaces).
 	workspaceId: z.string().optional(),
-	// The affected entity id when a client invalidates per-id (e.g. a report's
-	// discussion keyed by reportId).
+	// The affected entity id when a client invalidates per-id (e.g. a version's
+	// discussion keyed by reportContentId).
 	id: z.string().optional(),
 });
 export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;

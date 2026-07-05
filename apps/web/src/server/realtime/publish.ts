@@ -78,19 +78,20 @@ export function publishToWorkspace(
 }
 
 /**
- * Relay a discussion-changed signal to a report's participants (owner +
- * Send-to recipients). The participant lookup runs in the background.
+ * Relay a discussion-changed signal to a content version's participants (the
+ * report owner + that version's Send-to recipients). The participant lookup
+ * runs in the background.
  */
 export function publishToReportParticipants(
 	c: Context<AppEnv>,
-	reportId: string,
+	reportContentId: string,
 ): void {
 	const payload = JSON.stringify({
 		type: "report-discussion",
-		id: reportId,
+		id: reportContentId,
 	} satisfies RealtimeEvent);
 	deliver(c, async () => {
-		const ids = await listReportParticipantUserIds(c.var.db, reportId);
+		const ids = await listReportParticipantUserIds(c.var.db, reportContentId);
 		await fanOut(c, ids, payload);
 	});
 }

@@ -37,11 +37,18 @@ import type { AppEnv } from "../types";
 import { requireReportReadAccess } from "./reports";
 
 // Resolves a row's raw avatar fields into ready-to-use URLs and drops the raw
-// ones, producing the wire `MailItem` shape. Received rows carry the sender's
-// image; sent rows carry per-recipient images aligned with recipientNames.
+// ones — plus the internal reportId (admin scope checks only) — producing the
+// wire `MailItem` shape. Received rows carry the sender's image; sent rows
+// carry per-recipient images aligned with recipientNames.
 function toMailItem(row: MailItemRow) {
-	const { senderUserId, senderImage, recipientIds, recipientImages, ...rest } =
-		row;
+	const {
+		senderUserId,
+		senderImage,
+		recipientIds,
+		recipientImages,
+		reportId: _reportId,
+		...rest
+	} = row;
 	return {
 		...rest,
 		senderImageUrl: senderUserId

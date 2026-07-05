@@ -23,6 +23,7 @@ function reportFixture(overrides: Partial<Report> = {}): Report {
 		note: null,
 		totalMinutes: 750,
 		version: 1,
+		reportContentId: "rep-1-v1",
 		renderedMarkdown: "# Weekly report\n\n- did things\n",
 		createdAt: "2026-06-01T00:00:00Z",
 		updatedAt: "2026-06-01T00:00:00Z",

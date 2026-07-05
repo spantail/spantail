@@ -115,8 +115,12 @@ export interface MailItemRow {
 	id: string;
 	scope: MailScope;
 	batchId: string;
-	// Always present: the sent version's source report. A delivery cascades
-	// away with its report, so it can never outlive it.
+	// The content version this delivery carried — the key for content-scoped
+	// resources (the version's discussion thread).
+	reportContentId: string;
+	// The version's source report. Internal only (the route strips it): admin
+	// reads use it to scope-check against the owning report; it is not on the
+	// wire.
 	reportId: string;
 	senderName: string;
 	senderEmail: string;
@@ -153,6 +157,7 @@ async function listReceived(
 		.select({
 			id: reportDeliveries.id,
 			batchId: reportDeliveries.batchId,
+			reportContentId: reportDeliveries.reportContentId,
 			reportId: reportContent.reportId,
 			senderName: reportDeliveries.senderName,
 			senderEmail: reportDeliveries.senderEmail,
@@ -198,6 +203,7 @@ async function listReceived(
 		id: r.id,
 		scope: "received",
 		batchId: r.batchId ?? r.id,
+		reportContentId: r.reportContentId,
 		reportId: r.reportId,
 		senderName: r.senderName,
 		senderEmail: r.senderEmail,
@@ -238,6 +244,7 @@ async function listSent(
 			// One send = one content version, so every joined value below is
 			// identical across the batch; max() is a pick-one aggregate, exactly
 			// like max(senderName).
+			reportContentId: sql<string>`max(${reportDeliveries.reportContentId})`,
 			reportId: sql<string>`max(${reportContent.reportId})`,
 			senderName: sql<string>`max(${reportDeliveries.senderName})`,
 			senderEmail: sql<string>`max(${reportDeliveries.senderEmail})`,
@@ -295,6 +302,7 @@ async function listSent(
 		id: r.id,
 		scope: "sent",
 		batchId: r.batchId,
+		reportContentId: r.reportContentId,
 		reportId: r.reportId,
 		senderName: r.senderName,
 		senderEmail: r.senderEmail,
@@ -508,6 +516,7 @@ export async function getMailItemDetail(
 			id: row.id,
 			scope: "received",
 			batchId: row.batchId ?? row.id,
+			reportContentId: row.reportContentId,
 			reportId,
 			senderName: row.senderName,
 			senderEmail: row.senderEmail,
@@ -551,6 +560,7 @@ export async function getMailItemDetail(
 			id: row.id,
 			scope: "sent",
 			batchId: key,
+			reportContentId: row.reportContentId,
 			reportId,
 			senderName: row.senderName,
 			senderEmail: row.senderEmail,
@@ -588,6 +598,7 @@ export async function listDeliveriesByWorkspace(
 		.select({
 			id: reportDeliveries.id,
 			batchId: reportDeliveries.batchId,
+			reportContentId: reportDeliveries.reportContentId,
 			reportId: reportContent.reportId,
 			senderName: reportDeliveries.senderName,
 			senderEmail: reportDeliveries.senderEmail,
@@ -616,6 +627,7 @@ export async function listDeliveriesByWorkspace(
 		id: r.id,
 		scope: "received",
 		batchId: r.batchId ?? r.id,
+		reportContentId: r.reportContentId,
 		reportId: r.reportId,
 		senderName: r.senderName,
 		senderEmail: r.senderEmail,
@@ -680,6 +692,7 @@ export async function getDeliveryDetailById(
 		id: row.id,
 		scope: "received",
 		batchId: row.batchId ?? row.id,
+		reportContentId: row.reportContentId,
 		reportId,
 		senderName: row.senderName,
 		senderEmail: row.senderEmail,

@@ -2,11 +2,25 @@ import { parseArgs } from "node:util";
 
 import type { ReactionEmoji, ReactionSummary } from "@spantail/core";
 import { reactionEmojiSchema } from "@spantail/core";
+import type { SpantailClient } from "@spantail/sdk";
 
 import { createClient, requireConnection } from "../client";
 import { confirmAction } from "../confirm";
 import type { CliContext } from "../context";
 import { UsageError } from "../errors";
+
+/**
+ * Discussion threads are keyed by content version, while the CLI keeps the
+ * report id as its user-facing argument: resolve the report's *current*
+ * version, whose thread these commands read and write.
+ */
+async function resolveReportContentId(
+	client: SpantailClient,
+	reportId: string,
+): Promise<string> {
+	const report = await client.getReport(reportId);
+	return report.reportContentId;
+}
 
 /**
  * CLI spellings of the reaction emoji. `-1` cannot be typed as a positional
@@ -33,9 +47,10 @@ function formatReactions(reactions: ReactionSummary[]): string {
 
 const DISCUSSION_USAGE = `Usage: spantail report discussion <id>
 
-Shows a report's discussion: body reactions and comments. The comment ids
-are inputs to \`spantail report comment --edit/--delete\` and
-\`spantail report react --comment\`.
+Shows the discussion of a report's current version: body reactions and
+comments. Threads are per sent version, so an edited report starts a new
+thread. The comment ids are inputs to \`spantail report comment
+--edit/--delete\` and \`spantail report react --comment\`.
 `;
 
 export async function reportDiscussion(
@@ -57,12 +72,13 @@ export async function reportDiscussion(
 	}
 
 	const client = createClient(ctx, requireConnection(ctx));
-	const discussion = await client.getReportDiscussion(id);
+	const contentId = await resolveReportContentId(client, id);
+	const discussion = await client.getReportDiscussion(contentId);
 	if (discussion.reactions.length === 0 && discussion.comments.length === 0) {
 		ctx.stderr.write(
 			discussion.shared
 				? "No comments or reactions yet.\n"
-				: "No discussion: the report has not been sent to anyone.\n",
+				: "No discussion: this version has not been sent to anyone.\n",
 		);
 		return 0;
 	}
@@ -87,8 +103,8 @@ const COMMENT_USAGE = `Usage: spantail report comment <report-id> <body>
        spantail report comment <report-id> --edit <comment-id> <new-body>
        spantail report comment <report-id> --delete <comment-id> [--yes]
 
-Adds, edits, or deletes a comment on a report's discussion. You can only
-edit or delete your own comments.
+Adds, edits, or deletes a comment on the discussion of a report's current
+version. You can only edit or delete your own comments.
 
 Options:
   --edit <comment-id>    Replace the body of one of your comments
@@ -137,7 +153,8 @@ export async function reportComment(
 			ctx.stderr.write("Cancelled.\n");
 			return 1;
 		}
-		await client.deleteReportComment(reportId, values.delete);
+		const contentId = await resolveReportContentId(client, reportId);
+		await client.deleteReportComment(contentId, values.delete);
 		ctx.stdout.write(`Deleted comment ${values.delete}\n`);
 		return 0;
 	}
@@ -148,24 +165,25 @@ export async function reportComment(
 			"expected a single <body>; quote it if it contains spaces",
 		);
 	}
+	const contentId = await resolveReportContentId(client, reportId);
 	if (values.edit) {
 		const comment = await client.updateReportComment(
-			reportId,
+			contentId,
 			values.edit,
 			body,
 		);
 		ctx.stdout.write(`Updated comment ${comment.id}\n`);
 		return 0;
 	}
-	const comment = await client.addReportComment(reportId, body);
+	const comment = await client.addReportComment(contentId, body);
 	ctx.stdout.write(`Added comment ${comment.id}\n`);
 	return 0;
 }
 
 const REACT_USAGE = `Usage: spantail report react <report-id> <emoji> [options]
 
-Toggles your reaction on a report (or on one of its comments): reacting
-twice with the same emoji removes it.
+Toggles your reaction on a report's current version (or on one of its
+comments): reacting twice with the same emoji removes it.
 
 <emoji> is one of: ${EMOJI_HELP}
 (thumbs-down stands for -1, which cannot be typed as an argument)
@@ -209,9 +227,10 @@ export async function reportReact(
 	}
 
 	const client = createClient(ctx, requireConnection(ctx));
+	const contentId = await resolveReportContentId(client, reportId);
 	const reactions = values.comment
-		? await client.toggleReportCommentReaction(reportId, values.comment, emoji)
-		: await client.toggleReportReaction(reportId, emoji);
+		? await client.toggleReportCommentReaction(contentId, values.comment, emoji)
+		: await client.toggleReportReaction(contentId, emoji);
 	const mine = reactions.find(
 		(reaction) => reaction.emoji === emoji && reaction.reactedByMe,
 	);

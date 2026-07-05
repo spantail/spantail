@@ -57,7 +57,7 @@ report always reflects the data as of when it was rendered.
 
 :::note[Screenshot]
 A rendered report with its toolbar (edit, send, share, download, duplicate,
-print, delete) and the discussion thread below.
+print, delete).
 🚧 Image to be added.
 :::
 
@@ -82,9 +82,12 @@ The share dialog with the passcode and expiry options.
 
 ## Discuss
 
-Reports and inbox copies carry a **discussion**: Markdown comments and emoji
-reactions, visible to the owner and everyone the report was sent to. You can
-edit your own comments.
+Every sent report version carries a **discussion**: Markdown comments and
+emoji reactions on the message, visible to the sender and the recipients of
+that version. Open it from the message (Inbox or Sent). Editing a report and
+sending it again starts a fresh thread for the new version, so a conversation
+always refers to the exact body its participants received. You can edit your
+own comments.
 
 ## Inbox
 

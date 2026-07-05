@@ -33,7 +33,8 @@ export type ReactionSummary = z.infer<typeof reactionSummarySchema>;
 /** A Markdown comment with its own aggregated reactions. */
 export const commentSchema = z.object({
 	id: z.string(),
-	reportId: z.string(),
+	// The content version whose thread this comment belongs to.
+	reportContentId: z.string(),
 	// Null once the author's account is deleted; the frozen name stands alone.
 	authorUserId: z.string().nullable(),
 	authorName: z.string(),
@@ -49,12 +50,13 @@ export const commentSchema = z.object({
 export type Comment = z.infer<typeof commentSchema>;
 
 /**
- * A report's discussion. `shared` is false for a report that has never been
- * sent (its owner is the only participant) — the UI hides the panel then.
+ * A content version's discussion. `shared` is false for a version that has
+ * never been sent (its owner is the only participant) — the UI hides the
+ * panel then.
  */
 export const reportDiscussionSchema = z.object({
 	shared: z.boolean(),
-	// Report-body reactions.
+	// Reactions on the version's body.
 	reactions: z.array(reactionSummarySchema),
 	comments: z.array(commentSchema),
 });

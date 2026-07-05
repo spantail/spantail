@@ -2,7 +2,12 @@ import { expect, it } from "vitest";
 
 import { runCli } from "../cli";
 import { saveConfig } from "../config";
-import { commentFixture, createTestContext, fakeApi } from "../test-helpers";
+import {
+	commentFixture,
+	createTestContext,
+	fakeApi,
+	reportFixture,
+} from "../test-helpers";
 
 function loggedIn(configDir: string): void {
 	saveConfig(configDir, {
@@ -11,10 +16,16 @@ function loggedIn(configDir: string): void {
 	});
 }
 
+// Every discussion command takes a report id and resolves the report's current
+// content version first (threads are per version), so each fake API also
+// serves GET /reports/rep-1 (whose fixture carries reportContentId rep-1-v1).
+const reportLookup = { path: "/reports/rep-1", body: reportFixture() };
+
 it("shows reactions and comments", async () => {
 	const api = fakeApi([
+		reportLookup,
 		{
-			path: "/reports/rep-1/discussion",
+			path: "/report-contents/rep-1-v1/discussion",
 			body: {
 				shared: true,
 				reactions: [
@@ -58,8 +69,9 @@ it("shows reactions and comments", async () => {
 
 it("explains an empty discussion of an unsent report", async () => {
 	const api = fakeApi([
+		reportLookup,
 		{
-			path: "/reports/rep-1/discussion",
+			path: "/report-contents/rep-1-v1/discussion",
 			body: { shared: false, reactions: [], comments: [] },
 		},
 	]);
@@ -75,9 +87,10 @@ it("explains an empty discussion of an unsent report", async () => {
 
 it("adds a comment", async () => {
 	const api = fakeApi([
+		reportLookup,
 		{
 			method: "POST",
-			path: "/reports/rep-1/comments",
+			path: "/report-contents/rep-1-v1/comments",
 			body: commentFixture({ id: "com-9" }),
 		},
 	]);
@@ -94,9 +107,10 @@ it("adds a comment", async () => {
 
 it("edits a comment", async () => {
 	const api = fakeApi([
+		reportLookup,
 		{
 			method: "PATCH",
-			path: "/reports/rep-1/comments/com-1",
+			path: "/report-contents/rep-1-v1/comments/com-1",
 			body: commentFixture(),
 		},
 	]);
@@ -116,7 +130,12 @@ it("edits a comment", async () => {
 
 it("deletes a comment after confirmation", async () => {
 	const api = fakeApi([
-		{ method: "DELETE", path: "/reports/rep-1/comments/com-1", body: {} },
+		reportLookup,
+		{
+			method: "DELETE",
+			path: "/report-contents/rep-1-v1/comments/com-1",
+			body: {},
+		},
 	]);
 	const { ctx, stdout, configDir } = createTestContext({
 		fetch: api.fetch,
@@ -145,9 +164,10 @@ it("rejects --edit combined with --delete", async () => {
 
 it("toggles a reaction on the report body", async () => {
 	const api = fakeApi([
+		reportLookup,
 		{
 			method: "PUT",
-			path: "/reports/rep-1/reactions",
+			path: "/report-contents/rep-1-v1/reactions",
 			body: [
 				{ emoji: "rocket", count: 1, reactedByMe: true, userNames: ["Me"] },
 			],
@@ -164,9 +184,10 @@ it("toggles a reaction on the report body", async () => {
 
 it("maps thumbs-down to -1 and targets a comment", async () => {
 	const api = fakeApi([
+		reportLookup,
 		{
 			method: "PUT",
-			path: "/reports/rep-1/comments/com-1/reactions",
+			path: "/report-contents/rep-1-v1/comments/com-1/reactions",
 			body: [],
 		},
 	]);

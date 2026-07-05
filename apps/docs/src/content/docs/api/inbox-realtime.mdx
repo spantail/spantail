@@ -35,7 +35,7 @@ Per-scope fields are simply empty for the other scope (received: `recipientNames
 | `id` | string | Delivery id. For a sent item, a representative row in the batch. |
 | `scope` | string | `received` or `sent`. Picks which id flags target. |
 | `batchId` | string | The send batch this delivery belongs to. |
-| `reportId` | string | Source report of the delivered version. Always present — deleting a report also removes its deliveries. |
+| `reportContentId` | string | The immutable content version this delivery carried — the key for the version's [discussion](/api/report-sharing/#discussion). Always present — deleting a report also removes its versions and their deliveries. |
 | `senderName` | string | Display name of the sender. |
 | `senderEmail` | string | Email of the sender. |
 | `reportName` | string | Name of the delivered report. |
@@ -97,7 +97,7 @@ curl "https://<your-instance>/api/v1/inbox?folder=inbox&limit=50" \
     "id": "msg_01",
     "scope": "received",
     "batchId": "bat_7k",
-    "reportId": "rep_weekly",
+    "reportContentId": "rct_weekly_v1",
     "senderName": "Ana",
     "senderEmail": "ana@example.com",
     "reportName": "Weekly summary",
@@ -214,7 +214,7 @@ curl "https://<your-instance>/api/v1/inbox/msg_01" \
   "id": "msg_01",
   "scope": "received",
   "batchId": "bat_7k",
-  "reportId": "rep_weekly",
+  "reportContentId": "rct_weekly_v1",
   "senderName": "Ana",
   "senderEmail": "ana@example.com",
   "reportName": "Weekly summary",
@@ -277,7 +277,7 @@ shaping stay on the existing REST path. Each event is a JSON object:
 | --- | --- | --- |
 | `type` | string | What changed: `work-entry`, `agent-entry`, `project`, `report-discussion`, or `message`. |
 | `workspaceId` | string | Set for workspace-scoped signals; absent for user-scoped ones (`message` spans a user's workspaces). |
-| `id` | string | The affected entity id when invalidation is per-id (e.g. `report-discussion` keyed by report id). |
+| `id` | string | The affected entity id when invalidation is per-id (e.g. `report-discussion` keyed by the content version id). |
 
 Each event arrives as an SSE `data:` line:
 
@@ -286,7 +286,7 @@ data: {"type":"work-entry","workspaceId":"wrk_demo"}
 
 data: {"type":"message"}
 
-data: {"type":"report-discussion","id":"rep_weekly"}
+data: {"type":"report-discussion","id":"rct_weekly_v1"}
 ```
 
 The connection is routed to the caller's own hub; workspace fan-out is membership-scoped at

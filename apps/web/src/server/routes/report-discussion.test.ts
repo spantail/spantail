@@ -28,7 +28,8 @@ interface Discussion {
 
 /**
  * Owner + a workspace member (eligible recipient) + an outsider (no shared
- * workspace), plus one report owned by the owner.
+ * workspace), plus one report owned by the owner. `contentId` is the report's
+ * current (v1) content version — the discussion key.
  */
 async function setup() {
 	const owner = await signUpUser("Owner", "owner@example.com");
@@ -48,24 +49,34 @@ async function setup() {
 		{ email: "member@example.com" },
 		owner,
 	);
+	const templateId = await defaultTemplateId(owner);
 	const report = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/reports",
 			{
 				name: "Daily",
-				templateId: await defaultTemplateId(owner),
+				templateId,
 				filters: { workspaceIds: [ws.id], dateRange: "today" },
 			},
 			owner,
 		)
-	).json()) as { id: string };
+	).json()) as { id: string; reportContentId: string };
 	const memberId = (
 		(await (await apiGet("/api/v1/me", member)).json()) as {
 			user: { id: string };
 		}
 	).user.id;
-	return { owner, member, outsider, ws, report, memberId };
+	return {
+		owner,
+		member,
+		outsider,
+		ws,
+		report,
+		contentId: report.reportContentId,
+		templateId,
+		memberId,
+	};
 }
 
 async function send(report: { id: string }, owner: string, memberId: string) {
@@ -77,36 +88,38 @@ async function send(report: { id: string }, owner: string, memberId: string) {
 	);
 }
 
-const getDiscussion = async (reportId: string, user: string) =>
+const getDiscussion = async (contentId: string, user: string) =>
 	(await (
-		await apiGet(`/api/v1/reports/${reportId}/discussion`, user)
+		await apiGet(`/api/v1/report-contents/${contentId}/discussion`, user)
 	).json()) as Discussion;
 
 it("hides the discussion from non-participants but not the owner of an unsent report", async () => {
-	const { owner, member, outsider, report } = await setup();
+	const { owner, member, outsider, contentId } = await setup();
 	// Owner is a participant even before sending; the thread is just not enabled.
-	const unsent = await getDiscussion(report.id, owner);
+	const unsent = await getDiscussion(contentId, owner);
 	expect(unsent.shared).toBe(false);
 	expect(unsent.comments).toHaveLength(0);
 
 	// A user with no delivery and no ownership gets a 404 (existence hidden).
 	expect(
-		(await apiGet(`/api/v1/reports/${report.id}/discussion`, outsider)).status,
+		(await apiGet(`/api/v1/report-contents/${contentId}/discussion`, outsider))
+			.status,
 	).toBe(404);
 	// The member has not received it yet either.
 	expect(
-		(await apiGet(`/api/v1/reports/${report.id}/discussion`, member)).status,
+		(await apiGet(`/api/v1/report-contents/${contentId}/discussion`, member))
+			.status,
 	).toBe(404);
 });
 
-it("blocks mutations until the report has been shared", async () => {
-	const { owner, report } = await setup();
-	// Owner of an unsent report cannot react or comment.
+it("blocks mutations until the version has been shared", async () => {
+	const { owner, contentId } = await setup();
+	// Owner of an unsent version cannot react or comment.
 	expect(
 		(
 			await apiJson(
 				"PUT",
-				`/api/v1/reports/${report.id}/reactions`,
+				`/api/v1/report-contents/${contentId}/reactions`,
 				{ emoji: "+1" },
 				owner,
 			)
@@ -116,7 +129,7 @@ it("blocks mutations until the report has been shared", async () => {
 		(
 			await apiJson(
 				"POST",
-				`/api/v1/reports/${report.id}/comments`,
+				`/api/v1/report-contents/${contentId}/comments`,
 				{ body: "hi" },
 				owner,
 			)
@@ -125,14 +138,14 @@ it("blocks mutations until the report has been shared", async () => {
 });
 
 it("lets the sender and recipient share one comment thread", async () => {
-	const { owner, member, report, memberId } = await setup();
+	const { owner, member, report, contentId, memberId } = await setup();
 	await send(report, owner, memberId);
 
 	// Recipient comments.
 	const created = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/reports/${report.id}/comments`,
+			`/api/v1/report-contents/${contentId}/comments`,
 			{ body: "Looks good **to me**" },
 			member,
 		)
@@ -141,22 +154,22 @@ it("lets the sender and recipient share one comment thread", async () => {
 	expect(created.editable).toBe(true);
 
 	// Owner sees the recipient's comment but can't edit it.
-	const ownerView = await getDiscussion(report.id, owner);
+	const ownerView = await getDiscussion(contentId, owner);
 	expect(ownerView.shared).toBe(true);
 	expect(ownerView.comments).toHaveLength(1);
 	expect(ownerView.comments[0]?.editable).toBe(false);
 	expect(ownerView.comments[0]?.body).toBe("Looks good **to me**");
 });
 
-it("toggles report-body and comment reactions idempotently", async () => {
-	const { owner, member, report, memberId } = await setup();
+it("toggles body and comment reactions idempotently", async () => {
+	const { owner, member, report, contentId, memberId } = await setup();
 	await send(report, owner, memberId);
 
 	// Add a body reaction.
 	const added = (await (
 		await apiJson(
 			"PUT",
-			`/api/v1/reports/${report.id}/reactions`,
+			`/api/v1/report-contents/${contentId}/reactions`,
 			{ emoji: "+1" },
 			owner,
 		)
@@ -169,7 +182,7 @@ it("toggles report-body and comment reactions idempotently", async () => {
 	const removed = (await (
 		await apiJson(
 			"PUT",
-			`/api/v1/reports/${report.id}/reactions`,
+			`/api/v1/report-contents/${contentId}/reactions`,
 			{ emoji: "+1" },
 			owner,
 		)
@@ -180,18 +193,18 @@ it("toggles report-body and comment reactions idempotently", async () => {
 	const comment = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/reports/${report.id}/comments`,
+			`/api/v1/report-contents/${contentId}/comments`,
 			{ body: "nice" },
 			member,
 		)
 	).json()) as { id: string };
 	await apiJson(
 		"PUT",
-		`/api/v1/reports/${report.id}/comments/${comment.id}/reactions`,
+		`/api/v1/report-contents/${contentId}/comments/${comment.id}/reactions`,
 		{ emoji: "heart" },
 		owner,
 	);
-	const view = await getDiscussion(report.id, member);
+	const view = await getDiscussion(contentId, member);
 	expect(view.reactions).toHaveLength(0);
 	expect(view.comments[0]?.reactions).toEqual([
 		{ emoji: "heart", count: 1, reactedByMe: false, userNames: ["Owner"] },
@@ -199,12 +212,12 @@ it("toggles report-body and comment reactions idempotently", async () => {
 });
 
 it("scopes comment edit and delete to the author", async () => {
-	const { owner, member, report, memberId } = await setup();
+	const { owner, member, report, contentId, memberId } = await setup();
 	await send(report, owner, memberId);
 	const comment = (await (
 		await apiJson(
 			"POST",
-			`/api/v1/reports/${report.id}/comments`,
+			`/api/v1/report-contents/${contentId}/comments`,
 			{ body: "draft" },
 			member,
 		)
@@ -215,7 +228,7 @@ it("scopes comment edit and delete to the author", async () => {
 		(
 			await apiJson(
 				"PATCH",
-				`/api/v1/reports/${report.id}/comments/${comment.id}`,
+				`/api/v1/report-contents/${contentId}/comments/${comment.id}`,
 				{ body: "hijacked" },
 				owner,
 			)
@@ -225,7 +238,7 @@ it("scopes comment edit and delete to the author", async () => {
 		(
 			await apiJson(
 				"DELETE",
-				`/api/v1/reports/${report.id}/comments/${comment.id}`,
+				`/api/v1/report-contents/${contentId}/comments/${comment.id}`,
 				undefined,
 				owner,
 			)
@@ -237,7 +250,7 @@ it("scopes comment edit and delete to the author", async () => {
 		(
 			await apiJson(
 				"PATCH",
-				`/api/v1/reports/${report.id}/comments/${comment.id}`,
+				`/api/v1/report-contents/${contentId}/comments/${comment.id}`,
 				{ body: "final" },
 				member,
 			)
@@ -247,26 +260,26 @@ it("scopes comment edit and delete to the author", async () => {
 		(
 			await apiJson(
 				"DELETE",
-				`/api/v1/reports/${report.id}/comments/${comment.id}`,
+				`/api/v1/report-contents/${contentId}/comments/${comment.id}`,
 				undefined,
 				member,
 			)
 		).status,
 	).toBe(204);
-	expect((await getDiscussion(report.id, member)).comments).toHaveLength(0);
+	expect((await getDiscussion(contentId, member)).comments).toHaveLength(0);
 });
 
-it("rejects a comment-level reaction on a comment not in the report", async () => {
-	const { owner, member, report, memberId } = await setup();
+it("rejects a comment-level reaction on a comment not in the version", async () => {
+	const { owner, member, report, contentId, memberId } = await setup();
 	await send(report, owner, memberId);
 	void member;
-	// A comment id that doesn't belong to this report is a 404, never a stray
+	// A comment id that doesn't belong to this version is a 404, never a stray
 	// reaction row.
 	expect(
 		(
 			await apiJson(
 				"PUT",
-				`/api/v1/reports/${report.id}/comments/nonexistent/reactions`,
+				`/api/v1/report-contents/${contentId}/comments/nonexistent/reactions`,
 				{ emoji: "eyes" },
 				owner,
 			)
@@ -274,12 +287,79 @@ it("rejects a comment-level reaction on a comment not in the report", async () =
 	).toBe(404);
 });
 
-it("keeps the thread shared after the last recipient is deleted", async () => {
-	const { owner, member, report, memberId } = await setup();
+it("scopes the thread to the version that was sent", async () => {
+	const { owner, member, ws, report, contentId, templateId, memberId } =
+		await setup();
+	// Send v1 to the member, who comments on it.
 	await send(report, owner, memberId);
 	await apiJson(
 		"POST",
-		`/api/v1/reports/${report.id}/comments`,
+		`/api/v1/report-contents/${contentId}/comments`,
+		{ body: "on v1" },
+		member,
+	);
+
+	// Editing the report appends a new content version (v2).
+	const updated = (await (
+		await apiJson(
+			"PATCH",
+			`/api/v1/reports/${report.id}`,
+			{
+				name: "Daily v2",
+				templateId,
+				filters: { workspaceIds: [ws.id], dateRange: "today" },
+			},
+			owner,
+		)
+	).json()) as { reportContentId: string };
+	const v2ContentId = updated.reportContentId;
+	expect(v2ContentId).not.toBe(contentId);
+
+	// The v1 recipient holds no delivery of v2: its thread is hidden from them
+	// (read and write), while their v1 thread stays intact.
+	expect(
+		(await apiGet(`/api/v1/report-contents/${v2ContentId}/discussion`, member))
+			.status,
+	).toBe(404);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/report-contents/${v2ContentId}/comments`,
+				{ body: "sneak into v2" },
+				member,
+			)
+		).status,
+	).toBe(404);
+	expect((await getDiscussion(contentId, member)).comments).toHaveLength(1);
+
+	// The owner participates in every version of their own report: v2 starts as
+	// a fresh, unshared thread (the v1 delivery does not carry over).
+	const v2Unsent = await getDiscussion(v2ContentId, owner);
+	expect(v2Unsent.shared).toBe(false);
+	expect(v2Unsent.comments).toHaveLength(0);
+
+	// Sending v2 opens its own empty thread; the v1 comment never leaks in.
+	await send(report, owner, memberId);
+	const v2Shared = await getDiscussion(v2ContentId, member);
+	expect(v2Shared.shared).toBe(true);
+	expect(v2Shared.comments).toHaveLength(0);
+	await apiJson(
+		"POST",
+		`/api/v1/report-contents/${v2ContentId}/comments`,
+		{ body: "on v2" },
+		member,
+	);
+	expect((await getDiscussion(contentId, owner)).comments).toHaveLength(1);
+	expect((await getDiscussion(v2ContentId, owner)).comments).toHaveLength(1);
+});
+
+it("keeps the thread shared after the last recipient is deleted", async () => {
+	const { owner, member, report, contentId, memberId } = await setup();
+	await send(report, owner, memberId);
+	await apiJson(
+		"POST",
+		`/api/v1/report-contents/${contentId}/comments`,
 		{ body: "Reviewed, looks good" },
 		member,
 	);
@@ -292,7 +372,7 @@ it("keeps the thread shared after the last recipient is deleted", async () => {
 	).toBe(204);
 
 	// The owner still sees the retained thread and can follow up.
-	const view = await getDiscussion(report.id, owner);
+	const view = await getDiscussion(contentId, owner);
 	expect(view.shared).toBe(true);
 	expect(view.comments).toHaveLength(1);
 	expect(view.comments[0]?.authorName).toBe("Member");
@@ -301,7 +381,7 @@ it("keeps the thread shared after the last recipient is deleted", async () => {
 		(
 			await apiJson(
 				"POST",
-				`/api/v1/reports/${report.id}/comments`,
+				`/api/v1/report-contents/${contentId}/comments`,
 				{ body: "Thanks for the review" },
 				owner,
 			)
@@ -310,28 +390,29 @@ it("keeps the thread shared after the last recipient is deleted", async () => {
 });
 
 it("cascades report deletion to its comments and reactions", async () => {
-	const { owner, member, report, memberId } = await setup();
+	const { owner, member, report, contentId, memberId } = await setup();
 	await send(report, owner, memberId);
 	await apiJson(
 		"POST",
-		`/api/v1/reports/${report.id}/comments`,
+		`/api/v1/report-contents/${contentId}/comments`,
 		{ body: "to be removed" },
 		member,
 	);
 	await apiJson(
 		"PUT",
-		`/api/v1/reports/${report.id}/reactions`,
+		`/api/v1/report-contents/${contentId}/reactions`,
 		{ emoji: "rocket" },
 		owner,
 	);
-	expect((await getDiscussion(report.id, owner)).comments).toHaveLength(1);
+	expect((await getDiscussion(contentId, owner)).comments).toHaveLength(1);
 
 	expect(
 		(await apiJson("DELETE", `/api/v1/reports/${report.id}`, undefined, owner))
 			.status,
 	).toBe(204);
-	// The report (and its discussion) is gone for everyone.
+	// The report's versions (and their discussions) are gone for everyone.
 	expect(
-		(await apiGet(`/api/v1/reports/${report.id}/discussion`, owner)).status,
+		(await apiGet(`/api/v1/report-contents/${contentId}/discussion`, owner))
+			.status,
 	).toBe(404);
 });

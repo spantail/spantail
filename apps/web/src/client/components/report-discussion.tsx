@@ -185,10 +185,10 @@ function CommentComposer({
 }
 
 function CommentItem({
-	reportId,
+	reportContentId,
 	comment,
 }: {
-	reportId: string;
+	reportContentId: string;
 	comment: Comment;
 }) {
 	const { t, i18n } = useTranslation();
@@ -197,23 +197,24 @@ function CommentItem({
 	const [draft, setDraft] = useState(comment.body);
 	const [confirmDelete, setConfirmDelete] = useState(false);
 
-	const invalidate = () => invalidateReportDiscussion(queryClient, reportId);
+	const invalidate = () =>
+		invalidateReportDiscussion(queryClient, reportContentId);
 
 	const reactionMutation = useMutation({
 		mutationFn: (emoji: ReactionEmoji) =>
-			api.toggleReportCommentReaction(reportId, comment.id, emoji),
+			api.toggleReportCommentReaction(reportContentId, comment.id, emoji),
 		onSuccess: invalidate,
 	});
 	const updateMutation = useMutation({
 		mutationFn: (body: string) =>
-			api.updateReportComment(reportId, comment.id, body),
+			api.updateReportComment(reportContentId, comment.id, body),
 		onSuccess: () => {
 			setEditing(false);
 			invalidate();
 		},
 	});
 	const deleteMutation = useMutation({
-		mutationFn: () => api.deleteReportComment(reportId, comment.id),
+		mutationFn: () => api.deleteReportComment(reportContentId, comment.id),
 		onSuccess: invalidate,
 	});
 
@@ -339,11 +340,16 @@ function CommentItem({
 }
 
 /**
- * Reactions + Markdown comments for a Send-to-shared report. Shared by the
- * sender (reports view) and recipients (notifications view); both read and
- * write the same report-keyed thread. Renders nothing for an unshared report.
+ * Reactions + Markdown comments for a Send-to-shared content version. Shared
+ * by the sender and recipients (message detail, both scopes); all read and
+ * write the same version-keyed thread. Renders nothing for an unshared
+ * version.
  */
-export function ReportDiscussion({ reportId }: { reportId: string }) {
+export function ReportDiscussion({
+	reportContentId,
+}: {
+	reportContentId: string;
+}) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
 	const [draft, setDraft] = useState("");
@@ -352,19 +358,20 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 	const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 
 	const discussion = useQuery({
-		queryKey: ["report-discussion", reportId],
-		queryFn: () => api.getReportDiscussion(reportId),
+		queryKey: ["report-discussion", reportContentId],
+		queryFn: () => api.getReportDiscussion(reportContentId),
 	});
 
-	const invalidate = () => invalidateReportDiscussion(queryClient, reportId);
+	const invalidate = () =>
+		invalidateReportDiscussion(queryClient, reportContentId);
 
 	const bodyReactionMutation = useMutation({
 		mutationFn: (emoji: ReactionEmoji) =>
-			api.toggleReportReaction(reportId, emoji),
+			api.toggleReportReaction(reportContentId, emoji),
 		onSuccess: invalidate,
 	});
 	const addMutation = useMutation({
-		mutationFn: (body: string) => api.addReportComment(reportId, body),
+		mutationFn: (body: string) => api.addReportComment(reportContentId, body),
 		onSuccess: () => {
 			setDraft("");
 			invalidate();
@@ -372,7 +379,7 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 	});
 
 	const data = discussion.data;
-	// Hidden until loaded; an unshared report (owner never sent it) has no thread.
+	// Hidden until loaded; an unshared version (never sent) has no thread.
 	if (!data?.shared) return null;
 
 	return (
@@ -392,7 +399,11 @@ export function ReportDiscussion({ reportId }: { reportId: string }) {
 				</h3>
 
 				{data.comments.map((comment) => (
-					<CommentItem key={comment.id} reportId={reportId} comment={comment} />
+					<CommentItem
+						key={comment.id}
+						reportContentId={reportContentId}
+						comment={comment}
+					/>
 				))}
 			</div>
 

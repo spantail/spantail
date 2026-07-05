@@ -27,12 +27,13 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `totalMinutes` | integer \| null | 現在バージョンのエントリの合計分。この値の追跡前にレンダリングされたレポートは `null`（再レンダリングまで表示）。 |
 | `snapshotProjectIds` | string[] \| null | 現在のスナップショットにエントリが現れる、重複なしのプロジェクト ID。レンダリング時に取得され、Send-to ACL を駆動します。`null` はスコープ不明（この取得の追加前にレンダリング）を意味します。[レポートの送信](#レポートの送信) を参照。ワイヤには出力されますが `@spantail/core` の型付き `reportSchema` には含まれないため、ワイヤ専用の追加フィールドとして扱ってください。 |
 | `version` | integer | 現在のバージョン。作成時に `1`、編集ごとに +1。 |
+| `reportContentId` | string | 現在のコンテンツバージョンの ID — コンテンツスコープのリソース（そのバージョンの[ディスカッション](/ja/api/report-sharing/#ディスカッション)）のキー。 |
 | `renderedMarkdown` | string | 現在バージョンのレンダリング済みドキュメント。システム生成の YAML フロントマター（来歴）に、Liquid でレンダリングした本文が続きます。 |
 | `createdAt` | string | ISO 8601 の作成時刻。 |
 | `updatedAt` | string | ISO 8601 の最終更新時刻。 |
 
-一覧のペイロードでは `renderedMarkdown` は省略されます。本文は [`GET /reports/:id`](#レポートの取得) で
-オンデマンドに取得してください。
+一覧のペイロードでは `reportContentId` と `renderedMarkdown` は省略されます。
+[`GET /reports/:id`](#レポートの取得) でオンデマンドに取得してください。
 
 ### filters オブジェクト
 
@@ -205,6 +206,7 @@ curl -X POST "https://<your-instance>/api/v1/reports" \
   "totalMinutes": 540,
   "snapshotProjectIds": ["prj_site"],
   "version": 1,
+  "reportContentId": "rct_q2v1",
   "renderedMarkdown": "---\nname: Website — week of Jun 22\n...\n---\n\n# ...",
   "createdAt": "2026-06-28T09:30:00.000Z",
   "updatedAt": "2026-06-28T09:30:00.000Z"
