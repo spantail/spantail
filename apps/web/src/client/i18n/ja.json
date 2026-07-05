@@ -106,6 +106,21 @@
 			"project": "プロジェクト",
 			"input": "入力",
 			"output": "出力"
+		},
+		"detail": {
+			"open": "セッションの詳細を開く",
+			"noDescription": "無題のセッション",
+			"usage": "使用量",
+			"cacheWrite": "キャッシュ書き込み",
+			"cacheRead": "キャッシュ読み込み",
+			"totalTokens": "合計",
+			"cost": "コスト",
+			"context": "コンテキスト",
+			"repositories": "リポジトリ",
+			"branches": "ブランチ",
+			"refs": "参照",
+			"models": "モデル",
+			"sessionId": "セッション ID"
 		}
 	},
 	"workspace": {
