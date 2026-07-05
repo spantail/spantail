@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+import { createDb, schema } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -503,4 +505,50 @@ it("requires the write scope to delete", async () => {
 		body: JSON.stringify({ workspaceId: ws.id, ids: [entry] }),
 	});
 	expect(res.status).toBe(403);
+});
+
+it("deletes a session's raw events along with its entry", async () => {
+	const { admin, ws } = await setup();
+	const { agentId, token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	// An events-fed session: the rollup is recomputed from raw events on every
+	// ingest, so a delete that left them behind could be resurrected by a
+	// late event retry.
+	const eventIngest = await appFetch("/api/v1/agent-events", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			sessionId: "evt-session",
+			events: [
+				{
+					sourceId: "m1",
+					timestamp: "2026-06-20T01:00:00.000Z",
+					usage: { input_tokens: 10, output_tokens: 20 },
+				},
+			],
+		}),
+	});
+	expect(eventIngest.status).toBe(200);
+	const entry = (await eventIngest.json()) as { id: string };
+	// A second summary-path session for the same agent must keep its events…
+	// (none exist) …and one for another session must survive the delete.
+	const keep = await ingestId(token, "keep-session");
+
+	const res = await deleteEntries(admin, ws.id, [entry.id]);
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({ count: 1 });
+	expect(await listIds(admin, ws.id)).toEqual([keep]);
+
+	// Raw events have no read route; check the table directly.
+	const db = createDb(env.DB);
+	const events = await db.select().from(schema.agentEvents);
+	expect(
+		events.filter(
+			(e) => e.agentId === agentId && e.sessionId === "evt-session",
+		),
+	).toHaveLength(0);
 });

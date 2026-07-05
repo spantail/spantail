@@ -16,6 +16,7 @@ import {
 	isNull,
 	lt,
 	ne,
+	or,
 	type SQL,
 	sql,
 } from "drizzle-orm";
@@ -429,11 +430,20 @@ export async function getAgentEntriesByIds(
 	return db.select().from(agentEntries).where(inArray(agentEntries.id, ids));
 }
 
+// Each (agentId, sessionId) pair binds 2 parameters, plus 1 for the
+// workspace: a chunk of 40 keeps an event-delete statement at 81 binds,
+// under D1's 100-bound-parameter cap.
+const EVENT_DELETE_CHUNK = 40;
+
 /**
  * Deletes the caller-owned agent entries among `ids`, returning how many rows
  * went away. The workspace + owner scope is applied in SQL, so the delete
  * stays safe even if a row changed hands between the route's pre-check and
- * this statement. Link rows in work_entry_agent_entries cascade away.
+ * this statement. Link rows in work_entry_agent_entries cascade away, and the
+ * sessions' raw agent_events go in the same db.batch — events tie to a
+ * session by (agentId, sessionId), not a FK, and the rollup is recomputed
+ * from them on every event ingest, so leaving them behind would let a
+ * late event retry resurrect a deleted session from its full history.
  */
 export async function deleteAgentEntries(
 	db: Database,
@@ -441,16 +451,46 @@ export async function deleteAgentEntries(
 	scope: { workspaceId: string; ownerUserId: string },
 ): Promise<number> {
 	if (ids.length === 0) return 0;
-	const rows = await db
+	const scoped = and(
+		inArray(agentEntries.id, ids),
+		eq(agentEntries.workspaceId, scope.workspaceId),
+		eq(agentEntries.ownerUserId, scope.ownerUserId),
+	);
+	// The event delete needs the sessions' natural keys before the rows go.
+	const sessions = await db
+		.select({
+			agentId: agentEntries.agentId,
+			sessionId: agentEntries.sessionId,
+		})
+		.from(agentEntries)
+		.where(scoped);
+	if (sessions.length === 0) return 0;
+	const deleteEntries = db
 		.delete(agentEntries)
-		.where(
-			and(
-				inArray(agentEntries.id, ids),
-				eq(agentEntries.workspaceId, scope.workspaceId),
-				eq(agentEntries.ownerUserId, scope.ownerUserId),
-			),
-		)
+		.where(scoped)
 		.returning({ id: agentEntries.id });
+	const deleteEvents = [];
+	for (let i = 0; i < sessions.length; i += EVENT_DELETE_CHUNK) {
+		const chunk = sessions.slice(i, i + EVENT_DELETE_CHUNK);
+		deleteEvents.push(
+			db
+				.delete(agentEvents)
+				.where(
+					and(
+						eq(agentEvents.workspaceId, scope.workspaceId),
+						or(
+							...chunk.map((s) =>
+								and(
+									eq(agentEvents.agentId, s.agentId),
+									eq(agentEvents.sessionId, s.sessionId),
+								),
+							),
+						),
+					),
+				),
+		);
+	}
+	const [rows] = await db.batch([deleteEntries, ...deleteEvents]);
 	return rows.length;
 }
 
