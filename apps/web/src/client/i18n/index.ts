@@ -24,4 +24,14 @@ i18n
 		},
 	});
 
+// Keep the document's lang attribute in sync with the active locale. The
+// served index.html is static (lang="en"), so without this a ja UI stays
+// lang="en" and Chrome offers to translate the page. resolvedLanguage
+// normalizes navigator values (e.g. "ja-JP") to a catalog language ("en"/"ja").
+const applyDocumentLang = () => {
+	document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language;
+};
+i18n.on("languageChanged", applyDocumentLang);
+applyDocumentLang();
+
 export default i18n;
