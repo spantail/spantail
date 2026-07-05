@@ -113,6 +113,9 @@ pnpm deploy             # wrangler deploy (apps/web)
 - Unit tests colocated as `*.test.ts`; integration tests for routes run in the Workers pool
   (`@cloudflare/vitest-pool-workers`) against local D1.
 - The report engine must keep golden tests: filters + fixture entries → expected Markdown.
+- For manual checks in a browser, the `run-demo` skill
+  ([`.claude/skills/run-demo/SKILL.md`](.claude/skills/run-demo/SKILL.md)) is a convenient
+  (optional) way to seed demo data and drive the app.
 
 ## Definition of done
 

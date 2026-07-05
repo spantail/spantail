@@ -125,6 +125,10 @@ pnpm lint         # biome
 pnpm typecheck    # tsc across all packages
 ```
 
+For manual checks, the [`run-demo`](./.claude/skills/run-demo/SKILL.md) Claude
+Code skill is a convenient way to seed demo data and drive the app in a
+browser (optional — it also documents the recipe for doing it by hand).
+
 See [CLAUDE.md](./CLAUDE.md) for repository conventions.
 
 ## License
