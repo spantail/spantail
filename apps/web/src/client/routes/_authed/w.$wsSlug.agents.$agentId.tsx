@@ -268,7 +268,12 @@ function AgentPage() {
 		return () => setCreatePrefillSource(null);
 	}, [setCreatePrefillSource, clearSelection]);
 
-	const [confirmDelete, setConfirmDelete] = useState(false);
+	// The set of session ids the open confirmation is about, frozen when the
+	// dialog opens (null = closed): the confirm must delete exactly what the
+	// dialog described, not whatever the live selection has drifted to.
+	const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(
+		null,
+	);
 	// `d` opens the delete confirmation while a selection exists, mirroring the
 	// delete button (inert over the cap, like the button is disabled). Guarded
 	// like the app's other global shortcuts; alertdialog covers this page's own
@@ -290,7 +295,7 @@ function AgentPage() {
 				return;
 			}
 			e.preventDefault();
-			setConfirmDelete(true);
+			setPendingDeleteIds(entries.map((entry) => entry.id));
 		}
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
@@ -301,7 +306,7 @@ function AgentPage() {
 			api.deleteAgentEntries({ workspaceId: workspaceId as string, ids }),
 		onSuccess: ({ count }, ids) => {
 			toast.success(t("agents.selection.deletedToast", { count }));
-			setConfirmDelete(false);
+			setPendingDeleteIds(null);
 			clearSelection();
 			setActive(-1);
 			setViewEntry((v) => (v && ids.includes(v.id) ? null : v));
@@ -397,7 +402,9 @@ function AgentPage() {
 								variant="outline"
 								className="text-destructive hover:text-destructive"
 								disabled={tooMany}
-								onClick={() => setConfirmDelete(true)}
+								onClick={() =>
+									setPendingDeleteIds(selectedEntries.map((entry) => entry.id))
+								}
 							>
 								<Trash2Icon />
 								{t("agents.selection.deleteAction")}
@@ -568,7 +575,12 @@ function AgentPage() {
 				)}
 			</section>
 
-			<AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+			<AlertDialog
+				open={pendingDeleteIds !== null}
+				onOpenChange={(open) => {
+					if (!open) setPendingDeleteIds(null);
+				}}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
@@ -576,7 +588,7 @@ function AgentPage() {
 						</AlertDialogTitle>
 						<AlertDialogDescription>
 							{t("agents.selection.deleteDescription", {
-								count: selectedEntries.length,
+								count: pendingDeleteIds?.length ?? 0,
 							})}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
@@ -587,9 +599,9 @@ function AgentPage() {
 						<AlertDialogAction
 							className={buttonVariants({ variant: "destructive" })}
 							disabled={deleteMutation.isPending}
-							onClick={() =>
-								deleteMutation.mutate(selectedEntries.map((e) => e.id))
-							}
+							onClick={() => {
+								if (pendingDeleteIds) deleteMutation.mutate(pendingDeleteIds);
+							}}
 						>
 							{t("agents.selection.deleteConfirm")}
 						</AlertDialogAction>

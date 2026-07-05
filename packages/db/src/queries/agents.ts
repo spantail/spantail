@@ -430,9 +430,8 @@ export async function getAgentEntriesByIds(
 	return db.select().from(agentEntries).where(inArray(agentEntries.id, ids));
 }
 
-// Each (agentId, sessionId) pair binds 2 parameters, plus 1 for the
-// workspace: a chunk of 40 keeps an event-delete statement at 81 binds,
-// under D1's 100-bound-parameter cap.
+// Each (agentId, sessionId) pair binds 2 parameters: a chunk of 40 keeps an
+// event-delete statement at 80 binds, under D1's 100-bound-parameter cap.
 const EVENT_DELETE_CHUNK = 40;
 
 /**
@@ -473,21 +472,21 @@ export async function deleteAgentEntries(
 	for (let i = 0; i < sessions.length; i += EVENT_DELETE_CHUNK) {
 		const chunk = sessions.slice(i, i + EVENT_DELETE_CHUNK);
 		deleteEvents.push(
-			db
-				.delete(agentEvents)
-				.where(
-					and(
-						eq(agentEvents.workspaceId, scope.workspaceId),
-						or(
-							...chunk.map((s) =>
-								and(
-									eq(agentEvents.agentId, s.agentId),
-									eq(agentEvents.sessionId, s.sessionId),
-								),
-							),
+			db.delete(agentEvents).where(
+				// Deliberately NOT filtered by workspace: the rollup recompute reads
+				// events by (agentId, sessionId) alone, so a session whose events
+				// span workspaces (explicit-workspace ingests) would resurrect from
+				// the other workspace's rows. The keys come from entries the caller
+				// owns, and an agent's events are its owner's own telemetry.
+				or(
+					...chunk.map((s) =>
+						and(
+							eq(agentEvents.agentId, s.agentId),
+							eq(agentEvents.sessionId, s.sessionId),
 						),
 					),
 				),
+			),
 		);
 	}
 	const [rows] = await db.batch([deleteEntries, ...deleteEvents]);

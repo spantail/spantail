@@ -57,8 +57,16 @@ export function useListKeyboardNav<E extends HTMLElement>({
 		function onKeyDown(e: KeyboardEvent) {
 			if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing) return;
 			if (e.defaultPrevented || isTypingTarget(e.target)) return;
-			// Inert while a dialog/menu is open: a bare key may be Radix typeahead.
-			if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+			// Inert while a dialog/menu is open: a bare key may be Radix typeahead,
+			// and mutating the list behind a confirmation dialog would let the
+			// confirm act on a different set than the one it described.
+			if (
+				document.querySelector(
+					'[role="dialog"], [role="alertdialog"], [role="menu"]',
+				)
+			) {
+				return;
+			}
 			const { length, index, onMove, onOpen, onToggle, onReachEnd } =
 				latest.current;
 			if (e.key === "j" || e.key === "k") {

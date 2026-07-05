@@ -140,9 +140,15 @@ export function EntryDialogProvider({
 			if (e.key !== "c" || e.metaKey || e.ctrlKey || e.altKey) return;
 			if (e.repeat || e.isComposing || e.defaultPrevented) return;
 			if (isTypingTarget(e.target)) return;
-			// Covers this dialog plus any other open dialog or menu, where a
-			// bare keypress may be Radix typeahead input.
-			if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+			// Covers this dialog plus any other open dialog, confirmation, or
+			// menu, where a bare keypress may be Radix typeahead input.
+			if (
+				document.querySelector(
+					'[role="dialog"], [role="alertdialog"], [role="menu"]',
+				)
+			) {
+				return;
+			}
 			e.preventDefault();
 			const result = prefillSourceRef.current?.() ?? null;
 			if (result?.kind === "blocked") return;
