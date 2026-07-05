@@ -131,12 +131,13 @@ export function AgentsCard() {
 			}),
 		onSuccess: async (created) => {
 			await invalidateAgents();
-			// Capture the submitted scope before the form state is reset below.
+			// Use the persisted scope from the response, not form state, so the
+			// dialog can't show ids from an edit made while the request was in flight.
 			setIssued({
 				agentName: created.name,
 				secret: created.secret,
-				workspaceId,
-				projectIds,
+				workspaceId: created.token?.defaultWorkspaceId ?? null,
+				projectIds: created.projectIds,
 			});
 			setName("");
 			setProjectIds([]);
