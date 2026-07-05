@@ -58,6 +58,10 @@ Open an agent's activity page to see its sessions over a date range, with stats,
 a per-project breakdown, and token usage. This is a read-only rollup — the raw
 per-turn telemetry is not shown.
 
+Click a session row — or select it with <kbd>J</kbd> / <kbd>K</kbd> and press
+<kbd>O</kbd> — to open its details: description, project, duration, token usage,
+and the repositories, branches, and models the session touched.
+
 :::note[Screenshot]
 An agent activity page: stats, the session list, and token usage for the
 selected range.
