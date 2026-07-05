@@ -32,8 +32,8 @@
 		},
 		"sendSessionSummary": {
 			"type": "boolean",
-			"title": "Send session summary",
-			"description": "When a session that used plan mode ends, send its plan file's title to Spantail as the entry description (extracted mechanically, no inference; sessions without a plan send nothing). Off by default: the title is derived from conversation content, is stored verbatim, and can appear in reports and share links.",
+			"title": "Send plan title as session summary",
+			"description": "ON: when a session that used plan mode ends, its plan file's title is sent to Spantail as the entry description (extracted mechanically, no inference; stored verbatim, may appear in reports and share links; /spantail:summary off skips one session). OFF (default): nothing is sent unless you run /spantail:summary on in a session.",
 			"default": false
 		}
 	}
