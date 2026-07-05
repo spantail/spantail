@@ -1,6 +1,6 @@
 {
 	"name": "spantail",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Spantail integration: per-turn agent telemetry hooks, work-logging and reporting skills, and analysis agents.",
 	"author": { "name": "Spantail" },
 	"homepage": "https://spantail.com",
