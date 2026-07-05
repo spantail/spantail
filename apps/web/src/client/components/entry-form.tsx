@@ -124,10 +124,20 @@ export function EntryForm({
 	// Editing an entry orphaned by a project deletion: keep it assignable to
 	// "no project" so its other fields stay editable without forcing a project.
 	const canUnassign = Boolean(initial) && initial?.projectId == null;
+	// A prefilled project must still be offerable by the select: sessions may
+	// reference a project that has since been archived (or that the caller may
+	// no longer log to — `projects` is pre-filtered to loggable ones). Blank
+	// falls through so the user picks; submitting the raw id would create an
+	// entry in a project ordinary create cannot select.
+	const prefillProjectId = projects.some(
+		(p) => p.id === prefill?.projectId && p.status === "active",
+	)
+		? prefill?.projectId
+		: undefined;
 	const [projectId, setProjectId] = useState(
 		initial
 			? (initial.projectId ?? NO_PROJECT)
-			: (prefill?.projectId ?? defaultProjectId ?? ""),
+			: (prefillProjectId ?? defaultProjectId ?? ""),
 	);
 	const [entryDate, setEntryDate] = useState(
 		initial?.entryDate ?? prefill?.entryDate ?? todayInTimezone(timezone),
