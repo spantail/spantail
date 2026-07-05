@@ -45,7 +45,7 @@ Enabling the plugin prompts for:
 | `agentToken` | yes | The **agent access token** from Settings → Agents (`spantail_aat_…`), a write-only ingest credential. |
 | `workspaceId` | no | Defaults to the token's bound workspace. |
 | `projectId` | no | Record sessions against a project. |
-| `sendSessionSummary` | no | Send the session's summary title as the entry description (default off — see Privacy). |
+| `sendSessionSummary` | no | Send the plan-file title as the entry description when a plan-mode session ends (default off — see Privacy). |
 
 Every setting can be overridden with an environment variable
 (`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_WORKSPACE_ID`,
