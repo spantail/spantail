@@ -7,9 +7,11 @@
 #      on (agent, message.id), so this only recovers turns a Stop hook missed
 #      (e.g. right after a compact) and never double-counts.
 #   2. POST the session's closing facts to /api/v1/agent-events/finalize:
-#      wall-clock end, PR refs, and — only when opted in — the session's
-#      summary title as the description. A 404 (no entry yet: the session
-#      produced no events) is expected and ignored.
+#      wall-clock end, PR refs, and — only when opted in — the title of the
+#      session's plan file as the description (extracted mechanically from
+#      plan-mode attachment records; no inference, and sessions without a
+#      plan just leave the description null). A 404 (no entry yet: the
+#      session produced no events) is expected and ignored.
 #
 # Never blocks the session from ending: any problem logs to stderr and exits 0.
 #
@@ -72,8 +74,24 @@ fi
 # The marker is per-session state; the session is over, so clean it up.
 [ -n "$marker" ] && rm -f "$marker"
 
+# The description is the session's plan-file title, located via the
+# structured plan-mode attachment records in the transcript. Missing plan
+# references, a deleted plan file, or an empty one all degrade to sending no
+# description.
+plan_title=""
+if [ "$send_summary" = "true" ]; then
+	plan_path="$(jq -rn -f "$here/transcript-to-plan-path.jq" "$transcript" 2>/dev/null)"
+	if [ -n "$plan_path" ] && [ -f "$plan_path" ]; then
+		plan_title="$(grep -m1 '^# ' "$plan_path" 2>/dev/null | sed 's/^# *//')"
+		if [ -z "$plan_title" ]; then
+			plan_title="$(grep -m1 -v '^[[:space:]]*$' "$plan_path" 2>/dev/null)"
+		fi
+	fi
+fi
+
 # Step 2: finalize with closing facts.
 body="$(jq -n --arg session "$session" --arg send_summary "$send_summary" \
+	--arg plan_title "$plan_title" \
 	-f "$here/transcript-to-finalize.jq" "$transcript")" ||
 	skip "failed to parse transcript; skipping finalize"
 

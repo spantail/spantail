@@ -13,8 +13,8 @@ work and building reports.
   - `SessionEnd` re-posts the final events (idempotent reconcile) and
     finalizes the session via `POST /api/v1/agent-events/finalize` with the
     wall-clock end and the PRs the session touched (`pr-link` records →
-    `context.refs`). The session's summary title is sent as the entry
-    description **only if you opt in**.
+    `context.refs`). The title of the session's plan file is sent as the
+    entry description **only if you opt in**.
   - `SessionStart` exports `SPANTAIL_SESSION_ID` so the `/spantail:summary`
     toggle can target the current session.
 - **Skills** (need the Spantail MCP connection, which acts as *you* via a
@@ -23,8 +23,8 @@ work and building reports.
     work.
   - `/spantail:create-report` — compose a report; always previews before
     saving.
-  - `/spantail:summary on|off` — per-session toggle for sending the session
-    summary title.
+  - `/spantail:summary on|off` — per-session toggle for sending the plan
+    title as the entry description.
 - **Agents**: `spantail-work-analyst` (work-entry retrospectives) and
   `spantail-agent-activity-analyst` (agent telemetry analysis).
 
@@ -70,10 +70,12 @@ names, git branch/repository, working directory, client version, request ids,
 and PR references. Conversation bodies, thinking, and tool input/output never
 leave your machine.
 
-The one opt-in exception is `sendSessionSummary`: Claude Code generates a
-short summary title from the conversation, and with the setting (or
-`/spantail:summary on`) enabled the SessionEnd hook stores it as the entry's
-description. Anything placed in a description is stored verbatim and can
+The one opt-in exception is `sendSessionSummary`: with the setting (or
+`/spantail:summary on`) enabled, the SessionEnd hook extracts the session's
+plan-file title — mechanically, from the transcript's structured plan-mode
+records, with no extra inference — and stores it as the entry's description.
+Sessions that never used plan mode send nothing (the description is
+nullable). Anything placed in a description is stored verbatim and can
 surface in reports, public share links, and Send-to deliveries — see
 [`docs/security.md`](../../docs/security.md) (§2). The same applies to
 whatever you put into descriptions via `/spantail:log-work`.
@@ -88,7 +90,8 @@ whatever you put into descriptions via `/spantail:log-work`.
 | `hooks/spantail-session-start.sh` | Exports the session id for the summary toggle. |
 | `hooks/lib/config.sh` | Env → plugin user-config resolution. |
 | `hooks/transcript-to-events.jq` | Transcript → compact events (deduped by `message.id`). |
-| `hooks/transcript-to-finalize.jq` | Transcript → finalize body (endedAt, refs, opt-in summary). |
+| `hooks/transcript-to-finalize.jq` | Transcript → finalize body (endedAt, refs, opt-in plan title). |
+| `hooks/transcript-to-plan-path.jq` | Transcript → the session's plan-file path (structured records only). |
 | `skills/`, `agents/` | The skills and agents listed above. |
 
 The hooks never fail a turn or block a session's end: on any missing

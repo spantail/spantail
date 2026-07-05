@@ -40,8 +40,10 @@ thinking, and tool input/output never leave your machine:
 
 One thing is opt-in: with the `sendSessionSummary` setting (or
 `/spantail:summary on` for a single session), the SessionEnd hook also sends
-Claude Code's generated session summary title as the entry's description.
-The title is derived from conversation content and, like any description, is
+the title of the session's **plan file** as the entry's description. The
+title is extracted mechanically from the transcript's structured plan-mode
+records — no extra inference — so only sessions that used plan mode send one;
+the description simply stays empty otherwise. Like any description it is
 stored verbatim and can appear in reports and share links — it stays off
 unless you turn it on.
 
@@ -51,7 +53,7 @@ unless you turn it on.
 |---|---|
 | `/spantail:log-work` | Log a work entry — from your words or from the current session's work. |
 | `/spantail:create-report` | Compose a report; always previews before saving. |
-| `/spantail:summary on\|off` | Per-session toggle for sending the session summary title. |
+| `/spantail:summary on\|off` | Per-session toggle for sending the plan title as the description. |
 | `spantail-work-analyst` (agent) | Retrospectives over your work entries. |
 | `spantail-agent-activity-analyst` (agent) | Analysis of your agents' session telemetry. |
 

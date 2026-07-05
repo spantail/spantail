@@ -41,9 +41,11 @@ Claude Code v2.1.143 以降が必要です。
   [finalize](/ja/api/agent-ingest/) に送ります。
 
 1 つだけオプトインの項目があります。`sendSessionSummary` 設定（または単一セッション
-なら `/spantail:summary on`）を有効にすると、SessionEnd フックは Claude Code が生成
-するセッションのサマリタイトルをエントリの説明として送ります。タイトルは会話内容から
-生成され、他の説明と同様にそのまま保存されてレポートや共有リンクに表示され得るため、
+なら `/spantail:summary on`）を有効にすると、SessionEnd フックはそのセッションの
+**プランファイルのタイトル**をエントリの説明として送ります。タイトルは transcript の
+構造化された plan mode レコードから機械的に抽出され、追加の推論は行いません。
+plan mode を使ったセッションだけが対象で、それ以外では説明は空のままです。
+他の説明と同様そのまま保存されてレポートや共有リンクに表示され得るため、
 自分で有効にしない限りオフのままです。
 
 ## スキルとエージェント
@@ -52,7 +54,7 @@ Claude Code v2.1.143 以降が必要です。
 |---|---|
 | `/spantail:log-work` | 作業記録を作成 — 指示した内容からも、現在のセッションの作業内容からも。 |
 | `/spantail:create-report` | レポートを作成。保存前に必ずプレビューします。 |
-| `/spantail:summary on\|off` | セッション単位でサマリタイトル送信を切り替え。 |
+| `/spantail:summary on\|off` | セッション単位で、プランタイトルを説明として送るかを切り替え。 |
 | `spantail-work-analyst`（エージェント） | 作業記録のふりかえり分析。 |
 | `spantail-agent-activity-analyst`（エージェント） | エージェントのセッションテレメトリ分析。 |
 

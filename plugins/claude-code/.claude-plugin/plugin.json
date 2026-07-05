@@ -33,7 +33,7 @@
 		"sendSessionSummary": {
 			"type": "boolean",
 			"title": "Send session summary",
-			"description": "Send Claude Code's generated session summary title to Spantail as the entry description when a session ends. Off by default: the title is derived from conversation content, is stored verbatim, and can appear in reports and share links.",
+			"description": "When a session that used plan mode ends, send its plan file's title to Spantail as the entry description (extracted mechanically, no inference; sessions without a plan send nothing). Off by default: the title is derived from conversation content, is stored verbatim, and can appear in reports and share links.",
 			"default": false
 		}
 	}
