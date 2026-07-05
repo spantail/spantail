@@ -1,0 +1,9 @@
+{
+	"mcpServers": {
+		"spantail": {
+			"type": "http",
+			"url": "${user_config.apiUrl}/mcp",
+			"headers": { "Authorization": "Bearer ${user_config.apiToken}" }
+		}
+	}
+}

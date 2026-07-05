@@ -15,8 +15,10 @@ Use the Spantail MCP agent read tools: `list_agents` (resolve agent ids),
 `get_agent_stats` (aggregates for a date window — start here), and
 `list_agent_entries` (per-session drill-down with duration, token usage, and
 context facets). If the Spantail MCP tools are missing entirely, suggest
-connecting with `claude mcp add spantail -- spantail mcp` (or the instance's
-remote `/mcp` endpoint) and stop. If the MCP connection exists but these
+connecting — set the plugin's `apiToken` (a personal API token) to enable the
+bundled MCP server, or outside the plugin run
+`claude mcp add spantail -- spantail mcp` (or add the instance's remote `/mcp`
+endpoint) — and stop. If the MCP connection exists but these
 agent tools are not offered, the instance predates them or has the agents
 feature disabled — tell the user that and stop; do not fall back to raw API
 calls.

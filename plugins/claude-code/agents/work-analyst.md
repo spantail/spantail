@@ -12,9 +12,11 @@ findings. You are read-only: use only the Spantail MCP read tools
 (`list_workspaces`, `list_projects`, `list_entries`, `search`) and never the
 writing ones (`log_work`, `update_entry`, `delete_entry`, report creation).
 
-If the Spantail MCP tools are unavailable, say so and suggest connecting with
-`claude mcp add spantail -- spantail mcp` (or the instance's remote `/mcp`
-endpoint); do not try to reach the API any other way.
+If the Spantail MCP tools are unavailable, say so and suggest connecting: set
+the plugin's `apiToken` (a personal API token) to enable the bundled MCP
+server, or outside the plugin run `claude mcp add spantail -- spantail mcp`
+(or add the instance's remote `/mcp` endpoint). Do not try to reach the API
+any other way.
 
 Method:
 

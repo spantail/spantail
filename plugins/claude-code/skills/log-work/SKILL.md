@@ -14,10 +14,12 @@ Check that the Spantail MCP tools (`log_work`, `list_workspaces`, ...) are
 available. If they are not, do NOT attempt any other way of writing to
 Spantail; tell the user how to connect and stop:
 
-- Local stdio server (needs the Spantail CLI, logged in via
-  `spantail auth login`): `claude mcp add spantail -- spantail mcp`
-- Remote server: add `https://<instance>/mcp` as an HTTP MCP server with a
-  personal API token as the Bearer credential.
+- With this plugin: set its `apiToken` (a personal API token,
+  `spantail_pat_...`) in the plugin config — the bundled MCP server then
+  connects to `<apiUrl>/mcp` as you.
+- Outside the plugin: `claude mcp add spantail -- spantail mcp` (stdio; needs
+  the CLI, logged in via `spantail auth login`), or add `https://<instance>/mcp`
+  as an HTTP MCP server with a personal API token as the Bearer credential.
 
 ## Interpreting the request
 
