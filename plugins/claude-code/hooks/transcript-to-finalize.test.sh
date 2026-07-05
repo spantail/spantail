@@ -82,8 +82,16 @@ check "no pr-links omits context" "$min_body" 'has("context") == false'
 check "endedAt from the latest record" "$min_body" \
 	'.endedAt == "2026-06-21T09:05:00.000Z"'
 
-# Synthetic: an over-long plan title is capped at 200 chars, and an empty
-# transcript omits endedAt.
+# Synthetic: an empty-string timestamp is ignored, not emitted as endedAt.
+blank_ts="$(printf '{"type":"user","timestamp":""}\n' |
+	jq -n --arg session s4 --arg send_summary false --arg plan_title "" \
+		-f "$here/transcript-to-finalize.jq")"
+check "empty-string timestamps omit endedAt" "$blank_ts" \
+	'has("endedAt") == false'
+
+# Synthetic: an over-long plan title is capped at the deliberate 200-char
+# title budget (tighter than the API's 2000-char description limit), and an
+# empty transcript omits endedAt.
 long_body="$(printf '' |
 	jq -n --arg session s3 --arg send_summary true \
 		--arg plan_title "$(printf 'x%.0s' $(seq 1 260))" \

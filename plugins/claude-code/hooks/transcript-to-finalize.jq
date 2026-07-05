@@ -10,7 +10,10 @@
 # - description: only when opted in, and only the plan-file title — a normal
 #   session's transcript carries no usable summary (type "summary" records
 #   exist only on compacted/resumed sessions), so sessions without a plan
-#   simply leave the description null. Capped at 200 chars.
+#   simply leave the description null. Deliberately capped at 200 chars,
+#   well under the API's 2000-char description limit: this is a title line
+#   for the timeline, not a body, and the fallback source (the plan's first
+#   non-heading line) can run long.
 # - context.refs: "pr-link" sidecar records name the PRs the session touched.
 #   They are re-emitted repeatedly, so dedup by repository+number; the API
 #   accepts at most 20 refs of 200 chars each.
@@ -22,7 +25,7 @@ def refs:
 	| .[0:20];
 
 [ inputs ] as $records
-| ([ $records[] | .timestamp | select(. != null) ] | max) as $ended_at
+| ([ $records[] | .timestamp | select(. != null and . != "") ] | max) as $ended_at
 | ($records | refs) as $refs
 | {sessionId: $session}
 | (if $ended_at then . + {endedAt: $ended_at} else . end)
