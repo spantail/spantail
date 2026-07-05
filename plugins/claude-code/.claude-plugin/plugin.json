@@ -1,0 +1,40 @@
+{
+	"name": "spantail",
+	"version": "0.1.0",
+	"description": "Spantail integration: per-turn agent telemetry hooks, work-logging and reporting skills, and analysis agents.",
+	"author": { "name": "Spantail" },
+	"homepage": "https://spantail.com",
+	"userConfig": {
+		"apiUrl": {
+			"type": "string",
+			"title": "Spantail instance URL",
+			"description": "Base URL of your Spantail instance, e.g. https://spantail.example.com",
+			"required": true
+		},
+		"agentToken": {
+			"type": "string",
+			"title": "Agent access token",
+			"description": "Write-only ingest credential from Settings > Agents (spantail_aat_...)",
+			"sensitive": true,
+			"required": true
+		},
+		"workspaceId": {
+			"type": "string",
+			"title": "Workspace id",
+			"description": "Optional; defaults to the workspace the agent token is bound to",
+			"required": false
+		},
+		"projectId": {
+			"type": "string",
+			"title": "Project id",
+			"description": "Optional; records sessions against this project",
+			"required": false
+		},
+		"sendSessionSummary": {
+			"type": "boolean",
+			"title": "Send plan title as session summary",
+			"description": "ON: when a session that used plan mode ends, its plan file's title is sent to Spantail as the entry description (extracted mechanically, no inference; stored verbatim, may appear in reports and share links; /spantail:summary off skips one session). OFF (default): nothing is sent unless you run /spantail:summary on in a session.",
+			"default": false
+		}
+	}
+}

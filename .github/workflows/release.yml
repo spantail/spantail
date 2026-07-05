@@ -31,6 +31,9 @@ jobs:
       - run: pnpm test
       # Mirror CI: catch CLI bundling regressions before cutting a release.
       - run: pnpm --filter spantail pack
+      - name: Plugin hook tests
+        run: |
+          for t in plugins/claude-code/hooks/*.test.sh; do bash "$t"; done
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

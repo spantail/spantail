@@ -21,3 +21,7 @@ jobs:
       - run: pnpm test
       # Builds the cli bundle via prepack, catching bundling regressions.
       - run: pnpm --filter spantail pack
+      # Fixture tests for the Claude Code plugin's jq transcript mappers.
+      - name: Plugin hook tests
+        run: |
+          for t in plugins/claude-code/hooks/*.test.sh; do bash "$t"; done

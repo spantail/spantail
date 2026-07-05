@@ -16,7 +16,7 @@ monthly — from a single source of truth. Built AI-first: every operation is av
 ## Features
 
 - **Low-overhead capture** — work entries are a date, duration, description, and tags, with optional start/end times — built for fast daily logging. AI coding-agent work is captured automatically, with no manual entry.
-- **AI agent sessions** — register an AI coding agent and its sessions stream in automatically: per-session duration and token usage land on the same timeline as human work. A reference [Claude Code](https://code.claude.com) Stop hook ([`hooks/claude-code`](hooks/claude-code)) posts per-turn token usage while conversation bodies stay on your machine.
+- **AI agent sessions** — register an AI coding agent and its sessions stream in automatically: per-session duration and token usage land on the same timeline as human work. The [Claude Code plugin](plugins/claude-code) captures sessions per turn while conversation bodies stay on your machine.
 - **Workspaces** — organize work by department, team, or client organization. Projects live under workspaces. One deployment serves one company; this is not a multi-tenant SaaS.
 - **Unified reports** — no hardcoded report types. A report is a Markdown + Liquid template applied to filters you choose freely: any combination of workspaces, projects, users, and date range — including across workspaces. Built-in templates cover daily, weekly, and monthly reports.
 - **Safe report sharing** — share an immutable report snapshot via an expiring, revocable link with an optional passcode. Viewers don't need an account — share with clients, stakeholders, or anyone outside your instance.
@@ -48,7 +48,7 @@ See [`docs/security.md`](docs/security.md) for the security threat model — the
 | `packages/db` | Drizzle schema, migrations, queries |
 | `packages/sdk` | Typed API client |
 | `packages/cli` | `spantail` CLI (includes `spantail mcp` stdio server) |
-| `hooks/claude-code` | Reference Claude Code Stop hook that records agent token usage |
+| `plugins/claude-code` | Claude Code plugin: telemetry hooks, work-logging and reporting skills |
 
 ## Getting started
 
@@ -112,9 +112,9 @@ spantail mcp                                         # stdio MCP server for AI c
 
 AI clients that support remote MCP can connect directly to `https://your-instance/mcp` with an API token.
 
-To record an AI coding agent's sessions, register an agent in Spantail and add the reference Stop
-hook, which reads each turn's transcript locally and posts only compact telemetry — see
-[`hooks/claude-code`](hooks/claude-code).
+To record Claude Code sessions, register an agent in Spantail and install the
+[Claude Code plugin](plugins/claude-code) (`/plugin marketplace add spantail/spantail`), which reads
+each turn's transcript locally and posts only compact telemetry.
 
 ## Development
 

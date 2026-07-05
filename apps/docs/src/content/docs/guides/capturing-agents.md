@@ -41,10 +41,10 @@ scoped to your workspace membership and is checked on every ingest.
 ## Send activity
 
 Using the agent token, your agent posts its turns to the ingest endpoint
-(`POST /api/v1/agent-events`), and Spantail rolls them up into sessions. The
-easiest path is the dedicated **Claude Code plugin** (coming soon — see
-[Claude Plugin](/guides/tools/claude-plugin/)), which captures sessions
-automatically. Until it ships, activity is sent programmatically through the
+(`POST /api/v1/agent-events`), and Spantail rolls them up into sessions. For
+Claude Code the easiest path is the dedicated **Claude Code plugin** — see
+[Claude Plugin](/guides/tools/claude-plugin/) — which captures sessions
+automatically. Other agents send activity programmatically through the
 ingest API.
 
 :::note[Screenshot]
