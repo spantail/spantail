@@ -29,6 +29,10 @@ MCP は**個人用 API トークン**（[設定 → API トークン](/ja/guides
 
 ## Claude Code で設定する
 
+[Claude Code 向け Spantail プラグイン](/ja/guides/tools/claude-plugin/)を使う場合は、
+この MCP サーバーが同梱されています。プラグインの `apiToken` を設定すれば、以下の手動
+設定は不要です。
+
 stdio サーバーは1行で登録できます。
 
 ```bash

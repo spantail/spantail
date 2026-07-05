@@ -17,8 +17,9 @@ work and building reports.
     entry description **only if you opt in**.
   - `SessionStart` exports `SPANTAIL_SESSION_ID` so the `/spantail:summary`
     toggle can target the current session.
-- **Skills** (need the Spantail MCP connection, which acts as *you* via a
-  personal API token — a separate credential from the hooks' agent token):
+- **Skills** (use the bundled Spantail MCP server, which acts as *you* via a
+  personal API token — a separate credential from the hooks' agent token; set
+  `apiToken` to enable it):
   - `/spantail:log-work` — log a work entry, or capture the current session's
     work.
   - `/spantail:create-report` — compose a report; always previews before
@@ -43,6 +44,7 @@ Enabling the plugin prompts for:
 |---|---|---|
 | `apiUrl` | yes | Your instance's base URL, e.g. `https://spantail.example.com`. |
 | `agentToken` | yes | The **agent access token** from Settings → Agents (`spantail_aat_…`), a write-only ingest credential. |
+| `apiToken` | no | A **personal API token** (`spantail_pat_…`) for the bundled MCP server the skills and agents use — acts as you, separate from the agent token. Leave blank if you only use the hooks. |
 | `workspaceId` | no | Defaults to the token's bound workspace. |
 | `projectId` | no | Record sessions against a project. |
 | `sendSessionSummary` | no | Send the plan-file title as the entry description when a plan-mode session ends (default off — see Privacy). |
@@ -52,16 +54,26 @@ Every setting can be overridden with an environment variable
 `SPANTAIL_PROJECT_ID`, `SPANTAIL_SEND_SESSION_SUMMARY`), e.g. in a
 `settings.json` `env` block; the environment wins over the plugin config.
 
-The skills and agents additionally need the Spantail MCP connection:
+The skills and agents use the Spantail MCP connection, which the plugin
+bundles. With `apiToken` set, the plugin registers an HTTP MCP server
+(`.mcp.json`) pointing at your instance's `<apiUrl>/mcp` and authenticating as
+you. It uses your personal API token (PAT) — a different credential from the
+hooks' agent token (AAT) — so it is a separate, optional setting: hook-only
+users can leave `apiToken` blank, in which case the MCP server simply doesn't
+authenticate (it lists as unavailable in `/mcp`) and the hooks are unaffected.
+No CLI is required. `apiUrl` is joined to `/mcp` directly, so set it without a
+trailing slash. Both tokens are stored as sensitive plugin config (the system
+keychain).
+
+To use the MCP outside this plugin instead — for example from another client —
+register it manually:
 
 ```bash
 claude mcp add spantail -- spantail mcp   # stdio; needs the CLI + `spantail auth login`
 ```
 
-or point Claude Code at your instance's remote `https://<instance>/mcp` with a
-personal API token. The MCP server is deliberately not bundled with the
-plugin: it authenticates as you (PAT) while the hooks authenticate as your
-agent (AAT), and bundling it would break for hook-only users without the CLI.
+or point the client at your instance's remote `https://<instance>/mcp` with a
+personal API token as the Bearer credential.
 
 ## Privacy
 
@@ -84,6 +96,7 @@ whatever you put into descriptions via `/spantail:log-work`.
 
 | File | Purpose |
 |---|---|
+| `.mcp.json` | Registers the bundled HTTP MCP server (`<apiUrl>/mcp`, PAT auth) for the skills and agents. |
 | `hooks/hooks.json` | Wires SessionStart / Stop / SessionEnd. |
 | `hooks/spantail-agent-stop.sh` | Stop hook: transcript → per-turn events ingest. |
 | `hooks/spantail-session-end.sh` | SessionEnd hook: final reconcile + finalize. |

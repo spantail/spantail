@@ -18,6 +18,13 @@
 			"sensitive": true,
 			"required": true
 		},
+		"apiToken": {
+			"type": "string",
+			"title": "Personal API token",
+			"description": "Optional; personal API token (spantail_pat_...) for the bundled MCP server the skills and agents use. Acts as you (read/write per your permissions), separate from the agent access token above. Leave blank if you only use the telemetry hooks.",
+			"sensitive": true,
+			"required": false
+		},
 		"workspaceId": {
 			"type": "string",
 			"title": "Workspace id",

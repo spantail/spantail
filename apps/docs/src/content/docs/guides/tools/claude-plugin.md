@@ -18,7 +18,8 @@ Requires Claude Code v2.1.143 or later.
 
 Enabling the plugin prompts for your instance URL and an **agent access
 token** ([register an agent](/guides/capturing-agents/) first), plus optional
-workspace and project ids. Each setting can be overridden with an environment
+workspace and project ids and a personal API token for the skills' MCP server
+(see [Skills and agents](#skills-and-agents)). Each setting can be overridden with an environment
 variable (`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_WORKSPACE_ID`,
 `SPANTAIL_PROJECT_ID`, `SPANTAIL_SEND_SESSION_SUMMARY`) — the environment wins.
 
@@ -57,16 +58,15 @@ unless you turn it on.
 | `spantail-work-analyst` (agent) | Retrospectives over your work entries. |
 | `spantail-agent-activity-analyst` (agent) | Analysis of your agents' session telemetry. |
 
-The skills and analysis agents act **as you** and therefore need the
+The skills and analysis agents act **as you**, so they use the
 [Spantail MCP connection](/guides/tools/mcp/) with a personal API token — a
-separate credential from the hooks' write-only agent token:
+separate credential from the hooks' write-only agent token. The plugin bundles
+this MCP server: set the optional `apiToken` and it connects to your instance's
+`/mcp` over HTTP as you. Hook-only users can leave `apiToken` blank; no CLI is
+needed.
 
-```bash
-claude mcp add spantail -- spantail mcp
-```
-
-The MCP server is intentionally not bundled with the plugin, so hook-only
-users don't need the CLI installed.
+To use the MCP from another client, or without the plugin, register it
+manually — see [MCP](/guides/tools/mcp/).
 
 ## Without the plugin
 

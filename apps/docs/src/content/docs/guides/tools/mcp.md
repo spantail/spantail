@@ -32,6 +32,10 @@ only send agent activity, not call MCP tools. See
 
 ## Set up with Claude Code
 
+If you use the [Spantail plugin for Claude Code](/guides/tools/claude-plugin/),
+it bundles this MCP server — set the plugin's `apiToken` and skip the manual
+setup below.
+
 The stdio server registers in one line:
 
 ```bash
