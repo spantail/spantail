@@ -16,6 +16,7 @@ import {
 	isNull,
 	lt,
 	ne,
+	or,
 	type SQL,
 	sql,
 } from "drizzle-orm";
@@ -413,6 +414,83 @@ export async function upsertAgentEntry(
 	const row = rows[0];
 	if (!row) throw new Error("agent entry upsert returned no row");
 	return row;
+}
+
+/**
+ * Rows for the given ids, backing the ownership pre-checks of work-entry
+ * linking and bulk deletion. Both callers cap `ids` at
+ * MAX_LINKED_AGENT_ENTRIES (50), well under D1's 100-bound-parameter cap, so
+ * one statement suffices.
+ */
+export async function getAgentEntriesByIds(
+	db: Database,
+	ids: string[],
+): Promise<AgentEntryRow[]> {
+	if (ids.length === 0) return [];
+	return db.select().from(agentEntries).where(inArray(agentEntries.id, ids));
+}
+
+// Each (agentId, sessionId) pair binds 2 parameters: a chunk of 40 keeps an
+// event-delete statement at 80 binds, under D1's 100-bound-parameter cap.
+const EVENT_DELETE_CHUNK = 40;
+
+/**
+ * Deletes the caller-owned agent entries among `ids`, returning how many rows
+ * went away. The workspace + owner scope is applied in SQL, so the delete
+ * stays safe even if a row changed hands between the route's pre-check and
+ * this statement. Link rows in work_entry_agent_entries cascade away, and the
+ * sessions' raw agent_events go in the same db.batch — events tie to a
+ * session by (agentId, sessionId), not a FK, and the rollup is recomputed
+ * from them on every event ingest, so leaving them behind would let a
+ * late event retry resurrect a deleted session from its full history.
+ */
+export async function deleteAgentEntries(
+	db: Database,
+	ids: string[],
+	scope: { workspaceId: string; ownerUserId: string },
+): Promise<number> {
+	if (ids.length === 0) return 0;
+	const scoped = and(
+		inArray(agentEntries.id, ids),
+		eq(agentEntries.workspaceId, scope.workspaceId),
+		eq(agentEntries.ownerUserId, scope.ownerUserId),
+	);
+	// The event delete needs the sessions' natural keys before the rows go.
+	const sessions = await db
+		.select({
+			agentId: agentEntries.agentId,
+			sessionId: agentEntries.sessionId,
+		})
+		.from(agentEntries)
+		.where(scoped);
+	if (sessions.length === 0) return 0;
+	const deleteEntries = db
+		.delete(agentEntries)
+		.where(scoped)
+		.returning({ id: agentEntries.id });
+	const deleteEvents = [];
+	for (let i = 0; i < sessions.length; i += EVENT_DELETE_CHUNK) {
+		const chunk = sessions.slice(i, i + EVENT_DELETE_CHUNK);
+		deleteEvents.push(
+			db.delete(agentEvents).where(
+				// Deliberately NOT filtered by workspace: the rollup recompute reads
+				// events by (agentId, sessionId) alone, so a session whose events
+				// span workspaces (explicit-workspace ingests) would resurrect from
+				// the other workspace's rows. The keys come from entries the caller
+				// owns, and an agent's events are its owner's own telemetry.
+				or(
+					...chunk.map((s) =>
+						and(
+							eq(agentEvents.agentId, s.agentId),
+							eq(agentEvents.sessionId, s.sessionId),
+						),
+					),
+				),
+			),
+		);
+	}
+	const [rows] = await db.batch([deleteEntries, ...deleteEvents]);
+	return rows.length;
 }
 
 interface AgentEntryFilter {

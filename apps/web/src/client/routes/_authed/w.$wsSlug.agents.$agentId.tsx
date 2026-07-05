@@ -1,10 +1,21 @@
 import type { AgentEntry } from "@spantail/core";
-import { formatDuration, resolveDateRange } from "@spantail/core";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { SparklesIcon } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import {
+	dominantEntryDate,
+	formatDuration,
+	MAX_LINKED_AGENT_ENTRIES,
+	resolveDateRange,
+} from "@spantail/core";
+import {
+	useInfiniteQuery,
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
+import { SparklesIcon, Trash2Icon } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { AgentEntryDialog } from "@/components/agent-entry-dialog";
 import { AgentTypeIcon } from "@/components/agent-icon";
 import { AgentStats } from "@/components/agent-stats";
@@ -12,10 +23,23 @@ import {
 	type DashboardPeriod,
 	PeriodSelector,
 } from "@/components/dashboard/period-selector";
+import { useEntryDialog } from "@/components/entry-dialog";
+import type { EntryCreatePrefill } from "@/components/entry-form";
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
 import { ProjectMarker } from "@/components/project-marker";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Table,
 	TableBody,
@@ -34,10 +58,61 @@ import {
 	formatCompactNumber,
 	formatEntryDate,
 } from "@/lib/format";
+import { isTypingTarget } from "@/lib/keyboard";
+import { invalidateAgentEntryData } from "@/lib/query";
 import { useWorkspace } from "@/lib/workspace";
 
 // Page size for the in-range sessions table, loaded incrementally on scroll.
 const PAGE_SIZE = 50;
+
+// The note field caps at 10,000 chars server-side; the joined description
+// list is truncated to fit rather than failing the create.
+const MAX_NOTE_LENGTH = 10_000;
+
+/**
+ * Log-work initial values mechanically derived from the selected sessions.
+ * Duration is the plain sum; the date is the local day carrying the most
+ * duration (ties → most recent). When exactly one session has a description
+ * it becomes the entry description; otherwise the descriptions become a
+ * bulleted note and the description is left for the user.
+ * Callers guarantee the selection shares a single projectId.
+ */
+function buildPrefill(
+	entries: AgentEntry[],
+	timezone: string,
+): EntryCreatePrefill {
+	const descriptions = entries
+		.map((entry) => entry.description?.trim())
+		.filter((d): d is string => Boolean(d));
+	const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
+	return {
+		projectId: entries[0]?.projectId ?? undefined,
+		// A work entry's duration must be positive; an all-zero selection leaves
+		// the field for the user instead of prefilling an unsubmittable "0".
+		durationMinutes: totalMinutes > 0 ? totalMinutes : undefined,
+		entryDate:
+			dominantEntryDate(
+				// startedAt is non-null in storage but nullable in the schema type.
+				entries
+					.filter((e) => e.startedAt != null)
+					.map((e) => ({
+						startedAt: e.startedAt as string,
+						endedAt: e.endedAt,
+						durationMinutes: e.durationMinutes,
+					})),
+				timezone,
+			) ?? undefined,
+		description: descriptions.length === 1 ? descriptions[0] : undefined,
+		note:
+			descriptions.length > 1
+				? descriptions
+						.map((d) => `- ${d}`)
+						.join("\n")
+						.slice(0, MAX_NOTE_LENGTH)
+				: undefined,
+		agentEntryIds: entries.map((e) => e.id),
+	};
+}
 
 export const Route = createFileRoute("/_authed/w/$wsSlug/agents/$agentId")({
 	component: AgentPage,
@@ -118,6 +193,21 @@ function AgentPage() {
 	const [active, setActive] = useState(-1);
 	// The session whose read-only detail is shown; opened by row click or `o`.
 	const [viewEntry, setViewEntry] = useState<AgentEntry | null>(null);
+	// Bulk selection over the loaded rows. Only the raw id set is state; the
+	// effective selection is its intersection with the loaded list, so rows
+	// that vanish (deleted, or dropped by a period change) fall out on their own.
+	const { session } = useRouteContext({ from: "/_authed" });
+	const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
+		new Set(),
+	);
+	const toggleSelected = (id: string, checked: boolean) => {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (checked) next.add(id);
+			else next.delete(id);
+			return next;
+		});
+	};
 	useListKeyboardNav({
 		length: list.length,
 		index: active,
@@ -126,8 +216,103 @@ function AgentPage() {
 			const entry = list[active];
 			if (entry) setViewEntry(entry);
 		},
+		// `x` toggles the active row's checkbox — only where one is offered
+		// (the viewer's own sessions; see the cell below).
+		onToggle: () => {
+			const entry = list[active];
+			if (entry && entry.ownerUserId === session.user.id) {
+				toggleSelected(entry.id, !selectedIds.has(entry.id));
+			}
+		},
 		onReachEnd: loadMore,
 		containerRef: tableRef,
+	});
+	const selectedEntries = useMemo(
+		() => list.filter((entry) => selectedIds.has(entry.id)),
+		[list, selectedIds],
+	);
+	const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+	// Both bulk actions are owner-only server-side, so selection is offered only
+	// on the viewer's own sessions (an agent belongs to one user, so in practice
+	// this is all rows or none).
+	const canSelect = list.some((e) => e.ownerUserId === session.user.id);
+	// A work entry has one project, so a mixed-project selection can't become
+	// one; null (unassigned) is its own group.
+	const mixedProjects =
+		new Set(selectedEntries.map((e) => e.projectId)).size > 1;
+	const tooMany = selectedEntries.length > MAX_LINKED_AGENT_ENTRIES;
+	const canLogWork = selectedEntries.length > 0 && !mixedProjects && !tooMany;
+
+	// The global `c` shortcut consults this supplier, so it prefills exactly
+	// like the button while a selection exists (and is inert while the selection
+	// is invalid). State is read through a ref so the supplier registers once.
+	const { openCreate, setCreatePrefillSource } = useEntryDialog();
+	const selectionRef = useRef({ entries: selectedEntries, timezone });
+	selectionRef.current = { entries: selectedEntries, timezone };
+	useEffect(() => {
+		setCreatePrefillSource(() => {
+			const { entries, timezone: tz } = selectionRef.current;
+			if (entries.length === 0) return null;
+			if (
+				new Set(entries.map((e) => e.projectId)).size > 1 ||
+				entries.length > MAX_LINKED_AGENT_ENTRIES
+			) {
+				return { kind: "blocked" };
+			}
+			return {
+				kind: "prefill",
+				prefill: buildPrefill(entries, tz),
+				onCreated: clearSelection,
+			};
+		});
+		return () => setCreatePrefillSource(null);
+	}, [setCreatePrefillSource, clearSelection]);
+
+	// The set of session ids the open confirmation is about, frozen when the
+	// dialog opens (null = closed): the confirm must delete exactly what the
+	// dialog described, not whatever the live selection has drifted to.
+	const [pendingDeleteIds, setPendingDeleteIds] = useState<string[] | null>(
+		null,
+	);
+	// `d` opens the delete confirmation while a selection exists, mirroring the
+	// delete button (inert over the cap, like the button is disabled). Guarded
+	// like the app's other global shortcuts; alertdialog covers this page's own
+	// confirmation dialog.
+	useEffect(() => {
+		function onKeyDown(e: KeyboardEvent) {
+			if (e.key !== "d" || e.metaKey || e.ctrlKey || e.altKey) return;
+			if (e.repeat || e.isComposing || e.defaultPrevented) return;
+			if (isTypingTarget(e.target)) return;
+			if (
+				document.querySelector(
+					'[role="dialog"], [role="alertdialog"], [role="menu"]',
+				)
+			) {
+				return;
+			}
+			const { entries } = selectionRef.current;
+			if (entries.length === 0 || entries.length > MAX_LINKED_AGENT_ENTRIES) {
+				return;
+			}
+			e.preventDefault();
+			setPendingDeleteIds(entries.map((entry) => entry.id));
+		}
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, []);
+	const queryClient = useQueryClient();
+	const deleteMutation = useMutation({
+		mutationFn: (ids: string[]) =>
+			api.deleteAgentEntries({ workspaceId: workspaceId as string, ids }),
+		onSuccess: ({ count }, ids) => {
+			toast.success(t("agents.selection.deletedToast", { count }));
+			setPendingDeleteIds(null);
+			clearSelection();
+			setActive(-1);
+			setViewEntry((v) => (v && ids.includes(v.id) ? null : v));
+			invalidateAgentEntryData(queryClient, workspaceId as string);
+		},
+		onError: (err: Error) => toast.error(err.message),
 	});
 
 	if (!current) {
@@ -175,17 +360,66 @@ function AgentPage() {
 			<AgentStats workspaceId={current.id} agentId={agentId} period={period} />
 
 			<section className="flex flex-col gap-3">
-				<div className="flex items-center justify-between gap-3">
+				<div className="flex flex-wrap items-center justify-between gap-3">
 					<h2 className="font-heading text-lg font-semibold">
 						{t("agents.entriesTitle")}
 					</h2>
-					{/* Row count only once every page is loaded — a partial set would
-					    read as a total when it's really "showing the first N". The
-					    period's true session total is in the Sessions stat widget. */}
-					{list.length > 0 && !entries.hasNextPage && (
-						<span className="text-muted-foreground text-sm tabular-nums">
-							{t("agents.sessionCount", { count: list.length })}
-						</span>
+					{selectedEntries.length > 0 ? (
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="text-sm tabular-nums">
+								{t("agents.selection.count", {
+									count: selectedEntries.length,
+								})}
+							</span>
+							{/* The button stays visible but inert while the selection can't
+							    become one work entry, with the reason spelled out beside it
+							    (the `c` shortcut is equally inert then). */}
+							{mixedProjects ? (
+								<span className="text-muted-foreground text-xs">
+									{t("agents.selection.mixedProjects")}
+								</span>
+							) : tooMany ? (
+								<span className="text-muted-foreground text-xs">
+									{t("agents.selection.tooMany", {
+										max: MAX_LINKED_AGENT_ENTRIES,
+									})}
+								</span>
+							) : null}
+							<Button
+								size="sm"
+								variant="outline"
+								disabled={!canLogWork}
+								onClick={() =>
+									openCreate(buildPrefill(selectedEntries, timezone), {
+										onCreated: clearSelection,
+									})
+								}
+							>
+								{t("agents.selection.logWork")}
+							</Button>
+							<Button
+								size="sm"
+								variant="outline"
+								className="text-destructive hover:text-destructive"
+								disabled={tooMany}
+								onClick={() =>
+									setPendingDeleteIds(selectedEntries.map((entry) => entry.id))
+								}
+							>
+								<Trash2Icon />
+								{t("agents.selection.deleteAction")}
+							</Button>
+						</div>
+					) : (
+						/* Row count only once every page is loaded — a partial set would
+						   read as a total when it's really "showing the first N". The
+						   period's true session total is in the Sessions stat widget. */
+						list.length > 0 &&
+						!entries.hasNextPage && (
+							<span className="text-muted-foreground text-sm tabular-nums">
+								{t("agents.sessionCount", { count: list.length })}
+							</span>
+						)
 					)}
 				</div>
 				{entries.isPending ? (
@@ -204,6 +438,13 @@ function AgentPage() {
 						<Table>
 							<TableHeader>
 								<TableRow>
+									{canSelect && (
+										<TableHead className="w-8">
+											<span className="sr-only">
+												{t("agents.selection.selectEntry")}
+											</span>
+										</TableHead>
+									)}
 									<TableHead>{t("agents.table.date")}</TableHead>
 									<TableHead className="w-full">
 										{t("agents.table.description")}
@@ -233,6 +474,24 @@ function AgentPage() {
 											data-nav-active={active === index ? "" : undefined}
 											className="group data-[nav-active]:bg-muted relative cursor-pointer"
 										>
+											{canSelect && (
+												<TableCell>
+													{/* Lifted above the description button's stretched
+													    row overlay so clicks land on the checkbox. Only
+													    the viewer's own sessions are selectable (bulk
+													    actions are owner-only). */}
+													{entry.ownerUserId === session.user.id && (
+														<Checkbox
+															className="relative z-10 align-middle"
+															aria-label={t("agents.selection.selectEntry")}
+															checked={selectedIds.has(entry.id)}
+															onCheckedChange={(checked) =>
+																toggleSelected(entry.id, checked === true)
+															}
+														/>
+													)}
+												</TableCell>
+											)}
 											<TableCell className="whitespace-nowrap">
 												<div>
 													{formatEntryDate(entry.entryDate, i18n.language, {
@@ -315,6 +574,40 @@ function AgentPage() {
 					</div>
 				)}
 			</section>
+
+			<AlertDialog
+				open={pendingDeleteIds !== null}
+				onOpenChange={(open) => {
+					if (!open) setPendingDeleteIds(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							{t("agents.selection.deleteTitle")}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{t("agents.selection.deleteDescription", {
+								count: pendingDeleteIds?.length ?? 0,
+							})}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>
+							{t("agents.selection.deleteCancel")}
+						</AlertDialogCancel>
+						<AlertDialogAction
+							className={buttonVariants({ variant: "destructive" })}
+							disabled={deleteMutation.isPending}
+							onClick={() => {
+								if (pendingDeleteIds) deleteMutation.mutate(pendingDeleteIds);
+							}}
+						>
+							{t("agents.selection.deleteConfirm")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 
 			<AgentEntryDialog
 				entry={viewEntry}

@@ -94,7 +94,7 @@ of the project in question (always also a workspace member) · **Self** = the re
 | Projects: contained resources — work/agent entries (project) | R | R* | – | **–** | R | – |
 | Work entries — project-assigned (project) | R | R* | – | **–** | R | RW (own) |
 | Work entries — unassigned, `projectId = null` (workspace) | R | R | – | R | R | RW (own) |
-| Agent entries / events (project / workspace) | R | R* | – | per project | per project | R (own); write via AAT |
+| Agent entries / events (project / workspace) | R | R* | – | per project | per project | R + delete (own); write via AAT |
 | Reports (user) | R | R* | – | – | – | RW (own) |
 | Inbox / deliveries (user) | R | R* | – | – | – | RW (own) |
 | API tokens (user, secret hidden) | R (metadata) | – | – | – | – | RW (own, secret hidden) |
@@ -147,7 +147,9 @@ Notes:
 - **Agent entries/events are written only by the agent's Access Token (AAT).** Ingest goes through
   `POST /api/v1/agent-entries`, `/api/v1/agent-events`, and `/api/v1/agent-events/finalize` guarded
   by `requireAgentAuth`, not by the owner's normal session/user permissions; each ingest is checked
-  against the owner's live workspace membership. No human role writes these rows directly.
+  against the owner's live workspace membership. The one human-role write is **deletion**: the
+  entry's owner (and only the owner) may bulk-delete their own agent entries via
+  `POST /api/v1/agent-entries/delete` with a session/PAT `write` scope.
 
 ## UI vs API/MCP
 
@@ -177,6 +179,15 @@ so they are not mistaken for divergence:
   re-filtered on later reads.
 - **Raw agent events have no read route.** Only aggregated agent entries are readable; per-turn
   event telemetry is write-only (ingest), for every role.
+- **Agent-entry deletion is owner-only.** No admin override: agent entries are the owner's own
+  telemetry, and admins never write user data (see [Self-service](#self-service)). The bulk route
+  is all-or-nothing and answers 404 (not 403) for any id that is missing or foreign, so it cannot
+  be used to probe other users' session ids.
+- **Work-entry → agent-entry links assert provenance, not visibility.** When a work entry is
+  created from agent sessions (`agentEntryIds` on `POST /api/v1/work-entries`), every linked entry
+  must be the caller's **own** — being able to *read* a colleague's session (admin or project
+  member) is not enough, since a link claims "my work came from this session". The link rows are
+  currently write-only (no read route), like raw agent events.
 - **Off-boarding is future work.** Admins never *write* user-scoped resources (see
   [Self-service](#self-service)); acting on a departed user's data will be a dedicated, audited
   admin API when the need arrives.

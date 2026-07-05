@@ -141,6 +141,13 @@
       "when": 1783214996460,
       "tag": "0019_dark_ultimatum",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1783263048745,
+      "tag": "0020_lively_richard_fisk",
+      "breakpoints": true
     }
   ]
 }

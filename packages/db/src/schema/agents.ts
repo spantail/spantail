@@ -15,7 +15,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
-import { createdAtMs, projects, workspaces } from "./domain";
+import { createdAtMs, projects, workEntries, workspaces } from "./domain";
 
 /**
  * A registered AI coding agent. Account-scoped: a delegated identity of one
@@ -134,6 +134,30 @@ export const agentEntries = sqliteTable(
 		// Range queries filter by startedAt (the day-bucket key) within a workspace.
 		index("agent_entries_workspace_idx").on(table.workspaceId, table.startedAt),
 		index("agent_entries_agent_idx").on(table.agentId),
+	],
+);
+
+/**
+ * Provenance link: which agent sessions a human work entry was logged from
+ * (many-to-many). Rows are written when a work entry is created from selected
+ * agent entries and cascade away with either side; there is no read surface yet.
+ */
+export const workEntryAgentEntries = sqliteTable(
+	"work_entry_agent_entries",
+	{
+		workEntryId: text("work_entry_id")
+			.notNull()
+			.references(() => workEntries.id, { onDelete: "cascade" }),
+		agentEntryId: text("agent_entry_id")
+			.notNull()
+			.references(() => agentEntries.id, { onDelete: "cascade" }),
+		createdAt: createdAtMs(),
+	},
+	(table) => [
+		primaryKey({ columns: [table.workEntryId, table.agentEntryId] }),
+		// The composite PK only covers workEntryId-first lookups; the agent-entry
+		// side (cascade checks, per-session lookups) needs its own index.
+		index("work_entry_agent_entries_agent_entry_idx").on(table.agentEntryId),
 	],
 );
 

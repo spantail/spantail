@@ -983,6 +983,13 @@ export async function generateDataset(
 				}
 
 				const totalTokens = input + output + cacheCreation + cacheRead;
+				// Session summaries reuse the project's activity pool so they match
+				// the demo's domain (and the dataset's language). Roughly a quarter
+				// stay untitled so the no-description rendering stays visible.
+				const description =
+					project && hashString(`agdesc:${sessionId}`) % 4 !== 0
+						? pick(project.activities, hashString(`agact:${sessionId}`))
+						: null;
 				agentEntryRows.push({
 					id: randomUUID(),
 					workspaceId: ws.id,
@@ -999,7 +1006,7 @@ export async function generateDataset(
 						totalTokens,
 						model: AGENT_MODEL,
 					},
-					description: null,
+					description,
 					startedAt: new Date(minTs),
 					endedAt: new Date(maxTs),
 					createdAt: new Date(maxTs),

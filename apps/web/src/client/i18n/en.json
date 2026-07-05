@@ -118,6 +118,22 @@
 			"refs": "References",
 			"models": "Models",
 			"sessionId": "Session ID"
+		},
+		"selection": {
+			"selectEntry": "Select session",
+			"count_one": "{{count}} selected",
+			"count_other": "{{count}} selected",
+			"logWork": "Log work from selection",
+			"mixedProjects": "Sessions from different projects can't be combined.",
+			"tooMany": "Up to {{max}} sessions at a time.",
+			"deleteAction": "Delete sessions",
+			"deleteTitle": "Delete selected sessions?",
+			"deleteDescription_one": "This permanently deletes {{count}} session. This cannot be undone.",
+			"deleteDescription_other": "This permanently deletes {{count}} sessions. This cannot be undone.",
+			"deleteConfirm": "Delete",
+			"deleteCancel": "Cancel",
+			"deletedToast_one": "Deleted {{count}} session",
+			"deletedToast_other": "Deleted {{count}} sessions"
 		}
 	},
 	"workspace": {
@@ -157,6 +173,8 @@
 		"editTitle": "Edit entry",
 		"newDescription": "Record what you worked on and for how long.",
 		"editDescription": "Update the details of this work entry.",
+		"fromSessions_one": "Creating from {{count}} selected agent session.",
+		"fromSessions_other": "Creating from {{count}} selected agent sessions.",
 		"project": "Project",
 		"selectProject": "Select a project",
 		"date": "Date",

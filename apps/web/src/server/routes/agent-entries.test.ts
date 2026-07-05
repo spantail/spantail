@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+import { createDb, schema } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -382,4 +384,171 @@ it("lets project members see co-members' agent activity in that project", async 
 		)
 	).json()) as { totalTokens: number; entryCount: number };
 	expect(carolStats.entryCount).toBe(0);
+});
+
+// --- bulk delete (owner-only, all-or-nothing) ---
+
+async function ingestId(token: string, sessionId: string): Promise<string> {
+	const res = await ingest(token, { sessionId, durationMinutes: 5 });
+	expect(res.status).toBe(200);
+	return ((await res.json()) as { id: string }).id;
+}
+
+function deleteEntries(
+	cookie: string,
+	workspaceId: string,
+	ids: string[],
+): Promise<Response> {
+	return apiJson(
+		"POST",
+		"/api/v1/agent-entries/delete",
+		{ workspaceId, ids },
+		cookie,
+	);
+}
+
+async function listIds(cookie: string, workspaceId: string): Promise<string[]> {
+	const list = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${workspaceId}`, cookie)
+	).json()) as Array<{ id: string }>;
+	return list.map((e) => e.id).sort();
+}
+
+it("bulk-deletes the caller's own agent entries, deduping ids", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const a = await ingestId(token, "del-a");
+	const b = await ingestId(token, "del-b");
+	const keep = await ingestId(token, "del-keep");
+
+	// A duplicated id counts once — the response reflects unique rows deleted.
+	const res = await deleteEntries(admin, ws.id, [a, b, a]);
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({ count: 2 });
+	expect(await listIds(admin, ws.id)).toEqual([keep]);
+});
+
+it("deletes nothing when any id is foreign (all-or-nothing)", async () => {
+	const { admin, member, ws } = await setup();
+	const a = await createAgentToken(admin, { defaultWorkspaceId: ws.id });
+	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
+	const adminEntry = await ingestId(a.token, "mine-admin");
+	const memberEntry = await ingestId(b.token, "mine-member");
+
+	// The member's own id is valid, but the batch includes the admin's entry:
+	// 404 (existence hidden) and the member's own entry survives too.
+	const res = await deleteEntries(member, ws.id, [memberEntry, adminEntry]);
+	expect(res.status).toBe(404);
+	// The admin is the workspace owner (R*), so they see both remaining rows.
+	expect(await listIds(admin, ws.id)).toEqual([adminEntry, memberEntry].sort());
+});
+
+it("does not let a workspace admin delete a member's agent entries", async () => {
+	const { admin, member, ws } = await setup();
+	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
+	const memberEntry = await ingestId(b.token, "member-owned");
+
+	// Admins read all workspace agent activity but never write user data.
+	const res = await deleteEntries(admin, ws.id, [memberEntry]);
+	expect(res.status).toBe(404);
+	expect(await listIds(member, ws.id)).toEqual([memberEntry]);
+});
+
+it("scopes deletion to the named workspace", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const entry = await ingestId(token, "ws-scoped");
+
+	// Same owner, wrong workspace: the entry is not addressable through ws2.
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "other", name: "Other" },
+			admin,
+		)
+	).json()) as { id: string };
+	expect((await deleteEntries(admin, ws2.id, [entry])).status).toBe(404);
+
+	// A non-member cannot even address the workspace.
+	const outsider = await signUpUser("Outsider", "outsider@example.com");
+	expect((await deleteEntries(outsider, ws.id, [entry])).status).toBe(404);
+
+	expect(await listIds(admin, ws.id)).toEqual([entry]);
+});
+
+it("requires the write scope to delete", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const entry = await ingestId(token, "scope-guard");
+
+	const pat = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/tokens",
+			{ name: "reader", scopes: ["read"] },
+			admin,
+		)
+	).json()) as { token: string };
+	const res = await appFetch("/api/v1/agent-entries/delete", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${pat.token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({ workspaceId: ws.id, ids: [entry] }),
+	});
+	expect(res.status).toBe(403);
+});
+
+it("deletes a session's raw events along with its entry", async () => {
+	const { admin, ws } = await setup();
+	const { agentId, token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	// An events-fed session: the rollup is recomputed from raw events on every
+	// ingest, so a delete that left them behind could be resurrected by a
+	// late event retry.
+	const eventIngest = await appFetch("/api/v1/agent-events", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			sessionId: "evt-session",
+			events: [
+				{
+					sourceId: "m1",
+					timestamp: "2026-06-20T01:00:00.000Z",
+					usage: { input_tokens: 10, output_tokens: 20 },
+				},
+			],
+		}),
+	});
+	expect(eventIngest.status).toBe(200);
+	const entry = (await eventIngest.json()) as { id: string };
+	// A second summary-path session for the same agent must keep its events…
+	// (none exist) …and one for another session must survive the delete.
+	const keep = await ingestId(token, "keep-session");
+
+	const res = await deleteEntries(admin, ws.id, [entry.id]);
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({ count: 1 });
+	expect(await listIds(admin, ws.id)).toEqual([keep]);
+
+	// Raw events have no read route; check the table directly.
+	const db = createDb(env.DB);
+	const events = await db.select().from(schema.agentEvents);
+	expect(
+		events.filter(
+			(e) => e.agentId === agentId && e.sessionId === "evt-session",
+		),
+	).toHaveLength(0);
 });

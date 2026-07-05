@@ -7,6 +7,7 @@ import {
 	useContext,
 	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,7 +15,7 @@ import { toast } from "sonner";
 
 import { EntryDetail } from "@/components/entry-detail";
 import { EntryDetailActions } from "@/components/entry-detail-actions";
-import { EntryForm } from "@/components/entry-form";
+import { type EntryCreatePrefill, EntryForm } from "@/components/entry-form";
 import {
 	Dialog,
 	DialogContent,
@@ -30,14 +31,38 @@ import { isTypingTarget } from "@/lib/keyboard";
 import { useWorkspace } from "@/lib/workspace";
 
 type EntryDialogState =
-	| { mode: "create"; defaultProjectId?: string }
+	| {
+			mode: "create";
+			defaultProjectId?: string;
+			prefill?: EntryCreatePrefill;
+			onCreated?: () => void;
+	  }
 	| { mode: "edit"; entry: WorkEntry }
 	| { mode: "view"; entry: WorkEntry };
 
+/**
+ * What a page-registered supplier tells the global `c` shortcut to do:
+ * open with a prefill, ignore the keypress (e.g. an invalid selection), or
+ * null for "no opinion" — a plain create.
+ */
+export type CreatePrefillResult =
+	| { kind: "prefill"; prefill: EntryCreatePrefill; onCreated?: () => void }
+	| { kind: "blocked" }
+	| null;
+
 interface EntryDialogContextValue {
-	openCreate: () => void;
+	openCreate: (
+		prefill?: EntryCreatePrefill,
+		opts?: { onCreated?: () => void },
+	) => void;
 	openEdit: (entry: WorkEntry) => void;
 	openView: (entry: WorkEntry) => void;
+	/**
+	 * Registers the supplier the `c` shortcut consults before opening (pass
+	 * null to unregister). Pages with a bulk selection use it so the shortcut
+	 * prefills exactly like their explicit "log work" button.
+	 */
+	setCreatePrefillSource: (source: (() => CreatePrefillResult) | null) => void;
 }
 
 const EntryDialogContext = createContext<EntryDialogContextValue | null>(null);
@@ -77,11 +102,19 @@ export function EntryDialogProvider({
 			project.slug === routeProjectSlug && project.status === "active",
 	)?.id;
 
-	const openCreate = useCallback(() => {
-		if (!hasWorkspace) return;
-		setInstanceId((id) => id + 1);
-		setState({ mode: "create", defaultProjectId: contextProjectId });
-	}, [hasWorkspace, contextProjectId]);
+	const openCreate = useCallback(
+		(prefill?: EntryCreatePrefill, opts?: { onCreated?: () => void }) => {
+			if (!hasWorkspace) return;
+			setInstanceId((id) => id + 1);
+			setState({
+				mode: "create",
+				defaultProjectId: contextProjectId,
+				prefill,
+				onCreated: opts?.onCreated,
+			});
+		},
+		[hasWorkspace, contextProjectId],
+	);
 	const openEdit = useCallback((entry: WorkEntry) => {
 		setInstanceId((id) => id + 1);
 		setState({ mode: "edit", entry });
@@ -92,24 +125,46 @@ export function EntryDialogProvider({
 	}, []);
 	const close = useCallback(() => setState(null), []);
 
+	// Held in a ref: registering a supplier must not re-render the provider or
+	// re-bind the keydown listener.
+	const prefillSourceRef = useRef<(() => CreatePrefillResult) | null>(null);
+	const setCreatePrefillSource = useCallback(
+		(source: (() => CreatePrefillResult) | null) => {
+			prefillSourceRef.current = source;
+		},
+		[],
+	);
+
 	useEffect(() => {
 		function onKeyDown(e: KeyboardEvent) {
 			if (e.key !== "c" || e.metaKey || e.ctrlKey || e.altKey) return;
 			if (e.repeat || e.isComposing || e.defaultPrevented) return;
 			if (isTypingTarget(e.target)) return;
-			// Covers this dialog plus any other open dialog or menu, where a
-			// bare keypress may be Radix typeahead input.
-			if (document.querySelector('[role="dialog"], [role="menu"]')) return;
+			// Covers this dialog plus any other open dialog, confirmation, or
+			// menu, where a bare keypress may be Radix typeahead input.
+			if (
+				document.querySelector(
+					'[role="dialog"], [role="alertdialog"], [role="menu"]',
+				)
+			) {
+				return;
+			}
 			e.preventDefault();
-			openCreate();
+			const result = prefillSourceRef.current?.() ?? null;
+			if (result?.kind === "blocked") return;
+			if (result?.kind === "prefill") {
+				openCreate(result.prefill, { onCreated: result.onCreated });
+			} else {
+				openCreate();
+			}
 		}
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [openCreate]);
 
 	const value = useMemo(
-		() => ({ openCreate, openEdit, openView }),
-		[openCreate, openEdit, openView],
+		() => ({ openCreate, openEdit, openView, setCreatePrefillSource }),
+		[openCreate, openEdit, openView, setCreatePrefillSource],
 	);
 
 	// The entry form may only assign projects the caller can log to: workspace
@@ -240,12 +295,14 @@ export function EntryDialogProvider({
 								defaultProjectId={
 									state.mode === "create" ? state.defaultProjectId : undefined
 								}
+								prefill={state.mode === "create" ? state.prefill : undefined}
 								onSuccess={({ keepOpen }) => {
 									toast.success(
 										state.mode === "edit"
 											? t("entries.toast.updated")
 											: t("entries.toast.created"),
 									);
+									if (state.mode === "create") state.onCreated?.();
 									if (!keepOpen) close();
 								}}
 								onCancel={close}

@@ -3,6 +3,7 @@ import { todayInTimezone } from "@spantail/core";
 import {
 	createDb,
 	createWorkEntriesBatch,
+	schema,
 	WorkEntryOwnershipConflictError,
 } from "@spantail/db";
 import { expect, it } from "vitest";
@@ -983,4 +984,202 @@ it("rejects unassigning a live entry from its project", async () => {
 		admin,
 	);
 	expect(res.status).toBe(400);
+});
+
+// --- linking work entries to the agent entries they were logged from ---
+
+async function setupWithAgentIngest() {
+	const base = await setup();
+	// The agents feature is off by default; the bootstrap admin enables it.
+	await apiJson(
+		"PATCH",
+		"/api/v1/instance/agents",
+		{ agentsEnabled: true },
+		base.admin,
+	);
+	return {
+		...base,
+		// Registers an agent for `cookie`'s user and returns an ingest closure.
+		agentFor: async (cookie: string) => {
+			const created = (await (
+				await apiJson(
+					"POST",
+					"/api/v1/agents",
+					{ type: "claude_code", name: "CC", defaultWorkspaceId: base.ws.id },
+					cookie,
+				)
+			).json()) as { secret: string };
+			return async (sessionId: string, body?: object): Promise<string> => {
+				const res = await appFetch("/api/v1/agent-entries", {
+					method: "POST",
+					headers: {
+						authorization: `Bearer ${created.secret}`,
+						"content-type": "application/json",
+					},
+					body: JSON.stringify({ sessionId, durationMinutes: 10, ...body }),
+				});
+				expect(res.status).toBe(200);
+				return ((await res.json()) as { id: string }).id;
+			};
+		},
+	};
+}
+
+async function linkRowsFor(workEntryId: string): Promise<string[]> {
+	const db = createDb(env.DB as D1Database);
+	const rows = await db.select().from(schema.workEntryAgentEntries);
+	return rows
+		.filter((r) => r.workEntryId === workEntryId)
+		.map((r) => r.agentEntryId)
+		.sort();
+}
+
+it("links the created entry to the caller's own agent entries", async () => {
+	const { admin, ws, project, agentFor } = await setupWithAgentIngest();
+	const ingest = await agentFor(admin);
+	const a = await ingest("link-a");
+	const b = await ingest("link-b");
+
+	const res = await apiJson(
+		"POST",
+		"/api/v1/work-entries",
+		{
+			workspaceId: ws.id,
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 20,
+			description: "from sessions",
+			agentEntryIds: [a, b],
+		},
+		admin,
+	);
+	expect(res.status).toBe(201);
+	const entry = (await res.json()) as { id: string };
+	expect(await linkRowsFor(entry.id)).toEqual([a, b].sort());
+});
+
+it("rejects linking unknown, foreign-owner, or cross-workspace agent entries", async () => {
+	const { admin, member, ws, project, agentFor } = await setupWithAgentIngest();
+	const ingest = await agentFor(admin);
+	// The admin's session is logged into the shared project, so the member can
+	// *read* it — reading is not enough to link someone else's work.
+	const adminEntry = await ingest("owned-by-admin", { projectId: project.id });
+
+	const create = (cookie: string, agentEntryIds: string[]) =>
+		apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				entryDate: "2026-06-01",
+				durationMinutes: 20,
+				description: "attempt",
+				agentEntryIds,
+			},
+			cookie,
+		);
+
+	expect((await create(admin, ["no-such-id"])).status).toBe(400);
+	expect((await create(member, [adminEntry])).status).toBe(400);
+
+	// Same owner, but the work entry is created in a different workspace.
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "other", name: "Other" },
+			admin,
+		)
+	).json()) as { id: string };
+	const project2 = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws2.id}/projects`,
+			{ slug: "p2", name: "P2" },
+			admin,
+		)
+	).json()) as { id: string };
+	const crossWorkspace = await apiJson(
+		"POST",
+		"/api/v1/work-entries",
+		{
+			workspaceId: ws2.id,
+			projectId: project2.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 20,
+			description: "attempt",
+			agentEntryIds: [adminEntry],
+		},
+		admin,
+	);
+	expect(crossWorkspace.status).toBe(400);
+
+	// Nothing was linked by any of the rejected attempts.
+	const db = createDb(env.DB as D1Database);
+	expect(await db.select().from(schema.workEntryAgentEntries)).toHaveLength(0);
+});
+
+it("caps agentEntryIds per entry", async () => {
+	const { admin, ws, project } = await setupWithAgentIngest();
+	const res = await apiJson(
+		"POST",
+		"/api/v1/work-entries",
+		{
+			workspaceId: ws.id,
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 20,
+			description: "too many",
+			agentEntryIds: Array.from({ length: 51 }, (_, i) => `id-${i}`),
+		},
+		admin,
+	);
+	expect(res.status).toBe(400);
+});
+
+it("cascades link rows when either side is deleted", async () => {
+	const { admin, ws, project, agentFor } = await setupWithAgentIngest();
+	const ingest = await agentFor(admin);
+	const a = await ingest("cascade-a");
+	const b = await ingest("cascade-b");
+	const create = async () =>
+		(await (
+			await apiJson(
+				"POST",
+				"/api/v1/work-entries",
+				{
+					workspaceId: ws.id,
+					projectId: project.id,
+					entryDate: "2026-06-01",
+					durationMinutes: 20,
+					description: "linked",
+					agentEntryIds: [a, b],
+				},
+				admin,
+			)
+		).json()) as { id: string };
+
+	// Deleting the work entry drops its links; the agent entries survive.
+	const first = await create();
+	expect(await linkRowsFor(first.id)).toHaveLength(2);
+	await apiJson("DELETE", `/api/v1/work-entries/${first.id}`, undefined, admin);
+	expect(await linkRowsFor(first.id)).toHaveLength(0);
+	const agentList = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as unknown[];
+	expect(agentList).toHaveLength(2);
+
+	// Deleting the agent entries drops the links; the work entry survives.
+	const second = await create();
+	const deleted = await apiJson(
+		"POST",
+		"/api/v1/agent-entries/delete",
+		{ workspaceId: ws.id, ids: [a, b] },
+		admin,
+	);
+	expect(deleted.status).toBe(200);
+	expect(await linkRowsFor(second.id)).toHaveLength(0);
+	const entryRes = await apiGet(`/api/v1/work-entries/${second.id}`, admin);
+	expect(entryRes.status).toBe(200);
 });
