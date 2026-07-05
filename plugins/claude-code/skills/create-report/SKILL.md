@@ -25,8 +25,12 @@ Check that the Spantail MCP tools (`preview_report`, `list_report_templates`,
    (`list_projects`), and the period — prefer a preset (`this_week`,
    `last_month`, ...) over explicit dates when the user speaks in relative
    terms.
-3. ALWAYS render with `preview_report` first and show the user the result
-   (or a faithful summary of it). Only call `create_report` after they
+3. ALWAYS render with `preview_report` first, and QUOTE the rendered
+   Markdown in your reply — the user cannot see tool results, so a preview
+   they weren't shown is no preview at all. Quote the body verbatim (for a
+   long report: the header, the section structure, and the totals, clearly
+   marked as an excerpt). Only after the preview is visible in your message
+   may you ask for confirmation, and only call `create_report` once they
    confirm. A report is a saved, versioned document — don't create one the
    user hasn't seen.
 4. Report the saved report's name and id.
