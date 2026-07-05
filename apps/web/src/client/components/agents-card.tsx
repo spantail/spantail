@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
+import { CopyButton } from "@/components/copy-button";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -77,7 +78,14 @@ import { cn } from "@/lib/utils";
 const AGENT_TYPES: AgentType[] = ["claude_code", "codex", "cursor", "other"];
 
 /** A freshly issued secret to surface once, with the agent it belongs to. */
-type IssuedSecret = { agentName: string; secret: string };
+type IssuedSecret = {
+	agentName: string;
+	secret: string;
+	/** The workspace the token is bound to; surfaced for the plugin config. */
+	workspaceId: string | null;
+	/** Projects the token is scoped to; surfaced for the plugin config. */
+	projectIds: string[];
+};
 
 export function AgentsCard() {
 	const { t } = useTranslation();
@@ -123,7 +131,13 @@ export function AgentsCard() {
 			}),
 		onSuccess: async (created) => {
 			await invalidateAgents();
-			setIssued({ agentName: created.name, secret: created.secret });
+			// Capture the submitted scope before the form state is reset below.
+			setIssued({
+				agentName: created.name,
+				secret: created.secret,
+				workspaceId,
+				projectIds,
+			});
 			setName("");
 			setProjectIds([]);
 			setExpiresInDays("");
@@ -148,9 +162,12 @@ export function AgentsCard() {
 
 	const rotateMutation = useMutation({
 		mutationFn: (agent: AgentWithToken) =>
-			api
-				.rotateAgentToken(agent.id)
-				.then((res) => ({ agentName: agent.name, secret: res.secret })),
+			api.rotateAgentToken(agent.id).then((res) => ({
+				agentName: agent.name,
+				secret: res.secret,
+				workspaceId: agent.token?.defaultWorkspaceId ?? null,
+				projectIds: agent.projectIds,
+			})),
 		onSuccess: async (result) => {
 			await invalidateAgents();
 			setIssued(result);
@@ -346,14 +363,58 @@ export function AgentsCard() {
 											</Badge>
 										</TableCell>
 										<TableCell className="text-muted-foreground">
-											{(wsId && workspaceNames.get(wsId)) ?? "—"}
+											{wsId ? (
+												<span className="flex items-center gap-1">
+													{workspaceNames.get(wsId) ?? "—"}
+													<CopyButton
+														value={wsId}
+														label={t("settings.agents.copyWorkspaceId")}
+														className="size-7"
+													/>
+												</span>
+											) : (
+												"—"
+											)}
 										</TableCell>
 										<TableCell className="text-muted-foreground">
-											{agent.projectIds.length === 0
-												? t("settings.agents.projectAll")
-												: t("settings.agents.projectsSelected", {
-														count: agent.projectIds.length,
-													})}
+											{agent.projectIds.length === 0 ? (
+												t("settings.agents.projectAll")
+											) : (
+												<Popover>
+													<PopoverTrigger asChild>
+														<Button
+															variant="ghost"
+															size="sm"
+															className="text-muted-foreground h-auto px-1 py-0.5 font-normal"
+														>
+															{t("settings.agents.projectsSelected", {
+																count: agent.projectIds.length,
+															})}
+														</Button>
+													</PopoverTrigger>
+													<PopoverContent align="start" className="w-80">
+														<p className="mb-2 text-sm font-medium">
+															{t("settings.agents.projectIdsTitle")}
+														</p>
+														<div className="flex flex-col gap-2">
+															{agent.projectIds.map((id) => (
+																<div
+																	key={id}
+																	className="flex items-center gap-2"
+																>
+																	<code className="bg-muted flex-1 overflow-x-auto rounded-md p-2 text-xs">
+																		{id}
+																	</code>
+																	<CopyButton
+																		value={id}
+																		label={t("settings.agents.copyProjectId")}
+																	/>
+																</div>
+															))}
+														</div>
+													</PopoverContent>
+												</Popover>
+											)}
 										</TableCell>
 										<TableCell>
 											<Badge variant={disabled ? "outline" : "default"}>
@@ -504,6 +565,33 @@ function SecretDialog({
 						{copied ? <CheckIcon /> : <CopyIcon />}
 					</Button>
 				</div>
+				{issued && (issued.workspaceId || issued.projectIds.length > 0) && (
+					<div className="flex flex-col gap-2">
+						<div>
+							<p className="text-sm font-medium">
+								{t("settings.agents.pluginConfig")}
+							</p>
+							<p className="text-muted-foreground text-xs">
+								{t("settings.agents.pluginConfigHint")}
+							</p>
+						</div>
+						{issued.workspaceId && (
+							<IdRow
+								label={t("settings.agents.workspaceId")}
+								value={issued.workspaceId}
+								copyLabel={t("settings.agents.copyWorkspaceId")}
+							/>
+						)}
+						{issued.projectIds.map((id) => (
+							<IdRow
+								key={id}
+								label={t("settings.agents.projectId")}
+								value={id}
+								copyLabel={t("settings.agents.copyProjectId")}
+							/>
+						))}
+					</div>
+				)}
 				<DialogFooter>
 					<Button
 						onClick={() => {
@@ -516,5 +604,28 @@ function SecretDialog({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	);
+}
+
+/** A labelled, read-only id with a copy affordance. */
+function IdRow({
+	label,
+	value,
+	copyLabel,
+}: {
+	label: string;
+	value: string;
+	copyLabel: string;
+}) {
+	return (
+		<div className="flex items-center gap-2">
+			<span className="text-muted-foreground w-28 shrink-0 text-xs">
+				{label}
+			</span>
+			<code className="bg-muted flex-1 overflow-x-auto rounded-md p-2 text-xs">
+				{value}
+			</code>
+			<CopyButton value={value} label={copyLabel} />
+		</div>
 	);
 }
