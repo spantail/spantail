@@ -23,10 +23,13 @@ spantail_load_user_config() {
 	[ -f "$settings" ] || return 0
 	# The store is keyed by plugin id — "spantail" or "spantail@<marketplace>".
 	# Match exactly those forms so another plugin whose name merely starts
-	# with "spantail" can't shadow this one's options.
+	# with "spantail" can't shadow this one's options, and prefer the
+	# marketplace-qualified id deterministically when both forms exist
+	# (object entry order in settings.json is not guaranteed).
 	_spantail_plugin_options_json="$(jq -c '
 		(.pluginConfigs // {}) | to_entries
 		| map(select(.key == "spantail" or (.key | startswith("spantail@"))))
+		| sort_by(if .key == "spantail" then 1 else 0 end)
 		| (first.value.options // {})
 	' "$settings" 2>/dev/null || printf '{}')"
 }
