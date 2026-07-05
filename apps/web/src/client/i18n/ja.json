@@ -172,6 +172,7 @@
 		"newTitle": "作業を記録",
 		"editTitle": "記録を編集",
 		"newDescription": "取り組んだ作業とその時間を記録します。",
+		"fromSessions_other": "選択した{{count}}件のエージェントセッションから作成します。",
 		"editDescription": "この作業記録の内容を更新します。",
 		"project": "プロジェクト",
 		"selectProject": "プロジェクトを選択",

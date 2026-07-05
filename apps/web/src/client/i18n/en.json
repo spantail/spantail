@@ -173,6 +173,8 @@
 		"editTitle": "Edit entry",
 		"newDescription": "Record what you worked on and for how long.",
 		"editDescription": "Update the details of this work entry.",
+		"fromSessions_one": "Creating from {{count}} selected agent session.",
+		"fromSessions_other": "Creating from {{count}} selected agent sessions.",
 		"project": "Project",
 		"selectProject": "Select a project",
 		"date": "Date",

@@ -287,6 +287,13 @@ export function EntryForm({
 				mutation.mutate();
 			}}
 		>
+			{/* Driven by the state (not the prefill prop) so it disappears once a
+			    keep-entering reset drops the links for the next entry. */}
+			{agentEntryIds.length > 0 && (
+				<p className="text-muted-foreground bg-muted rounded-md px-3 py-2 text-sm sm:col-span-2">
+					{t("entries.fromSessions", { count: agentEntryIds.length })}
+				</p>
+			)}
 			<div className="flex flex-col gap-2">
 				<Label>{t("entries.project")}</Label>
 				<Select value={projectId} onValueChange={setProjectId} required>
