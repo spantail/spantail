@@ -12,41 +12,37 @@ export interface ReportDiscussionAccess {
 	report: { id: string; ownerUserId: string };
 	isOwner: boolean;
 	isRecipient: boolean;
-	/** The report has been Send-to-shared (≥1 delivery exists). */
+	/** The version has been Send-to-shared (≥1 delivery of it exists). */
 	shared: boolean;
 }
 
 /**
- * Resolves whether a user may take part in a report's discussion. A participant
- * is the report owner (sender) or anyone holding a Send-to delivery of it.
- * Returns undefined when the report is missing or the caller is neither — the
- * caller treats that as "not found", never revealing the report's existence.
+ * Resolves whether a user may take part in a content version's discussion. A
+ * participant is the report owner (sender) or anyone holding a Send-to delivery
+ * of that version. Returns undefined when the version is missing or the caller
+ * is neither — the caller treats that as "not found", never revealing the
+ * version's existence.
  */
 export async function getReportDiscussionAccess(
 	db: Database,
-	reportId: string,
+	reportContentId: string,
 	userId: string,
 ): Promise<ReportDiscussionAccess | undefined> {
 	const report = await db
 		.select({ id: reports.id, ownerUserId: reports.ownerUserId })
-		.from(reports)
-		.where(eq(reports.id, reportId))
+		.from(reportContent)
+		.innerJoin(reports, eq(reports.id, reportContent.reportId))
+		.where(eq(reportContent.id, reportContentId))
 		.get();
 	if (!report) return undefined;
 
 	const isOwner = report.ownerUserId === userId;
-	// A delivery references its report through the content version it carried,
-	// so report-scoped checks join one hop through report_content.
 	const recipient = await db
 		.select({ id: reportDeliveries.id })
 		.from(reportDeliveries)
-		.innerJoin(
-			reportContent,
-			eq(reportContent.id, reportDeliveries.reportContentId),
-		)
 		.where(
 			and(
-				eq(reportContent.reportId, reportId),
+				eq(reportDeliveries.reportContentId, reportContentId),
 				eq(reportDeliveries.recipientUserId, userId),
 			),
 		)
@@ -56,34 +52,33 @@ export async function getReportDiscussionAccess(
 
 	// A recipient implies a delivery; only the owner-without-delivery case needs
 	// the extra check.
-	const shared = isRecipient ? true : await isReportShared(db, reportId);
+	const shared = isRecipient
+		? true
+		: await isContentShared(db, reportContentId);
 	return { report, isOwner, isRecipient, shared };
 }
 
 /**
- * The user ids of a report's discussion participants: the owner plus every
- * Send-to recipient. Used to fan out a realtime signal when the discussion
- * changes. A recipient whose account was deleted has no delivery row, so they
- * are naturally excluded.
+ * The user ids of a content version's discussion participants: the report owner
+ * plus every Send-to recipient of that version. Used to fan out a realtime
+ * signal when the discussion changes. A recipient whose account was deleted has
+ * no delivery row, so they are naturally excluded.
  */
 export async function listReportParticipantUserIds(
 	db: Database,
-	reportId: string,
+	reportContentId: string,
 ): Promise<string[]> {
 	const report = await db
 		.select({ ownerUserId: reports.ownerUserId })
-		.from(reports)
-		.where(eq(reports.id, reportId))
+		.from(reportContent)
+		.innerJoin(reports, eq(reports.id, reportContent.reportId))
+		.where(eq(reportContent.id, reportContentId))
 		.get();
 	if (!report) return [];
 	const recipients = await db
 		.select({ userId: reportDeliveries.recipientUserId })
 		.from(reportDeliveries)
-		.innerJoin(
-			reportContent,
-			eq(reportContent.id, reportDeliveries.reportContentId),
-		)
-		.where(eq(reportContent.reportId, reportId));
+		.where(eq(reportDeliveries.reportContentId, reportContentId));
 	const ids = new Set<string>([report.ownerUserId]);
 	for (const r of recipients) {
 		if (r.userId) ids.add(r.userId);
@@ -92,35 +87,32 @@ export async function listReportParticipantUserIds(
 }
 
 /**
- * Whether a report's discussion exists: ≥1 delivery, comment, or reaction. An
- * existing discussion counts as shared even with no live delivery — when the
- * last recipient's account is deleted their delivery cascades away, but retained
- * comments (author_user_id set null) keep the thread alive. Used to surface the
- * `shared` flag to the owner and to admin readers who hold no delivery.
+ * Whether a content version's discussion exists: ≥1 delivery, comment, or
+ * reaction on that version. An existing discussion counts as shared even with
+ * no live delivery — when the last recipient's account is deleted their
+ * delivery cascades away, but retained comments (author_user_id set null) keep
+ * the thread alive. Used to surface the `shared` flag to the owner and to
+ * admin readers who hold no delivery.
  */
-export async function isReportShared(
+export async function isContentShared(
 	db: Database,
-	reportId: string,
+	reportContentId: string,
 ): Promise<boolean> {
 	const [anyDelivery, anyComment, anyReaction] = await Promise.all([
 		db
 			.select({ id: reportDeliveries.id })
 			.from(reportDeliveries)
-			.innerJoin(
-				reportContent,
-				eq(reportContent.id, reportDeliveries.reportContentId),
-			)
-			.where(eq(reportContent.reportId, reportId))
+			.where(eq(reportDeliveries.reportContentId, reportContentId))
 			.get(),
 		db
 			.select({ id: reportComments.id })
 			.from(reportComments)
-			.where(eq(reportComments.reportId, reportId))
+			.where(eq(reportComments.reportContentId, reportContentId))
 			.get(),
 		db
 			.select({ id: reportReactions.id })
 			.from(reportReactions)
-			.where(eq(reportReactions.reportId, reportId))
+			.where(eq(reportReactions.reportContentId, reportContentId))
 			.get(),
 	]);
 	return (
@@ -130,29 +122,32 @@ export async function isReportShared(
 	);
 }
 
-/** A report's comments, oldest first (thread order). */
+/** A content version's comments, oldest first (thread order). */
 export async function listReportComments(
 	db: Database,
-	reportId: string,
+	reportContentId: string,
 ): Promise<ReportCommentRow[]> {
 	return db
 		.select()
 		.from(reportComments)
-		.where(eq(reportComments.reportId, reportId))
+		.where(eq(reportComments.reportContentId, reportContentId))
 		.orderBy(asc(reportComments.createdAt));
 }
 
-/** A single comment, scoped to its report. */
+/** A single comment, scoped to its content version. */
 export async function getReportComment(
 	db: Database,
 	id: string,
-	reportId: string,
+	reportContentId: string,
 ): Promise<ReportCommentRow | undefined> {
 	return db
 		.select()
 		.from(reportComments)
 		.where(
-			and(eq(reportComments.id, id), eq(reportComments.reportId, reportId)),
+			and(
+				eq(reportComments.id, id),
+				eq(reportComments.reportContentId, reportContentId),
+			),
 		)
 		.get();
 }
@@ -160,7 +155,7 @@ export async function getReportComment(
 export async function createReportComment(
 	db: Database,
 	values: {
-		reportId: string;
+		reportContentId: string;
 		authorUserId: string;
 		authorName: string;
 		authorEmail: string;
@@ -179,7 +174,7 @@ export async function createReportComment(
 export async function updateReportComment(
 	db: Database,
 	id: string,
-	reportId: string,
+	reportContentId: string,
 	userId: string,
 	body: string,
 ): Promise<ReportCommentRow | undefined> {
@@ -189,7 +184,7 @@ export async function updateReportComment(
 		.where(
 			and(
 				eq(reportComments.id, id),
-				eq(reportComments.reportId, reportId),
+				eq(reportComments.reportContentId, reportContentId),
 				eq(reportComments.authorUserId, userId),
 			),
 		)
@@ -201,7 +196,7 @@ export async function updateReportComment(
 export async function deleteReportComment(
 	db: Database,
 	id: string,
-	reportId: string,
+	reportContentId: string,
 	userId: string,
 ): Promise<boolean> {
 	const deleted = await db
@@ -209,7 +204,7 @@ export async function deleteReportComment(
 		.where(
 			and(
 				eq(reportComments.id, id),
-				eq(reportComments.reportId, reportId),
+				eq(reportComments.reportContentId, reportContentId),
 				eq(reportComments.authorUserId, userId),
 			),
 		)
@@ -217,20 +212,22 @@ export async function deleteReportComment(
 	return deleted.length > 0;
 }
 
-/** Every reaction for a report (body- and comment-level); aggregated by callers. */
+/** Every reaction for a content version (body- and comment-level); aggregated
+ * by callers. */
 export async function listReportReactions(
 	db: Database,
-	reportId: string,
+	reportContentId: string,
 ): Promise<ReportReactionRow[]> {
 	return db
 		.select()
 		.from(reportReactions)
-		.where(eq(reportReactions.reportId, reportId));
+		.where(eq(reportReactions.reportContentId, reportContentId));
 }
 
 /**
- * Toggles one emoji for a user on a target (report body when commentId is null,
- * else a comment). Returns true if it was added, false if it was removed.
+ * Toggles one emoji for a user on a target (the version's body when commentId
+ * is null, else a comment). Returns true if it was added, false if it was
+ * removed.
  *
  * Delete-then-insert (rather than select-then-write) keeps it tolerant of
  * concurrent requests: two tabs adding the same emoji both delete nothing and
@@ -240,19 +237,19 @@ export async function listReportReactions(
 export async function toggleReportReaction(
 	db: Database,
 	values: {
-		reportId: string;
+		reportContentId: string;
 		commentId: string | null;
 		userId: string;
 		userName: string;
 		emoji: string;
 	},
 ): Promise<boolean> {
-	const { reportId, commentId, userId, userName, emoji } = values;
+	const { reportContentId, commentId, userId, userName, emoji } = values;
 	const removed = await db
 		.delete(reportReactions)
 		.where(
 			and(
-				eq(reportReactions.reportId, reportId),
+				eq(reportReactions.reportContentId, reportContentId),
 				commentId === null
 					? isNull(reportReactions.commentId)
 					: eq(reportReactions.commentId, commentId),
@@ -267,7 +264,7 @@ export async function toggleReportReaction(
 		.insert(reportReactions)
 		.values({
 			id: crypto.randomUUID(),
-			reportId,
+			reportContentId,
 			commentId,
 			userId,
 			userName,

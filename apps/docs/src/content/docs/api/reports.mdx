@@ -28,11 +28,13 @@ generation date resolve in the owner's timezone at render time. See
 | `totalMinutes` | integer \| null | Total logged minutes across the current version's entries. `null` for reports rendered before this was tracked (shown until re-rendered). |
 | `snapshotProjectIds` | string[] \| null | Distinct project ids whose entries appear in the current snapshot, captured at render time. Drives the Send-to ACL. `null` means unknown scope (rendered before this was captured) — see [Send a report](#send-a-report). Serialized on the wire but not part of the typed `reportSchema` in `@spantail/core`, so treat it as an extra wire-only field. |
 | `version` | integer | Current version: `1` at creation, incremented on each edit. |
+| `reportContentId` | string | The current content version's id — the key for content-scoped resources such as the version's [discussion](/api/report-sharing/#discussion). |
 | `renderedMarkdown` | string | The current version's rendered document: a system-generated YAML front-matter header (provenance) followed by the Liquid-rendered body. |
 | `createdAt` | string | ISO 8601 creation instant. |
 | `updatedAt` | string | ISO 8601 last-update instant. |
 
-List payloads omit `renderedMarkdown`; fetch the body on demand with [`GET /reports/:id`](#get-a-report).
+List payloads omit `reportContentId` and `renderedMarkdown`; fetch them on demand with
+[`GET /reports/:id`](#get-a-report).
 
 ### The filters object
 
@@ -206,6 +208,7 @@ curl -X POST "https://<your-instance>/api/v1/reports" \
   "totalMinutes": 540,
   "snapshotProjectIds": ["prj_site"],
   "version": 1,
+  "reportContentId": "rct_q2v1",
   "renderedMarkdown": "---\nname: Website — week of Jun 22\n...\n---\n\n# ...",
   "createdAt": "2026-06-28T09:30:00.000Z",
   "updatedAt": "2026-06-28T09:30:00.000Z"

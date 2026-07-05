@@ -699,51 +699,73 @@ export class SpantailClient {
 		});
 	}
 
-	// --- Report discussion (reactions + comments on Send-to-shared reports) ---
+	// --- Report discussion (reactions + comments on a Send-to-shared content
+	// version; keyed by reportContentId — see Report.reportContentId and
+	// MailItem.reportContentId) ---
 
-	getReportDiscussion(reportId: string): Promise<ReportDiscussion> {
-		return this.request("GET", `/reports/${reportId}/discussion`);
+	getReportDiscussion(reportContentId: string): Promise<ReportDiscussion> {
+		return this.request(
+			"GET",
+			`/report-contents/${reportContentId}/discussion`,
+		);
 	}
 
-	/** Toggles an emoji on the report body; returns the body's reaction summary. */
+	/** Toggles an emoji on the version's body; returns the body's reaction
+	 * summary. */
 	toggleReportReaction(
-		reportId: string,
+		reportContentId: string,
 		emoji: ReactionEmoji,
 	): Promise<ReactionSummary[]> {
-		return this.request("PUT", `/reports/${reportId}/reactions`, {
-			body: { emoji },
-		});
+		return this.request(
+			"PUT",
+			`/report-contents/${reportContentId}/reactions`,
+			{
+				body: { emoji },
+			},
+		);
 	}
 
-	addReportComment(reportId: string, body: string): Promise<Comment> {
-		return this.request("POST", `/reports/${reportId}/comments`, {
-			body: { body },
-		});
+	addReportComment(reportContentId: string, body: string): Promise<Comment> {
+		return this.request(
+			"POST",
+			`/report-contents/${reportContentId}/comments`,
+			{
+				body: { body },
+			},
+		);
 	}
 
 	updateReportComment(
-		reportId: string,
+		reportContentId: string,
 		commentId: string,
 		body: string,
 	): Promise<Comment> {
-		return this.request("PATCH", `/reports/${reportId}/comments/${commentId}`, {
-			body: { body },
-		});
+		return this.request(
+			"PATCH",
+			`/report-contents/${reportContentId}/comments/${commentId}`,
+			{ body: { body } },
+		);
 	}
 
-	deleteReportComment(reportId: string, commentId: string): Promise<void> {
-		return this.request("DELETE", `/reports/${reportId}/comments/${commentId}`);
+	deleteReportComment(
+		reportContentId: string,
+		commentId: string,
+	): Promise<void> {
+		return this.request(
+			"DELETE",
+			`/report-contents/${reportContentId}/comments/${commentId}`,
+		);
 	}
 
 	/** Toggles an emoji on a comment; returns that comment's reaction summary. */
 	toggleReportCommentReaction(
-		reportId: string,
+		reportContentId: string,
 		commentId: string,
 		emoji: ReactionEmoji,
 	): Promise<ReactionSummary[]> {
 		return this.request(
 			"PUT",
-			`/reports/${reportId}/comments/${commentId}/reactions`,
+			`/report-contents/${reportContentId}/comments/${commentId}/reactions`,
 			{ body: { emoji } },
 		);
 	}

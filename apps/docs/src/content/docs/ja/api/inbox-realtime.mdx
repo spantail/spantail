@@ -35,7 +35,7 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `id` | string | 配信 ID。送信アイテムではバッチ内の代表行。 |
 | `scope` | string | `received` または `sent`。フラグの対象 ID を決める。 |
 | `batchId` | string | この配信が属する送信バッチ。 |
-| `reportId` | string | 配信されたバージョンの元レポート。常に存在する — レポートを削除すると配信も一緒に削除される。 |
+| `reportContentId` | string | この配信が運んだ不変のコンテンツバージョン — そのバージョンの[ディスカッション](/ja/api/report-sharing/#ディスカッション)のキー。常に存在する — レポートを削除するとバージョンも配信も一緒に削除される。 |
 | `senderName` | string | 送信者の表示名。 |
 | `senderEmail` | string | 送信者のメールアドレス。 |
 | `reportName` | string | 配信されたレポート名。 |
@@ -96,7 +96,7 @@ curl "https://<your-instance>/api/v1/inbox?folder=inbox&limit=50" \
     "id": "msg_01",
     "scope": "received",
     "batchId": "bat_7k",
-    "reportId": "rep_weekly",
+    "reportContentId": "rct_weekly_v1",
     "senderName": "Ana",
     "senderEmail": "ana@example.com",
     "reportName": "Weekly summary",
@@ -213,7 +213,7 @@ curl "https://<your-instance>/api/v1/inbox/msg_01" \
   "id": "msg_01",
   "scope": "received",
   "batchId": "bat_7k",
-  "reportId": "rep_weekly",
+  "reportContentId": "rct_weekly_v1",
   "senderName": "Ana",
   "senderEmail": "ana@example.com",
   "reportName": "Weekly summary",
@@ -276,7 +276,7 @@ Token や Agent Access Token の呼び出し元はここでは利用できませ
 | --- | --- | --- |
 | `type` | string | 変更内容: `work-entry`、`agent-entry`、`project`、`report-discussion`、`message`。 |
 | `workspaceId` | string | ワークスペーススコープのシグナルで設定。ユーザースコープでは省略（`message` はユーザーのワークスペース横断）。 |
-| `id` | string | ID 単位で無効化する際の対象エンティティ ID（例: `report-discussion` はレポート ID をキーにする）。 |
+| `id` | string | ID 単位で無効化する際の対象エンティティ ID（例: `report-discussion` はコンテンツバージョン ID をキーにする）。 |
 
 各イベントは SSE の `data:` 行として届きます。
 
@@ -285,7 +285,7 @@ data: {"type":"work-entry","workspaceId":"wrk_demo"}
 
 data: {"type":"message"}
 
-data: {"type":"report-discussion","id":"rep_weekly"}
+data: {"type":"report-discussion","id":"rct_weekly_v1"}
 ```
 
 接続は呼び出し元自身のハブにルーティングされます。ワークスペースのファンアウトは publish 時に

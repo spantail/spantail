@@ -82,7 +82,7 @@ async function setup() {
 			},
 			member,
 		)
-	).json()) as { id: string };
+	).json()) as { id: string; reportContentId: string };
 	const multi = (await (
 		await apiJson(
 			"POST",
@@ -186,15 +186,20 @@ it("lets admins read a report's shares and discussion", async () => {
 		(await apiGet(`/api/v1/reports/${single.id}/shares`, outsider)).status,
 	).toBe(404);
 
-	// Discussion: admins read the thread without being a participant.
+	// Discussion (keyed by the report's content version): admins read the
+	// thread without being a participant, through the owning report's access.
+	const contentId = single.reportContentId;
 	expect(
-		(await apiGet(`/api/v1/reports/${single.id}/discussion`, iAdmin)).status,
+		(await apiGet(`/api/v1/report-contents/${contentId}/discussion`, iAdmin))
+			.status,
 	).toBe(200);
 	expect(
-		(await apiGet(`/api/v1/reports/${single.id}/discussion`, wsAdmin)).status,
+		(await apiGet(`/api/v1/report-contents/${contentId}/discussion`, wsAdmin))
+			.status,
 	).toBe(200);
 	expect(
-		(await apiGet(`/api/v1/reports/${single.id}/discussion`, outsider)).status,
+		(await apiGet(`/api/v1/report-contents/${contentId}/discussion`, outsider))
+			.status,
 	).toBe(404);
 });
 

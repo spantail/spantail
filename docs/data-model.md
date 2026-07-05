@@ -27,9 +27,9 @@ can cut across a user's workspaces (their own data, by default) and the unit of 
 The precise form of that rule is the five-scope model below, the same one
 [`permissions.md`](./permissions.md#scopes) gates access by. Every resource belongs to exactly one
 **scope**. Scopes nest: an instance contains workspaces, a workspace contains projects. Users are
-instance-wide principals that own their personal resources; a report owns its shares and
-discussion. Each user account, with its sessions and OAuth links, is also a single user's own
-resource.
+instance-wide principals that own their personal resources; a report's immutable content versions
+carry its shares and discussion. Each user account, with its sessions and OAuth links, is also a
+single user's own resource.
 
 ```mermaid
 flowchart TB
@@ -229,8 +229,8 @@ erDiagram
     report_content ||--o{ report_shares : "published as"
     report_content ||--o{ report_deliveries : "delivered as"
     user ||--o{ report_shares : "minted by"
-    reports ||--o{ report_comments : "discussed in"
-    reports ||--o{ report_reactions : "reacted to"
+    report_content ||--o{ report_comments : "discussed in"
+    report_content ||--o{ report_reactions : "reacted to"
     report_comments |o--o{ report_reactions : "reacted to"
     user ||--o{ report_deliveries : "recipient"
     user ||--o{ report_comments : "author"
@@ -245,8 +245,8 @@ erDiagram
 | `report_shares` | Content version | Public capability link over one immutable `report_content` version (no copied body — the referenced version can never change). Minted by the report owner (report screen) or a delivery recipient (Messages); `created_by_user_id` is the sole ownership anchor and listings scope by (content, creator). Optional passcode (hashed), expiry, revoke; view counter. | belongs to `report_content` (cascade); creator `user` (cascade) |
 | `report_deliveries` | User (recipient) | "Send to" inbox message referencing the exact immutable `report_content` version sent (email model: a later edit appends a new version and never changes what was received). One send fans out to N rows grouped by `batchId`. Title/period/body derive from the version (its front matter) at read time; legacy pre-front-matter versions fall back to the live report header. Only the sender identity (`sender_name`/`sender_email`) is frozen as columns. Deleting the report removes its deliveries through the content-version cascade. | sent version `report_content` (cascade); sender `user` (set null) + recipient `user` (cascade) |
 | `delivery_flags` | User | Per-viewer star / archive / trash on a mailbox item. `scope` is `received` (a delivery id) or `sent` (a batch id) — `targetId` is **not** a FK. | belongs to `user` |
-| `report_comments` | Report | Markdown discussion shared by the owner and all Send-to recipients. Author name frozen if the account is deleted. | belongs to `reports`; author `user` (set null) |
-| `report_reactions` | Report | Emoji reaction on the report body (`commentId` null) or on a comment (`commentId` set). | belongs to `reports`; optional `report_comments`; `user` |
+| `report_comments` | Content version | Markdown discussion on one sent `report_content` version, shared by the report owner and that version's Send-to recipients — a later edit's version starts a fresh thread. Author name frozen if the account is deleted. | belongs to `report_content` (cascade); author `user` (set null) |
+| `report_reactions` | Content version | Emoji reaction on the version's body (`commentId` null) or on a comment (`commentId` set). | belongs to `report_content` (cascade); optional `report_comments`; `user` |
 
 ## Lifecycles
 

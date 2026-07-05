@@ -44,7 +44,7 @@ export function toApiComment(
 ): Comment {
 	return {
 		id: row.id,
-		reportId: row.reportId,
+		reportContentId: row.reportContentId,
 		authorUserId: row.authorUserId,
 		authorName: row.authorName,
 		authorImageUrl,

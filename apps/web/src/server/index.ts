@@ -79,9 +79,9 @@ v1.route("/realtime", realtimeRoutes);
 v1.route("/report-shares", reportShareRoutes);
 v1.route("/report-templates", reportTemplateRoutes);
 v1.route("/reports", reportRoutes);
-// Discussion endpoints (/reports/:id/discussion, comments, reactions) for the
-// owner + Send-to recipients; mounted after reportRoutes on the same prefix.
-v1.route("/reports", reportDiscussionRoutes);
+// Discussion endpoints (/report-contents/:id/discussion, comments, reactions)
+// for the report owner + the Send-to recipients of that content version.
+v1.route("/report-contents", reportDiscussionRoutes);
 v1.route("/work-entries", workEntryRoutes);
 v1.route("/search", searchRoutes);
 v1.route("/agents", agentRoutes);

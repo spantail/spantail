@@ -7,8 +7,9 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
 A [report](/api/reports/) can be exposed two ways. A **public share** mints a capability link
 that anyone with the URL (and optional passcode) can open — one immutable version of the report,
-served by the public viewer with no Spantail account. A **discussion** lets the report's
-participants (the owner and Send-to recipients) react to the body and leave threaded comments.
+served by the public viewer with no Spantail account. A **discussion** accompanies each sent
+content version: its participants (the report owner and that version's Send-to recipients) react
+to the body and leave threaded comments.
 
 ## Public shares
 
@@ -157,18 +158,24 @@ curl -X POST "https://<your-instance>/share/Hs9Kp2mNv8rT3wYbL6dQx7" \
 
 ## Discussion
 
-A report's discussion is restricted to **participants** — the report owner and Send-to recipients.
-An instance admin (or a workspace admin/owner of a single-workspace report) who is not a participant
-can still *read* the thread under the report's read access, but writing stays participant-only.
-Comments and reactions are only writable once the report has been shared (it has at least one
-delivery); the owner of an unsent report sees an empty, read-only thread.
+Discussions are keyed by **content version** (`/report-contents/:id/…`), not by report: each sent
+version carries its own thread, so an edited report starts a fresh discussion and recipients only
+ever discuss the exact body they received. Resolve the id from `reportContentId` — on the
+[report](/api/reports/#the-report-object) (its current version) or on an
+[inbox message](/api/inbox-realtime/#the-mail-item-object) (the delivered version).
+
+A version's discussion is restricted to **participants** — the report owner and that version's
+Send-to recipients. An instance admin (or a workspace admin/owner of a single-workspace report)
+who is not a participant can still *read* the thread under the owning report's read access, but
+writing stays participant-only. Comments and reactions are only writable once the version has
+been shared (it has at least one delivery); an unsent version has an empty, read-only thread.
 
 ### The comment object
 
 | Field | Type | Description |
 | --- | --- | --- |
 | `id` | string | Unique identifier. |
-| `reportId` | string | The report this comment belongs to. |
+| `reportContentId` | string | The content version this comment belongs to. |
 | `authorUserId` | string \| null | Author, or `null` once their account is deleted (the frozen `authorName` stands alone). |
 | `authorName` | string | Author display name, frozen at write. |
 | `authorImageUrl` | string \| null | Author's live avatar URL, or `null`. |
@@ -184,15 +191,15 @@ A **reaction summary** aggregates one emoji: `{ "emoji": "+1", "count": 2, "reac
 
 ### Get the discussion
 
-`GET /api/v1/reports/:id/discussion` <Badge text="scope: read" variant="note" />
+`GET /api/v1/report-contents/:id/discussion` <Badge text="scope: read" variant="note" />
 
-Returns the report's body-level reactions and its comments (each with their own reactions), plus
-`shared` — `false` for a report that has never been sent (the UI hides the panel then).
+Returns the version's body-level reactions and its comments (each with their own reactions), plus
+`shared` — `false` for a version that has never been sent (the UI hides the panel then).
 
 <Tabs>
 <TabItem label="curl">
 ```bash
-curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
+curl "https://<your-instance>/api/v1/report-contents/rct_q2v3/discussion" \
   -H "Authorization: Bearer spantail_pat_yourtoken"
 ```
 </TabItem>
@@ -206,7 +213,7 @@ curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
   "comments": [
     {
       "id": "cmt_7x",
-      "reportId": "rep_q2",
+      "reportContentId": "rct_q2v3",
       "authorUserId": "usr_bo",
       "authorName": "Bo",
       "authorImageUrl": null,
@@ -224,9 +231,9 @@ curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
 
 ### Add a comment
 
-`POST /api/v1/reports/:id/comments` <Badge text="scope: write" variant="caution" />
+`POST /api/v1/report-contents/:id/comments` <Badge text="scope: write" variant="caution" />
 
-Participant only; the report must have been shared. Returns the created comment with `201`.
+Participant only; the version must have been shared. Returns the created comment with `201`.
 
 **Request body**
 
@@ -235,7 +242,7 @@ Participant only; the report must have been shared. Returns the created comment 
 | `body` | string | yes | Markdown comment (1–10000 chars). |
 
 ```bash
-curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/comments" \
+curl -X POST "https://<your-instance>/api/v1/report-contents/rct_q2v3/comments" \
   -H "Authorization: Bearer spantail_pat_yourtoken" \
   -H "Content-Type: application/json" \
   -d '{ "body": "Looks great — shipping it." }'
@@ -243,23 +250,23 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/comments" \
 
 ### Edit a comment
 
-`PATCH /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+`PATCH /api/v1/report-contents/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
 
-Author only. Same `body` field as create. A missing comment, a wrong report, or a non-author all
+Author only. Same `body` field as create. A missing comment, a wrong version, or a non-author all
 return `404` — which is never distinguished.
 
 ### Delete a comment
 
-`DELETE /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+`DELETE /api/v1/report-contents/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
 
 Author only. Returns `204 No Content`.
 
-### React to the report body
+### React to the version's body
 
-`PUT /api/v1/reports/:id/reactions` <Badge text="scope: write" variant="caution" />
+`PUT /api/v1/report-contents/:id/reactions` <Badge text="scope: write" variant="caution" />
 
-Participant only; the report must have been shared. Toggles the caller's reaction for the given
-emoji on the report body (a second call with the same emoji removes it). Returns the report body's
+Participant only; the version must have been shared. Toggles the caller's reaction for the given
+emoji on the version's body (a second call with the same emoji removes it). Returns the body's
 updated reaction summaries.
 
 **Request body**
@@ -269,7 +276,7 @@ updated reaction summaries.
 | `emoji` | string | yes | One of the reaction keys (`+1`, `-1`, `laugh`, `hooray`, `confused`, `heart`, `rocket`, `eyes`). |
 
 ```bash
-curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/reactions" \
+curl -X PUT "https://<your-instance>/api/v1/report-contents/rct_q2v3/reactions" \
   -H "Authorization: Bearer spantail_pat_yourtoken" \
   -H "Content-Type: application/json" \
   -d '{ "emoji": "rocket" }'
@@ -277,13 +284,13 @@ curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/reactions" \
 
 ### React to a comment
 
-`PUT /api/v1/reports/:id/comments/:commentId/reactions` <Badge text="scope: write" variant="caution" />
+`PUT /api/v1/report-contents/:id/comments/:commentId/reactions` <Badge text="scope: write" variant="caution" />
 
 Participant only. Toggles the caller's reaction on a single comment (validated to belong to the
-report). Returns that comment's updated reaction summaries.
+version). Returns that comment's updated reaction summaries.
 
 ```bash
-curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/comments/cmt_7x/reactions" \
+curl -X PUT "https://<your-instance>/api/v1/report-contents/rct_q2v3/comments/cmt_7x/reactions" \
   -H "Authorization: Bearer spantail_pat_yourtoken" \
   -H "Content-Type: application/json" \
   -d '{ "emoji": "heart" }'

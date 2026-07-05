@@ -40,7 +40,8 @@ full. Every resource belongs to exactly one scope:
 - **Workspace** — owned by a workspace (settings, members, projects, unassigned work entries).
 - **Project** — owned by a project within a workspace (project-assigned work/agent entries).
 - **User** — owned by a single user, managed self-service (reports, inbox, API tokens, agents, account).
-- **Report** — attached to a single report (shares, comments, reactions).
+- **Report** — attached to a report's immutable content versions (shares, comments, reactions);
+  each resource references the exact version it was created against.
 
 ## Principles
 
@@ -102,7 +103,7 @@ of the project in question (always also a workspace member) · **Self** = the re
 | Password (secret) | – | – | – | – | – | W (own, value never visible) |
 | Report shares (content version) | R | R* | – | – | – | RW (own report) |
 | Delivery shares (delivery) | – | – | – | – | – | RW (own received copy) |
-| Report discussion: comments / reactions (report) | R | R* | – | – | – | RW (participants; comments editable by author only) |
+| Report discussion: comments / reactions (content version) | R | R* | – | – | – | RW (participants: owner + that version's recipients; comments editable by author only) |
 
 Notes:
 

@@ -147,12 +147,20 @@ function normalizeNote(note: string | null): string | null {
 
 /**
  * Assembles the API report payload from a header row and a content version: the
- * report's current rendered document is the latest content (front-matter + body).
+ * report's current rendered document is the latest content (front-matter + body),
+ * and the version's id keys content-scoped resources (the discussion thread).
  * Date columns serialize to ISO strings via the JSON response (matching the
  * `Report` wire shape), so the header row is spread as-is.
  */
-function toApiReport(report: ReportRow, content: string) {
-	return { ...report, renderedMarkdown: content };
+function toApiReport(
+	report: ReportRow,
+	content: { id: string; content: string },
+) {
+	return {
+		...report,
+		reportContentId: content.id,
+		renderedMarkdown: content.content,
+	};
 }
 
 /**
@@ -581,7 +589,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			snapshotWorkspaceIds,
 			content,
 		});
-		return c.json(toApiReport(report, contentRow.content), 201);
+		return c.json(toApiReport(report, contentRow), 201);
 	})
 	.get("/:id", async (c) => {
 		const { user } = requireScope(c, "read");
@@ -597,7 +605,7 @@ export const reportRoutes = new Hono<AppEnv>()
 		}
 		const current = await getCurrentReportContent(c.var.db, report.id);
 		if (!current) throw new AppError("internal", "Report content missing");
-		return c.json(toApiReport(report, current.content));
+		return c.json(toApiReport(report, current));
 	})
 	.patch("/:id", async (c) => {
 		requireScope(c, "write");
@@ -636,7 +644,7 @@ export const reportRoutes = new Hono<AppEnv>()
 			content,
 		});
 		if (!updated) throw new AppError("not_found", "Report not found");
-		return c.json(toApiReport(updated.report, updated.content.content));
+		return c.json(toApiReport(updated.report, updated.content));
 	})
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");

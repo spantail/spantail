@@ -186,6 +186,7 @@ export function reportFixture(overrides: Partial<Report> = {}): Report {
 		note: null,
 		totalMinutes: 120,
 		version: 1,
+		reportContentId: "rep-1-v1",
 		renderedMarkdown: "# Weekly report\n",
 		createdAt: "2026-06-14T00:00:00Z",
 		updatedAt: "2026-06-14T00:00:00Z",
@@ -245,7 +246,7 @@ export function shareFixture(
 export function commentFixture(overrides: Partial<Comment> = {}): Comment {
 	return {
 		id: "com-1",
-		reportId: "rep-1",
+		reportContentId: "rep-1-v1",
 		authorUserId: "u2",
 		authorName: "Bob",
 		authorImageUrl: null,
@@ -263,7 +264,7 @@ export function mailItemFixture(overrides: Partial<MailItem> = {}): MailItem {
 		id: "mail-1",
 		scope: "received",
 		batchId: "batch-1",
-		reportId: "rep-1",
+		reportContentId: "rep-1-v1",
 		senderName: "Bob",
 		senderEmail: "bob@example.com",
 		senderImageUrl: null,

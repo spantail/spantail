@@ -94,9 +94,10 @@ export const mailItemSchema = z.object({
 	id: z.string(),
 	scope: mailScopeSchema,
 	batchId: z.string(),
-	// Always present: the sent version's source report. A delivery cascades
-	// away with its report, so it can never outlive it.
-	reportId: z.string(),
+	// The content version this delivery carried — the key for content-scoped
+	// resources (the version's discussion thread). A delivery cascades away
+	// with its version, so it can never outlive it.
+	reportContentId: z.string(),
 	senderName: z.string(),
 	senderEmail: z.string(),
 	// Received scope: the sender's ready-to-use avatar URL, or null when the

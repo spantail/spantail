@@ -165,6 +165,9 @@ export const reportSchema = z.object({
 	totalMinutes: z.number().int().nonnegative().nullable(),
 	// Current version number: 1 at creation, incremented on each edit.
 	version: z.number().int().positive(),
+	// The current content version's id — the key for content-scoped resources
+	// (the version's discussion thread).
+	reportContentId: z.string(),
 	// The current version's rendered document (system YAML front-matter + body),
 	// composed from the report header and its latest content version.
 	renderedMarkdown: z.string(),
@@ -173,8 +176,12 @@ export const reportSchema = z.object({
 });
 export type Report = z.infer<typeof reportSchema>;
 
-/** A report without its rendered body, for list payloads. */
-export const reportMetaSchema = reportSchema.omit({ renderedMarkdown: true });
+/** A report without its rendered body (and its content-version key), for
+ * list payloads. */
+export const reportMetaSchema = reportSchema.omit({
+	reportContentId: true,
+	renderedMarkdown: true,
+});
 export type ReportMeta = z.infer<typeof reportMetaSchema>;
 
 /**

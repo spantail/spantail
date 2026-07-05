@@ -8,7 +8,8 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 [レポート](/ja/api/reports/) は 2 つの方法で公開できます。**公開共有（public share）** は、URL
 （と任意のパスコード）を知っていれば誰でも開ける capability リンクを発行します。レポートの不変な 1
 バージョンが、Spantail アカウント不要で公開ビューアから配信されます。**ディスカッション（discussion）**
-では、レポートの参加者（所有者と Send-to 受信者）が本文にリアクションし、スレッド形式のコメントを残せます。
+は送信されたコンテンツバージョンごとに付随し、その参加者（レポート所有者とそのバージョンの Send-to
+受信者）が本文にリアクションし、スレッド形式のコメントを残せます。
 
 ## 公開共有
 
@@ -153,18 +154,25 @@ curl -X POST "https://<your-instance>/share/Hs9Kp2mNv8rT3wYbL6dQx7" \
 
 ## ディスカッション
 
-レポートのディスカッションは **参加者**（レポート所有者と Send-to 受信者）に限定されます。参加者でない
-インスタンス管理者（または単一ワークスペースレポートのワークスペース管理者・オーナー）は、レポートの
-読み取りアクセスのもとでスレッドを *読む* ことはできますが、書き込みは参加者専用です。コメントと
-リアクションは、レポートが共有された後（配信が 1 件以上ある）にのみ書き込めます。未送信レポートの所有者は、
-空の読み取り専用スレッドを見ます。
+ディスカッションはレポート単位ではなく **コンテンツバージョン** 単位（`/report-contents/:id/…`）で
+管理されます。送信されたバージョンごとに独立したスレッドを持つため、レポートを編集すると新しい
+ディスカッションが始まり、受信者は自分が受け取った本文そのものについてだけ議論します。ID は
+`reportContentId` から解決します — [レポート](/ja/api/reports/#レポートオブジェクト)（現行バージョン）
+または [受信メッセージ](/ja/api/inbox-realtime/#メールアイテムオブジェクト)（配信されたバージョン）に
+載っています。
+
+バージョンのディスカッションは **参加者**（レポート所有者とそのバージョンの Send-to 受信者）に限定
+されます。参加者でないインスタンス管理者（または単一ワークスペースレポートのワークスペース管理者・
+オーナー）は、レポートの読み取りアクセスのもとでスレッドを *読む* ことはできますが、書き込みは参加者
+専用です。コメントとリアクションは、そのバージョンが共有された後（配信が 1 件以上ある）にのみ書き込め
+ます。未送信のバージョンは空の読み取り専用スレッドです。
 
 ### コメントオブジェクト
 
 | フィールド | 型 | 説明 |
 | --- | --- | --- |
 | `id` | string | 一意の識別子。 |
-| `reportId` | string | このコメントが属するレポート。 |
+| `reportContentId` | string | このコメントが属するコンテンツバージョン。 |
 | `authorUserId` | string \| null | 作成者。アカウント削除後は `null`（固定の `authorName` が単独で残る）。 |
 | `authorName` | string | 作成者の表示名。書き込み時に固定。 |
 | `authorImageUrl` | string \| null | 作成者のライブアバター URL、または `null`。 |
@@ -180,15 +188,15 @@ curl -X POST "https://<your-instance>/share/Hs9Kp2mNv8rT3wYbL6dQx7" \
 
 ### ディスカッションの取得
 
-`GET /api/v1/reports/:id/discussion` <Badge text="scope: read" variant="note" />
+`GET /api/v1/report-contents/:id/discussion` <Badge text="scope: read" variant="note" />
 
-レポートの本文レベルのリアクションとコメント（各自のリアクション付き）に加え、`shared` を返します。
-一度も送信されていないレポートでは `shared` は `false`（その場合 UI はパネルを隠します）。
+バージョンの本文レベルのリアクションとコメント（各自のリアクション付き）に加え、`shared` を返します。
+一度も送信されていないバージョンでは `shared` は `false`（その場合 UI はパネルを隠します）。
 
 <Tabs>
 <TabItem label="curl">
 ```bash
-curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
+curl "https://<your-instance>/api/v1/report-contents/rct_q2v3/discussion" \
   -H "Authorization: Bearer spantail_pat_yourtoken"
 ```
 </TabItem>
@@ -202,7 +210,7 @@ curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
   "comments": [
     {
       "id": "cmt_7x",
-      "reportId": "rep_q2",
+      "reportContentId": "rct_q2v3",
       "authorUserId": "usr_bo",
       "authorName": "Bo",
       "authorImageUrl": null,
@@ -220,9 +228,9 @@ curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
 
 ### コメントの追加
 
-`POST /api/v1/reports/:id/comments` <Badge text="scope: write" variant="caution" />
+`POST /api/v1/report-contents/:id/comments` <Badge text="scope: write" variant="caution" />
 
-参加者のみ。レポートが共有済みである必要があります。作成したコメントを `201` で返します。
+参加者のみ。バージョンが共有済みである必要があります。作成したコメントを `201` で返します。
 
 **リクエストボディ**
 
@@ -231,7 +239,7 @@ curl "https://<your-instance>/api/v1/reports/rep_q2/discussion" \
 | `body` | string | はい | Markdown のコメント（1〜10000 文字）。 |
 
 ```bash
-curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/comments" \
+curl -X POST "https://<your-instance>/api/v1/report-contents/rct_q2v3/comments" \
   -H "Authorization: Bearer spantail_pat_yourtoken" \
   -H "Content-Type: application/json" \
   -d '{ "body": "Looks great — shipping it." }'
@@ -239,24 +247,23 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/comments" \
 
 ### コメントの編集
 
-`PATCH /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+`PATCH /api/v1/report-contents/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
 
-作成者のみ。作成と同じ `body` フィールド。存在しないコメント・誤ったレポート・非作成者はいずれも `404` を
+作成者のみ。作成と同じ `body` フィールド。存在しないコメント・誤ったバージョン・非作成者はいずれも `404` を
 返し、区別されません。
 
 ### コメントの削除
 
-`DELETE /api/v1/reports/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
+`DELETE /api/v1/report-contents/:id/comments/:commentId` <Badge text="scope: write" variant="caution" />
 
 作成者のみ。`204 No Content` を返します。
 
-### レポート本文へのリアクション
+### バージョン本文へのリアクション
 
-`PUT /api/v1/reports/:id/reactions` <Badge text="scope: write" variant="caution" />
+`PUT /api/v1/report-contents/:id/reactions` <Badge text="scope: write" variant="caution" />
 
-参加者のみ。レポートが共有済みである必要があります。指定された絵文字での呼び出し元のリアクションを
-レポート本文にトグルします（同じ絵文字で再度呼ぶと解除）。レポート本文の更新後のリアクション集計を
-返します。
+参加者のみ。バージョンが共有済みである必要があります。指定された絵文字での呼び出し元のリアクションを
+バージョン本文にトグルします（同じ絵文字で再度呼ぶと解除）。本文の更新後のリアクション集計を返します。
 
 **リクエストボディ**
 
@@ -265,7 +272,7 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/comments" \
 | `emoji` | string | はい | リアクションキーのいずれか（`+1`、`-1`、`laugh`、`hooray`、`confused`、`heart`、`rocket`、`eyes`）。 |
 
 ```bash
-curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/reactions" \
+curl -X PUT "https://<your-instance>/api/v1/report-contents/rct_q2v3/reactions" \
   -H "Authorization: Bearer spantail_pat_yourtoken" \
   -H "Content-Type: application/json" \
   -d '{ "emoji": "rocket" }'
@@ -273,13 +280,13 @@ curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/reactions" \
 
 ### コメントへのリアクション
 
-`PUT /api/v1/reports/:id/comments/:commentId/reactions` <Badge text="scope: write" variant="caution" />
+`PUT /api/v1/report-contents/:id/comments/:commentId/reactions` <Badge text="scope: write" variant="caution" />
 
-参加者のみ。単一コメント（レポートに属することを検証）への呼び出し元のリアクションをトグルします。その
-コメントの更新後のリアクション集計を返します。
+参加者のみ。単一コメント（そのバージョンに属することを検証）への呼び出し元のリアクションをトグル
+します。そのコメントの更新後のリアクション集計を返します。
 
 ```bash
-curl -X PUT "https://<your-instance>/api/v1/reports/rep_q2/comments/cmt_7x/reactions" \
+curl -X PUT "https://<your-instance>/api/v1/report-contents/rct_q2v3/comments/cmt_7x/reactions" \
   -H "Authorization: Bearer spantail_pat_yourtoken" \
   -H "Content-Type: application/json" \
   -d '{ "emoji": "heart" }'
