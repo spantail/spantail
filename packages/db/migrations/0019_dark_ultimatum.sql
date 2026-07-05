@@ -4,15 +4,19 @@
 -- of different versions no longer share one thread.
 --
 -- Every row is carried over — there is deliberately no WHERE filter. Existing
--- rows are re-keyed to the report's LATEST version (ORDER BY version DESC):
--- deployed instances predate report editing, so every report has exactly one
--- version and the mapping is unique and lossless. A report always has ≥1
--- content version (report_content is created with the report and never
--- deleted independently), so the subquery cannot come up empty; if it somehow
--- did, the NOT NULL constraint aborts this INSERT before the DROP below,
--- leaving the old table intact: the migration fails loudly instead of losing
--- data. Comments are rebuilt before reactions so the rebuilt report_comments
--- table exists for the comment_id FK.
+-- rows are re-keyed to their report's single content version. The old schema
+-- records no comment→version mapping, so a report that has BOTH multiple
+-- versions and a discussion is genuinely ambiguous — guessing (e.g. the
+-- latest version) could attach comments written about one version to
+-- another's thread, the exact mix-up this migration exists to end. The
+-- subquery therefore resolves only when the report has exactly one version
+-- and yields NULL otherwise (also when a version is somehow missing — a
+-- state the cascade rules make unreachable), and the NOT NULL constraint
+-- aborts this INSERT before the DROP below, leaving the old tables intact:
+-- the migration fails loudly instead of guessing or losing data. Reports
+-- with multiple versions but no discussion rows are unaffected (the guard is
+-- per row). Comments are rebuilt before reactions so the rebuilt
+-- report_comments table exists for the comment_id FK.
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_report_comments` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -28,9 +32,9 @@ CREATE TABLE `__new_report_comments` (
 );
 --> statement-breakpoint
 INSERT INTO `__new_report_comments`("id", "report_content_id", "author_user_id", "author_name", "author_email", "body", "created_at", "updated_at") SELECT "id", (
-	SELECT rc.`id` FROM `report_content` rc
+	SELECT max(rc.`id`) FROM `report_content` rc
 	WHERE rc.`report_id` = `report_comments`.`report_id`
-	ORDER BY rc.`version` DESC LIMIT 1
+	HAVING count(*) = 1
 ), "author_user_id", "author_name", "author_email", "body", "created_at", "updated_at" FROM `report_comments`;--> statement-breakpoint
 DROP TABLE `report_comments`;--> statement-breakpoint
 ALTER TABLE `__new_report_comments` RENAME TO `report_comments`;--> statement-breakpoint
@@ -50,9 +54,9 @@ CREATE TABLE `__new_report_reactions` (
 );
 --> statement-breakpoint
 INSERT INTO `__new_report_reactions`("id", "report_content_id", "comment_id", "user_id", "user_name", "emoji", "created_at") SELECT "id", (
-	SELECT rc.`id` FROM `report_content` rc
+	SELECT max(rc.`id`) FROM `report_content` rc
 	WHERE rc.`report_id` = `report_reactions`.`report_id`
-	ORDER BY rc.`version` DESC LIMIT 1
+	HAVING count(*) = 1
 ), "comment_id", "user_id", "user_name", "emoji", "created_at" FROM `report_reactions`;--> statement-breakpoint
 DROP TABLE `report_reactions`;--> statement-breakpoint
 ALTER TABLE `__new_report_reactions` RENAME TO `report_reactions`;--> statement-breakpoint
