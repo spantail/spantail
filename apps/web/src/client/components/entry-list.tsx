@@ -117,13 +117,13 @@ export function EntryList({
 							<TableCell className="py-3 whitespace-nowrap">
 								{memberName(entry.userId)}
 							</TableCell>
-							<TableCell className="py-3">
+							<TableCell className="py-3 whitespace-normal">
 								<button
 									type="button"
 									onClick={() => openView(entry)}
 									className="flex flex-wrap items-center gap-1.5 text-left before:absolute before:inset-0 before:content-['']"
 								>
-									<span className="underline-offset-4 group-hover:underline">
+									<span className="min-w-0 break-words underline-offset-4 group-hover:underline">
 										{entry.description}
 									</span>
 									{entry.tags.map((tag) => (

@@ -197,7 +197,9 @@ function AgentPage() {
 							<TableHeader>
 								<TableRow>
 									<TableHead>{t("agents.table.date")}</TableHead>
-									<TableHead>{t("agents.table.description")}</TableHead>
+									<TableHead className="w-full">
+										{t("agents.table.description")}
+									</TableHead>
 									<TableHead>{t("agents.table.project")}</TableHead>
 									<TableHead>{t("agents.table.model")}</TableHead>
 									<TableHead className="text-right">
@@ -238,7 +240,7 @@ function AgentPage() {
 													</div>
 												)}
 											</TableCell>
-											<TableCell>
+											<TableCell className="whitespace-normal break-words">
 												{/* Ingest preserves an empty-string description, so treat
 											    blank/whitespace as missing to show the em dash. */}
 												{entry.description?.trim() ? (
