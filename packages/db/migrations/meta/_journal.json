@@ -127,6 +127,13 @@
       "when": 1783177181321,
       "tag": "0017_luxuriant_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1783201419605,
+      "tag": "0018_dear_gamora",
+      "breakpoints": true
     }
   ]
 }

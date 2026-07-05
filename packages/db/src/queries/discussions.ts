@@ -3,7 +3,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Database } from "../index";
 import { reportDeliveries } from "../schema/deliveries";
 import { reportComments, reportReactions } from "../schema/discussions";
-import { reports } from "../schema/reports";
+import { reportContent, reports } from "../schema/reports";
 
 export type ReportCommentRow = typeof reportComments.$inferSelect;
 export type ReportReactionRow = typeof reportReactions.$inferSelect;
@@ -35,12 +35,18 @@ export async function getReportDiscussionAccess(
 	if (!report) return undefined;
 
 	const isOwner = report.ownerUserId === userId;
+	// A delivery references its report through the content version it carried,
+	// so report-scoped checks join one hop through report_content.
 	const recipient = await db
 		.select({ id: reportDeliveries.id })
 		.from(reportDeliveries)
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
 		.where(
 			and(
-				eq(reportDeliveries.reportId, reportId),
+				eq(reportContent.reportId, reportId),
 				eq(reportDeliveries.recipientUserId, userId),
 			),
 		)
@@ -73,7 +79,11 @@ export async function listReportParticipantUserIds(
 	const recipients = await db
 		.select({ userId: reportDeliveries.recipientUserId })
 		.from(reportDeliveries)
-		.where(eq(reportDeliveries.reportId, reportId));
+		.innerJoin(
+			reportContent,
+			eq(reportContent.id, reportDeliveries.reportContentId),
+		)
+		.where(eq(reportContent.reportId, reportId));
 	const ids = new Set<string>([report.ownerUserId]);
 	for (const r of recipients) {
 		if (r.userId) ids.add(r.userId);
@@ -96,7 +106,11 @@ export async function isReportShared(
 		db
 			.select({ id: reportDeliveries.id })
 			.from(reportDeliveries)
-			.where(eq(reportDeliveries.reportId, reportId))
+			.innerJoin(
+				reportContent,
+				eq(reportContent.id, reportDeliveries.reportContentId),
+			)
+			.where(eq(reportContent.reportId, reportId))
 			.get(),
 		db
 			.select({ id: reportComments.id })

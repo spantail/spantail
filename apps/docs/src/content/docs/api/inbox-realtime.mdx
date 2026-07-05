@@ -35,7 +35,7 @@ Per-scope fields are simply empty for the other scope (received: `recipientNames
 | `id` | string | Delivery id. For a sent item, a representative row in the batch. |
 | `scope` | string | `received` or `sent`. Picks which id flags target. |
 | `batchId` | string | The send batch this delivery belongs to. |
-| `reportId` | string \| null | Source report, or `null` once it has been deleted (the snapshot stands alone). |
+| `reportId` | string | Source report of the delivered version. Always present — deleting a report also removes its deliveries. |
 | `senderName` | string | Display name of the sender. |
 | `senderEmail` | string | Email of the sender. |
 | `reportName` | string | Name of the delivered report. |

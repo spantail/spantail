@@ -227,8 +227,7 @@ erDiagram
     report_templates |o..o{ reports : "format (templateId, no FK)"
     reports ||--o{ report_content : "versions"
     report_content ||--o{ report_shares : "published as"
-    report_content ||--o{ report_deliveries : "sent as (recorded version)"
-    reports ||--o{ report_deliveries : "sent as"
+    report_content ||--o{ report_deliveries : "delivered as"
     user ||--o{ report_shares : "minted by"
     reports ||--o{ report_comments : "discussed in"
     reports ||--o{ report_reactions : "reacted to"
@@ -244,7 +243,7 @@ erDiagram
 | `reports` | User | Mutable report header: `templateId` + `filters` + note. Scope is a single workspace (`filters.workspaceIds === [id]`), or instance scope (`filters.workspaceIds === []`). Instance scope is owner-scoped and spans every workspace the running user belongs to, resolved to a concrete membership set only transiently to bound the entry query at render — that resolved set is **not** persisted, so the stored filter keeps the empty set (a legacy report may still hold a resolved multi-workspace set). Entries are scoped to the owner's **own** work by default: when `filters.userIds` is empty the render restricts to the owner (so the web app, which never sets `userIds`, always produces an own-only report — even an instance-scope one, even for an instance admin); the API can pass explicit `userIds` for a cross-user report, still bounded by the owner's entry access. `version` points at the current snapshot. `snapshot_workspace_ids` freezes the workspace set the current snapshot was rendered against (alongside `snapshot_project_ids`): every membership gate on the report — owner read/edit, list redaction, the Send-to / share ACL, and the recipient pool — is bounded by this frozen scope, not the empty stored filter or live memberships, so access stays stable and cross-user snapshots are never left ungated (null on legacy rows falls back to `filters.workspaceIds`). | owner `user`; `templateId` is a `report_templates` id (no FK) |
 | `report_content` | User (per report) | Immutable rendered snapshot per version: YAML front-matter + Markdown body. | belongs to `reports` (cascade) |
 | `report_shares` | Content version | Public capability link over one immutable `report_content` version (no copied body — the referenced version can never change). Minted by the report owner (report screen) or a delivery recipient (Messages); `created_by_user_id` is the sole ownership anchor and listings scope by (content, creator). Optional passcode (hashed), expiry, revoke; view counter. | belongs to `report_content` (cascade); creator `user` (cascade) |
-| `report_deliveries` | User (recipient) | "Send to" inbox copy, frozen at send time (email model). One send fans out to N rows grouped by `batchId`. `report_content_id` records the exact version sent (recipient re-sharing references it). | source `reports` (cascade); sent version `report_content` (cascade); sender + recipient `user` |
+| `report_deliveries` | User (recipient) | "Send to" inbox message referencing the exact immutable `report_content` version sent (email model: a later edit appends a new version and never changes what was received). One send fans out to N rows grouped by `batchId`. Title/period/body derive from the version (its front matter) at read time; legacy pre-front-matter versions fall back to the live report header. Only the sender identity (`sender_name`/`sender_email`) is frozen as columns. Deleting the report removes its deliveries through the content-version cascade. | sent version `report_content` (cascade); sender `user` (set null) + recipient `user` (cascade) |
 | `delivery_flags` | User | Per-viewer star / archive / trash on a mailbox item. `scope` is `received` (a delivery id) or `sent` (a batch id) — `targetId` is **not** a FK. | belongs to `user` |
 | `report_comments` | Report | Markdown discussion shared by the owner and all Send-to recipients. Author name frozen if the account is deleted. | belongs to `reports`; author `user` (set null) |
 | `report_reactions` | Report | Emoji reaction on the report body (`commentId` null) or on a comment (`commentId` set). | belongs to `reports`; optional `report_comments`; `user` |
@@ -299,7 +298,7 @@ flowchart TB
     TPL["report_templates<br/>(Liquid)"] --> RUN
     RUN --> REP["reports (header)<br/>+ report_content (version N, frozen)"]
     REP -->|"Share (owner)"| SH["report_shares<br/>public link over one version<br/>passcode · expiry"]
-    REP -->|"Send to"| DEL["report_deliveries<br/>recipient inbox (frozen copy)"]
+    REP -->|"Send to"| DEL["report_deliveries<br/>recipient inbox (references sent version)"]
     DEL -->|"Share (recipient)"| SH
     REP -->|"Discuss"| DIS["report_comments + report_reactions"]
     DEL --> FLAG["delivery_flags<br/>star / archive / trash, per viewer"]

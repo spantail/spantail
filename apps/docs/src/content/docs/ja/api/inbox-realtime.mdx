@@ -35,7 +35,7 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `id` | string | 配信 ID。送信アイテムではバッチ内の代表行。 |
 | `scope` | string | `received` または `sent`。フラグの対象 ID を決める。 |
 | `batchId` | string | この配信が属する送信バッチ。 |
-| `reportId` | string \| null | 元レポート。削除済みの場合は `null`（スナップショットは単独で残る）。 |
+| `reportId` | string | 配信されたバージョンの元レポート。常に存在する — レポートを削除すると配信も一緒に削除される。 |
 | `senderName` | string | 送信者の表示名。 |
 | `senderEmail` | string | 送信者のメールアドレス。 |
 | `reportName` | string | 配信されたレポート名。 |

@@ -211,10 +211,12 @@ describe("generateDataset", () => {
 	it("delivers reports to a workspace manager (never the sender)", async () => {
 		const { rows } = await build();
 		const deliveries = rows("reportDeliveries");
+		const contentIds = new Set(rows("reportContent").map((c) => c.id));
 		expect(deliveries.length).toBeGreaterThan(0);
 		for (const d of deliveries) {
 			expect(d.recipientUserId).not.toBe(d.senderUserId);
-			expect(d.renderedMarkdown as string).toBeTruthy();
+			// Every delivery references an existing content version.
+			expect(contentIds.has(d.reportContentId)).toBe(true);
 		}
 	});
 
@@ -237,14 +239,24 @@ describe("generateDataset", () => {
 		);
 		expect(crossWorkspace.length).toBeGreaterThan(0);
 
+		// Deliveries reference their report through the content version they
+		// carried.
+		const reportIdByContent = new Map(
+			rows("reportContent").map((c) => [c.id as string, c.reportId as string]),
+		);
+		const reportIdOf = (d: Record<string, unknown>) =>
+			reportIdByContent.get(d.reportContentId as string);
+
 		const crossIds = new Set(crossWorkspace.map((r) => r.id));
-		const crossDeliveries = deliveries.filter((d) => crossIds.has(d.reportId));
+		const crossDeliveries = deliveries.filter((d) =>
+			crossIds.has(reportIdOf(d)),
+		);
 		// A cross-workspace report that exists purely to be undeliverable would
 		// defeat the demo — these are actually sent.
 		expect(crossDeliveries.length).toBeGreaterThan(0);
 
 		for (const d of crossDeliveries) {
-			const report = reportById.get(d.reportId as string);
+			const report = reportById.get(reportIdOf(d) as string);
 			const workspaceIds = (report?.filters as { workspaceIds: string[] })
 				.workspaceIds;
 			for (const wsId of workspaceIds) {

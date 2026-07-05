@@ -641,8 +641,8 @@ export const reportRoutes = new Hono<AppEnv>()
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");
 		const report = await requireReportOwner(c, c.req.param("id"));
-		// Shares and deliveries (each holding its own frozen copy) cascade away
-		// with the report row.
+		// Shares and deliveries reference the report's content versions, which
+		// cascade away with the report row — and take them along.
 		await deleteReport(c.var.db, report.id);
 		return c.body(null, 204);
 	})
@@ -726,8 +726,9 @@ export const reportRoutes = new Hono<AppEnv>()
 		}
 		const message =
 			input.message && input.message.trim() !== "" ? input.message : null;
-		// Send the current content version: each delivery copies its body, so the
-		// recipient keeps what was sent even after a later edit or report deletion.
+		// Send the current content version by reference: versions are immutable,
+		// so the recipient keeps what was sent even after a later edit (which
+		// appends a new version).
 		const current = await getCurrentReportContent(c.var.db, report.id);
 		if (!current) throw new AppError("internal", "Report content missing");
 		// One id shared by every row of this send so the sender's Sent folder can
@@ -735,15 +736,10 @@ export const reportRoutes = new Hono<AppEnv>()
 		const batchId = crypto.randomUUID();
 		const base = {
 			batchId,
-			reportId: report.id,
 			reportContentId: current.id,
 			senderUserId: user.id,
 			senderName: user.name,
 			senderEmail: user.email,
-			reportName: report.name,
-			dateFrom: report.filters.dateRange.from,
-			dateTo: report.filters.dateRange.to,
-			renderedMarkdown: current.content,
 			message,
 		};
 		const deliveries = recipientIds.map((recipientUserId) => ({

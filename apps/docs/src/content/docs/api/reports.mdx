@@ -284,10 +284,11 @@ eligible until the report is re-rendered.
 
 `POST /api/v1/reports/:id/send` <Badge text="scope: write" variant="caution" />
 
-Owner only. Drops a **frozen snapshot** of the report's current version into each recipient's
-inbox. Each recipient must be in the [recipients](#recipients) candidate set, so a send can never
-widen who can see the data; an ineligible id returns `400`. Each delivery copies the body, so the
-recipient keeps what was sent even after a later edit or report deletion.
+Owner only. Drops the report's current **immutable version** into each recipient's inbox. Each
+recipient must be in the [recipients](#recipients) candidate set, so a send can never widen who
+can see the data; an ineligible id returns `400`. Each delivery references the sent version, so
+the recipient keeps what was sent even after a later edit (which appends a new version); deleting
+the report removes its deliveries.
 
 **Request body**
 

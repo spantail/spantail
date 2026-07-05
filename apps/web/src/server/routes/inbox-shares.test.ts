@@ -294,35 +294,6 @@ it("enforces PAT scopes on inbox share management", async () => {
 	).toBe(201);
 });
 
-it("repairs a rollout-window delivery lacking its content id", async () => {
-	const { alice, deliveryId } = await setup();
-	// Simulate a row inserted by a pre-column Worker after the migration
-	// backfill already ran: the recorded version id is missing.
-	await env.DB.prepare(
-		"UPDATE report_deliveries SET report_content_id = NULL WHERE id = ?",
-	)
-		.bind(deliveryId)
-		.run();
-
-	const created = await apiJson(
-		"POST",
-		`/api/v1/inbox/${deliveryId}/shares`,
-		{},
-		alice,
-	);
-	expect(created.status).toBe(201);
-	const share = (await created.json()) as { reportContentId: string };
-	expect(share.reportContentId).toBeTruthy();
-
-	// The resolved id was written back onto the delivery row.
-	const healed = await env.DB.prepare(
-		"SELECT report_content_id FROM report_deliveries WHERE id = ?",
-	)
-		.bind(deliveryId)
-		.first<{ report_content_id: string | null }>();
-	expect(healed?.report_content_id).toBe(share.reportContentId);
-});
-
 it("still shares a trashed message (trash is a folder, not deletion)", async () => {
 	const { alice, deliveryId } = await setup();
 	expect(

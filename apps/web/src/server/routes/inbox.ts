@@ -19,7 +19,6 @@ import {
 	markInboxRead,
 	markInboxUnread,
 	type ReportDeliveryRow,
-	resolveDeliveredContentId,
 	setDeliveryFlags,
 	userOwnsMailTarget,
 } from "@spantail/db";
@@ -53,21 +52,6 @@ function toMailItem(row: MailItemRow) {
 			return id ? resolveAvatarUrl(id, recipientImages[i]) : null;
 		}),
 	};
-}
-
-// Every delivery records the content version it carried; a rollout-window row
-// (inserted by a pre-column Worker after the migration backfill) is resolved
-// and repaired by resolveDeliveredContentId. A null after that is a server
-// bug, not a caller error.
-async function deliveredContentId(
-	c: Context<AppEnv>,
-	row: ReportDeliveryRow,
-): Promise<string> {
-	const contentId = await resolveDeliveredContentId(c.var.db, row);
-	if (!contentId) {
-		throw new AppError("internal", "Delivery content missing");
-	}
-	return contentId;
 }
 
 // The recipient-scoped delivery row, or 404. Backs the share routes: only the
@@ -190,9 +174,6 @@ export const inboxRoutes = new Hono<AppEnv>()
 		const adminDetail = await getDeliveryDetailById(c.var.db, id);
 		if (!adminDetail) throw new AppError("not_found", "Message not found");
 		if (!user.isAdmin) {
-			if (!adminDetail.reportId) {
-				throw new AppError("not_found", "Message not found");
-			}
 			await requireReportReadAccess(c, adminDetail.reportId);
 		}
 		return c.json(toMailItem(adminDetail));
@@ -212,7 +193,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 			await parseOptionalJsonBody(c),
 		);
 		const share = await createReportShare(c.var.db, {
-			reportContentId: await deliveredContentId(c, row),
+			reportContentId: row.reportContentId,
 			createdByUserId: user.id,
 			token: generateShareToken(),
 			...(await shareAttributesFromInput(input)),
@@ -227,7 +208,7 @@ export const inboxRoutes = new Hono<AppEnv>()
 		const row = await requireReceivedMessage(c, c.req.param("id"), user.id);
 		const shares = await listReportSharesByContent(
 			c.var.db,
-			await deliveredContentId(c, row),
+			row.reportContentId,
 			user.id,
 		);
 		return c.json(shares.map(toApiShare));

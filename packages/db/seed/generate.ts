@@ -503,15 +503,8 @@ export async function generateDataset(
 	const readBefore = shiftDays(todayInTimezone("UTC", now), -3);
 
 	const addDeliveries = (
-		report: {
-			id: string;
-			name: string;
-			sender: ResolvedUser;
-			rendered: string;
-		},
+		report: { id: string; sender: ResolvedUser },
 		recipients: ResolvedUser[],
-		dateFrom: string,
-		dateTo: string,
 		createdAt: Date,
 		read: boolean,
 	) => {
@@ -520,7 +513,6 @@ export async function generateDataset(
 		for (const r of recipients) {
 			deliveryRows.push({
 				id: randomUUID(),
-				reportId: report.id,
 				// Seed reports are all version 1, so the delivered version is the
 				// deterministic content id addReport minted.
 				reportContentId: `${report.id}-v1`,
@@ -529,10 +521,6 @@ export async function generateDataset(
 				batchId,
 				senderName: report.sender.name,
 				senderEmail: report.sender.email,
-				reportName: report.name,
-				dateFrom,
-				dateTo,
-				renderedMarkdown: report.rendered,
 				message: null,
 				readAt: read ? new Date(createdAt.getTime() + 3_600_000) : null,
 				createdAt,
@@ -627,10 +615,8 @@ export async function generateDataset(
 					createdAt,
 				);
 				addDeliveries(
-					{ id, name, sender: user, rendered: content },
+					{ id, sender: user },
 					manager && manager.key !== user.key ? [manager] : [],
-					date,
-					date,
 					createdAt,
 					date <= readBefore,
 				);
@@ -731,14 +717,7 @@ export async function generateDataset(
 				content,
 				createdAt,
 			);
-			addDeliveries(
-				{ id, name, sender, rendered: content },
-				recipients,
-				date,
-				date,
-				createdAt,
-				date <= readBefore,
-			);
+			addDeliveries({ id, sender }, recipients, createdAt, date <= readBefore);
 		}
 	}
 
@@ -850,10 +829,8 @@ export async function generateDataset(
 				);
 				const manager = managerByWs.get(ws.key);
 				addDeliveries(
-					{ id, name, sender: user, rendered: content },
+					{ id, sender: user },
 					manager && manager.key !== user.key ? [manager] : [],
-					month.first,
-					month.last,
 					createdAt,
 					true,
 				);
