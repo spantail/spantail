@@ -45,6 +45,10 @@ export function notAMemberReply(): string {
 	return "Your Spantail account is not a member of the workspace this repository is mapped to, so nothing was logged.";
 }
 
+export function noProjectAccessReply(): string {
+	return "Your Spantail account is not a member of the project this repository is mapped to, so nothing was logged.";
+}
+
 export function onboardingReply(connectUrl: string): string {
 	return `To log work from GitHub, connect your GitHub account to Spantail first: ${connectUrl}. Then re-post your command.`;
 }

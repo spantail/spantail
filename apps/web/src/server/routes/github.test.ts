@@ -422,6 +422,52 @@ it("onboards unlinked insiders with a connect link", async () => {
 	);
 });
 
+it("enforces the project ACL for workspace members outside the project", async () => {
+	const ctx = await seedIntegration();
+	// A second workspace member who is NOT a member of the mapped project.
+	const other = await signUpUser("Colleague", "colleague@example.com");
+	const otherId = (
+		(await (await apiGet("/api/v1/me", other)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ctx.ws.id}/members`,
+		{ email: "colleague@example.com" },
+		ctx.admin,
+	);
+	await db().insert(schema.githubIdentities).values({
+		id: crypto.randomUUID(),
+		githubUserId: 888,
+		userId: otherId,
+		login: "colleague",
+	});
+
+	await runPipeline(commentPayload({ userId: 888 }));
+	expect(await listEntries()).toHaveLength(0);
+	const reply = recorded.find((call) =>
+		call.url.endsWith("/issues/5/comments"),
+	);
+	expect((reply?.body as { body: string }).body).toContain(
+		"not a member of the project",
+	);
+});
+
+it("logs for a linked member with outsider association, but stays silent", async () => {
+	await seedIntegration();
+	// A workspace member commenting on an OSS repo they don't belong to on the
+	// GitHub side: the entry is theirs, but the bot must not reply publicly.
+	await runPipeline(commentPayload({ association: "NONE" }));
+	expect(await listEntries()).toHaveLength(1);
+	expect(
+		recorded.filter(
+			(call) =>
+				call.url.endsWith("/comments") || call.url.includes("/reactions"),
+		),
+	).toHaveLength(0);
+});
+
 it("rejects linked users outside the mapped workspace with a reply", async () => {
 	const ctx = await seedIntegration();
 	// Re-point the identity to a user who is not a member of the workspace.

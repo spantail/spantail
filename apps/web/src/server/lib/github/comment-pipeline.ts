@@ -1,6 +1,7 @@
 import {
 	logWorkErrorReply,
 	logWorkSuccessReply,
+	noProjectAccessReply,
 	notAMemberReply,
 	onboardingReply,
 	parseLogWorkArgs,
@@ -17,6 +18,7 @@ import {
 	getMembership,
 	getUserById,
 	getWorkEntryGithubRefByCommentId,
+	isProjectMember,
 	sumWorkEntryMinutesForGithubIssue,
 } from "@spantail/db";
 
@@ -141,6 +143,16 @@ export async function handleIssueCommentCreated(opts: {
 			if (canReply) await reply(notAMemberReply());
 			return;
 		}
+		// Project ACL: same rule as the log-work API route (requireProjectAccess)
+		// — a restricted project accepts entries only from its members and
+		// workspace admins.
+		if (
+			membership.role === "member" &&
+			!(await isProjectMember(db, mapping.projectId, identity.userId))
+		) {
+			if (canReply) await reply(noProjectAccessReply());
+			return;
+		}
 
 		const user = await getUserById(db, identity.userId);
 		if (!user) return;
@@ -216,8 +228,11 @@ export async function handleIssueCommentCreated(opts: {
 			mapping.repoFullName,
 			issueNumber,
 		);
-		// Feedback is best-effort: the entry exists even if GitHub rejects the
-		// reaction or reply.
+		// Feedback is best-effort (the entry exists even if GitHub rejects the
+		// reaction or reply) and association-gated like every other reply: a
+		// linked member commenting as an outsider on an OSS repo gets their
+		// entry, silently.
+		if (!canReply) return;
 		try {
 			await createCommentReaction(
 				token,
