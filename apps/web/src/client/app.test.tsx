@@ -325,6 +325,18 @@ it("renders the settings takeover with the rail and workspaces pane", async () =
 	expect(router.state.location.pathname).toBe("/settings/general");
 });
 
+it("redirects the bare settings path to the general section", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	// The sidebar cog links to /settings (no trailing slash); it must land on
+	// the first section, not a blank pane.
+	const router = await renderApp("/settings");
+
+	await waitFor(() =>
+		expect(router.state.location.pathname).toBe("/settings/general"),
+	);
+	expect(await screen.findByDisplayValue("Acme")).toBeDefined();
+});
+
 it("redirects the renamed profile section to preferences", async () => {
 	getSession.mockResolvedValue({ data: sessionPayload });
 	const router = await renderApp("/settings/profile");
