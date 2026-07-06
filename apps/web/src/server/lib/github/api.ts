@@ -31,6 +31,8 @@ async function githubRequest<T>(
 		method?: string;
 		token?: string;
 		body?: unknown;
+		/** Form-encoded body (the OAuth token endpoint's expected format). */
+		form?: Record<string, string>;
 		/** Absolute URL escape hatch for the two github.com (non-API) endpoints. */
 		url?: string;
 	},
@@ -43,12 +45,19 @@ async function githubRequest<T>(
 		"user-agent": "spantail",
 	};
 	if (init.token) headers.authorization = `Bearer ${init.token}`;
-	if (init.body !== undefined) headers["content-type"] = "application/json";
+	let body: string | undefined;
+	if (init.form !== undefined) {
+		headers["content-type"] = "application/x-www-form-urlencoded";
+		body = new URLSearchParams(init.form).toString();
+	} else if (init.body !== undefined) {
+		headers["content-type"] = "application/json";
+		body = JSON.stringify(init.body);
+	}
 	const doFetch = fetchImpl ?? fetch;
 	const response = await doFetch(url, {
 		method: init.method ?? "GET",
 		headers,
-		body: init.body === undefined ? undefined : JSON.stringify(init.body),
+		body,
 	});
 	if (!response.ok) throw new GithubApiError(response.status, path);
 	if (response.status === 204) return undefined as T;
@@ -182,7 +191,8 @@ export async function exchangeOauthCode(
 	}>("/login/oauth/access_token", {
 		method: "POST",
 		url: "https://github.com/login/oauth/access_token",
-		body: { client_id: clientId, client_secret: clientSecret, code },
+		// The token endpoint takes form-encoded parameters, not JSON.
+		form: { client_id: clientId, client_secret: clientSecret, code },
 	});
 	if (!result.access_token) {
 		throw new GithubApiError(400, "/login/oauth/access_token");

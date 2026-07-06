@@ -17,6 +17,7 @@ import { listInstallationRepos } from "../lib/github/api";
 import { getInstallationToken } from "../lib/github/app-auth";
 import { requireWorkspaceAccess } from "../lib/permissions";
 import { validate } from "../lib/validate";
+import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 /**
@@ -54,6 +55,8 @@ export const githubMappingRoutes = new Hono<AppEnv>()
 	})
 	.post("/", async (c) => {
 		const workspaceId = c.req.param("id") ?? "";
+		// PAT callers need the admin scope, like other workspace-admin writes.
+		requireScope(c, "admin");
 		await requireWorkspaceAccess(c, workspaceId, "admin");
 		const input = validate(createGithubMappingInputSchema, await c.req.json());
 
@@ -125,6 +128,7 @@ export const githubMappingRoutes = new Hono<AppEnv>()
 	})
 	.delete("/:mappingId", async (c) => {
 		const workspaceId = c.req.param("id") ?? "";
+		requireScope(c, "admin");
 		await requireWorkspaceAccess(c, workspaceId, "admin");
 		const mapping = await getGithubRepoMapping(
 			c.var.db,
@@ -140,6 +144,7 @@ export const githubMappingRoutes = new Hono<AppEnv>()
 	// workspace admin's picker. Read live from GitHub; empty without an App.
 	.get("/unmapped-repos", async (c) => {
 		const workspaceId = c.req.param("id") ?? "";
+		requireScope(c, "admin");
 		await requireWorkspaceAccess(c, workspaceId, "admin");
 		const config = await getGithubAppConfig(c.var.db);
 		if (!config) return c.json({ repos: [] });

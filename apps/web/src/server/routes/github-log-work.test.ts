@@ -422,6 +422,36 @@ it("manages workspace repo mappings with admin gating and 409 on conflicts", asy
 	expect(removed.status).toBe(204);
 });
 
+it("requires the admin PAT scope for mapping writes", async () => {
+	const ctx = await setup();
+	// A write-scope (non-admin) PAT of the workspace ADMIN: role alone must
+	// not be enough — mapping writes need the admin token scope like other
+	// workspace-admin writes.
+	const { token } = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/tokens",
+			{ name: "rw", scopes: ["read", "write"] },
+			ctx.admin,
+		)
+	).json()) as { token: string };
+	const res = await appFetch(
+		`/api/v1/workspaces/${ctx.ws.id}/github-mappings`,
+		{
+			method: "POST",
+			headers: {
+				authorization: `Bearer ${token}`,
+				"content-type": "application/json",
+			},
+			body: JSON.stringify({
+				repoFullName: "acme/scoped",
+				projectId: ctx.project.id,
+			}),
+		},
+	);
+	expect(res.status).toBe(403);
+});
+
 it("exposes and clears the caller's github identity", async () => {
 	const ctx = await setup();
 	expect(await (await apiGet("/api/v1/me/github", ctx.member)).json()).toEqual({

@@ -221,9 +221,14 @@ export async function handleIssueCommentCreated(opts: {
 				},
 				agentEntryIds,
 			);
-		} catch {
-			// Unique violation on comment_id: a redelivery raced the pre-check.
-			return;
+		} catch (error) {
+			// Unique violation on comment_id: a redelivery raced the pre-check —
+			// the entry already exists, nothing to do. Anything else (FK failure
+			// after a project delete, transient D1 error) must surface in the
+			// outer log, not be silently swallowed as a duplicate.
+			const message = error instanceof Error ? error.message : "";
+			if (message.includes("comment_id")) return;
+			throw error;
 		}
 
 		const totalMinutes = await sumWorkEntryMinutesForGithubIssue(

@@ -43,7 +43,13 @@ function stubGithubFetch(): void {
 	setGithubFetchForTests(async (input, init) => {
 		const url = String(input);
 		const method = init?.method ?? "GET";
-		const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+		const raw = init?.body ? String(init.body) : undefined;
+		let body: unknown;
+		try {
+			body = raw ? JSON.parse(raw) : undefined;
+		} catch {
+			body = raw; // form-encoded bodies stay raw strings
+		}
 		recorded.push({ method, url, body });
 
 		if (url.includes("/app/installations/") && url.endsWith("/access_tokens")) {
@@ -698,6 +704,12 @@ it("connects a GitHub identity via the App user-authorization flow", async () =>
 	expect(callback.headers.get("location")).toBe(
 		"/settings/authentication?github=linked",
 	);
+	// The token endpoint takes form-encoded parameters, not JSON.
+	const exchange = recorded.find((call) =>
+		call.url.endsWith("/login/oauth/access_token"),
+	);
+	expect(exchange?.body).toContain("client_id=Iv1.testclient");
+	expect(exchange?.body).toContain("code=xyz");
 	expect(await getGithubIdentityByUserId(db(), ctx.memberId)).toMatchObject({
 		githubUserId: 777,
 		login: "octocat",
