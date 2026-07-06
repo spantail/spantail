@@ -118,6 +118,7 @@ export default defineConfig({
 								items: [
 									{ slug: "admin/users" },
 									{ slug: "admin/system-settings" },
+									{ slug: "admin/github-integration" },
 									{ slug: "admin/report-templates" },
 								],
 							},
