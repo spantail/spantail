@@ -12,8 +12,10 @@ import { agentEventRoutes } from "./routes/agent-events";
 import { agentRoutes } from "./routes/agents";
 import { avatarRoutes } from "./routes/avatars";
 import { devMailRoutes } from "./routes/dev-mail";
+import { githubConnectRoutes } from "./routes/github-connect";
 import { inboxRoutes } from "./routes/inbox";
 import { instanceRoutes } from "./routes/instance";
+import { instanceGithubRoutes } from "./routes/instance-github";
 import { invitationRoutes } from "./routes/invitations";
 import { meRoutes } from "./routes/me";
 import { projectRoutes } from "./routes/projects";
@@ -26,6 +28,7 @@ import { searchRoutes } from "./routes/search";
 import { shareRoutes } from "./routes/share";
 import { tokenRoutes } from "./routes/tokens";
 import { userRoutes } from "./routes/users";
+import { githubWebhookRoutes } from "./routes/webhooks/github";
 import { workEntryRoutes } from "./routes/work-entries";
 import { workspaceRoutes } from "./routes/workspaces";
 import type { AppEnv } from "./types";
@@ -72,6 +75,7 @@ v1.route("/avatars", avatarRoutes);
 v1.route("/inbox", inboxRoutes);
 v1.route("/users", userRoutes);
 v1.route("/invitations", invitationRoutes);
+v1.route("/instance/github", instanceGithubRoutes);
 v1.route("/instance", instanceRoutes);
 v1.route("/workspaces", workspaceRoutes);
 v1.route("/projects", projectRoutes);
@@ -93,6 +97,14 @@ app.route("/api/v1", v1);
 
 // Development-only email outbox viewer (404s in production).
 app.route("/api/dev/mail", devMailRoutes);
+
+// GitHub App surfaces: the signed webhook receiver and the browser redirect
+// flows (manifest setup callback, Connect GitHub). Authenticated per-route,
+// not by the /api/v1 middleware chain.
+const github = new Hono<AppEnv>();
+github.route("/webhook", githubWebhookRoutes);
+github.route("/", githubConnectRoutes);
+app.route("/api/github", github);
 
 // Public share views: unauthenticated HTML, outside /api.
 app.use("/share/*", requestContext);

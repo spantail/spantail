@@ -103,7 +103,10 @@ interface StatePayload {
 	exp: number;
 }
 
-async function hmacKey(secret: string, usage: KeyUsage): Promise<CryptoKey> {
+async function hmacKey(
+	secret: string,
+	usage: "sign" | "verify",
+): Promise<CryptoKey> {
 	return crypto.subtle.importKey(
 		"raw",
 		te.encode(`spantail:github-state:${secret}`),
