@@ -38,16 +38,21 @@ export const githubWebhookRoutes = new Hono<AppEnv>().post("/", async (c) => {
 			404,
 		);
 	}
+	// Reject shapeless requests before buffering the body: real GitHub
+	// deliveries always carry a sha256 signature header.
+	const signature = c.req.header("x-hub-signature-256");
+	if (!signature?.startsWith("sha256=")) {
+		return c.json(
+			{ error: { code: "unauthorized", message: "Invalid signature" } },
+			401,
+		);
+	}
 	const body = await c.req.arrayBuffer();
 	const secret = await decryptSecret(
 		c.env.BETTER_AUTH_SECRET,
 		config.webhookSecretEnc,
 	);
-	const valid = await verifyWebhookSignature(
-		secret,
-		body,
-		c.req.header("x-hub-signature-256"),
-	);
+	const valid = await verifyWebhookSignature(secret, body, signature);
 	if (!valid) {
 		return c.json(
 			{ error: { code: "unauthorized", message: "Invalid signature" } },
@@ -72,14 +77,23 @@ export const githubWebhookRoutes = new Hono<AppEnv>().post("/", async (c) => {
 		const p = payload as InstallationPayload;
 		const installation = p.installation;
 		if (!installation) return c.body(null, 204);
+		const accountLogin = installation.account?.login;
+		const accountType = installation.account?.type;
 		switch (p.action) {
 			case "created":
 			case "unsuspend":
+				// A payload without a usable account identity would only create an
+				// ambiguous row; skip it rather than storing an empty login.
+				if (
+					!accountLogin ||
+					(accountType !== "User" && accountType !== "Organization")
+				) {
+					break;
+				}
 				await upsertGithubInstallation(c.var.db, {
 					installationId: installation.id,
-					accountLogin: installation.account?.login ?? "",
-					accountType:
-						installation.account?.type === "User" ? "User" : "Organization",
+					accountLogin,
+					accountType,
 				});
 				break;
 			case "deleted":

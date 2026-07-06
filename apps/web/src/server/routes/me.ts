@@ -80,16 +80,18 @@ export const meRoutes = new Hono<AppEnv>()
 		return c.json({ user: { ...user, imageUrl: null }, memberships });
 	})
 	// The caller's GitHub identity link (issue #159): display state for the
-	// Connect GitHub card. The link itself is created by the OAuth callback.
+	// Connect GitHub card. The link itself is created by the OAuth callback,
+	// so scope-gating (not session-only) is enough here — a PAT can read its
+	// owner's link state and disconnect, mirroring other self-service rows.
 	.get("/github", async (c) => {
-		const { user } = requireSession(c);
+		const { user } = requireScope(c, "read");
 		const identity = await getGithubIdentityByUserId(c.var.db, user.id);
 		return c.json(
 			identity ? { linked: true, login: identity.login } : { linked: false },
 		);
 	})
 	.delete("/github", async (c) => {
-		const { user } = requireSession(c);
+		const { user } = requireScope(c, "write");
 		await deleteGithubIdentityByUserId(c.var.db, user.id);
 		return c.body(null, 204);
 	});

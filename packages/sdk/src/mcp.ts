@@ -261,6 +261,7 @@ export function registerSpantailTools(
 					.number()
 					.int()
 					.positive()
+					.max(10_000_000)
 					.describe("The GitHub issue/PR number (the N in #N)"),
 				args: z
 					.string()
