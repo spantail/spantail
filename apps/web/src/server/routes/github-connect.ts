@@ -12,6 +12,7 @@ import {
 	exchangeOauthCode,
 	getAuthenticatedUser,
 } from "../lib/github/api";
+import { clearInstallationTokenCache } from "../lib/github/app-auth";
 import {
 	decryptSecret,
 	encryptSecret,
@@ -95,6 +96,8 @@ export const githubConnectRoutes = new Hono<AppEnv>()
 				),
 				clientSecretEnc: await encryptSecret(secret, conversion.client_secret),
 			});
+			// A re-registration invalidates tokens minted under the previous App.
+			clearInstallationTokenCache();
 			// Next step of onboarding: install the freshly created App somewhere.
 			return c.redirect(
 				`https://github.com/apps/${conversion.slug}/installations/new`,

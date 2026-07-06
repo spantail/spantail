@@ -12,7 +12,6 @@ import {
 	createWorkEntryWithGithubRef,
 	type Database,
 	type GithubAppConfigRow,
-	getGithubAppConfig,
 	getGithubIdentityByGithubUserId,
 	getGithubRepoMappingForRepo,
 	getMembership,
@@ -95,11 +94,9 @@ export async function handleIssueCommentCreated(opts: {
 			comment.author_association ?? "",
 		);
 		const reply = async (message: string) => {
-			const config = await getGithubAppConfig(db);
-			if (!config) return;
 			const token = await getInstallationToken(
 				env.BETTER_AUTH_SECRET,
-				config,
+				opts.config,
 				installationId,
 			);
 			await createIssueComment(
