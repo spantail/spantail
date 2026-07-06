@@ -50,8 +50,9 @@ pnpm dev                     # Vite + Worker on http://localhost:5173
   empty instance, so **skip the `pnpm db:seed` step** of the launch recipe
   and run `pnpm db:reset` instead; the first sign-up becomes the instance
   admin.
-- **Everything else**: use the seeded demo data. The first seeded user
-  (Alice) is the instance admin; other users are plain members.
+- **Everything else**: use the seeded demo data. Of the seeded users, the
+  first (Alice) is the instance admin and the second (Bilal) carries the
+  template-author capability; the rest are plain members.
 - **Instance feature flags** (email, social login, agents, realtime) live in
   the `instance_settings` singleton row: flip them at `/settings/features` as
   the instance admin, or directly in D1 (see below). Social-login buttons
