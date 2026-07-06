@@ -336,13 +336,15 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 				<CardDescription>{t("settings.projects.description")}</CardDescription>
 				{canManage && (
 					<CardAction>
+						{/* The mockup's small action button: h-8 with text-xs. */}
 						<Button
+							className="gap-1.5 px-3 text-xs"
 							onClick={() => {
 								setEditing(null);
 								setFormOpen(true);
 							}}
 						>
-							<PlusIcon />
+							<PlusIcon className="size-3.5" />
 							{t("settings.projects.newAction")}
 						</Button>
 					</CardAction>

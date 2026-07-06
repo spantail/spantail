@@ -142,9 +142,11 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceWithRole }) {
 										onChange={onFileChange}
 									/>
 									<div className="flex gap-2">
+										{/* The mockup's small action buttons: h-8 with text-xs. */}
 										<Button
 											type="button"
 											variant="outline"
+											className="px-3 text-xs"
 											disabled={logoBusy}
 											onClick={() => inputRef.current?.click()}
 										>
@@ -154,6 +156,7 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceWithRole }) {
 											<Button
 												type="button"
 												variant="ghost"
+												className="px-3 text-xs"
 												disabled={logoBusy}
 												onClick={() => removeMutation.mutate()}
 											>
