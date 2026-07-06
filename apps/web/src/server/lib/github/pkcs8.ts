@@ -10,7 +10,7 @@ function pemBody(pem: string, label: string): Uint8Array | null {
 	const match = new RegExp(
 		`-----BEGIN ${label}-----([A-Za-z0-9+/=\\s]+)-----END ${label}-----`,
 	).exec(pem);
-	if (!match || !match[1]) return null;
+	if (!match?.[1]) return null;
 	const binary = atob(match[1].replace(/\s+/g, ""));
 	const bytes = new Uint8Array(binary.length);
 	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
