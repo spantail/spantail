@@ -2,7 +2,6 @@ import {
 	DEFAULT_PROJECT_SYMBOL,
 	PROJECT_SYMBOLS,
 	type Project,
-	type ProjectMember,
 	type ProjectMemberAvatar,
 	type ProjectSymbol,
 	pickNextSymbol,
@@ -16,11 +15,11 @@ import {
 	CheckIcon,
 	MoreHorizontalIcon,
 	PencilIcon,
+	PlusIcon,
 	Trash2Icon,
 	TriangleAlertIcon,
-	UsersIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -40,12 +39,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Card,
+	CardAction,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -63,18 +62,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -203,78 +190,52 @@ function AvatarStack({ members }: { members: ProjectMemberAvatar[] }) {
 	);
 }
 
-/** Popover checkbox list for picking initial project members on create. */
-function MemberMultiSelect({
+/** Toggleable member chips (avatar + name + check), per the design mockup. */
+function MemberChips({
 	members,
 	selected,
-	onChange,
+	onToggle,
 }: {
 	members: WorkspaceMember[];
 	selected: string[];
-	onChange: (ids: string[]) => void;
+	onToggle: (userId: string) => void;
 }) {
 	const { t } = useTranslation();
-	const toggle = (userId: string) => {
-		onChange(
-			selected.includes(userId)
-				? selected.filter((id) => id !== userId)
-				: [...selected, userId],
+	if (members.length === 0) {
+		return (
+			<p className="text-muted-foreground text-sm">
+				{t("settings.projects.members.noWorkspaceMembers")}
+			</p>
 		);
-	};
-	const label =
-		selected.length === 0
-			? t("settings.projects.members.selectPlaceholder")
-			: t("settings.projects.members.selectedCount", {
-					count: selected.length,
-				});
+	}
 	return (
-		<Popover>
-			<PopoverTrigger asChild>
-				<Button
-					type="button"
-					variant="outline"
-					className="w-full justify-between font-normal sm:w-72"
-				>
-					<span
-						className={selected.length === 0 ? "text-muted-foreground" : ""}
+		<div className="flex flex-wrap gap-2">
+			{members.map((member) => {
+				const on = selected.includes(member.userId);
+				return (
+					<button
+						key={member.userId}
+						type="button"
+						aria-pressed={on}
+						onClick={() => onToggle(member.userId)}
+						className={cn(
+							"flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm transition-colors",
+							on
+								? "border-foreground bg-muted"
+								: "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+						)}
 					>
-						{label}
-					</span>
-					<UsersIcon className="text-muted-foreground size-4" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent align="start" className="w-72 p-2">
-				{members.length === 0 ? (
-					<p className="text-muted-foreground p-2 text-sm">
-						{t("settings.projects.members.noWorkspaceMembers")}
-					</p>
-				) : (
-					<div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
-						{members.map((member) => (
-							<label
-								key={member.userId}
-								htmlFor={`pm-pick-${member.userId}`}
-								className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md p-1.5"
-							>
-								<Checkbox
-									id={`pm-pick-${member.userId}`}
-									checked={selected.includes(member.userId)}
-									onCheckedChange={() => toggle(member.userId)}
-								/>
-								<PersonAvatar
-									name={member.name}
-									imageUrl={member.imageUrl}
-									size={24}
-								/>
-								<span className="min-w-0 flex-1 truncate text-sm">
-									{member.name}
-								</span>
-							</label>
-						))}
-					</div>
-				)}
-			</PopoverContent>
-		</Popover>
+						<PersonAvatar
+							name={member.name}
+							imageUrl={member.imageUrl}
+							size={22}
+						/>
+						<span className="truncate">{member.name}</span>
+						{on && <CheckIcon className="size-3.5 shrink-0" />}
+					</button>
+				);
+			})}
+		</div>
 	);
 }
 
@@ -296,18 +257,9 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 	const queryClient = useQueryClient();
 	const { selected } = useSettingsWorkspace();
 	const workspaceId = selected?.id ?? "";
-	const [slug, setSlug] = useState("");
-	const [name, setName] = useState("");
-	const [hue, setHue] = useState<number>(DEFAULT_PROJECT_HUE);
-	const [symbol, setSymbol] = useState<ProjectSymbol>(DEFAULT_PROJECT_SYMBOL);
-	// Until the user picks a symbol, the form tracks a suggestion that spreads
-	// variety across the workspace's existing projects (see the effect below).
-	const [symbolTouched, setSymbolTouched] = useState(false);
-	const [memberIds, setMemberIds] = useState<string[]>([]);
-	const [error, setError] = useState<string | null>(null);
+	const [formOpen, setFormOpen] = useState(false);
 	const [editing, setEditing] = useState<Project | null>(null);
 	const [deleting, setDeleting] = useState<Project | null>(null);
-	const [managing, setManaging] = useState<Project | null>(null);
 
 	const projects = useQuery({
 		queryKey: ["projects", workspaceId],
@@ -316,16 +268,13 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 	});
 
 	// The least-used symbol among existing projects, so a new project defaults to
-	// a shape that isn't already crowded. Recomputes as projects load / change.
+	// a shape that isn't already crowded.
 	const suggestedSymbol = useMemo(
 		() => pickNextSymbol((projects.data ?? []).map((p) => p.symbol)),
 		[projects.data],
 	);
-	useEffect(() => {
-		if (!symbolTouched) setSymbol(suggestedSymbol);
-	}, [suggestedSymbol, symbolTouched]);
 
-	// Workspace members feed the create form's member picker and the manage dialog.
+	// Workspace members feed the form dialog's member chips.
 	const workspaceMembers = useQuery({
 		queryKey: ["members", workspaceId],
 		queryFn: () => api.listMembers(workspaceId),
@@ -355,30 +304,6 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 			queryKey: ["project-members", workspaceId],
 		});
 
-	const createMutation = useMutation({
-		mutationFn: () =>
-			api.createProject(workspaceId, {
-				slug,
-				name,
-				hue,
-				symbol,
-				memberUserIds: memberIds,
-			}),
-		onSuccess: async () => {
-			await Promise.all([refresh(), refreshMembers()]);
-			setSlug("");
-			setName("");
-			setHue(DEFAULT_PROJECT_HUE);
-			// Re-enable the auto-suggestion so the next project picks a fresh shape
-			// (the refreshed project list now includes the one just created).
-			setSymbolTouched(false);
-			setMemberIds([]);
-			setError(null);
-			toast.success(t("settings.projects.toast.created"));
-		},
-		onError: (err: Error) => setError(err.message),
-	});
-
 	const statusMutation = useMutation({
 		mutationFn: ({
 			id,
@@ -397,6 +322,11 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 		},
 	});
 
+	const closeForm = () => {
+		setFormOpen(false);
+		setEditing(null);
+	};
+
 	return (
 		<Card>
 			<CardHeader>
@@ -404,69 +334,22 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 					{t("settings.projects.title")}
 				</CardTitle>
 				<CardDescription>{t("settings.projects.description")}</CardDescription>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
 				{canManage && (
-					<form
-						className="flex flex-col gap-4"
-						onSubmit={(e) => {
-							e.preventDefault();
-							createMutation.mutate();
-						}}
-					>
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="flex flex-col gap-2">
-								<Label htmlFor="prj-name">{t("settings.projects.name")}</Label>
-								<Input
-									id="prj-name"
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-									required
-								/>
-							</div>
-							<div className="flex flex-col gap-2">
-								<Label htmlFor="prj-slug">{t("settings.slug")}</Label>
-								<Input
-									id="prj-slug"
-									value={slug}
-									onChange={(e) => setSlug(e.target.value)}
-									placeholder={t("settings.projects.slugPlaceholder")}
-									pattern="[a-z0-9][a-z0-9-]*"
-									required
-								/>
-							</div>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("settings.projects.color")}</Label>
-							<ColorPicker value={hue} onChange={setHue} />
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("settings.projects.symbol")}</Label>
-							<SymbolPicker
-								hue={hue}
-								value={symbol}
-								onChange={(s) => {
-									setSymbol(s);
-									setSymbolTouched(true);
-								}}
-							/>
-						</div>
-						<div className="flex flex-col gap-2">
-							<Label>{t("settings.projects.members.label")}</Label>
-							<MemberMultiSelect
-								members={workspaceMembers.data ?? []}
-								selected={memberIds}
-								onChange={setMemberIds}
-							/>
-						</div>
-						{error && <p className="text-destructive text-sm">{error}</p>}
-						<div>
-							<Button type="submit" disabled={createMutation.isPending}>
-								{t("settings.createAction")}
-							</Button>
-						</div>
-					</form>
+					<CardAction>
+						<Button
+							size="sm"
+							onClick={() => {
+								setEditing(null);
+								setFormOpen(true);
+							}}
+						>
+							<PlusIcon />
+							{t("settings.projects.newAction")}
+						</Button>
+					</CardAction>
 				)}
+			</CardHeader>
+			<CardContent>
 				<Table>
 					<TableHeader>
 						<TableRow>
@@ -520,13 +403,14 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 												</Button>
 											</DropdownMenuTrigger>
 											<DropdownMenuContent align="end" className="w-48">
-												<DropdownMenuItem onClick={() => setEditing(project)}>
+												<DropdownMenuItem
+													onClick={() => {
+														setEditing(project);
+														setFormOpen(true);
+													}}
+												>
 													<PencilIcon />
 													{t("settings.projects.edit")}
-												</DropdownMenuItem>
-												<DropdownMenuItem onClick={() => setManaging(project)}>
-													<UsersIcon />
-													{t("settings.projects.members.manage")}
 												</DropdownMenuItem>
 												<DropdownMenuItem
 													onClick={() =>
@@ -566,29 +450,29 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 					</TableBody>
 				</Table>
 			</CardContent>
-			<ProjectEditDialog
-				project={editing}
-				onOpenChange={(open) => {
-					if (!open) setEditing(null);
-				}}
-				onSaved={async () => {
-					setEditing(null);
-					await refresh();
-					invalidateWorkEntryData(queryClient, workspaceId);
-					toast.success(t("settings.projects.toast.updated"));
-				}}
-			/>
-			<ProjectMembersDialog
-				project={managing}
-				workspaceMembers={workspaceMembers.data ?? []}
-				onOpenChange={(open) => {
-					if (!open) setManaging(null);
-				}}
-				onChanged={async () => {
-					await refreshMembers();
-					invalidateWorkEntryData(queryClient, workspaceId);
-				}}
-			/>
+			{formOpen && (
+				<ProjectFormDialog
+					project={editing}
+					workspaceId={workspaceId}
+					workspaceMembers={workspaceMembers.data ?? []}
+					suggestedSymbol={suggestedSymbol}
+					onOpenChange={(open) => {
+						if (!open) closeForm();
+					}}
+					onSaved={async (mode) => {
+						closeForm();
+						await Promise.all([refresh(), refreshMembers()]);
+						if (mode === "edit") {
+							invalidateWorkEntryData(queryClient, workspaceId);
+						}
+						toast.success(
+							mode === "create"
+								? t("settings.projects.toast.created")
+								: t("settings.projects.toast.updated"),
+						);
+					}}
+				/>
+			)}
 			<DeleteProjectDialog
 				project={deleting}
 				onOpenChange={(open) => {
@@ -605,81 +489,137 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 	);
 }
 
-function ProjectEditDialog({
+/**
+ * One dialog for create and edit — name/slug, color, symbol, members and
+ * description, per the design mockup. On edit, the member chips are seeded
+ * from the project's current members and diffed on save.
+ */
+function ProjectFormDialog({
 	project,
+	workspaceId,
+	workspaceMembers,
+	suggestedSymbol,
 	onOpenChange,
 	onSaved,
 }: {
 	project: Project | null;
+	workspaceId: string;
+	workspaceMembers: WorkspaceMember[];
+	suggestedSymbol: ProjectSymbol;
 	onOpenChange: (open: boolean) => void;
-	onSaved: () => void;
+	onSaved: (mode: "create" | "edit") => void;
 }) {
 	const { t } = useTranslation();
-	const [name, setName] = useState("");
-	const [slug, setSlug] = useState("");
-	const [description, setDescription] = useState("");
-	const [hue, setHue] = useState<number>(DEFAULT_PROJECT_HUE);
-	const [symbol, setSymbol] = useState<ProjectSymbol>(DEFAULT_PROJECT_SYMBOL);
+	const isEdit = Boolean(project);
+	const [name, setName] = useState(project?.name ?? "");
+	const [slug, setSlug] = useState(project?.slug ?? "");
+	const [description, setDescription] = useState(project?.description ?? "");
+	const [hue, setHue] = useState<number>(project?.hue ?? DEFAULT_PROJECT_HUE);
+	const [symbol, setSymbol] = useState<ProjectSymbol>(
+		project?.symbol ?? (isEdit ? DEFAULT_PROJECT_SYMBOL : suggestedSymbol),
+	);
+	const [memberIds, setMemberIds] = useState<string[]>([]);
 	const [error, setError] = useState<string | null>(null);
 
-	// Seed the form whenever a different project is opened for editing.
+	// Editing needs the project's current members to seed the chips (and to
+	// diff against on save). Seed once when they load; later refetches must not
+	// clobber the user's in-progress selection.
+	const currentMembers = useQuery({
+		queryKey: ["project-member-list", project?.id ?? ""],
+		queryFn: () => api.listProjectMembers(project?.id ?? ""),
+		enabled: isEdit,
+	});
+	const seeded = useRef(false);
 	useEffect(() => {
-		if (project) {
-			setName(project.name);
-			setSlug(project.slug);
-			setDescription(project.description ?? "");
-			setHue(project.hue);
-			setSymbol(project.symbol);
-			setError(null);
+		if (!seeded.current && currentMembers.data) {
+			seeded.current = true;
+			setMemberIds(currentMembers.data.map((m) => m.userId));
 		}
-	}, [project]);
+	}, [currentMembers.data]);
+
+	const toggleMember = (userId: string) =>
+		setMemberIds((ids) =>
+			ids.includes(userId)
+				? ids.filter((id) => id !== userId)
+				: [...ids, userId],
+		);
 
 	const mutation = useMutation({
-		mutationFn: () => {
-			if (!project) throw new Error("no project");
-			return api.updateProject(project.id, {
+		mutationFn: async () => {
+			if (!project) {
+				await api.createProject(workspaceId, {
+					slug: slug.trim(),
+					name: name.trim(),
+					hue,
+					symbol,
+					memberUserIds: memberIds,
+				});
+				return;
+			}
+			await api.updateProject(project.id, {
 				name: name.trim(),
 				slug: slug.trim(),
 				description: description.trim() || null,
 				hue,
 				symbol,
 			});
+			const original = new Set(
+				(currentMembers.data ?? []).map((m) => m.userId),
+			);
+			const chosen = new Set(memberIds);
+			await Promise.all([
+				...memberIds
+					.filter((id) => !original.has(id))
+					.map((id) => api.addProjectMember(project.id, { userId: id })),
+				...[...original]
+					.filter((id) => !chosen.has(id))
+					.map((id) => api.removeProjectMember(project.id, id)),
+			]);
 		},
-		onSuccess: () => onSaved(),
+		onSuccess: () => onSaved(isEdit ? "edit" : "create"),
 		onError: (err: Error) => setError(err.message),
 	});
 
 	const valid = name.trim().length > 0 && slug.trim().length > 0;
+	// Block saving an edit until the current members are known — otherwise the
+	// diff would remove every existing member.
+	const membersReady = !isEdit || Boolean(currentMembers.data);
 
 	return (
-		<Dialog open={Boolean(project)} onOpenChange={onOpenChange}>
+		<Dialog open onOpenChange={onOpenChange}>
 			<DialogContent size="2xl">
 				<DialogHeader>
-					<DialogTitle>{t("settings.projects.editTitle")}</DialogTitle>
+					<DialogTitle>
+						{isEdit
+							? t("settings.projects.editTitle")
+							: t("settings.projects.createTitle")}
+					</DialogTitle>
 					<DialogDescription>
-						{t("settings.projects.editDescription")}
+						{isEdit
+							? t("settings.projects.editDescription")
+							: t("settings.projects.createDescription")}
 					</DialogDescription>
 				</DialogHeader>
 				<form
 					className="grid gap-5 sm:grid-cols-2"
 					onSubmit={(e) => {
 						e.preventDefault();
-						if (valid) mutation.mutate();
+						if (valid && membersReady) mutation.mutate();
 					}}
 				>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor="pe-name">{t("settings.projects.name")}</Label>
+						<Label htmlFor="pf-name">{t("settings.projects.name")}</Label>
 						<Input
-							id="pe-name"
+							id="pf-name"
 							value={name}
 							onChange={(e) => setName(e.target.value)}
 							required
 						/>
 					</div>
 					<div className="flex flex-col gap-2">
-						<Label htmlFor="pe-slug">{t("settings.slug")}</Label>
+						<Label htmlFor="pf-slug">{t("settings.slug")}</Label>
 						<Input
-							id="pe-slug"
+							id="pf-slug"
 							value={slug}
 							onChange={(e) => setSlug(e.target.value)}
 							placeholder={t("settings.projects.slugPlaceholder")}
@@ -694,13 +634,31 @@ function ProjectEditDialog({
 					<div className="flex flex-col gap-2 sm:col-span-2">
 						<Label>{t("settings.projects.symbol")}</Label>
 						<SymbolPicker hue={hue} value={symbol} onChange={setSymbol} />
+						<p className="text-muted-foreground text-xs">
+							{t("settings.projects.symbolHint")}
+						</p>
 					</div>
 					<div className="flex flex-col gap-2 sm:col-span-2">
-						<Label htmlFor="pe-desc">
+						<Label>{t("settings.projects.members.label")}</Label>
+						<MemberChips
+							members={workspaceMembers}
+							selected={memberIds}
+							onToggle={toggleMember}
+						/>
+						<p className="text-muted-foreground text-xs">
+							{memberIds.length === 0
+								? t("settings.projects.members.noneHint")
+								: t("settings.projects.members.selectedCount", {
+										count: memberIds.length,
+									})}
+						</p>
+					</div>
+					<div className="flex flex-col gap-2 sm:col-span-2">
+						<Label htmlFor="pf-desc">
 							{t("settings.projects.descriptionLabel")}
 						</Label>
 						<Textarea
-							id="pe-desc"
+							id="pf-desc"
 							rows={3}
 							value={description}
 							onChange={(e) => setDescription(e.target.value)}
@@ -718,8 +676,13 @@ function ProjectEditDialog({
 						>
 							{t("settings.cancelAction")}
 						</Button>
-						<Button type="submit" disabled={!valid || mutation.isPending}>
-							{t("settings.projects.save")}
+						<Button
+							type="submit"
+							disabled={!valid || !membersReady || mutation.isPending}
+						>
+							{isEdit
+								? t("settings.projects.save")
+								: t("settings.projects.createConfirm")}
 						</Button>
 					</DialogFooter>
 				</form>
@@ -788,129 +751,5 @@ function DeleteProjectDialog({
 				</AlertDialogFooter>
 			</AlertDialogContent>
 		</AlertDialog>
-	);
-}
-
-/** Manage a project's members: list current members, add or remove them. */
-function ProjectMembersDialog({
-	project,
-	workspaceMembers,
-	onOpenChange,
-	onChanged,
-}: {
-	project: Project | null;
-	workspaceMembers: WorkspaceMember[];
-	onOpenChange: (open: boolean) => void;
-	onChanged: () => void;
-}) {
-	const { t } = useTranslation();
-	const queryClient = useQueryClient();
-	const [addUserId, setAddUserId] = useState("");
-	const projectId = project?.id ?? "";
-
-	const members = useQuery({
-		queryKey: ["project-member-list", projectId],
-		queryFn: () => api.listProjectMembers(projectId),
-		enabled: Boolean(projectId),
-	});
-
-	const refresh = async () => {
-		await queryClient.invalidateQueries({
-			queryKey: ["project-member-list", projectId],
-		});
-		onChanged();
-	};
-
-	const addMutation = useMutation({
-		mutationFn: (userId: string) => api.addProjectMember(projectId, { userId }),
-		onSuccess: async () => {
-			setAddUserId("");
-			await refresh();
-		},
-	});
-
-	const removeMutation = useMutation({
-		mutationFn: (userId: string) => api.removeProjectMember(projectId, userId),
-		onSuccess: () => refresh(),
-	});
-
-	const memberIds = new Set(
-		(members.data ?? []).map((m: ProjectMember) => m.userId),
-	);
-	const candidates = workspaceMembers.filter((m) => !memberIds.has(m.userId));
-
-	return (
-		<Dialog open={Boolean(project)} onOpenChange={onOpenChange}>
-			<DialogContent size="2xl">
-				<DialogHeader>
-					<DialogTitle>
-						{t("settings.projects.members.manageTitle")}
-					</DialogTitle>
-					<DialogDescription>
-						{t("settings.projects.members.manageDescription")}
-					</DialogDescription>
-				</DialogHeader>
-				<div className="flex items-end gap-2">
-					<div className="flex flex-1 flex-col gap-2">
-						<Label>{t("settings.projects.members.addLabel")}</Label>
-						<Select value={addUserId} onValueChange={setAddUserId}>
-							<SelectTrigger>
-								<SelectValue
-									placeholder={t("settings.projects.members.addPlaceholder")}
-								/>
-							</SelectTrigger>
-							<SelectContent>
-								{candidates.map((m) => (
-									<SelectItem key={m.userId} value={m.userId}>
-										{m.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<Button
-						type="button"
-						disabled={!addUserId || addMutation.isPending}
-						onClick={() => addMutation.mutate(addUserId)}
-					>
-						{t("settings.projects.members.addAction")}
-					</Button>
-				</div>
-				<div className="flex flex-col gap-1">
-					{(members.data ?? []).length === 0 ? (
-						<p className="text-muted-foreground py-2 text-sm">
-							{t("settings.projects.members.empty")}
-						</p>
-					) : (
-						(members.data ?? []).map((member: ProjectMember) => (
-							<div
-								key={member.userId}
-								className="flex items-center gap-3 rounded-md py-1.5"
-							>
-								<PersonAvatar
-									name={member.name}
-									imageUrl={member.imageUrl}
-									size={28}
-								/>
-								<div className="min-w-0 flex-1">
-									<p className="truncate text-sm font-medium">{member.name}</p>
-									<p className="text-muted-foreground truncate text-xs">
-										{member.email}
-									</p>
-								</div>
-								<Button
-									variant="ghost"
-									size="sm"
-									disabled={removeMutation.isPending}
-									onClick={() => removeMutation.mutate(member.userId)}
-								>
-									{t("settings.projects.members.removeAction")}
-								</Button>
-							</div>
-						))
-					)}
-				</div>
-			</DialogContent>
-		</Dialog>
 	);
 }
