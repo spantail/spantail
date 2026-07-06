@@ -36,13 +36,17 @@ export const githubMappingRoutes = new Hono<AppEnv>()
 			c.var.db,
 			workspaceId,
 		);
-		const projectNames = new Map<string, string>();
-		for (const mapping of mappings) {
-			if (!projectNames.has(mapping.projectId)) {
-				const project = await getProjectById(c.var.db, mapping.projectId);
-				projectNames.set(mapping.projectId, project?.name ?? "");
-			}
-		}
+		const projectIds = [...new Set(mappings.map((m) => m.projectId))];
+		const projectNames = new Map(
+			await Promise.all(
+				projectIds.map(
+					async (id): Promise<[string, string]> => [
+						id,
+						(await getProjectById(c.var.db, id))?.name ?? "",
+					],
+				),
+			),
+		);
 		return c.json(
 			mappings.map((mapping) => ({
 				id: mapping.id,

@@ -6,7 +6,10 @@ import {
 } from "@spantail/db";
 import { Hono } from "hono";
 
-import { handleIssueCommentCreated } from "../../lib/github/comment-pipeline";
+import {
+	handleIssueCommentCreated,
+	type IssueCommentPayload,
+} from "../../lib/github/comment-pipeline";
 import { decryptSecret } from "../../lib/github/crypto";
 import { verifyWebhookSignature } from "../../lib/github/webhook";
 import type { AppEnv } from "../../types";
@@ -53,7 +56,17 @@ export const githubWebhookRoutes = new Hono<AppEnv>().post("/", async (c) => {
 	}
 
 	const event = c.req.header("x-github-event");
-	const payload = JSON.parse(new TextDecoder().decode(body));
+	// Even a correctly signed body is untrusted input: malformed JSON must
+	// answer 400, not throw into a 5xx (which would trigger redelivery noise).
+	let payload: unknown;
+	try {
+		payload = JSON.parse(new TextDecoder().decode(body));
+	} catch {
+		return c.json(
+			{ error: { code: "bad_request", message: "Malformed JSON payload" } },
+			400,
+		);
+	}
 
 	if (event === "installation") {
 		const p = payload as InstallationPayload;
@@ -95,7 +108,8 @@ export const githubWebhookRoutes = new Hono<AppEnv>().post("/", async (c) => {
 				db: c.var.db,
 				origin: new URL(c.req.url).origin,
 				config,
-				payload,
+				// The pipeline reads every field defensively (optional types).
+				payload: payload as IssueCommentPayload,
 			}),
 		);
 		return c.body(null, 202);

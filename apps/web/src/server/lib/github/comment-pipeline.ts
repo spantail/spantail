@@ -85,9 +85,12 @@ export async function handleIssueCommentCreated(opts: {
 		// Bots (including this App's own replies) never trigger commands.
 		if (comment.user.type === "Bot") return;
 
+		// The prefix must stand alone as a token: "@spantailbot" or "@spantail2h"
+		// is somebody else's mention, not a command.
 		const body = comment.body.trim();
-		if (!body.toLowerCase().startsWith(COMMAND_PREFIX)) return;
-		const rawArgs = body.slice(COMMAND_PREFIX.length).trim();
+		const prefix = new RegExp(`^${COMMAND_PREFIX}(?=\\s|$)`, "i").exec(body);
+		if (!prefix) return;
+		const rawArgs = body.slice(prefix[0].length).trim();
 
 		// Redelivery guard: this comment already produced an entry.
 		if (await getWorkEntryGithubRefByCommentId(db, comment.id)) return;

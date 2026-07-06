@@ -401,6 +401,38 @@ it("is idempotent on the comment id", async () => {
 	expect(await listEntries()).toHaveLength(1);
 });
 
+it("ignores mentions of other accounts sharing the prefix", async () => {
+	await seedIntegration();
+	await runPipeline(
+		commentPayload({ body: "@spantailbot 2h", commentId: 9200 }),
+	);
+	await runPipeline(commentPayload({ body: "@spantail2h", commentId: 9201 }));
+	expect(await listEntries()).toHaveLength(0);
+	expect(
+		recorded.filter((call) => call.url.endsWith("/comments")),
+	).toHaveLength(0);
+	// The bare token is still a command (answered with usage help).
+	await runPipeline(commentPayload({ body: "@spantail", commentId: 9202 }));
+	const reply = recorded.find((call) =>
+		call.url.endsWith("/issues/5/comments"),
+	);
+	expect((reply?.body as { body: string }).body).toContain("Usage");
+});
+
+it("answers 400 for a signed but malformed body", async () => {
+	await seedIntegration();
+	const body = "{not json";
+	const res = await appFetch("/api/github/webhook", {
+		method: "POST",
+		headers: {
+			"x-github-event": "issue_comment",
+			"x-hub-signature-256": await signWebhookBody(TEST_WEBHOOK_SECRET, body),
+		},
+		body,
+	});
+	expect(res.status).toBe(400);
+});
+
 it("stays fully silent for outsiders and unmapped repos from outsiders", async () => {
 	await seedIntegration();
 	// Unlinked outsider: no reply, no reaction, no entry.
