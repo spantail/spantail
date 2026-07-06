@@ -662,7 +662,6 @@
 		},
 		"profile": {
 			"title": "Profile photo",
-			"description": "Upload an avatar shown next to your name across the workspace.",
 			"uploadAction": "Upload photo",
 			"remove": "Remove",
 			"hint": "PNG, JPEG, WebP, or GIF. Square images look best.",
@@ -700,8 +699,6 @@
 			"noneAvailable": "No social login providers are enabled on this instance."
 		},
 		"preferences": {
-			"title": "Preferences",
-			"description": "Set your timezone, language, and appearance.",
 			"language": "Language",
 			"theme": "Theme",
 			"themeSystem": "System",

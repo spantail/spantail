@@ -1,17 +1,14 @@
+import type { Me } from "@spantail/sdk";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
+import { PersonAvatar } from "@/components/person-avatar";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -23,6 +20,129 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+// Avatars are normalized client-side to a small square so storage and transfer
+// stay tiny regardless of the source image.
+const AVATAR_SIZE = 256;
+
+/** Center-crops to a square and re-encodes as a 256px WebP for upload. */
+async function toAvatarBlob(file: File): Promise<Blob> {
+	const bitmap = await createImageBitmap(file);
+	try {
+		const canvas = document.createElement("canvas");
+		canvas.width = AVATAR_SIZE;
+		canvas.height = AVATAR_SIZE;
+		const ctx = canvas.getContext("2d");
+		if (!ctx) throw new Error("canvas unsupported");
+		const side = Math.min(bitmap.width, bitmap.height);
+		const sx = (bitmap.width - side) / 2;
+		const sy = (bitmap.height - side) / 2;
+		ctx.drawImage(bitmap, sx, sy, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
+		return await new Promise<Blob>((resolve, reject) => {
+			canvas.toBlob(
+				(blob) => (blob ? resolve(blob) : reject(new Error("encode failed"))),
+				"image/webp",
+				0.85,
+			);
+		});
+	} finally {
+		bitmap.close();
+	}
+}
+
+function ProfilePicture() {
+	const { t } = useTranslation();
+	const queryClient = useQueryClient();
+	const inputRef = useRef<HTMLInputElement>(null);
+	const { data: me } = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
+
+	const onSettled = (updated: Me) => {
+		queryClient.setQueryData<Me>(["me"], updated);
+		void queryClient.invalidateQueries({ queryKey: ["me"] });
+	};
+
+	const uploadMutation = useMutation({
+		mutationFn: async (file: File) =>
+			api.updateAvatar(await toAvatarBlob(file)),
+		onSuccess: (updated) => {
+			onSettled(updated);
+			toast.success(t("settings.profile.updated"));
+		},
+		onError: () => toast.error(t("settings.profile.error")),
+	});
+
+	const removeMutation = useMutation({
+		mutationFn: () => api.removeAvatar(),
+		onSuccess: (updated) => {
+			onSettled(updated);
+			toast.success(t("settings.profile.removed"));
+		},
+		onError: () => toast.error(t("errors.generic")),
+	});
+
+	const busy = uploadMutation.isPending || removeMutation.isPending;
+	const user = me?.user;
+
+	function onPick(event: React.ChangeEvent<HTMLInputElement>) {
+		const file = event.target.files?.[0];
+		// Allow re-selecting the same file later by clearing the input.
+		event.target.value = "";
+		if (!file) return;
+		if (!file.type.startsWith("image/")) {
+			toast.error(t("settings.profile.error"));
+			return;
+		}
+		uploadMutation.mutate(file);
+	}
+
+	return (
+		<div className="flex flex-col gap-2">
+			<Label>{t("settings.profile.title")}</Label>
+			<div className="flex items-center gap-4">
+				<PersonAvatar
+					name={user?.name ?? "?"}
+					imageUrl={user?.imageUrl}
+					size={56}
+				/>
+				<div className="flex flex-col items-start gap-1.5">
+					<div className="flex flex-wrap gap-2">
+						{/* The mockup's small action buttons: h-8 with text-xs. */}
+						<Button
+							type="button"
+							variant="outline"
+							className="px-3 text-xs"
+							disabled={busy}
+							onClick={() => inputRef.current?.click()}
+						>
+							{t("settings.profile.uploadAction")}
+						</Button>
+						{user?.imageUrl && (
+							<Button
+								type="button"
+								variant="ghost"
+								className="px-3 text-xs"
+								disabled={busy}
+								onClick={() => removeMutation.mutate()}
+							>
+								{t("settings.profile.remove")}
+							</Button>
+						)}
+					</div>
+					<p className="text-muted-foreground text-xs">
+						{t("settings.profile.hint")}
+					</p>
+				</div>
+				<input
+					ref={inputRef}
+					type="file"
+					accept="image/png,image/jpeg,image/webp,image/gif"
+					className="hidden"
+					onChange={onPick}
+				/>
+			</div>
+		</div>
+	);
+}
 
 function browserTimezone(): string {
 	return Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -58,7 +178,7 @@ function TimezonePreference() {
 
 	return (
 		<form
-			className="flex flex-col gap-2"
+			className="flex max-w-md flex-col gap-2"
 			onSubmit={(e) => {
 				e.preventDefault();
 				mutation.mutate(next);
@@ -133,6 +253,9 @@ function SwatchBars({
 	);
 }
 
+// One panel for everything user-scoped — profile picture, language, timezone
+// and theme — per the design mockup. The section header carries the title, so
+// the card has no header of its own.
 export function PreferencesCard() {
 	const { t, i18n } = useTranslation();
 	const { theme, setTheme } = useTheme();
@@ -143,16 +266,9 @@ export function PreferencesCard() {
 
 	return (
 		<Card>
-			<CardHeader>
-				<CardTitle className="font-heading text-base">
-					{t("settings.preferences.title")}
-				</CardTitle>
-				<CardDescription>
-					{t("settings.preferences.description")}
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="flex max-w-md flex-col gap-6">
-				<div className="flex flex-col gap-2">
+			<CardContent className="flex flex-col gap-6">
+				<ProfilePicture />
+				<div className="flex max-w-md flex-col gap-2">
 					<Label htmlFor="language-select">
 						{t("settings.preferences.language")}
 					</Label>
@@ -172,7 +288,8 @@ export function PreferencesCard() {
 						</SelectContent>
 					</Select>
 				</div>
-				<div className="flex flex-col gap-2">
+				<TimezonePreference />
+				<div className="flex max-w-md flex-col gap-2">
 					<Label>{t("settings.preferences.theme")}</Label>
 					<div className="grid grid-cols-3 gap-3">
 						{THEMES.map((option) => {
@@ -191,7 +308,7 @@ export function PreferencesCard() {
 									)}
 								>
 									{"split" in option ? (
-										<div className="flex h-14 overflow-hidden rounded-lg border border-border">
+										<div className="border-border flex h-14 overflow-hidden rounded-lg border">
 											<SwatchBars
 												className="flex-1"
 												bg={LIGHT.bg}
@@ -231,7 +348,6 @@ export function PreferencesCard() {
 						})}
 					</div>
 				</div>
-				<TimezonePreference />
 			</CardContent>
 		</Card>
 	);

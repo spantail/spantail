@@ -661,7 +661,6 @@
 		},
 		"profile": {
 			"title": "プロフィール画像",
-			"description": "ワークスペース全体で名前の横に表示されるアバターをアップロードします。",
 			"uploadAction": "画像をアップロード",
 			"remove": "削除",
 			"hint": "PNG・JPEG・WebP・GIF に対応。正方形の画像が綺麗に表示されます。",
@@ -699,8 +698,6 @@
 			"noneAvailable": "このインスタンスではソーシャルログインが有効化されていません。"
 		},
 		"preferences": {
-			"title": "環境設定",
-			"description": "タイムゾーン・言語・外観を設定します。",
 			"language": "言語",
 			"theme": "テーマ",
 			"themeSystem": "システム",
