@@ -337,7 +337,6 @@ function ProjectsCard({ canManage }: { canManage: boolean }) {
 				{canManage && (
 					<CardAction>
 						<Button
-							size="sm"
 							onClick={() => {
 								setEditing(null);
 								setFormOpen(true);

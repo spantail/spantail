@@ -145,7 +145,6 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceWithRole }) {
 										<Button
 											type="button"
 											variant="outline"
-											size="sm"
 											disabled={logoBusy}
 											onClick={() => inputRef.current?.click()}
 										>
@@ -155,7 +154,6 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceWithRole }) {
 											<Button
 												type="button"
 												variant="ghost"
-												size="sm"
 												disabled={logoBusy}
 												onClick={() => removeMutation.mutate()}
 											>
