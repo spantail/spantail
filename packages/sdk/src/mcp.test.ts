@@ -80,7 +80,7 @@ async function connect(client: SpantailClient) {
 	return mcpClient;
 }
 
-it("exposes the seventeen spantail tools", async () => {
+it("exposes the eighteen spantail tools", async () => {
 	const { stub } = makeStub();
 	const client = await connect(stub);
 
@@ -99,6 +99,7 @@ it("exposes the seventeen spantail tools", async () => {
 		"list_workspaces",
 		"log_work",
 		"log_work_batch",
+		"log_work_github",
 		"preview_report",
 		"search",
 		"update_entry",

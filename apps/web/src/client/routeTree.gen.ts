@@ -27,6 +27,7 @@ import { Route as SettingsSystemRouteImport } from './routes/settings/system'
 import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
 import { Route as SettingsPreferencesRouteImport } from './routes/settings/preferences'
 import { Route as SettingsOauthRouteImport } from './routes/settings/oauth'
+import { Route as SettingsGithubRouteImport } from './routes/settings/github'
 import { Route as SettingsFeaturesRouteImport } from './routes/settings/features'
 import { Route as SettingsEmailRouteImport } from './routes/settings/email'
 import { Route as SettingsAuthenticationRouteImport } from './routes/settings/authentication'
@@ -45,6 +46,7 @@ import { Route as ReportsTabIndexRouteImport } from './routes/reports/$tab/index
 import { Route as MessagesFolderIndexRouteImport } from './routes/messages/$folder/index'
 import { Route as SettingsWorkspaceProjectsRouteImport } from './routes/settings/_workspace/projects'
 import { Route as SettingsWorkspaceMembersRouteImport } from './routes/settings/_workspace/members'
+import { Route as SettingsWorkspaceIntegrationsRouteImport } from './routes/settings/_workspace/integrations'
 import { Route as SettingsWorkspaceGeneralRouteImport } from './routes/settings/_workspace/general'
 import { Route as ReportsTabReportIdRouteImport } from './routes/reports/$tab/$reportId'
 import { Route as MessagesFolderMessageIdRouteImport } from './routes/messages/$folder/$messageId'
@@ -142,6 +144,11 @@ const SettingsOauthRoute = SettingsOauthRouteImport.update({
   path: '/oauth',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsGithubRoute = SettingsGithubRouteImport.update({
+  id: '/github',
+  path: '/github',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsFeaturesRoute = SettingsFeaturesRouteImport.update({
   id: '/features',
   path: '/features',
@@ -233,6 +240,12 @@ const SettingsWorkspaceMembersRoute =
     path: '/members',
     getParentRoute: () => SettingsWorkspaceRoute,
   } as any)
+const SettingsWorkspaceIntegrationsRoute =
+  SettingsWorkspaceIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => SettingsWorkspaceRoute,
+  } as any)
 const SettingsWorkspaceGeneralRoute =
   SettingsWorkspaceGeneralRouteImport.update({
     id: '/general',
@@ -293,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/settings/authentication': typeof SettingsAuthenticationRoute
   '/settings/email': typeof SettingsEmailRoute
   '/settings/features': typeof SettingsFeaturesRoute
+  '/settings/github': typeof SettingsGithubRoute
   '/settings/oauth': typeof SettingsOauthRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
@@ -307,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/settings/general': typeof SettingsWorkspaceGeneralRoute
+  '/settings/integrations': typeof SettingsWorkspaceIntegrationsRoute
   '/settings/members': typeof SettingsWorkspaceMembersRoute
   '/settings/projects': typeof SettingsWorkspaceProjectsRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
@@ -331,6 +346,7 @@ export interface FileRoutesByTo {
   '/settings/authentication': typeof SettingsAuthenticationRoute
   '/settings/email': typeof SettingsEmailRoute
   '/settings/features': typeof SettingsFeaturesRoute
+  '/settings/github': typeof SettingsGithubRoute
   '/settings/oauth': typeof SettingsOauthRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
@@ -344,6 +360,7 @@ export interface FileRoutesByTo {
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/settings/general': typeof SettingsWorkspaceGeneralRoute
+  '/settings/integrations': typeof SettingsWorkspaceIntegrationsRoute
   '/settings/members': typeof SettingsWorkspaceMembersRoute
   '/settings/projects': typeof SettingsWorkspaceProjectsRoute
   '/messages/$folder': typeof MessagesFolderIndexRoute
@@ -375,6 +392,7 @@ export interface FileRoutesById {
   '/settings/authentication': typeof SettingsAuthenticationRoute
   '/settings/email': typeof SettingsEmailRoute
   '/settings/features': typeof SettingsFeaturesRoute
+  '/settings/github': typeof SettingsGithubRoute
   '/settings/oauth': typeof SettingsOauthRoute
   '/settings/preferences': typeof SettingsPreferencesRoute
   '/settings/profile': typeof SettingsProfileRoute
@@ -390,6 +408,7 @@ export interface FileRoutesById {
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
   '/settings/_workspace/general': typeof SettingsWorkspaceGeneralRoute
+  '/settings/_workspace/integrations': typeof SettingsWorkspaceIntegrationsRoute
   '/settings/_workspace/members': typeof SettingsWorkspaceMembersRoute
   '/settings/_workspace/projects': typeof SettingsWorkspaceProjectsRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
@@ -421,6 +440,7 @@ export interface FileRouteTypes {
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/features'
+    | '/settings/github'
     | '/settings/oauth'
     | '/settings/preferences'
     | '/settings/profile'
@@ -435,6 +455,7 @@ export interface FileRouteTypes {
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
     | '/settings/general'
+    | '/settings/integrations'
     | '/settings/members'
     | '/settings/projects'
     | '/messages/$folder/'
@@ -459,6 +480,7 @@ export interface FileRouteTypes {
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/features'
+    | '/settings/github'
     | '/settings/oauth'
     | '/settings/preferences'
     | '/settings/profile'
@@ -472,6 +494,7 @@ export interface FileRouteTypes {
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
     | '/settings/general'
+    | '/settings/integrations'
     | '/settings/members'
     | '/settings/projects'
     | '/messages/$folder'
@@ -502,6 +525,7 @@ export interface FileRouteTypes {
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/features'
+    | '/settings/github'
     | '/settings/oauth'
     | '/settings/preferences'
     | '/settings/profile'
@@ -517,6 +541,7 @@ export interface FileRouteTypes {
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
     | '/settings/_workspace/general'
+    | '/settings/_workspace/integrations'
     | '/settings/_workspace/members'
     | '/settings/_workspace/projects'
     | '/messages/$folder/'
@@ -666,6 +691,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsOauthRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/github': {
+      id: '/settings/github'
+      path: '/github'
+      fullPath: '/settings/github'
+      preLoaderRoute: typeof SettingsGithubRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/features': {
       id: '/settings/features'
       path: '/features'
@@ -790,6 +822,13 @@ declare module '@tanstack/react-router' {
       path: '/members'
       fullPath: '/settings/members'
       preLoaderRoute: typeof SettingsWorkspaceMembersRouteImport
+      parentRoute: typeof SettingsWorkspaceRoute
+    }
+    '/settings/_workspace/integrations': {
+      id: '/settings/_workspace/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof SettingsWorkspaceIntegrationsRouteImport
       parentRoute: typeof SettingsWorkspaceRoute
     }
     '/settings/_workspace/general': {
@@ -936,12 +975,14 @@ const ReportsRouteWithChildren =
 
 interface SettingsWorkspaceRouteChildren {
   SettingsWorkspaceGeneralRoute: typeof SettingsWorkspaceGeneralRoute
+  SettingsWorkspaceIntegrationsRoute: typeof SettingsWorkspaceIntegrationsRoute
   SettingsWorkspaceMembersRoute: typeof SettingsWorkspaceMembersRoute
   SettingsWorkspaceProjectsRoute: typeof SettingsWorkspaceProjectsRoute
 }
 
 const SettingsWorkspaceRouteChildren: SettingsWorkspaceRouteChildren = {
   SettingsWorkspaceGeneralRoute: SettingsWorkspaceGeneralRoute,
+  SettingsWorkspaceIntegrationsRoute: SettingsWorkspaceIntegrationsRoute,
   SettingsWorkspaceMembersRoute: SettingsWorkspaceMembersRoute,
   SettingsWorkspaceProjectsRoute: SettingsWorkspaceProjectsRoute,
 }
@@ -957,6 +998,7 @@ interface SettingsRouteChildren {
   SettingsAuthenticationRoute: typeof SettingsAuthenticationRoute
   SettingsEmailRoute: typeof SettingsEmailRoute
   SettingsFeaturesRoute: typeof SettingsFeaturesRoute
+  SettingsGithubRoute: typeof SettingsGithubRoute
   SettingsOauthRoute: typeof SettingsOauthRoute
   SettingsPreferencesRoute: typeof SettingsPreferencesRoute
   SettingsProfileRoute: typeof SettingsProfileRoute
@@ -975,6 +1017,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsAuthenticationRoute: SettingsAuthenticationRoute,
   SettingsEmailRoute: SettingsEmailRoute,
   SettingsFeaturesRoute: SettingsFeaturesRoute,
+  SettingsGithubRoute: SettingsGithubRoute,
   SettingsOauthRoute: SettingsOauthRoute,
   SettingsPreferencesRoute: SettingsPreferencesRoute,
   SettingsProfileRoute: SettingsProfileRoute,

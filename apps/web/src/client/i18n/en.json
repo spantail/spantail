@@ -38,7 +38,9 @@
 		"continueWithGoogle": "Continue with Google",
 		"continueWithGithub": "Continue with GitHub"
 	},
-	"errors": { "generic": "Something went wrong. Please try again." },
+	"errors": {
+		"generic": "Something went wrong. Please try again."
+	},
 	"invite": {
 		"title": "Accept your invitation",
 		"description": "Set up your Spantail account for {{email}}.",
@@ -47,7 +49,9 @@
 		"acceptAction": "Create account",
 		"googleHint": "Use the Google account for {{email}} to accept without a password."
 	},
-	"home": { "subtitle": "{{date}} · your time at a glance." },
+	"home": {
+		"subtitle": "{{date}} · your time at a glance."
+	},
 	"nav": {
 		"home": "Home",
 		"logWork": "Log work",
@@ -94,7 +98,11 @@
 		"output": "Output",
 		"dailyActivity": "Daily activity",
 		"tokensSplit": "Input {{input}} · Output {{output}}",
-		"metric": { "sessions": "Sessions", "time": "Time", "tokens": "Tokens" },
+		"metric": {
+			"sessions": "Sessions",
+			"time": "Time",
+			"tokens": "Tokens"
+		},
 		"table": {
 			"date": "Date",
 			"duration": "Duration",
@@ -388,7 +396,10 @@
 		"unreadSummary_other": "You have {{count}} unread reports to review.",
 		"allCaughtUp": "You're all caught up.",
 		"markAllRead": "Mark all as read",
-		"tab": { "all": "All", "unread": "Unread" },
+		"tab": {
+			"all": "All",
+			"unread": "Unread"
+		},
 		"empty": "No notifications yet.",
 		"emptyUnread": "No unread notifications.",
 		"sentYouAReport": "sent you a report",
@@ -411,7 +422,10 @@
 			"archive": "Archive",
 			"trash": "Trash"
 		},
-		"list": { "to": "To: {{names}}", "noMessage": "No message" },
+		"list": {
+			"to": "To: {{names}}",
+			"noMessage": "No message"
+		},
 		"toolbar": {
 			"close": "Close",
 			"prev": "Previous",
@@ -514,7 +528,11 @@
 		"duplicateAction": "Duplicate",
 		"empty": "No templates yet."
 	},
-	"roles": { "owner": "Owner", "admin": "Admin", "member": "Member" },
+	"roles": {
+		"owner": "Owner",
+		"admin": "Admin",
+		"member": "Member"
+	},
 	"settings": {
 		"title": "Settings",
 		"rail": { "close": "Close" },
@@ -528,6 +546,7 @@
 			"general": "General",
 			"projects": "Projects",
 			"members": "Members",
+			"integrations": "Integrations",
 			"templates": "Report templates",
 			"tokens": "API tokens",
 			"agents": "Agents",
@@ -535,6 +554,7 @@
 			"authentication": "Authentication",
 			"systemUsers": "Users",
 			"features": "Features",
+			"github": "GitHub",
 			"systemAbout": "System"
 		},
 		"systemAdminOnly": "Only instance admins can access this section.",
@@ -708,7 +728,19 @@
 			"disconnect": "Disconnect",
 			"disconnected": "Account disconnected.",
 			"lastAccount": "This is your only sign-in method, so it cannot be disconnected. Set a password or link another account first.",
-			"noneAvailable": "No social login providers are enabled on this instance."
+			"noneAvailable": "No social login providers are enabled on this instance.",
+			"github": {
+				"title": "GitHub for work logging",
+				"description": "Connect your GitHub account so @spantail commands in issues and PRs are attributed to you. This link is used only for work logging, never for sign-in.",
+				"connectedAs": "Connected as {{login}}",
+				"notConnected": "Not connected",
+				"connect": "Connect GitHub",
+				"disconnect": "Disconnect",
+				"linked": "GitHub account connected.",
+				"alreadyLinked": "That GitHub account is already connected to another user.",
+				"disconnected": "GitHub account disconnected.",
+				"error": "Connecting GitHub failed. Try again."
+			}
 		},
 		"preferences": {
 			"language": "Language",
@@ -858,6 +890,64 @@
 				"blue": "Blue",
 				"violet": "Violet",
 				"pink": "Pink"
+			}
+		},
+		"github": {
+			"title": "GitHub App",
+			"adminBanner": "Register this instance's own GitHub App to log work from issue and PR comments. Credentials are received automatically and stored encrypted.",
+			"flowError": "GitHub App registration failed ({{code}}). Start the registration again.",
+			"register": {
+				"title": "Register a GitHub App",
+				"description": "Creates a private GitHub App owned by your account or organization via GitHub's App Manifest flow. The owner decides which repositories the App can be installed on.",
+				"ownerLabel": "App owner",
+				"ownerOrg": "An organization",
+				"ownerPersonal": "My personal account",
+				"orgLabel": "Organization name",
+				"hint": "You will be redirected to GitHub to approve the App. After approval, GitHub returns here and asks where to install it.",
+				"action": "Register on GitHub"
+			},
+			"app": {
+				"title": "GitHub App",
+				"description": "This instance's registered App. Webhooks from its installations are delivered here.",
+				"slug": "App",
+				"owner": "Owner",
+				"appId": "App ID",
+				"viewOnGithub": "View on GitHub",
+				"remove": "Remove configuration",
+				"removeConfirm": "Remove the GitHub App configuration? Repo mappings are kept, but comment commands stop working until an App is registered again.",
+				"removed": "GitHub App configuration removed."
+			},
+			"installations": {
+				"title": "Installations",
+				"description": "Accounts and organizations the App is installed on. Repositories become mappable in each workspace's Integrations settings.",
+				"empty": "The App is not installed anywhere yet.",
+				"install": "Install it on GitHub",
+				"account": "Account",
+				"type": "Type",
+				"suspended": "Suspended"
+			}
+		},
+		"integrations": {
+			"mappings": {
+				"title": "GitHub repositories",
+				"description": "Map repositories to projects so @spantail comments and #N log-work commands land in the right project. One repository maps to one project across the whole instance.",
+				"repo": "Repository",
+				"project": "Project",
+				"projectPlaceholder": "Select a project",
+				"source": "Source",
+				"sourceInstallation": "Installation",
+				"sourceManual": "Manual",
+				"add": "Add mapping",
+				"added": "Repository mapped.",
+				"remove": "Remove",
+				"removed": "Mapping removed.",
+				"empty": "No repositories are mapped to this workspace yet."
+			},
+			"unmapped": {
+				"title": "Unmapped repositories",
+				"description": "Repositories the GitHub App can reach that are not mapped to any project yet.",
+				"empty": "Every reachable repository is mapped.",
+				"map": "Map"
 			}
 		}
 	},

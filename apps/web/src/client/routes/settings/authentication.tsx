@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 
 import { ConnectedAccountsCard } from "@/components/connected-accounts-card";
+import { GithubConnectCard } from "@/components/github-connect-card";
 import { PasswordCard } from "@/components/password-card";
 import { SettingsSection } from "@/components/settings-section";
 
@@ -16,6 +17,7 @@ function AuthenticationSection() {
 			<div className="flex flex-col gap-4">
 				<PasswordCard />
 				<ConnectedAccountsCard />
+				<GithubConnectCard />
 			</div>
 		</SettingsSection>
 	);

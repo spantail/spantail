@@ -38,7 +38,9 @@
 		"continueWithGoogle": "Google でログイン",
 		"continueWithGithub": "GitHub でログイン"
 	},
-	"errors": { "generic": "問題が発生しました。もう一度お試しください。" },
+	"errors": {
+		"generic": "問題が発生しました。もう一度お試しください。"
+	},
 	"invite": {
 		"title": "招待を受ける",
 		"description": "{{email}} の Spantail アカウントを設定します。",
@@ -47,7 +49,9 @@
 		"acceptAction": "アカウントを作成",
 		"googleHint": "{{email}} の Google アカウントを使うと、パスワードなしで承諾できます。"
 	},
-	"home": { "subtitle": "{{date}} · あなたの時間をひと目で。" },
+	"home": {
+		"subtitle": "{{date}} · あなたの時間をひと目で。"
+	},
 	"nav": {
 		"home": "ホーム",
 		"logWork": "記録する",
@@ -387,7 +391,10 @@
 		"unreadSummary_other": "未読のレポートが {{count}} 件あります。",
 		"allCaughtUp": "すべて確認済みです。",
 		"markAllRead": "すべて既読にする",
-		"tab": { "all": "すべて", "unread": "未読" },
+		"tab": {
+			"all": "すべて",
+			"unread": "未読"
+		},
 		"empty": "通知はまだありません。",
 		"emptyUnread": "未読の通知はありません。",
 		"sentYouAReport": "さんがレポートを送信しました",
@@ -410,7 +417,10 @@
 			"archive": "アーカイブ",
 			"trash": "ゴミ箱"
 		},
-		"list": { "to": "宛先: {{names}}", "noMessage": "メッセージなし" },
+		"list": {
+			"to": "宛先: {{names}}",
+			"noMessage": "メッセージなし"
+		},
 		"toolbar": {
 			"close": "閉じる",
 			"prev": "前へ",
@@ -513,7 +523,11 @@
 		"duplicateAction": "複製",
 		"empty": "テンプレートはまだありません。"
 	},
-	"roles": { "owner": "オーナー", "admin": "管理者", "member": "メンバー" },
+	"roles": {
+		"owner": "オーナー",
+		"admin": "管理者",
+		"member": "メンバー"
+	},
 	"settings": {
 		"title": "設定",
 		"rail": { "close": "閉じる" },
@@ -527,6 +541,7 @@
 			"general": "一般",
 			"projects": "プロジェクト",
 			"members": "メンバー",
+			"integrations": "連携",
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
 			"agents": "エージェント",
@@ -534,6 +549,7 @@
 			"authentication": "認証",
 			"systemUsers": "ユーザー",
 			"features": "機能",
+			"github": "GitHub",
 			"systemAbout": "システム"
 		},
 		"systemAdminOnly": "このセクションはインスタンス管理者のみがアクセスできます。",
@@ -707,7 +723,19 @@
 			"disconnect": "連携を解除",
 			"disconnected": "連携を解除しました。",
 			"lastAccount": "これが唯一のサインイン手段のため解除できません。先にパスワードを設定するか、別のアカウントを連携してください。",
-			"noneAvailable": "このインスタンスではソーシャルログインが有効化されていません。"
+			"noneAvailable": "このインスタンスではソーシャルログインが有効化されていません。",
+			"github": {
+				"title": "作業記録用の GitHub 連携",
+				"description": "GitHub アカウントを連携すると、Issue や PR での @spantail コマンドがあなたの記録として登録されます。この連携は作業記録専用で、サインインには使われません。",
+				"connectedAs": "{{login}} として連携済み",
+				"notConnected": "未連携",
+				"connect": "GitHub を連携",
+				"disconnect": "連携を解除",
+				"linked": "GitHub アカウントを連携しました。",
+				"alreadyLinked": "その GitHub アカウントは別のユーザーに連携されています。",
+				"disconnected": "GitHub アカウントの連携を解除しました。",
+				"error": "GitHub の連携に失敗しました。もう一度お試しください。"
+			}
 		},
 		"preferences": {
 			"language": "言語",
@@ -857,6 +885,64 @@
 				"blue": "ブルー",
 				"violet": "バイオレット",
 				"pink": "ピンク"
+			}
+		},
+		"github": {
+			"title": "GitHub App",
+			"adminBanner": "このインスタンス専用の GitHub App を登録すると、Issue や PR のコメントから作業を記録できます。資格情報は自動で受領し、暗号化して保存します。",
+			"flowError": "GitHub App の登録に失敗しました（{{code}}）。もう一度登録を開始してください。",
+			"register": {
+				"title": "GitHub App を登録",
+				"description": "GitHub の App Manifest フローで、あなたのアカウントまたは組織が所有するプライベートな GitHub App を作成します。所有者によって、App をインストールできるリポジトリの範囲が決まります。",
+				"ownerLabel": "App の所有者",
+				"ownerOrg": "組織",
+				"ownerPersonal": "個人アカウント",
+				"orgLabel": "組織名",
+				"hint": "GitHub に移動して App を承認します。承認後は GitHub からこの画面に戻り、インストール先を選択します。",
+				"action": "GitHub で登録"
+			},
+			"app": {
+				"title": "GitHub App",
+				"description": "このインスタンスに登録済みの App です。インストール先からの webhook はここに届きます。",
+				"slug": "App",
+				"owner": "所有者",
+				"appId": "App ID",
+				"viewOnGithub": "GitHub で表示",
+				"remove": "設定を削除",
+				"removeConfirm": "GitHub App の設定を削除しますか？ リポジトリのマッピングは残りますが、再登録するまでコメントコマンドは動作しません。",
+				"removed": "GitHub App の設定を削除しました。"
+			},
+			"installations": {
+				"title": "インストール",
+				"description": "App がインストールされているアカウント・組織です。リポジトリは各ワークスペースの「連携」設定でマッピングできます。",
+				"empty": "App はまだどこにもインストールされていません。",
+				"install": "GitHub でインストール",
+				"account": "アカウント",
+				"type": "種別",
+				"suspended": "停止中"
+			}
+		},
+		"integrations": {
+			"mappings": {
+				"title": "GitHub リポジトリ",
+				"description": "リポジトリをプロジェクトにマッピングすると、@spantail コメントや #N 形式の作業記録が正しいプロジェクトに記録されます。1 つのリポジトリはインスタンス全体で 1 つのプロジェクトに対応します。",
+				"repo": "リポジトリ",
+				"project": "プロジェクト",
+				"projectPlaceholder": "プロジェクトを選択",
+				"source": "登録元",
+				"sourceInstallation": "インストール",
+				"sourceManual": "手動",
+				"add": "マッピングを追加",
+				"added": "リポジトリをマッピングしました。",
+				"remove": "削除",
+				"removed": "マッピングを削除しました。",
+				"empty": "このワークスペースにマッピングされたリポジトリはまだありません。"
+			},
+			"unmapped": {
+				"title": "未マッピングのリポジトリ",
+				"description": "GitHub App から到達できるうち、まだどのプロジェクトにもマッピングされていないリポジトリです。",
+				"empty": "到達可能なリポジトリはすべてマッピング済みです。",
+				"map": "マッピング"
 			}
 		}
 	},
