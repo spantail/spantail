@@ -1,6 +1,6 @@
 import type { Project, WorkEntry, WorkspaceMember } from "@spantail/core";
 import { formatDuration } from "@spantail/core";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EntryActions } from "@/components/entry-actions";
@@ -41,8 +41,11 @@ export function EntryList({
 		id
 			? (projects.find((p) => p.id === id)?.name ?? id)
 			: t("projects.unassigned");
-	const member = (id: string) => members.find((m) => m.userId === id);
-	const memberName = (id: string) => member(id)?.name ?? id;
+	const memberById = useMemo(
+		() => new Map(members.map((m) => [m.userId, m])),
+		[members],
+	);
+	const memberName = (id: string) => memberById.get(id)?.name ?? id;
 
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(-1);
@@ -119,7 +122,7 @@ export function EntryList({
 								<span className="flex items-center gap-2">
 									<PersonAvatar
 										name={memberName(entry.userId)}
-										imageUrl={member(entry.userId)?.imageUrl}
+										imageUrl={memberById.get(entry.userId)?.imageUrl}
 										size={22}
 									/>
 									{memberName(entry.userId)}
