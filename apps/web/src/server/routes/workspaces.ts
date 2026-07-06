@@ -101,8 +101,14 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		await deleteWorkspace(c.var.db, workspaceId);
 		// Logo cleanup after the row is gone: a failed R2 delete merely orphans an
 		// unreachable object, while the reverse order could strip the logo from a
-		// workspace that then failed to delete.
-		await c.env.UPLOADS.delete(workspaceLogoKey(workspaceId));
+		// workspace that then failed to delete. The delete has already succeeded
+		// at this point, so a cleanup failure must not turn the response into an
+		// error — a retry would only see 404.
+		try {
+			await c.env.UPLOADS.delete(workspaceLogoKey(workspaceId));
+		} catch (error) {
+			console.error("workspace logo cleanup failed", workspaceId, error);
+		}
 		return c.body(null, 204);
 	})
 	// Serves the logo through the Worker so the session cookie authorizes it
