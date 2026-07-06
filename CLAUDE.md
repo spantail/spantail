@@ -62,7 +62,7 @@ pnpm deploy             # wrangler deploy (apps/web)
   its rail replaces the workspace navigation (title + Close back to the workspace) and groups every
   management section — Workspace (general, projects, members), Report (report templates —
   instance-scoped, gated to instance admins and users with the template-author capability),
-  Account (preferences: profile + language + theme + timezone, authentication, API tokens, agents),
+  Account (preferences — profile photo, language, theme, timezone — plus authentication, API tokens, agents),
   and System (instance admin only: user management, features; About is public) — each a
   deep-linkable child route (`/settings/<section>`). The workspace-scoped sections carry a middle
   workspaces pane: the sections edit the workspace selected there (settings-local, defaulting to

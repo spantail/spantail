@@ -30,6 +30,7 @@ export function SettingsWorkspacePane() {
 						<button
 							key={workspace.id}
 							type="button"
+							aria-pressed={active}
 							onClick={() => selectId(workspace.id)}
 							className={cn(
 								"border-border/60 relative flex w-full items-center gap-3 border-b px-4 py-3 text-left transition-colors",

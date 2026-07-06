@@ -20,7 +20,7 @@ export function SettingsSection({
 	return (
 		<section className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
 			<div className="border-border flex h-14 shrink-0 items-center gap-2 border-b px-4 md:px-6">
-				<span className="shrink-0 text-sm font-semibold">{title}</span>
+				<h1 className="shrink-0 text-sm font-semibold">{title}</h1>
 				{meta && (
 					<span className="hidden min-w-0 items-center gap-2 md:flex">
 						<span className="text-muted-foreground/50">·</span>
