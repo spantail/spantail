@@ -45,7 +45,9 @@ export async function setStateCookie(
 	setCookie(c, STATE_COOKIE, state, {
 		path: "/api/github",
 		httpOnly: true,
-		secure: true,
+		// Follows the request scheme so the flows work in http local dev
+		// (Safari rejects Secure cookies even on http://localhost).
+		secure: new URL(c.req.url).protocol === "https:",
 		sameSite: "Lax",
 		maxAge: STATE_TTL_MS / 1000,
 	});

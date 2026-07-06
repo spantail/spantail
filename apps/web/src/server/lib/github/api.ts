@@ -38,12 +38,17 @@ async function githubRequest<T>(
 	},
 ): Promise<T> {
 	const url = init.url ?? `${API_BASE}${path}`;
-	const headers: Record<string, string> = {
-		accept: "application/vnd.github+json",
-		"x-github-api-version": "2022-11-28",
-		// GitHub rejects requests without a User-Agent.
-		"user-agent": "spantail",
-	};
+	// The two github.com (non-API) endpoints are not the REST API: the OAuth
+	// token exchange returns form-encoded text unless plain JSON is requested,
+	// and the API-version header does not apply there.
+	const headers: Record<string, string> = init.url
+		? { accept: "application/json", "user-agent": "spantail" }
+		: {
+				accept: "application/vnd.github+json",
+				"x-github-api-version": "2022-11-28",
+				// GitHub rejects requests without a User-Agent.
+				"user-agent": "spantail",
+			};
 	if (init.token) headers.authorization = `Bearer ${init.token}`;
 	let body: string | undefined;
 	if (init.form !== undefined) {

@@ -30,6 +30,7 @@ import type { AppEnv } from "../types";
 export const githubMappingRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		const workspaceId = c.req.param("id") ?? "";
+		requireScope(c, "read");
 		await requireWorkspaceAccess(c, workspaceId);
 		const mappings = await listGithubRepoMappingsByWorkspace(
 			c.var.db,
