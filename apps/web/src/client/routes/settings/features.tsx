@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AdminBanner } from "@/components/admin-banner";
+import { SettingsSection } from "@/components/settings-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authed/settings/features")({
+export const Route = createFileRoute("/settings/features")({
 	component: FeaturesSection,
 });
 
@@ -30,6 +31,15 @@ export const Route = createFileRoute("/_authed/settings/features")({
 // independent setting with its own query key, rendered as a stacked card under
 // a single admin gate.
 function FeaturesSection() {
+	const { t } = useTranslation();
+	return (
+		<SettingsSection title={t("settings.nav.features")}>
+			<FeaturesContent />
+		</SettingsSection>
+	);
+}
+
+function FeaturesContent() {
 	const { t } = useTranslation();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-
+import { SettingsSection } from "@/components/settings-section";
 import { SpantailMark } from "@/components/spantail-mark";
 import {
 	Card,
@@ -10,7 +10,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 
-export const Route = createFileRoute("/_authed/settings/system")({
+export const Route = createFileRoute("/settings/system")({
 	component: SystemSection,
 });
 
@@ -26,6 +26,15 @@ function releaseUrl(version: string): string {
 }
 
 function SystemSection() {
+	const { t } = useTranslation();
+	return (
+		<SettingsSection title={t("settings.nav.systemAbout")}>
+			<SystemContent />
+		</SettingsSection>
+	);
+}
+
+function SystemContent() {
 	const { t } = useTranslation();
 	const version = __APP_VERSION__;
 	const year = new Date().getFullYear();

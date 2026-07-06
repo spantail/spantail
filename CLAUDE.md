@@ -57,12 +57,16 @@ pnpm deploy             # wrangler deploy (apps/web)
   `src/client/components/ui` (generated; avoid hand-editing beyond theming).
 - **App shell.** The root layout is based on the shadcn/ui Sidebar block `sidebar-07` (collapses
   to icons). The sidebar is workspace-scoped only: workspace switcher at the top, workspace
-  navigation, and a single Settings cog pinned at the bottom that opens the Settings hub
-  (`/settings`). Settings is one screen with a left sub-nav grouping every management section —
-  Workspace (general, projects, members), Account (API tokens, password, preferences: language +
-  theme + timezone), Reporting (report templates — instance-scoped, gated to instance admins and users with
-  the template-author capability), and System (instance admin only: user management, email,
-  social login) — each a deep-linkable child route (`/settings/<section>`).
+  navigation, and a single Settings cog pinned at the bottom that opens Settings.
+  Settings (`/settings`) is a full-screen takeover, a sibling shell to `/reports` and `/messages`:
+  its rail replaces the workspace navigation (title + Close back to the workspace) and groups every
+  management section — Workspace (general, projects, members), Report (report templates —
+  instance-scoped, gated to instance admins and users with the template-author capability),
+  Account (preferences — profile photo, language, theme, timezone — plus authentication, API tokens, agents),
+  and System (instance admin only: user management, features; About is public) — each a
+  deep-linkable child route (`/settings/<section>`). The workspace-scoped sections carry a middle
+  workspaces pane: the sections edit the workspace selected there (settings-local, defaulting to
+  the active workspace), so admins can manage any workspace without switching the app.
   User-scoped surfaces — reports and the user menu (account, logout) — live in the header's
   top-right corner, never in the sidebar. New screens render inside this shell.
 - **Dates and time.** Timezone is a per-user concept (`user.timezone`, null → UTC); workspaces and

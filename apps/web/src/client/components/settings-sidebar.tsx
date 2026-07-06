@@ -1,24 +1,35 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-	BotIcon,
 	FileTextIcon,
 	FingerprintIcon,
 	FolderIcon,
 	InfoIcon,
 	KeyIcon,
+	LayersIcon,
 	SettingsIcon,
 	ShieldIcon,
-	ToggleRightIcon,
-	UserCircleIcon,
-	UsersIcon,
+	SlidersHorizontalIcon,
+	TerminalIcon,
+	ZapIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import { cn } from "@/lib/utils";
+import { RailHeader } from "@/components/rail-header";
+import {
+	Sidebar,
+	SidebarContent,
+	SidebarGroup,
+	SidebarGroupLabel,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	SidebarRail,
+	useSidebar,
+} from "@/components/ui/sidebar";
 
-// Sections of the Settings hub, grouped by scope. Mirrors the design's
-// SubNav: workspace-scoped settings, then the user-scoped account section,
-// then an instance-admin-only system section.
+// Sections of the Settings takeover, grouped by scope: workspace-scoped
+// settings, report templates, the user-scoped account section, then an
+// instance-admin-only system section.
 interface SettingsNavItem {
 	to:
 		| "/settings/general"
@@ -27,7 +38,7 @@ interface SettingsNavItem {
 		| "/settings/templates"
 		| "/settings/tokens"
 		| "/settings/agents"
-		| "/settings/profile"
+		| "/settings/preferences"
 		| "/settings/authentication"
 		| "/settings/users"
 		| "/settings/features"
@@ -71,7 +82,7 @@ const GROUPS: SettingsNavGroup[] = [
 			{
 				to: "/settings/members",
 				labelKey: "settings.nav.members",
-				icon: UsersIcon,
+				icon: LayersIcon,
 			},
 		],
 	},
@@ -90,9 +101,9 @@ const GROUPS: SettingsNavGroup[] = [
 		labelKey: "settings.nav.account",
 		items: [
 			{
-				to: "/settings/profile",
-				labelKey: "settings.nav.profile",
-				icon: UserCircleIcon,
+				to: "/settings/preferences",
+				labelKey: "settings.nav.preferences",
+				icon: SlidersHorizontalIcon,
 			},
 			{
 				to: "/settings/authentication",
@@ -107,7 +118,7 @@ const GROUPS: SettingsNavGroup[] = [
 			{
 				to: "/settings/agents",
 				labelKey: "settings.nav.agents",
-				icon: BotIcon,
+				icon: TerminalIcon,
 				requiresAgents: true,
 			},
 		],
@@ -124,7 +135,7 @@ const GROUPS: SettingsNavGroup[] = [
 			{
 				to: "/settings/features",
 				labelKey: "settings.nav.features",
-				icon: ToggleRightIcon,
+				icon: ZapIcon,
 			},
 			{
 				to: "/settings/system",
@@ -146,7 +157,7 @@ export function settingsSectionLabelKey(pathname: string): string | undefined {
 	return undefined;
 }
 
-export function SettingsNav({
+export function SettingsSidebar({
 	isAdmin,
 	canManageTemplates,
 	agentsEnabled,
@@ -156,6 +167,7 @@ export function SettingsNav({
 	agentsEnabled: boolean;
 }) {
 	const { t } = useTranslation();
+	const { setOpenMobile } = useSidebar();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
 
 	const itemVisible = (
@@ -174,32 +186,41 @@ export function SettingsNav({
 		group.items.filter((item) => itemVisible(item, group));
 
 	return (
-		<nav className="flex shrink-0 flex-col gap-5 md:w-48">
-			{GROUPS.filter((group) => visibleItems(group).length > 0).map((group) => (
-				<div key={group.labelKey} className="flex flex-col gap-1">
-					<p className="text-muted-foreground px-2 pb-1 text-xs font-medium uppercase tracking-wider">
-						{t(group.labelKey)}
-					</p>
-					{visibleItems(group).map((item) => {
-						const isActive = pathname === item.to;
-						return (
-							<Link
-								key={item.to}
-								to={item.to}
-								className={cn(
-									"flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
-									isActive
-										? "bg-secondary text-foreground font-medium"
-										: "text-muted-foreground hover:bg-accent hover:text-foreground",
-								)}
-							>
-								<item.icon className="size-4" />
-								{t(item.labelKey)}
-							</Link>
-						);
-					})}
-				</div>
-			))}
-		</nav>
+		<Sidebar collapsible="icon">
+			<RailHeader
+				title={t("settings.title")}
+				closeLabel={t("settings.rail.close")}
+			/>
+			<SidebarContent>
+				{GROUPS.filter((group) => visibleItems(group).length > 0).map(
+					(group) => (
+						<SidebarGroup key={group.labelKey}>
+							<SidebarGroupLabel className="text-[11px] tracking-wider uppercase">
+								{t(group.labelKey)}
+							</SidebarGroupLabel>
+							<SidebarMenu>
+								{visibleItems(group).map((item) => (
+									<SidebarMenuItem key={item.to}>
+										<SidebarMenuButton
+											asChild
+											isActive={pathname === item.to}
+											tooltip={t(item.labelKey)}
+											className="h-9"
+											onClick={() => setOpenMobile(false)}
+										>
+											<Link to={item.to}>
+												<item.icon />
+												<span>{t(item.labelKey)}</span>
+											</Link>
+										</SidebarMenuButton>
+									</SidebarMenuItem>
+								))}
+							</SidebarMenu>
+						</SidebarGroup>
+					),
+				)}
+			</SidebarContent>
+			<SidebarRail />
+		</Sidebar>
 	);
 }

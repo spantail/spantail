@@ -10,44 +10,45 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ReportsIndexRouteImport } from './routes/reports/index'
 import { Route as MessagesIndexRouteImport } from './routes/messages/index'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as SettingsUsersRouteImport } from './routes/settings/users'
+import { Route as SettingsTokensRouteImport } from './routes/settings/tokens'
+import { Route as SettingsTemplatesRouteImport } from './routes/settings/templates'
+import { Route as SettingsSystemRouteImport } from './routes/settings/system'
+import { Route as SettingsProfileRouteImport } from './routes/settings/profile'
+import { Route as SettingsPreferencesRouteImport } from './routes/settings/preferences'
+import { Route as SettingsOauthRouteImport } from './routes/settings/oauth'
+import { Route as SettingsFeaturesRouteImport } from './routes/settings/features'
+import { Route as SettingsEmailRouteImport } from './routes/settings/email'
+import { Route as SettingsAuthenticationRouteImport } from './routes/settings/authentication'
+import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
+import { Route as SettingsAgentsAdminRouteImport } from './routes/settings/agents-admin'
+import { Route as SettingsAgentsRouteImport } from './routes/settings/agents'
+import { Route as SettingsWorkspaceRouteImport } from './routes/settings/_workspace'
 import { Route as ResetPasswordTokenRouteImport } from './routes/reset-password.$token'
 import { Route as ReportsTabRouteImport } from './routes/reports/$tab'
 import { Route as MessagesFolderRouteImport } from './routes/messages/$folder'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
 import { Route as AuthedTemplatesRouteImport } from './routes/_authed/templates'
-import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AuthedEntriesRouteImport } from './routes/_authed/entries'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as ReportsTabIndexRouteImport } from './routes/reports/$tab/index'
 import { Route as MessagesFolderIndexRouteImport } from './routes/messages/$folder/index'
-import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
+import { Route as SettingsWorkspaceProjectsRouteImport } from './routes/settings/_workspace/projects'
+import { Route as SettingsWorkspaceMembersRouteImport } from './routes/settings/_workspace/members'
+import { Route as SettingsWorkspaceGeneralRouteImport } from './routes/settings/_workspace/general'
 import { Route as ReportsTabReportIdRouteImport } from './routes/reports/$tab/$reportId'
 import { Route as MessagesFolderMessageIdRouteImport } from './routes/messages/$folder/$messageId'
 import { Route as AuthedWWsSlugRouteImport } from './routes/_authed/w.$wsSlug'
-import { Route as AuthedSettingsUsersRouteImport } from './routes/_authed/settings/users'
-import { Route as AuthedSettingsTokensRouteImport } from './routes/_authed/settings/tokens'
-import { Route as AuthedSettingsTemplatesRouteImport } from './routes/_authed/settings/templates'
-import { Route as AuthedSettingsSystemRouteImport } from './routes/_authed/settings/system'
-import { Route as AuthedSettingsProjectsRouteImport } from './routes/_authed/settings/projects'
-import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
-import { Route as AuthedSettingsPreferencesRouteImport } from './routes/_authed/settings/preferences'
-import { Route as AuthedSettingsOauthRouteImport } from './routes/_authed/settings/oauth'
-import { Route as AuthedSettingsMembersRouteImport } from './routes/_authed/settings/members'
-import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
-import { Route as AuthedSettingsFeaturesRouteImport } from './routes/_authed/settings/features'
-import { Route as AuthedSettingsEmailRouteImport } from './routes/_authed/settings/email'
-import { Route as AuthedSettingsAuthenticationRouteImport } from './routes/_authed/settings/authentication'
-import { Route as AuthedSettingsAppearanceRouteImport } from './routes/_authed/settings/appearance'
-import { Route as AuthedSettingsAgentsAdminRouteImport } from './routes/_authed/settings/agents-admin'
-import { Route as AuthedSettingsAgentsRouteImport } from './routes/_authed/settings/agents'
 import { Route as AuthedWWsSlugIndexRouteImport } from './routes/_authed/w.$wsSlug.index'
 import { Route as AuthedWWsSlugProjectsProjectSlugRouteImport } from './routes/_authed/w.$wsSlug.projects.$projectSlug'
 import { Route as AuthedWWsSlugAgentsAgentIdRouteImport } from './routes/_authed/w.$wsSlug.agents.$agentId'
@@ -55,6 +56,11 @@ import { Route as AuthedWWsSlugAgentsAgentIdRouteImport } from './routes/_authed
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsRoute = ReportsRouteImport.update({
@@ -81,6 +87,11 @@ const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const ReportsIndexRoute = ReportsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -95,6 +106,75 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedRoute,
+} as any)
+const SettingsUsersRoute = SettingsUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsTokensRoute = SettingsTokensRouteImport.update({
+  id: '/tokens',
+  path: '/tokens',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsTemplatesRoute = SettingsTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSystemRoute = SettingsSystemRouteImport.update({
+  id: '/system',
+  path: '/system',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsProfileRoute = SettingsProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsPreferencesRoute = SettingsPreferencesRouteImport.update({
+  id: '/preferences',
+  path: '/preferences',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsOauthRoute = SettingsOauthRouteImport.update({
+  id: '/oauth',
+  path: '/oauth',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsFeaturesRoute = SettingsFeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsEmailRoute = SettingsEmailRouteImport.update({
+  id: '/email',
+  path: '/email',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAuthenticationRoute = SettingsAuthenticationRouteImport.update({
+  id: '/authentication',
+  path: '/authentication',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
+  id: '/appearance',
+  path: '/appearance',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAgentsAdminRoute = SettingsAgentsAdminRouteImport.update({
+  id: '/agents-admin',
+  path: '/agents-admin',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAgentsRoute = SettingsAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsWorkspaceRoute = SettingsWorkspaceRouteImport.update({
+  id: '/_workspace',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const ResetPasswordTokenRoute = ResetPasswordTokenRouteImport.update({
   id: '/reset-password/$token',
@@ -121,11 +201,6 @@ const AuthedTemplatesRoute = AuthedTemplatesRouteImport.update({
   path: '/templates',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedEntriesRoute = AuthedEntriesRouteImport.update({
   id: '/entries',
   path: '/entries',
@@ -146,11 +221,24 @@ const MessagesFolderIndexRoute = MessagesFolderIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MessagesFolderRoute,
 } as any)
-const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
+const SettingsWorkspaceProjectsRoute =
+  SettingsWorkspaceProjectsRouteImport.update({
+    id: '/projects',
+    path: '/projects',
+    getParentRoute: () => SettingsWorkspaceRoute,
+  } as any)
+const SettingsWorkspaceMembersRoute =
+  SettingsWorkspaceMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => SettingsWorkspaceRoute,
+  } as any)
+const SettingsWorkspaceGeneralRoute =
+  SettingsWorkspaceGeneralRouteImport.update({
+    id: '/general',
+    path: '/general',
+    getParentRoute: () => SettingsWorkspaceRoute,
+  } as any)
 const ReportsTabReportIdRoute = ReportsTabReportIdRouteImport.update({
   id: '/$reportId',
   path: '/$reportId',
@@ -165,90 +253,6 @@ const AuthedWWsSlugRoute = AuthedWWsSlugRouteImport.update({
   id: '/w/$wsSlug',
   path: '/w/$wsSlug',
   getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedSettingsUsersRoute = AuthedSettingsUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsTokensRoute = AuthedSettingsTokensRouteImport.update({
-  id: '/tokens',
-  path: '/tokens',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsTemplatesRoute = AuthedSettingsTemplatesRouteImport.update({
-  id: '/templates',
-  path: '/templates',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsSystemRoute = AuthedSettingsSystemRouteImport.update({
-  id: '/system',
-  path: '/system',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsProjectsRoute = AuthedSettingsProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsProfileRoute = AuthedSettingsProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsPreferencesRoute =
-  AuthedSettingsPreferencesRouteImport.update({
-    id: '/preferences',
-    path: '/preferences',
-    getParentRoute: () => AuthedSettingsRoute,
-  } as any)
-const AuthedSettingsOauthRoute = AuthedSettingsOauthRouteImport.update({
-  id: '/oauth',
-  path: '/oauth',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
-  id: '/members',
-  path: '/members',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsGeneralRoute = AuthedSettingsGeneralRouteImport.update({
-  id: '/general',
-  path: '/general',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsFeaturesRoute = AuthedSettingsFeaturesRouteImport.update({
-  id: '/features',
-  path: '/features',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsEmailRoute = AuthedSettingsEmailRouteImport.update({
-  id: '/email',
-  path: '/email',
-  getParentRoute: () => AuthedSettingsRoute,
-} as any)
-const AuthedSettingsAuthenticationRoute =
-  AuthedSettingsAuthenticationRouteImport.update({
-    id: '/authentication',
-    path: '/authentication',
-    getParentRoute: () => AuthedSettingsRoute,
-  } as any)
-const AuthedSettingsAppearanceRoute =
-  AuthedSettingsAppearanceRouteImport.update({
-    id: '/appearance',
-    path: '/appearance',
-    getParentRoute: () => AuthedSettingsRoute,
-  } as any)
-const AuthedSettingsAgentsAdminRoute =
-  AuthedSettingsAgentsAdminRouteImport.update({
-    id: '/agents-admin',
-    path: '/agents-admin',
-    getParentRoute: () => AuthedSettingsRoute,
-  } as any)
-const AuthedSettingsAgentsRoute = AuthedSettingsAgentsRouteImport.update({
-  id: '/agents',
-  path: '/agents',
-  getParentRoute: () => AuthedSettingsRoute,
 } as any)
 const AuthedWWsSlugIndexRoute = AuthedWWsSlugIndexRouteImport.update({
   id: '/',
@@ -274,37 +278,37 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
   '/reports': typeof ReportsRouteWithChildren
+  '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
   '/account': typeof AuthedAccountRoute
   '/entries': typeof AuthedEntriesRoute
-  '/settings': typeof AuthedSettingsRouteWithChildren
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/messages/$folder': typeof MessagesFolderRouteWithChildren
   '/reports/$tab': typeof ReportsTabRouteWithChildren
   '/reset-password/$token': typeof ResetPasswordTokenRoute
+  '/settings/agents': typeof SettingsAgentsRoute
+  '/settings/agents-admin': typeof SettingsAgentsAdminRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/authentication': typeof SettingsAuthenticationRoute
+  '/settings/email': typeof SettingsEmailRoute
+  '/settings/features': typeof SettingsFeaturesRoute
+  '/settings/oauth': typeof SettingsOauthRoute
+  '/settings/preferences': typeof SettingsPreferencesRoute
+  '/settings/profile': typeof SettingsProfileRoute
+  '/settings/system': typeof SettingsSystemRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
+  '/settings/tokens': typeof SettingsTokensRoute
+  '/settings/users': typeof SettingsUsersRoute
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
-  '/settings/agents': typeof AuthedSettingsAgentsRoute
-  '/settings/agents-admin': typeof AuthedSettingsAgentsAdminRoute
-  '/settings/appearance': typeof AuthedSettingsAppearanceRoute
-  '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
-  '/settings/email': typeof AuthedSettingsEmailRoute
-  '/settings/features': typeof AuthedSettingsFeaturesRoute
-  '/settings/general': typeof AuthedSettingsGeneralRoute
-  '/settings/members': typeof AuthedSettingsMembersRoute
-  '/settings/oauth': typeof AuthedSettingsOauthRoute
-  '/settings/preferences': typeof AuthedSettingsPreferencesRoute
-  '/settings/profile': typeof AuthedSettingsProfileRoute
-  '/settings/projects': typeof AuthedSettingsProjectsRoute
-  '/settings/system': typeof AuthedSettingsSystemRoute
-  '/settings/templates': typeof AuthedSettingsTemplatesRoute
-  '/settings/tokens': typeof AuthedSettingsTokensRoute
-  '/settings/users': typeof AuthedSettingsUsersRoute
+  '/settings/': typeof SettingsIndexRoute
   '/w/$wsSlug': typeof AuthedWWsSlugRouteWithChildren
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
-  '/settings/': typeof AuthedSettingsIndexRoute
+  '/settings/general': typeof SettingsWorkspaceGeneralRoute
+  '/settings/members': typeof SettingsWorkspaceMembersRoute
+  '/settings/projects': typeof SettingsWorkspaceProjectsRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
   '/reports/$tab/': typeof ReportsTabIndexRoute
   '/w/$wsSlug/': typeof AuthedWWsSlugIndexRoute
@@ -320,28 +324,28 @@ export interface FileRoutesByTo {
   '/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/reset-password/$token': typeof ResetPasswordTokenRoute
+  '/settings': typeof SettingsIndexRoute
+  '/settings/agents': typeof SettingsAgentsRoute
+  '/settings/agents-admin': typeof SettingsAgentsAdminRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/authentication': typeof SettingsAuthenticationRoute
+  '/settings/email': typeof SettingsEmailRoute
+  '/settings/features': typeof SettingsFeaturesRoute
+  '/settings/oauth': typeof SettingsOauthRoute
+  '/settings/preferences': typeof SettingsPreferencesRoute
+  '/settings/profile': typeof SettingsProfileRoute
+  '/settings/system': typeof SettingsSystemRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
+  '/settings/tokens': typeof SettingsTokensRoute
+  '/settings/users': typeof SettingsUsersRoute
   '/': typeof AuthedIndexRoute
   '/messages': typeof MessagesIndexRoute
   '/reports': typeof ReportsIndexRoute
-  '/settings/agents': typeof AuthedSettingsAgentsRoute
-  '/settings/agents-admin': typeof AuthedSettingsAgentsAdminRoute
-  '/settings/appearance': typeof AuthedSettingsAppearanceRoute
-  '/settings/authentication': typeof AuthedSettingsAuthenticationRoute
-  '/settings/email': typeof AuthedSettingsEmailRoute
-  '/settings/features': typeof AuthedSettingsFeaturesRoute
-  '/settings/general': typeof AuthedSettingsGeneralRoute
-  '/settings/members': typeof AuthedSettingsMembersRoute
-  '/settings/oauth': typeof AuthedSettingsOauthRoute
-  '/settings/preferences': typeof AuthedSettingsPreferencesRoute
-  '/settings/profile': typeof AuthedSettingsProfileRoute
-  '/settings/projects': typeof AuthedSettingsProjectsRoute
-  '/settings/system': typeof AuthedSettingsSystemRoute
-  '/settings/templates': typeof AuthedSettingsTemplatesRoute
-  '/settings/tokens': typeof AuthedSettingsTokensRoute
-  '/settings/users': typeof AuthedSettingsUsersRoute
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
-  '/settings': typeof AuthedSettingsIndexRoute
+  '/settings/general': typeof SettingsWorkspaceGeneralRoute
+  '/settings/members': typeof SettingsWorkspaceMembersRoute
+  '/settings/projects': typeof SettingsWorkspaceProjectsRoute
   '/messages/$folder': typeof MessagesFolderIndexRoute
   '/reports/$tab': typeof ReportsTabIndexRoute
   '/w/$wsSlug': typeof AuthedWWsSlugIndexRoute
@@ -355,38 +359,39 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRouteWithChildren
   '/reports': typeof ReportsRouteWithChildren
+  '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
   '/_authed/account': typeof AuthedAccountRoute
   '/_authed/entries': typeof AuthedEntriesRoute
-  '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/_authed/templates': typeof AuthedTemplatesRoute
   '/invite/$token': typeof InviteTokenRoute
   '/messages/$folder': typeof MessagesFolderRouteWithChildren
   '/reports/$tab': typeof ReportsTabRouteWithChildren
   '/reset-password/$token': typeof ResetPasswordTokenRoute
+  '/settings/_workspace': typeof SettingsWorkspaceRouteWithChildren
+  '/settings/agents': typeof SettingsAgentsRoute
+  '/settings/agents-admin': typeof SettingsAgentsAdminRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/authentication': typeof SettingsAuthenticationRoute
+  '/settings/email': typeof SettingsEmailRoute
+  '/settings/features': typeof SettingsFeaturesRoute
+  '/settings/oauth': typeof SettingsOauthRoute
+  '/settings/preferences': typeof SettingsPreferencesRoute
+  '/settings/profile': typeof SettingsProfileRoute
+  '/settings/system': typeof SettingsSystemRoute
+  '/settings/templates': typeof SettingsTemplatesRoute
+  '/settings/tokens': typeof SettingsTokensRoute
+  '/settings/users': typeof SettingsUsersRoute
   '/_authed/': typeof AuthedIndexRoute
   '/messages/': typeof MessagesIndexRoute
   '/reports/': typeof ReportsIndexRoute
-  '/_authed/settings/agents': typeof AuthedSettingsAgentsRoute
-  '/_authed/settings/agents-admin': typeof AuthedSettingsAgentsAdminRoute
-  '/_authed/settings/appearance': typeof AuthedSettingsAppearanceRoute
-  '/_authed/settings/authentication': typeof AuthedSettingsAuthenticationRoute
-  '/_authed/settings/email': typeof AuthedSettingsEmailRoute
-  '/_authed/settings/features': typeof AuthedSettingsFeaturesRoute
-  '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
-  '/_authed/settings/members': typeof AuthedSettingsMembersRoute
-  '/_authed/settings/oauth': typeof AuthedSettingsOauthRoute
-  '/_authed/settings/preferences': typeof AuthedSettingsPreferencesRoute
-  '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
-  '/_authed/settings/projects': typeof AuthedSettingsProjectsRoute
-  '/_authed/settings/system': typeof AuthedSettingsSystemRoute
-  '/_authed/settings/templates': typeof AuthedSettingsTemplatesRoute
-  '/_authed/settings/tokens': typeof AuthedSettingsTokensRoute
-  '/_authed/settings/users': typeof AuthedSettingsUsersRoute
+  '/settings/': typeof SettingsIndexRoute
   '/_authed/w/$wsSlug': typeof AuthedWWsSlugRouteWithChildren
   '/messages/$folder/$messageId': typeof MessagesFolderMessageIdRoute
   '/reports/$tab/$reportId': typeof ReportsTabReportIdRoute
-  '/_authed/settings/': typeof AuthedSettingsIndexRoute
+  '/settings/_workspace/general': typeof SettingsWorkspaceGeneralRoute
+  '/settings/_workspace/members': typeof SettingsWorkspaceMembersRoute
+  '/settings/_workspace/projects': typeof SettingsWorkspaceProjectsRoute
   '/messages/$folder/': typeof MessagesFolderIndexRoute
   '/reports/$tab/': typeof ReportsTabIndexRoute
   '/_authed/w/$wsSlug/': typeof AuthedWWsSlugIndexRoute
@@ -401,37 +406,37 @@ export interface FileRouteTypes {
     | '/login'
     | '/messages'
     | '/reports'
+    | '/settings'
     | '/setup'
     | '/account'
     | '/entries'
-    | '/settings'
     | '/templates'
     | '/invite/$token'
     | '/messages/$folder'
     | '/reports/$tab'
     | '/reset-password/$token'
-    | '/messages/'
-    | '/reports/'
     | '/settings/agents'
     | '/settings/agents-admin'
     | '/settings/appearance'
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/features'
-    | '/settings/general'
-    | '/settings/members'
     | '/settings/oauth'
     | '/settings/preferences'
     | '/settings/profile'
-    | '/settings/projects'
     | '/settings/system'
     | '/settings/templates'
     | '/settings/tokens'
     | '/settings/users'
+    | '/messages/'
+    | '/reports/'
+    | '/settings/'
     | '/w/$wsSlug'
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
-    | '/settings/'
+    | '/settings/general'
+    | '/settings/members'
+    | '/settings/projects'
     | '/messages/$folder/'
     | '/reports/$tab/'
     | '/w/$wsSlug/'
@@ -447,28 +452,28 @@ export interface FileRouteTypes {
     | '/templates'
     | '/invite/$token'
     | '/reset-password/$token'
-    | '/'
-    | '/messages'
-    | '/reports'
+    | '/settings'
     | '/settings/agents'
     | '/settings/agents-admin'
     | '/settings/appearance'
     | '/settings/authentication'
     | '/settings/email'
     | '/settings/features'
-    | '/settings/general'
-    | '/settings/members'
     | '/settings/oauth'
     | '/settings/preferences'
     | '/settings/profile'
-    | '/settings/projects'
     | '/settings/system'
     | '/settings/templates'
     | '/settings/tokens'
     | '/settings/users'
+    | '/'
+    | '/messages'
+    | '/reports'
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
-    | '/settings'
+    | '/settings/general'
+    | '/settings/members'
+    | '/settings/projects'
     | '/messages/$folder'
     | '/reports/$tab'
     | '/w/$wsSlug'
@@ -481,38 +486,39 @@ export interface FileRouteTypes {
     | '/login'
     | '/messages'
     | '/reports'
+    | '/settings'
     | '/setup'
     | '/_authed/account'
     | '/_authed/entries'
-    | '/_authed/settings'
     | '/_authed/templates'
     | '/invite/$token'
     | '/messages/$folder'
     | '/reports/$tab'
     | '/reset-password/$token'
+    | '/settings/_workspace'
+    | '/settings/agents'
+    | '/settings/agents-admin'
+    | '/settings/appearance'
+    | '/settings/authentication'
+    | '/settings/email'
+    | '/settings/features'
+    | '/settings/oauth'
+    | '/settings/preferences'
+    | '/settings/profile'
+    | '/settings/system'
+    | '/settings/templates'
+    | '/settings/tokens'
+    | '/settings/users'
     | '/_authed/'
     | '/messages/'
     | '/reports/'
-    | '/_authed/settings/agents'
-    | '/_authed/settings/agents-admin'
-    | '/_authed/settings/appearance'
-    | '/_authed/settings/authentication'
-    | '/_authed/settings/email'
-    | '/_authed/settings/features'
-    | '/_authed/settings/general'
-    | '/_authed/settings/members'
-    | '/_authed/settings/oauth'
-    | '/_authed/settings/preferences'
-    | '/_authed/settings/profile'
-    | '/_authed/settings/projects'
-    | '/_authed/settings/system'
-    | '/_authed/settings/templates'
-    | '/_authed/settings/tokens'
-    | '/_authed/settings/users'
+    | '/settings/'
     | '/_authed/w/$wsSlug'
     | '/messages/$folder/$messageId'
     | '/reports/$tab/$reportId'
-    | '/_authed/settings/'
+    | '/settings/_workspace/general'
+    | '/settings/_workspace/members'
+    | '/settings/_workspace/projects'
     | '/messages/$folder/'
     | '/reports/$tab/'
     | '/_authed/w/$wsSlug/'
@@ -526,6 +532,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRouteWithChildren
   ReportsRoute: typeof ReportsRouteWithChildren
+  SettingsRoute: typeof SettingsRouteWithChildren
   SetupRoute: typeof SetupRoute
   InviteTokenRoute: typeof InviteTokenRoute
   ResetPasswordTokenRoute: typeof ResetPasswordTokenRoute
@@ -538,6 +545,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports': {
@@ -575,6 +589,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/reports/': {
       id: '/reports/'
       path: '/'
@@ -595,6 +616,104 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/settings/users': {
+      id: '/settings/users'
+      path: '/users'
+      fullPath: '/settings/users'
+      preLoaderRoute: typeof SettingsUsersRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/tokens': {
+      id: '/settings/tokens'
+      path: '/tokens'
+      fullPath: '/settings/tokens'
+      preLoaderRoute: typeof SettingsTokensRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/templates': {
+      id: '/settings/templates'
+      path: '/templates'
+      fullPath: '/settings/templates'
+      preLoaderRoute: typeof SettingsTemplatesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/system': {
+      id: '/settings/system'
+      path: '/system'
+      fullPath: '/settings/system'
+      preLoaderRoute: typeof SettingsSystemRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/profile': {
+      id: '/settings/profile'
+      path: '/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof SettingsProfileRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/preferences': {
+      id: '/settings/preferences'
+      path: '/preferences'
+      fullPath: '/settings/preferences'
+      preLoaderRoute: typeof SettingsPreferencesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/oauth': {
+      id: '/settings/oauth'
+      path: '/oauth'
+      fullPath: '/settings/oauth'
+      preLoaderRoute: typeof SettingsOauthRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/features': {
+      id: '/settings/features'
+      path: '/features'
+      fullPath: '/settings/features'
+      preLoaderRoute: typeof SettingsFeaturesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/email': {
+      id: '/settings/email'
+      path: '/email'
+      fullPath: '/settings/email'
+      preLoaderRoute: typeof SettingsEmailRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/authentication': {
+      id: '/settings/authentication'
+      path: '/authentication'
+      fullPath: '/settings/authentication'
+      preLoaderRoute: typeof SettingsAuthenticationRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/appearance': {
+      id: '/settings/appearance'
+      path: '/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/agents-admin': {
+      id: '/settings/agents-admin'
+      path: '/agents-admin'
+      fullPath: '/settings/agents-admin'
+      preLoaderRoute: typeof SettingsAgentsAdminRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/agents': {
+      id: '/settings/agents'
+      path: '/agents'
+      fullPath: '/settings/agents'
+      preLoaderRoute: typeof SettingsAgentsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/_workspace': {
+      id: '/settings/_workspace'
+      path: ''
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsWorkspaceRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/reset-password/$token': {
       id: '/reset-password/$token'
@@ -631,13 +750,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedTemplatesRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/settings': {
-      id: '/_authed/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthedSettingsRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/entries': {
       id: '/_authed/entries'
       path: '/entries'
@@ -666,12 +778,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MessagesFolderIndexRouteImport
       parentRoute: typeof MessagesFolderRoute
     }
-    '/_authed/settings/': {
-      id: '/_authed/settings/'
-      path: '/'
-      fullPath: '/settings/'
-      preLoaderRoute: typeof AuthedSettingsIndexRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+    '/settings/_workspace/projects': {
+      id: '/settings/_workspace/projects'
+      path: '/projects'
+      fullPath: '/settings/projects'
+      preLoaderRoute: typeof SettingsWorkspaceProjectsRouteImport
+      parentRoute: typeof SettingsWorkspaceRoute
+    }
+    '/settings/_workspace/members': {
+      id: '/settings/_workspace/members'
+      path: '/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof SettingsWorkspaceMembersRouteImport
+      parentRoute: typeof SettingsWorkspaceRoute
+    }
+    '/settings/_workspace/general': {
+      id: '/settings/_workspace/general'
+      path: '/general'
+      fullPath: '/settings/general'
+      preLoaderRoute: typeof SettingsWorkspaceGeneralRouteImport
+      parentRoute: typeof SettingsWorkspaceRoute
     }
     '/reports/$tab/$reportId': {
       id: '/reports/$tab/$reportId'
@@ -693,118 +819,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/w/$wsSlug'
       preLoaderRoute: typeof AuthedWWsSlugRouteImport
       parentRoute: typeof AuthedRoute
-    }
-    '/_authed/settings/users': {
-      id: '/_authed/settings/users'
-      path: '/users'
-      fullPath: '/settings/users'
-      preLoaderRoute: typeof AuthedSettingsUsersRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/tokens': {
-      id: '/_authed/settings/tokens'
-      path: '/tokens'
-      fullPath: '/settings/tokens'
-      preLoaderRoute: typeof AuthedSettingsTokensRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/templates': {
-      id: '/_authed/settings/templates'
-      path: '/templates'
-      fullPath: '/settings/templates'
-      preLoaderRoute: typeof AuthedSettingsTemplatesRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/system': {
-      id: '/_authed/settings/system'
-      path: '/system'
-      fullPath: '/settings/system'
-      preLoaderRoute: typeof AuthedSettingsSystemRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/projects': {
-      id: '/_authed/settings/projects'
-      path: '/projects'
-      fullPath: '/settings/projects'
-      preLoaderRoute: typeof AuthedSettingsProjectsRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/profile': {
-      id: '/_authed/settings/profile'
-      path: '/profile'
-      fullPath: '/settings/profile'
-      preLoaderRoute: typeof AuthedSettingsProfileRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/preferences': {
-      id: '/_authed/settings/preferences'
-      path: '/preferences'
-      fullPath: '/settings/preferences'
-      preLoaderRoute: typeof AuthedSettingsPreferencesRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/oauth': {
-      id: '/_authed/settings/oauth'
-      path: '/oauth'
-      fullPath: '/settings/oauth'
-      preLoaderRoute: typeof AuthedSettingsOauthRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/members': {
-      id: '/_authed/settings/members'
-      path: '/members'
-      fullPath: '/settings/members'
-      preLoaderRoute: typeof AuthedSettingsMembersRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/general': {
-      id: '/_authed/settings/general'
-      path: '/general'
-      fullPath: '/settings/general'
-      preLoaderRoute: typeof AuthedSettingsGeneralRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/features': {
-      id: '/_authed/settings/features'
-      path: '/features'
-      fullPath: '/settings/features'
-      preLoaderRoute: typeof AuthedSettingsFeaturesRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/email': {
-      id: '/_authed/settings/email'
-      path: '/email'
-      fullPath: '/settings/email'
-      preLoaderRoute: typeof AuthedSettingsEmailRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/authentication': {
-      id: '/_authed/settings/authentication'
-      path: '/authentication'
-      fullPath: '/settings/authentication'
-      preLoaderRoute: typeof AuthedSettingsAuthenticationRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/appearance': {
-      id: '/_authed/settings/appearance'
-      path: '/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof AuthedSettingsAppearanceRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/agents-admin': {
-      id: '/_authed/settings/agents-admin'
-      path: '/agents-admin'
-      fullPath: '/settings/agents-admin'
-      preLoaderRoute: typeof AuthedSettingsAgentsAdminRouteImport
-      parentRoute: typeof AuthedSettingsRoute
-    }
-    '/_authed/settings/agents': {
-      id: '/_authed/settings/agents'
-      path: '/agents'
-      fullPath: '/settings/agents'
-      preLoaderRoute: typeof AuthedSettingsAgentsRouteImport
-      parentRoute: typeof AuthedSettingsRoute
     }
     '/_authed/w/$wsSlug/': {
       id: '/_authed/w/$wsSlug/'
@@ -830,50 +844,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthedSettingsRouteChildren {
-  AuthedSettingsAgentsRoute: typeof AuthedSettingsAgentsRoute
-  AuthedSettingsAgentsAdminRoute: typeof AuthedSettingsAgentsAdminRoute
-  AuthedSettingsAppearanceRoute: typeof AuthedSettingsAppearanceRoute
-  AuthedSettingsAuthenticationRoute: typeof AuthedSettingsAuthenticationRoute
-  AuthedSettingsEmailRoute: typeof AuthedSettingsEmailRoute
-  AuthedSettingsFeaturesRoute: typeof AuthedSettingsFeaturesRoute
-  AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
-  AuthedSettingsMembersRoute: typeof AuthedSettingsMembersRoute
-  AuthedSettingsOauthRoute: typeof AuthedSettingsOauthRoute
-  AuthedSettingsPreferencesRoute: typeof AuthedSettingsPreferencesRoute
-  AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
-  AuthedSettingsProjectsRoute: typeof AuthedSettingsProjectsRoute
-  AuthedSettingsSystemRoute: typeof AuthedSettingsSystemRoute
-  AuthedSettingsTemplatesRoute: typeof AuthedSettingsTemplatesRoute
-  AuthedSettingsTokensRoute: typeof AuthedSettingsTokensRoute
-  AuthedSettingsUsersRoute: typeof AuthedSettingsUsersRoute
-  AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
-}
-
-const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
-  AuthedSettingsAgentsRoute: AuthedSettingsAgentsRoute,
-  AuthedSettingsAgentsAdminRoute: AuthedSettingsAgentsAdminRoute,
-  AuthedSettingsAppearanceRoute: AuthedSettingsAppearanceRoute,
-  AuthedSettingsAuthenticationRoute: AuthedSettingsAuthenticationRoute,
-  AuthedSettingsEmailRoute: AuthedSettingsEmailRoute,
-  AuthedSettingsFeaturesRoute: AuthedSettingsFeaturesRoute,
-  AuthedSettingsGeneralRoute: AuthedSettingsGeneralRoute,
-  AuthedSettingsMembersRoute: AuthedSettingsMembersRoute,
-  AuthedSettingsOauthRoute: AuthedSettingsOauthRoute,
-  AuthedSettingsPreferencesRoute: AuthedSettingsPreferencesRoute,
-  AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
-  AuthedSettingsProjectsRoute: AuthedSettingsProjectsRoute,
-  AuthedSettingsSystemRoute: AuthedSettingsSystemRoute,
-  AuthedSettingsTemplatesRoute: AuthedSettingsTemplatesRoute,
-  AuthedSettingsTokensRoute: AuthedSettingsTokensRoute,
-  AuthedSettingsUsersRoute: AuthedSettingsUsersRoute,
-  AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
-}
-
-const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
-  AuthedSettingsRouteChildren,
-)
-
 interface AuthedWWsSlugRouteChildren {
   AuthedWWsSlugIndexRoute: typeof AuthedWWsSlugIndexRoute
   AuthedWWsSlugAgentsAgentIdRoute: typeof AuthedWWsSlugAgentsAgentIdRoute
@@ -893,7 +863,6 @@ const AuthedWWsSlugRouteWithChildren = AuthedWWsSlugRoute._addFileChildren(
 interface AuthedRouteChildren {
   AuthedAccountRoute: typeof AuthedAccountRoute
   AuthedEntriesRoute: typeof AuthedEntriesRoute
-  AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
   AuthedTemplatesRoute: typeof AuthedTemplatesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedWWsSlugRoute: typeof AuthedWWsSlugRouteWithChildren
@@ -902,7 +871,6 @@ interface AuthedRouteChildren {
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountRoute: AuthedAccountRoute,
   AuthedEntriesRoute: AuthedEntriesRoute,
-  AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
   AuthedTemplatesRoute: AuthedTemplatesRoute,
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedWWsSlugRoute: AuthedWWsSlugRouteWithChildren,
@@ -966,12 +934,68 @@ const ReportsRouteChildren: ReportsRouteChildren = {
 const ReportsRouteWithChildren =
   ReportsRoute._addFileChildren(ReportsRouteChildren)
 
+interface SettingsWorkspaceRouteChildren {
+  SettingsWorkspaceGeneralRoute: typeof SettingsWorkspaceGeneralRoute
+  SettingsWorkspaceMembersRoute: typeof SettingsWorkspaceMembersRoute
+  SettingsWorkspaceProjectsRoute: typeof SettingsWorkspaceProjectsRoute
+}
+
+const SettingsWorkspaceRouteChildren: SettingsWorkspaceRouteChildren = {
+  SettingsWorkspaceGeneralRoute: SettingsWorkspaceGeneralRoute,
+  SettingsWorkspaceMembersRoute: SettingsWorkspaceMembersRoute,
+  SettingsWorkspaceProjectsRoute: SettingsWorkspaceProjectsRoute,
+}
+
+const SettingsWorkspaceRouteWithChildren =
+  SettingsWorkspaceRoute._addFileChildren(SettingsWorkspaceRouteChildren)
+
+interface SettingsRouteChildren {
+  SettingsWorkspaceRoute: typeof SettingsWorkspaceRouteWithChildren
+  SettingsAgentsRoute: typeof SettingsAgentsRoute
+  SettingsAgentsAdminRoute: typeof SettingsAgentsAdminRoute
+  SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsAuthenticationRoute: typeof SettingsAuthenticationRoute
+  SettingsEmailRoute: typeof SettingsEmailRoute
+  SettingsFeaturesRoute: typeof SettingsFeaturesRoute
+  SettingsOauthRoute: typeof SettingsOauthRoute
+  SettingsPreferencesRoute: typeof SettingsPreferencesRoute
+  SettingsProfileRoute: typeof SettingsProfileRoute
+  SettingsSystemRoute: typeof SettingsSystemRoute
+  SettingsTemplatesRoute: typeof SettingsTemplatesRoute
+  SettingsTokensRoute: typeof SettingsTokensRoute
+  SettingsUsersRoute: typeof SettingsUsersRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsWorkspaceRoute: SettingsWorkspaceRouteWithChildren,
+  SettingsAgentsRoute: SettingsAgentsRoute,
+  SettingsAgentsAdminRoute: SettingsAgentsAdminRoute,
+  SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsAuthenticationRoute: SettingsAuthenticationRoute,
+  SettingsEmailRoute: SettingsEmailRoute,
+  SettingsFeaturesRoute: SettingsFeaturesRoute,
+  SettingsOauthRoute: SettingsOauthRoute,
+  SettingsPreferencesRoute: SettingsPreferencesRoute,
+  SettingsProfileRoute: SettingsProfileRoute,
+  SettingsSystemRoute: SettingsSystemRoute,
+  SettingsTemplatesRoute: SettingsTemplatesRoute,
+  SettingsTokensRoute: SettingsTokensRoute,
+  SettingsUsersRoute: SettingsUsersRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRouteWithChildren,
   ReportsRoute: ReportsRouteWithChildren,
+  SettingsRoute: SettingsRouteWithChildren,
   SetupRoute: SetupRoute,
   InviteTokenRoute: InviteTokenRoute,
   ResetPasswordTokenRoute: ResetPasswordTokenRoute,

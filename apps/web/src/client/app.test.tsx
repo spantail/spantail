@@ -311,3 +311,117 @@ it("keeps the URL-selected workspace active after leaving the scoped route", asy
 	router.navigate({ to: "/" });
 	await waitFor(() => expect(router.state.location.pathname).toBe("/w/beta"));
 });
+
+it("renders the settings takeover with the rail and workspaces pane", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/settings/general");
+
+	// The rail replaces the workspace nav: it carries a Close link back to the
+	// workspace, and the workspace-scoped sections get the workspaces pane.
+	expect(await screen.findByRole("link", { name: "Close" })).toBeDefined();
+	expect(await screen.findByText("Workspaces")).toBeDefined();
+	// The section edits the selected workspace (the sole membership).
+	expect(await screen.findByDisplayValue("Acme")).toBeDefined();
+	expect(router.state.location.pathname).toBe("/settings/general");
+});
+
+it("redirects the bare settings path to the general section", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	// The sidebar cog links to /settings (no trailing slash); it must land on
+	// the first section, not a blank pane.
+	const router = await renderApp("/settings");
+
+	await waitFor(() =>
+		expect(router.state.location.pathname).toBe("/settings/general"),
+	);
+	expect(await screen.findByDisplayValue("Acme")).toBeDefined();
+});
+
+it("redirects the renamed profile section to preferences", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const router = await renderApp("/settings/profile");
+
+	await waitFor(() =>
+		expect(router.state.location.pathname).toBe("/settings/preferences"),
+	);
+	expect((await screen.findAllByText("Preferences")).length).toBeGreaterThan(0);
+});
+
+it("hides admin-only settings sections from non-admins", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const nonAdminMe = {
+		...mePayload,
+		user: { ...mePayload.user, isAdmin: false },
+	};
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input instanceof Request ? input.url : input));
+			switch (url.pathname) {
+				case "/api/v1/me":
+					return json(nonAdminMe);
+				default:
+					return json([]);
+			}
+		}),
+	);
+
+	await renderApp("/settings/system");
+
+	// The System (about) item stays public inside the admin-only System group.
+	expect((await screen.findAllByText("System")).length).toBeGreaterThan(0);
+	expect(screen.queryByText("Users")).toBeNull();
+	expect(screen.queryByText("Features")).toBeNull();
+	// Templates need the template-author capability; Agents needs the feature.
+	expect(screen.queryByText("Report templates")).toBeNull();
+	expect(screen.queryByText("Agents")).toBeNull();
+});
+
+it("keeps the settings workspace selection across sections", async () => {
+	getSession.mockResolvedValue({ data: sessionPayload });
+	const twoWorkspaceMe = {
+		...mePayload,
+		memberships: [
+			mePayload.memberships[0],
+			{
+				id: "ws2",
+				slug: "beta",
+				name: "Beta",
+				timezone: "Asia/Tokyo",
+				accentColor: "neutral",
+				settings: {},
+				createdAt: NOW,
+				archivedAt: null,
+				role: "owner",
+			},
+		],
+	};
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input instanceof Request ? input.url : input));
+			switch (url.pathname) {
+				case "/api/v1/me":
+					return json(twoWorkspaceMe);
+				default:
+					return json([]);
+			}
+		}),
+	);
+
+	const router = await renderApp("/settings/general");
+	expect(await screen.findByDisplayValue("Acme")).toBeDefined();
+
+	// Pick the other workspace in the pane; the section reseeds to it.
+	fireEvent.click(await screen.findByRole("button", { name: /Beta/ }));
+	expect(await screen.findByDisplayValue("Beta")).toBeDefined();
+
+	// The selection is held by the settings shell, so it survives switching
+	// sections (it is not part of the route).
+	router.navigate({ to: "/settings/members" });
+	await waitFor(() =>
+		expect(router.state.location.pathname).toBe("/settings/members"),
+	);
+	router.navigate({ to: "/settings/general" });
+	expect(await screen.findByDisplayValue("Beta")).toBeDefined();
+});

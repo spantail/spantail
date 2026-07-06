@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { PersonAvatar } from "@/components/person-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,31 +32,30 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { useWorkspace } from "@/lib/workspace";
+import { useSettingsWorkspace } from "@/lib/settings-workspace";
 
-export const Route = createFileRoute("/_authed/settings/members")({
+export const Route = createFileRoute("/settings/_workspace/members")({
 	component: MembersSection,
 });
 
 function MembersSection() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
+	const { selected, canManage } = useSettingsWorkspace();
 
-	if (!current) {
+	if (!selected) {
 		return (
 			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
 		);
 	}
 
-	const canManage = current.role === "owner" || current.role === "admin";
-	return <MembersCard canManage={canManage} />;
+	return <MembersCard key={selected.id} canManage={canManage} />;
 }
 
 function MembersCard({ canManage }: { canManage: boolean }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { current } = useWorkspace();
-	const workspaceId = current?.id ?? "";
+	const { selected } = useSettingsWorkspace();
+	const workspaceId = selected?.id ?? "";
 	const [email, setEmail] = useState("");
 	const [role, setRole] = useState<Exclude<WorkspaceRole, "owner">>("member");
 	const [error, setError] = useState<string | null>(null);
@@ -140,7 +140,7 @@ function MembersCard({ canManage }: { canManage: boolean }) {
 						)}
 					</form>
 				)}
-				<Table>
+				<Table className="[&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3">
 					<TableHeader>
 						<TableRow>
 							<TableHead>{t("auth.name")}</TableHead>
@@ -152,7 +152,16 @@ function MembersCard({ canManage }: { canManage: boolean }) {
 					<TableBody>
 						{(members.data ?? []).map((member) => (
 							<TableRow key={member.userId}>
-								<TableCell>{member.name}</TableCell>
+								<TableCell>
+									<span className="flex items-center gap-2.5">
+										<PersonAvatar
+											name={member.name}
+											imageUrl={member.imageUrl}
+											size={26}
+										/>
+										{member.name}
+									</span>
+								</TableCell>
 								<TableCell className="text-muted-foreground">
 									{member.email}
 								</TableCell>
