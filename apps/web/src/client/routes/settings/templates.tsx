@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { SettingsSection } from "@/components/settings-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/_authed/settings/templates")({
+export const Route = createFileRoute("/settings/templates")({
 	component: TemplatesSection,
 });
 
@@ -63,6 +63,15 @@ const EMPTY_DRAFT: TemplateDraft = {
 };
 
 function TemplatesSection() {
+	const { t } = useTranslation();
+	return (
+		<SettingsSection title={t("settings.nav.templates")}>
+			<TemplatesContent />
+		</SettingsSection>
+	);
+}
+
+function TemplatesContent() {
 	const { t } = useTranslation();
 	const [draft, setDraft] = useState<TemplateDraft>(EMPTY_DRAFT);
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });

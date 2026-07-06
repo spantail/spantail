@@ -31,31 +31,30 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
-import { useWorkspace } from "@/lib/workspace";
+import { useSettingsWorkspace } from "@/lib/settings-workspace";
 
-export const Route = createFileRoute("/_authed/settings/members")({
+export const Route = createFileRoute("/settings/_workspace/members")({
 	component: MembersSection,
 });
 
 function MembersSection() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
+	const { selected, canManage } = useSettingsWorkspace();
 
-	if (!current) {
+	if (!selected) {
 		return (
 			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
 		);
 	}
 
-	const canManage = current.role === "owner" || current.role === "admin";
-	return <MembersCard canManage={canManage} />;
+	return <MembersCard key={selected.id} canManage={canManage} />;
 }
 
 function MembersCard({ canManage }: { canManage: boolean }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { current } = useWorkspace();
-	const workspaceId = current?.id ?? "";
+	const { selected } = useSettingsWorkspace();
+	const workspaceId = selected?.id ?? "";
 	const [email, setEmail] = useState("");
 	const [role, setRole] = useState<Exclude<WorkspaceRole, "owner">>("member");
 	const [error, setError] = useState<string | null>(null);

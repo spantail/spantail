@@ -2,6 +2,7 @@ import {
 	isWorkspaceLogoMimeType,
 	WORKSPACE_LOGO_MAX_BYTES,
 	WORKSPACE_LOGO_MIME_TYPES,
+	type WorkspaceWithRole,
 } from "@spantail/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -20,18 +21,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WorkspaceAvatar } from "@/components/workspace-avatar";
 import { api } from "@/lib/api";
-import { useWorkspace } from "@/lib/workspace";
+import { useSettingsWorkspace } from "@/lib/settings-workspace";
 
-export const Route = createFileRoute("/_authed/settings/general")({
+export const Route = createFileRoute("/settings/_workspace/general")({
 	component: GeneralSection,
 });
 
 function GeneralSection() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
-	const canManage = current?.role === "owner" || current?.role === "admin";
+	const { selected, canManage } = useSettingsWorkspace();
 
-	if (!current) {
+	if (!selected) {
 		return (
 			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
 		);
@@ -51,27 +51,23 @@ function GeneralSection() {
 	}
 
 	return (
-		<div className="grid gap-4" key={current.id}>
-			<EditWorkspaceCard />
-			<WorkspaceLogoCard />
-			<AppearanceCard />
+		<div className="grid gap-4" key={selected.id}>
+			<EditWorkspaceCard workspace={selected} />
+			<WorkspaceLogoCard workspace={selected} />
+			<AppearanceCard workspace={selected} />
 		</div>
 	);
 }
 
-function EditWorkspaceCard() {
+function EditWorkspaceCard({ workspace }: { workspace: WorkspaceWithRole }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { current } = useWorkspace();
-	const [name, setName] = useState(current?.name ?? "");
-	const [slug, setSlug] = useState(current?.slug ?? "");
+	const [name, setName] = useState(workspace.name);
+	const [slug, setSlug] = useState(workspace.slug);
 	const [error, setError] = useState<string | null>(null);
 
 	const mutation = useMutation({
-		mutationFn: () => {
-			if (!current) throw new Error("no workspace");
-			return api.updateWorkspace(current.id, { name, slug });
-		},
+		mutationFn: () => api.updateWorkspace(workspace.id, { name, slug }),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["me"] });
 			setError(null);
@@ -129,18 +125,14 @@ function EditWorkspaceCard() {
 	);
 }
 
-function WorkspaceLogoCard() {
+function WorkspaceLogoCard({ workspace }: { workspace: WorkspaceWithRole }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { current } = useWorkspace();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	const uploadMutation = useMutation({
-		mutationFn: (file: File) => {
-			if (!current) throw new Error("no workspace");
-			return api.uploadWorkspaceLogo(current.id, file);
-		},
+		mutationFn: (file: File) => api.uploadWorkspaceLogo(workspace.id, file),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["me"] });
 			setError(null);
@@ -149,10 +141,7 @@ function WorkspaceLogoCard() {
 	});
 
 	const removeMutation = useMutation({
-		mutationFn: () => {
-			if (!current) throw new Error("no workspace");
-			return api.removeWorkspaceLogo(current.id);
-		},
+		mutationFn: () => api.removeWorkspaceLogo(workspace.id),
 		onSuccess: async () => {
 			await queryClient.invalidateQueries({ queryKey: ["me"] });
 			setError(null);
@@ -189,8 +178,8 @@ function WorkspaceLogoCard() {
 			</CardHeader>
 			<CardContent className="flex items-center gap-4">
 				<WorkspaceAvatar
-					name={current?.name ?? ""}
-					logoUrl={current?.logoUrl}
+					name={workspace.name}
+					logoUrl={workspace.logoUrl}
 					className="size-16 text-lg"
 				/>
 				<div className="flex flex-col gap-2">
@@ -210,7 +199,7 @@ function WorkspaceLogoCard() {
 						>
 							{t("settings.general.logoUpload")}
 						</Button>
-						{current?.logoUrl && (
+						{workspace.logoUrl && (
 							<Button
 								type="button"
 								variant="ghost"

@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { AdminBanner } from "@/components/admin-banner";
 import { GitHubIcon, GoogleIcon } from "@/components/provider-icons";
+import { SettingsSection } from "@/components/settings-section";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -55,11 +56,20 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 
-export const Route = createFileRoute("/_authed/settings/users")({
+export const Route = createFileRoute("/settings/users")({
 	component: UsersSection,
 });
 
 function UsersSection() {
+	const { t } = useTranslation();
+	return (
+		<SettingsSection title={t("settings.nav.systemUsers")}>
+			<UsersContent />
+		</SettingsSection>
+	);
+}
+
+function UsersContent() {
 	const { t } = useTranslation();
 	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
 

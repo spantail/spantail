@@ -86,10 +86,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { invalidateWorkEntryData } from "@/lib/query";
+import { useSettingsWorkspace } from "@/lib/settings-workspace";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/lib/workspace";
 
-export const Route = createFileRoute("/_authed/settings/projects")({
+export const Route = createFileRoute("/settings/_workspace/projects")({
 	component: ProjectsSection,
 });
 
@@ -280,23 +280,22 @@ function MemberMultiSelect({
 
 function ProjectsSection() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
+	const { selected, canManage } = useSettingsWorkspace();
 
-	if (!current) {
+	if (!selected) {
 		return (
 			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
 		);
 	}
 
-	const canManage = current.role === "owner" || current.role === "admin";
-	return <ProjectsCard canManage={canManage} />;
+	return <ProjectsCard key={selected.id} canManage={canManage} />;
 }
 
 function ProjectsCard({ canManage }: { canManage: boolean }) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { current } = useWorkspace();
-	const workspaceId = current?.id ?? "";
+	const { selected } = useSettingsWorkspace();
+	const workspaceId = selected?.id ?? "";
 	const [slug, setSlug] = useState("");
 	const [name, setName] = useState("");
 	const [hue, setHue] = useState<number>(DEFAULT_PROJECT_HUE);

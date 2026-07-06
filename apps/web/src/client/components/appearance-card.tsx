@@ -1,4 +1,4 @@
-import type { WorkspaceAccentColor } from "@spantail/core";
+import type { WorkspaceAccentColor, WorkspaceWithRole } from "@spantail/core";
 import type { Me } from "@spantail/sdk";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckIcon } from "lucide-react";
@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/lib/workspace";
 
 // Accent swatches. Colors are inline OKLCH so each tile renders its hue
 // regardless of the active workspace theme. "neutral" is the achromatic
@@ -40,51 +39,25 @@ const ACCENTS: ReadonlyArray<{
 const PREVIEW_BARS = [44, 70, 52, 84, 60, 30, 26, 76, 58, 90, 64, 48];
 const PREVIEW_DIM = new Set([5, 6]);
 
-export function AppearanceCard() {
-	const { t } = useTranslation();
-	const { current } = useWorkspace();
-	const canManage = current?.role === "owner" || current?.role === "admin";
-
-	if (!current) {
-		return (
-			<p className="text-muted-foreground text-sm">{t("workspace.none")}</p>
-		);
-	}
-
-	if (!canManage) {
-		return (
-			<Card>
-				<CardHeader>
-					<CardTitle className="font-heading text-base">
-						{t("settings.appearance.title")}
-					</CardTitle>
-					<CardDescription>{t("settings.adminOnlyHint")}</CardDescription>
-				</CardHeader>
-			</Card>
-		);
-	}
-
-	return <EditAppearanceCard key={current.id} />;
-}
-
-function EditAppearanceCard() {
+export function AppearanceCard({
+	workspace,
+}: {
+	workspace: WorkspaceWithRole;
+}) {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const { current } = useWorkspace();
-	const selected = current?.accentColor ?? "neutral";
+	const selected = workspace.accentColor ?? "neutral";
 
 	const mutation = useMutation({
-		mutationFn: (accentColor: WorkspaceAccentColor) => {
-			if (!current) throw new Error("no workspace");
-			return api.updateWorkspace(current.id, { accentColor });
-		},
+		mutationFn: (accentColor: WorkspaceAccentColor) =>
+			api.updateWorkspace(workspace.id, { accentColor }),
 		// Optimistically patch the cached workspace so the provider re-applies the
 		// accent immediately (instant preview). Roll back on error and reconcile
 		// with the server on settle. The provider stays the single source of truth
 		// for the document theme, so a failed request never leaves a stale accent
 		// applied — even if the active workspace changed while it was in flight.
+		// Editing a non-active workspace correctly leaves the app accent alone.
 		onMutate: async (accentColor) => {
-			if (!current) return;
 			await queryClient.cancelQueries({ queryKey: ["me"] });
 			const previous = queryClient.getQueryData<Me>(["me"]);
 			queryClient.setQueryData<Me>(["me"], (old) =>
@@ -92,7 +65,7 @@ function EditAppearanceCard() {
 					? {
 							...old,
 							memberships: old.memberships.map((w) =>
-								w.id === current.id ? { ...w, accentColor } : w,
+								w.id === workspace.id ? { ...w, accentColor } : w,
 							),
 						}
 					: old,
@@ -112,7 +85,7 @@ function EditAppearanceCard() {
 					{t("settings.appearance.title")}
 				</CardTitle>
 				<CardDescription>
-					{t("settings.appearance.description", { name: current?.name ?? "" })}
+					{t("settings.appearance.description", { name: workspace.name })}
 				</CardDescription>
 			</CardHeader>
 			<CardContent>

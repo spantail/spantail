@@ -502,7 +502,8 @@
 	"roles": { "owner": "オーナー", "admin": "管理者", "member": "メンバー" },
 	"settings": {
 		"title": "設定",
-		"subtitle": "ワークスペース・チーム・個人アクセスを管理します。",
+		"rail": { "close": "閉じる" },
+		"workspacePane": { "title": "ワークスペース" },
 		"adminOnlyHint": "これらの設定はワークスペース管理者のみ変更できます。",
 		"nav": {
 			"workspace": "ワークスペース",
@@ -515,7 +516,7 @@
 			"templates": "レポートテンプレート",
 			"tokens": "API トークン",
 			"agents": "エージェント",
-			"profile": "プロフィール",
+			"preferences": "環境設定",
 			"authentication": "認証",
 			"systemUsers": "ユーザー管理",
 			"features": "機能",
