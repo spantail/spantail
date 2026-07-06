@@ -326,7 +326,9 @@ export function AgentsCard() {
 
 			{formOpen && (
 				<AgentFormDialog
-					workspaces={workspaces.data ?? []}
+					// Archived workspaces are read-only: a token bound to one could
+					// never ingest, and the server rejects the binding anyway.
+					workspaces={(workspaces.data ?? []).filter((ws) => !ws.archivedAt)}
 					onOpenChange={(open) => {
 						if (!open) setFormOpen(false);
 					}}

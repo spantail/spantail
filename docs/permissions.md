@@ -19,7 +19,7 @@ MCP are not constrained by the UI and follow this spec directly.**
 |---|---|---|
 | Instance admin | `user.isAdmin` (`packages/db/src/schema/auth.ts`) | System-wide super admin. |
 | Template author | `user.canManageTemplates` | May author instance-wide report templates without being an instance admin. |
-| Workspace owner | `workspace_members.role = "owner"` | Workspace creator. Same powers as workspace admin, but cannot be removed and the last admin cannot be demoted. |
+| Workspace owner | `workspace_members.role = "owner"` | Workspace creator. Same powers as workspace admin, but cannot be removed and the last admin cannot be demoted. The only workspace role that can **delete** the workspace. |
 | Workspace admin | `workspace_members.role = "admin"` | Manages a workspace and its resources/settings. |
 | Workspace member | `workspace_members.role = "member"` | Belongs to a workspace. |
 | Project member | `project_members` (`packages/db/src/schema/domain.ts`) | Belongs to a specific project. Binary membership (no per-project role), managed by workspace admins. |
@@ -28,6 +28,9 @@ MCP are not constrained by the UI and follow this spec directly.**
 
 Workspace roles are ranked `member < admin < owner` (`apps/web/src/server/lib/permissions.ts`).
 "Workspace admin" in this document means **owner or admin** unless stated otherwise.
+An **instance admin satisfies any workspace-role requirement** regardless of whether (or with
+what role) they happen to be a member — the admin bypass (Principle 1) is not demoted by an
+incidental `member` row.
 
 ## Scopes
 
@@ -65,6 +68,14 @@ full. Every resource belongs to exactly one scope:
 7. **Secrets** (API token values, password) are never readable by anyone — not even the owner,
    except a token's value shown once at creation. The resource that *holds* a secret (e.g. the
    token list) is readable as metadata; the secret value itself is never returned.
+8. **An archived workspace is read-only.** Every write into it — work entries, agent ingest,
+   projects, members, settings, logo, agent-token bindings — is rejected with `409 conflict`
+   until it is unarchived, for every role including admins. Exactly two operations stay allowed:
+   unarchiving (`PATCH` with `archived: false`, the only field the route accepts while archived)
+   and deleting the workspace. Reads are unaffected. Enforced centrally in
+   `requireWorkspaceAccess` / `requireAgentIngestWorkspace`
+   (`apps/web/src/server/lib/permissions.ts`). Archiving itself is a workspace-settings write
+   (workspace admin), but **deletion is owner-only** (plus instance admins via the bypass).
 
 ### Self-service
 

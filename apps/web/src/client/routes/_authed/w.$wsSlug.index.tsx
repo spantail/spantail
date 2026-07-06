@@ -37,15 +37,23 @@ function Dashboard() {
 	// The parent layout redirects when the slug has no matching workspace, so
 	// `current` resolves to this workspace by the time the dashboard renders.
 	if (!current) return null;
-	return <Timeline workspaceId={current.id} userId={session.user.id} />;
+	return (
+		<Timeline
+			workspaceId={current.id}
+			userId={session.user.id}
+			readOnly={Boolean(current.archivedAt)}
+		/>
+	);
 }
 
 function Timeline({
 	workspaceId,
 	userId,
+	readOnly,
 }: {
 	workspaceId: string;
 	userId: string;
+	readOnly: boolean;
 }) {
 	const { t, i18n } = useTranslation();
 	const { openCreate } = useEntryDialog();
@@ -119,12 +127,16 @@ function Timeline({
 						<p className="text-muted-foreground text-sm">
 							{t("timeline.empty")}
 						</p>
-						<Button onClick={() => openCreate()}>
-							{t("timeline.emptyCta")}
-						</Button>
-						<p className="text-muted-foreground text-xs">
-							{t("timeline.shortcutHint")}
-						</p>
+						{!readOnly && (
+							<>
+								<Button onClick={() => openCreate()}>
+									{t("timeline.emptyCta")}
+								</Button>
+								<p className="text-muted-foreground text-xs">
+									{t("timeline.shortcutHint")}
+								</p>
+							</>
+						)}
 					</div>
 				) : (
 					<>

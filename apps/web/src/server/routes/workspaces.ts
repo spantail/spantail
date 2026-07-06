@@ -7,6 +7,7 @@ import {
 } from "@spantail/core";
 import {
 	createWorkspace,
+	deleteWorkspace,
 	getWorkspaceBySlug,
 	updateWorkspace,
 } from "@spantail/db";
@@ -62,9 +63,15 @@ export const workspaceRoutes = new Hono<AppEnv>()
 	.patch("/:id", async (c) => {
 		requireScope(c, "admin");
 		const workspaceId = c.req.param("id");
-		await requireWorkspaceAccess(c, workspaceId, "admin");
+		// Read mode so unarchiving stays reachable; while archived, `archived` is
+		// the only field this route accepts — everything else needs an unarchive
+		// first, keeping the workspace read-only in one place.
+		const { workspace } = await requireWorkspaceAccess(c, workspaceId, "admin");
 		const input = validate(updateWorkspaceInputSchema, await c.req.json());
 		const { archived, ...rest } = input;
+		if (workspace.archivedAt && Object.keys(rest).length > 0) {
+			throw new AppError("conflict", "Workspace is archived");
+		}
 		if (rest.slug !== undefined) {
 			const existing = await getWorkspaceBySlug(c.var.db, rest.slug);
 			if (existing && existing.id !== workspaceId) {
@@ -81,6 +88,28 @@ export const workspaceRoutes = new Hono<AppEnv>()
 				: { archivedAt: archived ? new Date() : null }),
 		});
 		return c.json(updated);
+	})
+	// Deleting a workspace is owner-only (plus instance admins via the bypass);
+	// workspace admins manage settings but cannot destroy the container. FK
+	// cascades remove members, projects, entries, agent telemetry, and agent
+	// tokens bound to the workspace. Read mode: an archived workspace is still
+	// deletable.
+	.delete("/:id", async (c) => {
+		requireScope(c, "admin");
+		const workspaceId = c.req.param("id");
+		await requireWorkspaceAccess(c, workspaceId, "owner");
+		await deleteWorkspace(c.var.db, workspaceId);
+		// Logo cleanup after the row is gone: a failed R2 delete merely orphans an
+		// unreachable object, while the reverse order could strip the logo from a
+		// workspace that then failed to delete. The delete has already succeeded
+		// at this point, so a cleanup failure must not turn the response into an
+		// error — a retry would only see 404.
+		try {
+			await c.env.UPLOADS.delete(workspaceLogoKey(workspaceId));
+		} catch (error) {
+			console.error("workspace logo cleanup failed", workspaceId, error);
+		}
+		return c.body(null, 204);
 	})
 	// Serves the logo through the Worker so the session cookie authorizes it
 	// (the SPA loads it via <img>). "no-cache" forces the browser to revalidate
@@ -106,7 +135,7 @@ export const workspaceRoutes = new Hono<AppEnv>()
 	.put("/:id/logo", async (c) => {
 		requireScope(c, "admin");
 		const workspaceId = c.req.param("id");
-		await requireWorkspaceAccess(c, workspaceId, "admin");
+		await requireWorkspaceAccess(c, workspaceId, "admin", { write: true });
 		const contentType = c.req.header("content-type")?.split(";")[0]?.trim();
 		if (!contentType || !isWorkspaceLogoMimeType(contentType)) {
 			throw new AppError(
@@ -141,7 +170,7 @@ export const workspaceRoutes = new Hono<AppEnv>()
 	.delete("/:id/logo", async (c) => {
 		requireScope(c, "admin");
 		const workspaceId = c.req.param("id");
-		await requireWorkspaceAccess(c, workspaceId, "admin");
+		await requireWorkspaceAccess(c, workspaceId, "admin", { write: true });
 		await c.env.UPLOADS.delete(workspaceLogoKey(workspaceId));
 		const updated = await updateWorkspace(c.var.db, workspaceId, {
 			logoUrl: null,

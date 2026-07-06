@@ -328,8 +328,15 @@ summarized here for the data model.
 - **Denormalized `workspaceId`.** Copied onto `work_entries`, `agent_entries`, and `agent_events` so
   membership-scoped queries never have to join through a project. The workspace is the cheap filter.
 - **Archival vs deletion.** `archivedAt` / `status = "archived"` hide a workspace, project, or agent
-  while preserving data; `disabledAt` reversibly rejects an agent's token. Deleting a project does
-  **not** cascade to its entries — `projectId` is set to null, leaving them as unassigned history.
+  while preserving data; `disabledAt` reversibly rejects an agent's token. An **archived workspace**
+  is additionally **read-only**: every write into it (entries, agent ingest, projects, members,
+  settings) is rejected with 409 until it is unarchived — only unarchiving and deleting the
+  workspace itself stay allowed — and it is hidden from the workspace switcher while remaining
+  readable. Deleting a project does **not** cascade to its entries — `projectId` is set to null,
+  leaving them as unassigned history. Deleting a **workspace** does cascade: members, projects,
+  work entries, agent entries/events, and agent tokens bound to the workspace are all removed.
+  Report snapshots survive (they are user-scoped), but the deleted workspace drops out of scope
+  validation, the same as losing membership.
 - **Frozen snapshots.** Deliveries freeze their rendered Markdown (and identifying metadata) at
   send time; shares reference an immutable `report_content` version instead of copying it — same
   guarantee, by construction. A later edit or account deletion never rewrites what someone already

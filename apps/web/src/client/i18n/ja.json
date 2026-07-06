@@ -140,6 +140,9 @@
 		"label": "ワークスペース",
 		"none": "ワークスペースなし",
 		"createAction": "ワークスペースを作成",
+		"archivedBanner": "このワークスペースはアーカイブ済みで、読み取り専用です。",
+		"archivedBadge": "アーカイブ済み",
+		"archivedOption": "{{name}}（アーカイブ済み）",
 		"empty": {
 			"title": "ワークスペースがありません",
 			"admin": "最初のワークスペースを作成すると記録を開始できます。",
@@ -808,7 +811,28 @@
 			"logoRemove": "削除",
 			"logoHint": "PNG・JPEG・WebP、最大 1 MB。",
 			"logoErrorType": "ロゴは PNG・JPEG・WebP 画像である必要があります。",
-			"logoErrorSize": "ロゴは最大サイズの 1 MB を超えています。"
+			"logoErrorSize": "ロゴは最大サイズの 1 MB を超えています。",
+			"archiveLabel": "ワークスペースをアーカイブ",
+			"archiveDescription": "ワークスペースを読み取り専用にし、ワークスペーススイッチャーから非表示にします。",
+			"archivedHint": "このワークスペースはアーカイブ済みで、読み取り専用です。変更するには復元してください。",
+			"archiveAction": "アーカイブする",
+			"unarchiveAction": "復元する",
+			"archivedToast": "ワークスペースをアーカイブしました。",
+			"unarchivedToast": "ワークスペースを復元しました。"
+		},
+		"danger": {
+			"title": "Danger Zone",
+			"description": "このワークスペースに対する取り消しできない操作。",
+			"deleteLabel": "ワークスペースを削除",
+			"deleteDescription": "ワークスペースを、そのプロジェクト・エントリ・エージェントアクティビティごと完全に削除します。",
+			"deleteAction": "ワークスペースを削除",
+			"deleteTitle": "{{name}} を削除しますか？",
+			"deleteDialogDescription": "ワークスペースとその中のすべてのデータを完全に削除します。",
+			"deleteWarningTitle": "この操作は取り消せません",
+			"deleteWarningBody": "「{{name}}」のすべてのプロジェクト・メンバー・作業エントリ・エージェントアクティビティが完全に削除されます。",
+			"confirmLabel": "確認のため {{slug}} と入力してください",
+			"deleteConfirm": "ワークスペースを削除",
+			"deletedToast": "ワークスペースを削除しました。"
 		},
 		"appearance": {
 			"title": "外観",

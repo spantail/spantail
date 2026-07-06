@@ -1,6 +1,6 @@
 ---
 title: Workspaces
-description: Read, create, and update workspaces, and manage their logo.
+description: Read, create, update, archive, and delete workspaces, and manage their logo.
 ---
 
 import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -132,6 +132,35 @@ curl -X PATCH "https://<your-instance>/api/v1/workspaces/wrk_demo" \
 ```
 
 Returns the updated workspace object.
+
+<Aside type="note">
+An **archived workspace is read-only**: every write into it — work entries, agent ingest,
+projects, members, settings, logo — returns `409 conflict` until it is restored. Reads keep
+working and the workspace stays in list responses (`archivedAt` is set). While archived, this
+route accepts only the `archived` field; restore first to change anything else. Deleting the
+workspace also stays possible.
+</Aside>
+
+## Delete a workspace
+
+`DELETE /api/v1/workspaces/:id` <Badge text="scope: admin" variant="danger" />
+
+Permanently deletes a workspace. **Workspace owner only** (instance admins may also delete any
+workspace); a workspace admin who is not the owner gets `403`. An archived workspace can be
+deleted without restoring it first.
+
+<Aside type="caution">
+Deletion cascades: the workspace's members, projects, work entries, agent entries/events, and
+agent tokens bound to the workspace are all permanently removed. Report snapshots that already
+rendered its data survive, but the deleted workspace drops out of report scope validation.
+</Aside>
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/workspaces/wrk_demo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+Returns `204 No Content`.
 
 ## Get the workspace logo
 

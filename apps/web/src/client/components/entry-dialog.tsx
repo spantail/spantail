@@ -87,7 +87,9 @@ export function EntryDialogProvider({
 	const [state, setState] = useState<EntryDialogState | null>(null);
 	// Remount key so the form re-derives its initial state on every open.
 	const [instanceId, setInstanceId] = useState(0);
-	const hasWorkspace = Boolean(current);
+	// An archived workspace is read-only, so creating is blocked here — the one
+	// chokepoint both the buttons and the `c` shortcut go through.
+	const canCreate = Boolean(current) && !current?.archivedAt;
 
 	// On a project page (`/w/{wsSlug}/projects/{projectSlug}`), creating
 	// pre-selects that project (only while it is active — the form's select
@@ -104,7 +106,7 @@ export function EntryDialogProvider({
 
 	const openCreate = useCallback(
 		(prefill?: EntryCreatePrefill, opts?: { onCreated?: () => void }) => {
-			if (!hasWorkspace) return;
+			if (!canCreate) return;
 			setInstanceId((id) => id + 1);
 			setState({
 				mode: "create",
@@ -113,7 +115,7 @@ export function EntryDialogProvider({
 				onCreated: opts?.onCreated,
 			});
 		},
-		[hasWorkspace, contextProjectId],
+		[canCreate, contextProjectId],
 	);
 	const openEdit = useCallback((entry: WorkEntry) => {
 		setInstanceId((id) => id + 1);

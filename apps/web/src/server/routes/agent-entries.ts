@@ -94,7 +94,9 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 	.post("/delete", async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(deleteAgentEntriesInputSchema, await c.req.json());
-		await requireWorkspaceAccess(c, input.workspaceId);
+		await requireWorkspaceAccess(c, input.workspaceId, "member", {
+			write: true,
+		});
 		const ids = [...new Set(input.ids)];
 		const rows = await getAgentEntriesByIds(c.var.db, ids);
 		const byId = new Map(rows.map((row) => [row.id, row]));

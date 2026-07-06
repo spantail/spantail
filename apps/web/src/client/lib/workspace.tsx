@@ -29,9 +29,17 @@ export function WorkspaceProvider({
 	const urlSlug = useRouterState({
 		select: (s) => s.location.pathname.match(/^\/w\/([^/]+)/)?.[1] ?? null,
 	});
+	// Archived workspaces stay reachable by URL (they are still readable) but
+	// lose to any active workspace when picking a default — the switcher hides
+	// them, so defaulting into one would strand the user in a workspace they
+	// cannot switch back to. When *every* membership is archived there is no
+	// active workspace to prefer, so fall back to an archived one anyway: it is
+	// still readable, and `null` would strand the user on the home hub instead
+	// (for admins, in a `/` ↔ `/setup` redirect loop).
 	const current =
 		(urlSlug ? workspaces.find((w) => w.slug === urlSlug) : undefined) ??
-		workspaces.find((w) => w.id === selectedId) ??
+		workspaces.find((w) => w.id === selectedId && !w.archivedAt) ??
+		workspaces.find((w) => !w.archivedAt) ??
 		workspaces[0] ??
 		null;
 

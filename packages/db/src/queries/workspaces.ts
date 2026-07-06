@@ -105,6 +105,14 @@ export async function updateWorkspace(
 	return rows[0];
 }
 
+/**
+ * Deletes the workspace row; FK cascades remove members, projects, entries,
+ * agent telemetry, and agent tokens bound to the workspace.
+ */
+export async function deleteWorkspace(db: Database, id: string): Promise<void> {
+	await db.delete(workspaces).where(eq(workspaces.id, id));
+}
+
 export async function getMembership(
 	db: Database,
 	workspaceId: string,

@@ -234,8 +234,10 @@ function AgentPage() {
 	const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 	// Both bulk actions are owner-only server-side, so selection is offered only
 	// on the viewer's own sessions (an agent belongs to one user, so in practice
-	// this is all rows or none).
-	const canSelect = list.some((e) => e.ownerUserId === session.user.id);
+	// this is all rows or none). No selection in an archived workspace either —
+	// both bulk actions are writes, which the server rejects there.
+	const canSelect =
+		!current?.archivedAt && list.some((e) => e.ownerUserId === session.user.id);
 	// A work entry has one project, so a mixed-project selection can't become
 	// one; null (unassigned) is its own group.
 	const mixedProjects =

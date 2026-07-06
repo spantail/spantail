@@ -91,7 +91,8 @@ function LogWorkButton() {
 	const { current } = useWorkspace();
 	const { openCreate } = useEntryDialog();
 
-	if (!current) return null;
+	// Hidden while the active workspace is archived (read-only).
+	if (!current || current.archivedAt) return null;
 	return (
 		<Button
 			size="sm"

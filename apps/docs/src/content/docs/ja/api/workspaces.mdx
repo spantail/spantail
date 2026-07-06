@@ -1,6 +1,6 @@
 ---
 title: ワークスペース
-description: ワークスペースの取得・作成・更新、およびロゴの管理。
+description: ワークスペースの取得・作成・更新・アーカイブ・削除、およびロゴの管理。
 ---
 
 import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -133,6 +133,36 @@ curl -X PATCH "https://<your-instance>/api/v1/workspaces/wrk_demo" \
 ```
 
 更新後のワークスペースオブジェクトを返します。
+
+<Aside type="note">
+**アーカイブされたワークスペースは読み取り専用**です。作業エントリ・エージェント取り込み・
+プロジェクト・メンバー・設定・ロゴなど、そのワークスペースへのあらゆる書き込みは復元されるまで
+`409 conflict` を返します。読み取りは引き続き可能で、一覧レスポンスにも含まれます（`archivedAt` が
+設定されます）。アーカイブ中、このルートは `archived` フィールドのみを受け付けます。他のフィールドを
+変更するには先に復元してください。ワークスペース自体の削除は引き続き可能です。
+</Aside>
+
+## ワークスペースの削除
+
+`DELETE /api/v1/workspaces/:id` <Badge text="scope: admin" variant="danger" />
+
+ワークスペースを完全に削除します。**ワークスペースオーナーのみ**（インスタンス管理者も任意の
+ワークスペースを削除できます）。オーナーでないワークスペース管理者は `403` になります。
+アーカイブされたワークスペースは復元せずに削除できます。
+
+<Aside type="caution">
+削除はカスケードします。ワークスペースのメンバー・プロジェクト・作業エントリ・エージェント
+エントリ/イベント・ワークスペースに紐づくエージェントトークンがすべて完全に削除されます。
+すでにレンダリング済みのレポートスナップショットは残りますが、削除されたワークスペースは
+レポートのスコープ検証から外れます。
+</Aside>
+
+```bash
+curl -X DELETE "https://<your-instance>/api/v1/workspaces/wrk_demo" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+
+`204 No Content` を返します。
 
 ## ワークスペースロゴの取得
 

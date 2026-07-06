@@ -263,6 +263,241 @@ it("uploads, serves, and removes a workspace logo", async () => {
 	expect(gone.status).toBe(404);
 });
 
+it("makes an archived workspace read-only until it is restored", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com");
+	await signUpUser("Member", "member@example.com");
+	const ws = await createWs(admin);
+
+	const archived = await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${ws.id}`,
+		{ archived: true },
+		admin,
+	);
+	expect(archived.status).toBe(200);
+
+	// Writes across the workspace are rejected with 409.
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/workspaces/${ws.id}/projects`,
+				{ slug: "p1", name: "P1" },
+				admin,
+			)
+		).status,
+	).toBe(409);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/workspaces/${ws.id}/members`,
+				{ email: "member@example.com" },
+				admin,
+			)
+		).status,
+	).toBe(409);
+	expect(
+		(await putLogo(ws.id, new Uint8Array([1]), "image/png", admin)).status,
+	).toBe(409);
+
+	// While archived, PATCH accepts only the `archived` field itself.
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/workspaces/${ws.id}`,
+				{ name: "Renamed" },
+				admin,
+			)
+		).status,
+	).toBe(409);
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/workspaces/${ws.id}`,
+				{ archived: false, name: "Renamed" },
+				admin,
+			)
+		).status,
+	).toBe(409);
+
+	// Reads still work.
+	expect((await apiGet(`/api/v1/workspaces/${ws.id}`, admin)).status).toBe(200);
+	expect(
+		(await apiGet(`/api/v1/workspaces/${ws.id}/projects`, admin)).status,
+	).toBe(200);
+	expect(
+		(await apiGet(`/api/v1/workspaces/${ws.id}/members`, admin)).status,
+	).toBe(200);
+
+	// Unarchiving restores writes.
+	const restored = await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${ws.id}`,
+		{ archived: false },
+		admin,
+	);
+	expect(restored.status).toBe(200);
+	expect(
+		((await restored.json()) as { archivedAt: string | null }).archivedAt,
+	).toBeNull();
+	expect(
+		(
+			await apiJson(
+				"POST",
+				`/api/v1/workspaces/${ws.id}/projects`,
+				{ slug: "p1", name: "P1" },
+				admin,
+			)
+		).status,
+	).toBe(201);
+});
+
+it("lets only the owner delete a workspace, not a workspace admin", async () => {
+	await signUpUser("Admin", "admin@example.com"); // bootstrap admin
+	const owner = await signUpAdmin("Owner", "owner@example.com");
+	const memberCookie = await signUpUser("Member", "member@example.com");
+	const wsAdminCookie = await signUpUser("WS Admin", "ws-admin@example.com");
+
+	const ws = (await (
+		await apiJson("POST", "/api/v1/workspaces", WS, owner)
+	).json()) as { id: string };
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "member@example.com" },
+		owner,
+	);
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "ws-admin@example.com", role: "admin" },
+		owner,
+	);
+
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${ws.id}`,
+				undefined,
+				memberCookie,
+			)
+		).status,
+	).toBe(403);
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${ws.id}`,
+				undefined,
+				wsAdminCookie,
+			)
+		).status,
+	).toBe(403);
+
+	expect(
+		(await apiJson("DELETE", `/api/v1/workspaces/${ws.id}`, undefined, owner))
+			.status,
+	).toBe(204);
+	expect((await apiGet(`/api/v1/workspaces/${ws.id}`, owner)).status).toBe(404);
+});
+
+it("lets an instance admin delete a workspace regardless of membership role", async () => {
+	const admin = await signUpUser("Admin", "admin@example.com"); // bootstrap admin
+	const owner = await signUpAdmin("Owner", "owner@example.com");
+
+	// Not a member at all: the bypass covers the owner requirement.
+	const foreign = (await (
+		await apiJson("POST", "/api/v1/workspaces", WS, owner)
+	).json()) as { id: string };
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${foreign.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// A member with a plain `member` role: the stored role must not demote the
+	// instance admin below the owner requirement.
+	const joined = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ ...WS, slug: "beta", name: "Beta" },
+			owner,
+		)
+	).json()) as { id: string };
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${joined.id}/members`,
+		{ email: "admin@example.com" },
+		owner,
+	);
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${joined.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// A missing workspace stays 404.
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				"/api/v1/workspaces/does-not-exist",
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(404);
+});
+
+it("deletes a workspace with its contents, even while archived", async () => {
+	const owner = await signUpUser("Owner", "owner@example.com");
+	const ws = await createWs(owner);
+	const project = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "p1", name: "P1" },
+			owner,
+		)
+	).json()) as { id: string };
+
+	await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${ws.id}`,
+		{ archived: true },
+		owner,
+	);
+	expect(
+		(await apiJson("DELETE", `/api/v1/workspaces/${ws.id}`, undefined, owner))
+			.status,
+	).toBe(204);
+
+	// The container and its cascaded contents are gone.
+	expect((await apiGet(`/api/v1/workspaces/${ws.id}`, owner)).status).toBe(404);
+	expect((await apiGet(`/api/v1/projects/${project.id}`, owner)).status).toBe(
+		404,
+	);
+	const memberships = (await (await apiGet("/api/v1/me", owner)).json()) as {
+		memberships: unknown[];
+	};
+	expect(memberships.memberships).toHaveLength(0);
+});
+
 it("rejects logo uploads from non-admins and invalid files", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const member = await signUpUser("Member", "member@example.com");
