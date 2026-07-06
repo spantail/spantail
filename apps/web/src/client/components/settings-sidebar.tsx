@@ -6,6 +6,7 @@ import {
 	InfoIcon,
 	KeyIcon,
 	LayersIcon,
+	PlugIcon,
 	SettingsIcon,
 	ShieldIcon,
 	SlidersHorizontalIcon,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { GitHubIcon } from "@/components/provider-icons";
 import { RailHeader } from "@/components/rail-header";
 import {
 	Sidebar,
@@ -35,6 +37,7 @@ interface SettingsNavItem {
 		| "/settings/general"
 		| "/settings/projects"
 		| "/settings/members"
+		| "/settings/integrations"
 		| "/settings/templates"
 		| "/settings/tokens"
 		| "/settings/agents"
@@ -42,6 +45,7 @@ interface SettingsNavItem {
 		| "/settings/authentication"
 		| "/settings/users"
 		| "/settings/features"
+		| "/settings/github"
 		| "/settings/system";
 	labelKey: string;
 	icon: React.ComponentType<{ className?: string }>;
@@ -83,6 +87,11 @@ const GROUPS: SettingsNavGroup[] = [
 				to: "/settings/members",
 				labelKey: "settings.nav.members",
 				icon: LayersIcon,
+			},
+			{
+				to: "/settings/integrations",
+				labelKey: "settings.nav.integrations",
+				icon: PlugIcon,
 			},
 		],
 	},
@@ -136,6 +145,11 @@ const GROUPS: SettingsNavGroup[] = [
 				to: "/settings/features",
 				labelKey: "settings.nav.features",
 				icon: ZapIcon,
+			},
+			{
+				to: "/settings/github",
+				labelKey: "settings.nav.github",
+				icon: GitHubIcon,
 			},
 			{
 				to: "/settings/system",

@@ -22,6 +22,7 @@ import {
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
+import { githubMappingRoutes } from "./github-mappings";
 import { memberRoutes } from "./members";
 import { workspaceProjectRoutes } from "./projects";
 
@@ -178,4 +179,5 @@ export const workspaceRoutes = new Hono<AppEnv>()
 		return c.json(updated);
 	})
 	.route("/:id/members", memberRoutes)
-	.route("/:id/projects", workspaceProjectRoutes);
+	.route("/:id/projects", workspaceProjectRoutes)
+	.route("/:id/github-mappings", githubMappingRoutes);

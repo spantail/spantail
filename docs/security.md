@@ -179,6 +179,37 @@ default is an insecure deployment. The rule is **fail closed**:
   leaked instance token is caught. This guards the *repository*, a distinct surface from the
   *captured runtime content* in §2.
 
+## 9. GitHub integration: untrusted webhooks, stored credentials, comment replies
+
+The BYO GitHub App (issue #159) adds three surfaces with distinct threats:
+
+**Webhook input is untrusted until the HMAC verifies.** `POST /api/github/webhook` reads
+the raw body bytes first and verifies `X-Hub-Signature-256` (HMAC-SHA256 with the stored
+webhook secret, constant-time compare) before any JSON parsing; failures get 401 and no
+processing. Everything in a verified payload is still *GitHub-mediated user input*:
+command parsing is strictly deterministic (`packages/core/src/github/command.ts` — no
+inference over comment text), and reply templates never echo attacker-controlled input
+beyond bounded, validated fragments.
+
+**App credentials live in D1, encrypted at rest.** The Manifest conversion delivers the
+App's private key, webhook secret, and OAuth client secret at runtime, so they cannot be
+environment secrets. They are stored AES-256-GCM encrypted with a key derived (HKDF) from
+`BETTER_AUTH_SECRET` — a database dump alone does not disclose them; the trust anchor
+remains the environment secret, which is already fail-closed (§8). Secrets are never
+returned by any API; only display metadata (slug, owner, App id) is readable.
+
+**Comment replies must not make an OSS repo a spam surface, nor let outsiders probe.**
+Commands execute only for identity-linked workspace members (the link is created via the
+App's user-authorization OAuth flow — verified account ownership, keyed by the immutable
+numeric GitHub user id, never the mutable login). Feedback replies (onboarding, errors)
+go only to commenters whose `author_association` is OWNER/MEMBER/COLLABORATOR; everyone
+else gets no reaction at all. Bot comments (including the App's own replies) never
+trigger commands. The redirect flows (manifest setup, connect) are CSRF-bound by a
+signed, purpose-scoped, expiring state that must match both the `state` query param and
+an HttpOnly cookie. Client-sent git remote URLs may embed credentials
+(`https://user:token@…`): they are normalized server-side (userinfo stripped) and never
+persisted — only the matched `owner/repo` full name is stored.
+
 ## Related
 
 - [`permissions.md`](./permissions.md) — who can read and write each resource (the access

@@ -430,6 +430,38 @@ export async function getAgentEntriesByIds(
 	return db.select().from(agentEntries).where(inArray(agentEntries.id, ids));
 }
 
+/**
+ * Recent agent entries of one user whose session context mentions a
+ * repository URL — the candidate set for linking sessions to a GitHub issue
+ * at log time. The LIKE on the JSON context is a cheap prefilter only;
+ * callers must re-verify `context.repositories` in JS before trusting a row
+ * (the substring could occur in another facet).
+ */
+export async function listAgentEntriesByRepo(
+	db: Database,
+	opts: {
+		workspaceId: string;
+		ownerUserId: string;
+		repoUrl: string;
+		since: Date;
+		limit?: number;
+	},
+): Promise<AgentEntryRow[]> {
+	return db
+		.select()
+		.from(agentEntries)
+		.where(
+			and(
+				eq(agentEntries.workspaceId, opts.workspaceId),
+				eq(agentEntries.ownerUserId, opts.ownerUserId),
+				gte(agentEntries.startedAt, opts.since),
+				sql`${agentEntries.context} like '%' || ${opts.repoUrl} || '%'`,
+			),
+		)
+		.orderBy(desc(agentEntries.startedAt))
+		.limit(opts.limit ?? 50);
+}
+
 // Each (agentId, sessionId) pair binds 2 parameters: a chunk of 40 keeps an
 // event-delete statement at 80 binds, under D1's 100-bound-parameter cap.
 const EVENT_DELETE_CHUNK = 40;

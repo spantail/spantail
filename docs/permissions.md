@@ -98,6 +98,9 @@ of the project in question (always also a workspace member) · **Self** = the re
 |---|---|---|---|---|---|---|
 | Users / Invitations (instance) | RW | – | – | – | – | – |
 | Instance settings: email/oauth/agents (instance) | RW | – | – | – | – | – |
+| GitHub App config (instance, secrets hidden) | RW | – | – | – | – | – |
+| GitHub repo mappings (workspace) | RW | RW | – | R | R | – |
+| GitHub identity link (user) | – | – | – | – | – | RW (own, via verified OAuth) |
 | Report templates (instance) | RW | – | RW | R | R | R |
 | Workspace settings (workspace) | RW | RW | – | R | R | – |
 | Members (workspace) | RW | RW | – | R | R | – |
@@ -161,6 +164,16 @@ Notes:
   against the owner's live workspace membership. The one human-role write is **deletion**: the
   entry's owner (and only the owner) may bulk-delete their own agent entries via
   `POST /api/v1/agent-entries/delete` with a session/PAT `write` scope.
+- **GitHub-originated writes act as the linked user, never as the App.** A `@spantail`
+  comment creates a work entry only when the commenter's GitHub account (matched by
+  immutable numeric user id) is linked to a Spantail user who is a member of the mapped
+  workspace — the normal author-only write, just triggered from GitHub. GitHub org
+  membership or repo `author_association` grants nothing by itself; it only gates whether
+  the bot replies at all (insiders get onboarding/error replies, outsiders get silence).
+  The `#N` log-work API path runs under the caller's own PAT/session with the same
+  workspace/project checks as a direct work-entry create. Whether an App is configured
+  (`GET /instance/github/enabled`, a boolean) is readable by any signed-in user to gate
+  the Connect card.
 
 ## UI vs API/MCP
 

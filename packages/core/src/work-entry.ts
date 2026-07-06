@@ -6,7 +6,7 @@ import { MAX_DURATION_MINUTES } from "./duration";
 export const tagSchema = z.string().min(1).max(50);
 
 /** Client channel a work entry was created through. Server-determined, not user input. */
-export const workEntrySources = ["web", "cli", "mcp", "api"] as const;
+export const workEntrySources = ["web", "cli", "mcp", "api", "github"] as const;
 export const workEntrySourceSchema = z.enum(workEntrySources);
 export type WorkEntrySource = z.infer<typeof workEntrySourceSchema>;
 

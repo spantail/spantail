@@ -56,6 +56,7 @@ unless you turn it on.
 | What | Purpose |
 |---|---|
 | `/spantail:log-work` | Log a work entry — from your words or from the current session's work. |
+| `/spantail:log-work #N <duration> [date]` | Log against a GitHub issue: the server resolves the project from its repo mapping (see [GitHub integration](/admin/github-integration/)), fills in the issue title and labels, and links matching agent sessions. |
 | `/spantail:create-report` | Compose a report; always previews before saving. |
 | `/spantail:summary on\|off` | Per-session toggle for sending the plan title as the description. |
 | `spantail-work-analyst` (agent) | Retrospectives over your work entries. |

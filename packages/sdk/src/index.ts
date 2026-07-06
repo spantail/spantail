@@ -14,6 +14,7 @@ import type {
 	Comment,
 	CreateAgentInput,
 	CreatedUser,
+	CreateGithubMappingInput,
 	CreateInvitationInputData,
 	CreateProjectInput,
 	CreateReportInput,
@@ -29,6 +30,12 @@ import type {
 	EmailEnabled,
 	EmailSettings,
 	FinalizeAgentSessionInput,
+	GithubAppStatus,
+	GithubIdentityStatus,
+	GithubInstallationRepo,
+	GithubManifestInitInput,
+	GithubMapping,
+	GithubUnmappedRepo,
 	IngestAgentEntryInputData,
 	IngestAgentEventsInputData,
 	Invitation,
@@ -37,6 +44,8 @@ import type {
 	ListInboxQueryData,
 	ListReportsQueryData,
 	ListWorkEntriesQueryData,
+	LogWorkFromGithubInput,
+	LogWorkFromGithubResult,
 	MailFolder,
 	MailFolderCounts,
 	MailItem,
@@ -287,6 +296,75 @@ export class SpantailClient {
 		return this.request("PATCH", "/instance/oauth", { body: input });
 	}
 
+	// --- GitHub integration (issue #159) ---
+
+	/** Whether a GitHub App is configured; gates the Connect GitHub card. */
+	getGithubAppEnabled(): Promise<{ enabled: boolean }> {
+		return this.request("GET", "/instance/github/enabled");
+	}
+
+	getGithubAppStatus(): Promise<GithubAppStatus> {
+		return this.request("GET", "/instance/github");
+	}
+
+	createGithubAppManifest(
+		input: GithubManifestInitInput,
+	): Promise<{ action: string; manifest: string }> {
+		return this.request("POST", "/instance/github/app/manifest", {
+			body: input,
+		});
+	}
+
+	deleteGithubApp(): Promise<void> {
+		return this.request("DELETE", "/instance/github/app");
+	}
+
+	listGithubInstallationRepos(
+		installationId: number,
+	): Promise<{ repos: GithubInstallationRepo[] }> {
+		return this.request(
+			"GET",
+			`/instance/github/installations/${installationId}/repos`,
+		);
+	}
+
+	listGithubMappings(workspaceId: string): Promise<GithubMapping[]> {
+		return this.request("GET", `/workspaces/${workspaceId}/github-mappings`);
+	}
+
+	createGithubMapping(
+		workspaceId: string,
+		input: CreateGithubMappingInput,
+	): Promise<GithubMapping> {
+		return this.request("POST", `/workspaces/${workspaceId}/github-mappings`, {
+			body: input,
+		});
+	}
+
+	deleteGithubMapping(workspaceId: string, mappingId: string): Promise<void> {
+		return this.request(
+			"DELETE",
+			`/workspaces/${workspaceId}/github-mappings/${mappingId}`,
+		);
+	}
+
+	listGithubUnmappedRepos(
+		workspaceId: string,
+	): Promise<{ repos: GithubUnmappedRepo[] }> {
+		return this.request(
+			"GET",
+			`/workspaces/${workspaceId}/github-mappings/unmapped-repos`,
+		);
+	}
+
+	getGithubIdentity(): Promise<GithubIdentityStatus> {
+		return this.request("GET", "/me/github");
+	}
+
+	disconnectGithubIdentity(): Promise<void> {
+		return this.request("DELETE", "/me/github");
+	}
+
 	listWorkspaces(): Promise<WorkspaceWithRole[]> {
 		return this.request("GET", "/workspaces");
 	}
@@ -420,6 +498,17 @@ export class SpantailClient {
 
 	getWorkEntry(id: string): Promise<WorkEntry> {
 		return this.request("GET", `/work-entries/${id}`);
+	}
+
+	/**
+	 * UC2 of the GitHub integration: log work against a GitHub issue. The
+	 * server resolves the project from the repo mapping and parses the raw
+	 * args string — callers send remotes and args verbatim.
+	 */
+	logWorkFromGithub(
+		input: LogWorkFromGithubInput,
+	): Promise<LogWorkFromGithubResult> {
+		return this.request("POST", "/github/log-work", { body: input });
 	}
 
 	updateWorkEntry(id: string, input: UpdateWorkEntryInput): Promise<WorkEntry> {

@@ -174,6 +174,7 @@ it("serves the full stateless json-rpc flow and writes through the api", async (
 		"list_workspaces",
 		"log_work",
 		"log_work_batch",
+		"log_work_github",
 		"preview_report",
 		"search",
 		"update_entry",

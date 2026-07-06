@@ -7,6 +7,7 @@ export * from "./deliveries";
 export * from "./delivery-flags";
 export * from "./discussions";
 export * from "./domain";
+export * from "./github";
 export * from "./instance";
 export * from "./reports";
 export * from "./shares";

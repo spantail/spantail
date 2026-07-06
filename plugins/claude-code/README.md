@@ -21,7 +21,11 @@ work and building reports.
   personal API token — a separate credential from the hooks' agent token; set
   `apiToken` to enable it):
   - `/spantail:log-work` — log a work entry, or capture the current session's
-    work.
+    work. The `#N` form (`/spantail:log-work #123 2h yesterday`) logs against
+    a GitHub issue: the server resolves the project from its repo→project
+    mapping (configured in Settings → Integrations; no project id lives in
+    this plugin) and links matching agent sessions. Duration/date are parsed
+    server-side — the plugin sends your raw arguments verbatim.
   - `/spantail:create-report` — compose a report; always previews before
     saving.
   - `/spantail:summary on|off` — per-session toggle for sending the plan

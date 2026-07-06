@@ -217,6 +217,35 @@ validates bounds, not names):
 Transcript content and source code are never ingested — only usage and the bounded metadata
 above (the OTel content-capture guidance and [`security.md`](./security.md) §2 both demand this).
 
+## Domain: GitHub integration
+
+The bring-your-own GitHub App (each instance registers its own via the App Manifest flow) and
+the server-side state that turns `@spantail` comments and `#N` log-work calls into work entries.
+
+Schema: [`packages/db/src/schema/github.ts`](../packages/db/src/schema/github.ts) ·
+Core types: [`packages/core/src/github/api.ts`](../packages/core/src/github/api.ts)
+
+```mermaid
+erDiagram
+    github_app_config ||..o{ github_installations : "webhooks maintain"
+    projects ||--o{ github_repo_mappings : "mapped from repos"
+    workspaces ||--o{ github_repo_mappings : "denormalized scope"
+    user ||--o| github_identities : "linked GitHub account"
+    work_entries ||--o| work_entry_github_refs : "logged from (repo, issue#)"
+```
+
+| Entity | Scope | Purpose | Key relationships |
+|---|---|---|---|
+| `github_app_config` | Instance | The BYO App's credentials, one row (`id = "singleton"`); its existence is the "enabled" flag. Secrets (private key as PKCS#8 DER, webhook secret, OAuth client secret) are AES-GCM encrypted at rest (see [`security.md`](./security.md) §9); `clientId` is public. | standalone |
+| `github_installations` | Instance | Where the App is installed (account login/type, suspended state). Maintained solely by `installation` webhooks; installed repos are **not mirrored** — the settings UI lists them live from the GitHub API. | keyed by GitHub's `installationId` |
+| `github_repo_mappings` | Workspace | repo → project: the single source of truth for project resolution (clients hold no project id). Keyed by the lowercased `repoFullName` (unique instance-wide); the numeric `repoId` (present for installation-sourced rows) self-heals the cached name across renames. Survives App/installation removal — that is degraded mode. | `projects` / `workspaces` (cascade) |
+| `github_identities` | User | GitHub account ↔ Spantail user, 1:1 both ways, keyed by the immutable numeric GitHub user id (login is a display cache). Established via the App's user-authorization OAuth flow, so ownership is verified. Attribution-only — never a sign-in method. | `user` (cascade) |
+| `work_entry_github_refs` | Workspace (via parent) | (repo, issue#) provenance of a GitHub-logged entry; backs the "total on this issue" running sum and, via the unique `commentId`, webhook redelivery idempotency (`commentId` is null for plugin-logged entries). | `work_entries` (cascade, PK) |
+
+Agent sessions are linked at log time through the existing `work_entry_agent_entries` rows: a
+snapshot taken when the entry is created (candidates matched by `context.repositories` +
+refs/branch heuristics), never revisited for late-arriving sessions.
+
 ## Domain: Reports & distribution
 
 A report combines a template with freely chosen filters, renders to an immutable snapshot, and is
