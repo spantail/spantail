@@ -305,7 +305,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<Table>
+					<Table className="[&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3">
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("auth.name")}</TableHead>
@@ -431,7 +431,7 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<Table>
+						<Table className="[&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3">
 							<TableHeader>
 								<TableRow>
 									<TableHead>{t("auth.email")}</TableHead>

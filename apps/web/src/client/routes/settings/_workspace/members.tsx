@@ -140,7 +140,7 @@ function MembersCard({ canManage }: { canManage: boolean }) {
 						)}
 					</form>
 				)}
-				<Table>
+				<Table className="[&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3">
 					<TableHeader>
 						<TableRow>
 							<TableHead>{t("auth.name")}</TableHead>

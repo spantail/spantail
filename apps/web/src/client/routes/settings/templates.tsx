@@ -432,7 +432,7 @@ function TemplateListCard({
 						{t("templates.empty")}
 					</p>
 				) : (
-					<Table>
+					<Table className="[&_td]:px-3 [&_td]:py-2.5 [&_th]:px-3">
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("templates.name")}</TableHead>
