@@ -12,6 +12,7 @@ import {
 	CopyIcon,
 	KeyRoundIcon,
 	MoreHorizontalIcon,
+	PlusIcon,
 	Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
@@ -33,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
 	Card,
+	CardAction,
 	CardContent,
 	CardDescription,
 	CardHeader,
@@ -92,12 +94,7 @@ type IssuedSecret = {
 export function AgentsCard() {
 	const { t } = useTranslation();
 	const queryClient = useQueryClient();
-	const [name, setName] = useState("");
-	const [type, setType] = useState<AgentType>("claude_code");
-	const [workspaceId, setWorkspaceId] = useState("");
-	const [projectIds, setProjectIds] = useState<string[]>([]);
-	const [expiresInDays, setExpiresInDays] = useState("");
-	const [error, setError] = useState<string | null>(null);
+	const [formOpen, setFormOpen] = useState(false);
 	const [issued, setIssued] = useState<IssuedSecret | null>(null);
 	const [deleting, setDeleting] = useState<AgentWithToken | null>(null);
 
@@ -109,11 +106,6 @@ export function AgentsCard() {
 		queryKey: ["workspaces"],
 		queryFn: () => api.listWorkspaces(),
 	});
-	const projects = useQuery({
-		queryKey: ["projects", workspaceId],
-		queryFn: () => api.listProjects(workspaceId),
-		enabled: workspaceId !== "",
-	});
 
 	const workspaceNames = new Map(
 		(workspaces.data ?? []).map((ws) => [ws.id, ws.name]),
@@ -121,33 +113,6 @@ export function AgentsCard() {
 
 	const invalidateAgents = () =>
 		queryClient.invalidateQueries({ queryKey: ["agents"] });
-
-	const createMutation = useMutation({
-		mutationFn: () =>
-			api.createAgent({
-				type,
-				name,
-				defaultWorkspaceId: workspaceId,
-				projectIds,
-				expiresInDays: expiresInDays === "" ? undefined : Number(expiresInDays),
-			}),
-		onSuccess: async (created) => {
-			await invalidateAgents();
-			// Use the persisted scope from the response, not form state, so the
-			// dialog can't show ids from an edit made while the request was in flight.
-			setIssued({
-				agentName: created.name,
-				secret: created.secret,
-				workspaceId: created.token?.defaultWorkspaceId ?? null,
-				projectIds: created.projectIds,
-			});
-			setName("");
-			setProjectIds([]);
-			setExpiresInDays("");
-			setError(null);
-		},
-		onError: (err: Error) => setError(err.message),
-	});
 
 	const updateMutation = useMutation({
 		mutationFn: (vars: { id: string; disabled: boolean }) =>
@@ -188,15 +153,6 @@ export function AgentsCard() {
 		onError: (err: Error) => toast.error(err.message),
 	});
 
-	const onCreate = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (workspaceId === "") {
-			setError(t("settings.agents.workspaceRequired"));
-			return;
-		}
-		createMutation.mutate();
-	};
-
 	return (
 		<Card>
 			<CardHeader>
@@ -204,137 +160,18 @@ export function AgentsCard() {
 					{t("settings.agents.title")}
 				</CardTitle>
 				<CardDescription>{t("settings.agents.description")}</CardDescription>
+				<CardAction>
+					{/* The mockup's small action button: h-8 with text-xs. */}
+					<Button
+						className="gap-1.5 px-3 text-xs"
+						onClick={() => setFormOpen(true)}
+					>
+						<PlusIcon className="size-3.5" />
+						{t("settings.agents.newAction")}
+					</Button>
+				</CardAction>
 			</CardHeader>
-			<CardContent className="flex flex-col gap-4">
-				<form className="grid gap-4 sm:grid-cols-2" onSubmit={onCreate}>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="agent-name">{t("settings.agents.name")}</Label>
-						<Input
-							id="agent-name"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							placeholder={t("settings.agents.namePlaceholder")}
-							required
-						/>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="agent-type">{t("settings.agents.type")}</Label>
-						<Select value={type} onValueChange={(v) => setType(v as AgentType)}>
-							<SelectTrigger id="agent-type" className="w-full">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{agentTypes.map((value) => (
-									<SelectItem key={value} value={value}>
-										{t(`settings.agents.types.${value}`)}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("settings.agents.workspace")}</Label>
-						<Select
-							value={workspaceId}
-							onValueChange={(v) => {
-								setWorkspaceId(v);
-								setProjectIds([]);
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue
-									placeholder={t("settings.agents.workspacePlaceholder")}
-								/>
-							</SelectTrigger>
-							<SelectContent>
-								{(workspaces.data ?? []).map((ws) => (
-									<SelectItem key={ws.id} value={ws.id}>
-										{ws.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("settings.agents.project")}</Label>
-						<Popover>
-							<PopoverTrigger asChild>
-								<Button
-									type="button"
-									variant="outline"
-									disabled={workspaceId === ""}
-									className="w-full justify-between font-normal"
-								>
-									<span
-										className={cn(
-											projectIds.length === 0 && "text-muted-foreground",
-										)}
-									>
-										{projectIds.length === 0
-											? t("settings.agents.projectAll")
-											: t("settings.agents.projectsSelected", {
-													count: projectIds.length,
-												})}
-									</span>
-									<ChevronsUpDownIcon className="size-4 opacity-50" />
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent align="start" className="w-72 p-2">
-								{(projects.data ?? []).length === 0 ? (
-									<p className="text-muted-foreground px-2 py-1.5 text-sm">
-										{t("settings.agents.projectsEmpty")}
-									</p>
-								) : (
-									<div className="flex max-h-60 flex-col gap-0.5 overflow-y-auto">
-										{(projects.data ?? []).map((project) => (
-											<label
-												key={project.id}
-												htmlFor={`agent-project-${project.id}`}
-												className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-											>
-												<Checkbox
-													id={`agent-project-${project.id}`}
-													checked={projectIds.includes(project.id)}
-													onCheckedChange={(value) =>
-														setProjectIds((prev) =>
-															value === true
-																? [...prev, project.id]
-																: prev.filter((id) => id !== project.id),
-														)
-													}
-												/>
-												<span>{project.name}</span>
-											</label>
-										))}
-									</div>
-								)}
-							</PopoverContent>
-						</Popover>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor="agent-expiry">
-							{t("settings.agents.expiresInDays")}
-						</Label>
-						<Input
-							id="agent-expiry"
-							type="number"
-							min={1}
-							max={3650}
-							value={expiresInDays}
-							onChange={(e) => setExpiresInDays(e.target.value)}
-							placeholder={t("settings.agents.noExpiry")}
-						/>
-					</div>
-					{error && (
-						<p className="text-destructive text-sm sm:col-span-2">{error}</p>
-					)}
-					<div className="flex items-end sm:col-span-2">
-						<Button type="submit" disabled={createMutation.isPending}>
-							{t("settings.agents.createAction")}
-						</Button>
-					</div>
-				</form>
-
+			<CardContent>
 				{(agents.data ?? []).length === 0 ? (
 					<p className="text-muted-foreground text-sm">
 						{t("settings.agents.empty")}
@@ -487,6 +324,20 @@ export function AgentsCard() {
 				)}
 			</CardContent>
 
+			{formOpen && (
+				<AgentFormDialog
+					workspaces={workspaces.data ?? []}
+					onOpenChange={(open) => {
+						if (!open) setFormOpen(false);
+					}}
+					onCreated={async (created) => {
+						setFormOpen(false);
+						await invalidateAgents();
+						setIssued(created);
+					}}
+				/>
+			)}
+
 			<SecretDialog issued={issued} onClose={() => setIssued(null)} />
 
 			<AlertDialog
@@ -517,6 +368,210 @@ export function AgentsCard() {
 				</AlertDialogContent>
 			</AlertDialog>
 		</Card>
+	);
+}
+
+/** The mockup's registration dialog: one token is issued on creation. */
+function AgentFormDialog({
+	workspaces,
+	onOpenChange,
+	onCreated,
+}: {
+	workspaces: Array<{ id: string; name: string }>;
+	onOpenChange: (open: boolean) => void;
+	onCreated: (issued: IssuedSecret) => void;
+}) {
+	const { t } = useTranslation();
+	const [name, setName] = useState("");
+	const [type, setType] = useState<AgentType>("claude_code");
+	const [workspaceId, setWorkspaceId] = useState("");
+	const [projectIds, setProjectIds] = useState<string[]>([]);
+	const [expiresInDays, setExpiresInDays] = useState("");
+	const [error, setError] = useState<string | null>(null);
+
+	const projects = useQuery({
+		queryKey: ["projects", workspaceId],
+		queryFn: () => api.listProjects(workspaceId),
+		enabled: workspaceId !== "",
+	});
+
+	const createMutation = useMutation({
+		mutationFn: () =>
+			api.createAgent({
+				type,
+				name,
+				defaultWorkspaceId: workspaceId,
+				projectIds,
+				expiresInDays: expiresInDays === "" ? undefined : Number(expiresInDays),
+			}),
+		onSuccess: (created) => {
+			// Use the persisted scope from the response, not form state, so the
+			// dialog can't show ids from an edit made while the request was in flight.
+			onCreated({
+				agentName: created.name,
+				secret: created.secret,
+				workspaceId: created.token?.defaultWorkspaceId ?? null,
+				projectIds: created.projectIds,
+			});
+		},
+		onError: (err: Error) => setError(err.message),
+	});
+
+	const onCreate = (e: React.FormEvent) => {
+		e.preventDefault();
+		if (workspaceId === "") {
+			setError(t("settings.agents.workspaceRequired"));
+			return;
+		}
+		createMutation.mutate();
+	};
+
+	return (
+		<Dialog open onOpenChange={onOpenChange}>
+			<DialogContent size="lg">
+				<DialogHeader>
+					<DialogTitle>{t("settings.agents.createTitle")}</DialogTitle>
+					<DialogDescription>
+						{t("settings.agents.createDescription")}
+					</DialogDescription>
+				</DialogHeader>
+				<form className="grid gap-5 sm:grid-cols-2" onSubmit={onCreate}>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="agent-name">{t("settings.agents.name")}</Label>
+						<Input
+							id="agent-name"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							placeholder={t("settings.agents.namePlaceholder")}
+							required
+						/>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="agent-type">{t("settings.agents.type")}</Label>
+						<Select value={type} onValueChange={(v) => setType(v as AgentType)}>
+							<SelectTrigger id="agent-type" className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{agentTypes.map((value) => (
+									<SelectItem key={value} value={value}>
+										{t(`settings.agents.types.${value}`)}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label>{t("settings.agents.workspace")}</Label>
+						<Select
+							value={workspaceId}
+							onValueChange={(v) => {
+								setWorkspaceId(v);
+								setProjectIds([]);
+							}}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue
+									placeholder={t("settings.agents.workspacePlaceholder")}
+								/>
+							</SelectTrigger>
+							<SelectContent>
+								{workspaces.map((ws) => (
+									<SelectItem key={ws.id} value={ws.id}>
+										{ws.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label>{t("settings.agents.project")}</Label>
+						<Popover>
+							<PopoverTrigger asChild>
+								<Button
+									type="button"
+									variant="outline"
+									disabled={workspaceId === ""}
+									className="w-full justify-between font-normal"
+								>
+									<span
+										className={cn(
+											projectIds.length === 0 && "text-muted-foreground",
+										)}
+									>
+										{projectIds.length === 0
+											? t("settings.agents.projectAll")
+											: t("settings.agents.projectsSelected", {
+													count: projectIds.length,
+												})}
+									</span>
+									<ChevronsUpDownIcon className="size-4 opacity-50" />
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent align="start" className="w-72 p-2">
+								{(projects.data ?? []).length === 0 ? (
+									<p className="text-muted-foreground px-2 py-1.5 text-sm">
+										{t("settings.agents.projectsEmpty")}
+									</p>
+								) : (
+									<div className="flex max-h-60 flex-col gap-0.5 overflow-y-auto">
+										{(projects.data ?? []).map((project) => (
+											<label
+												key={project.id}
+												htmlFor={`agent-project-${project.id}`}
+												className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+											>
+												<Checkbox
+													id={`agent-project-${project.id}`}
+													checked={projectIds.includes(project.id)}
+													onCheckedChange={(value) =>
+														setProjectIds((prev) =>
+															value === true
+																? [...prev, project.id]
+																: prev.filter((id) => id !== project.id),
+														)
+													}
+												/>
+												<span>{project.name}</span>
+											</label>
+										))}
+									</div>
+								)}
+							</PopoverContent>
+						</Popover>
+					</div>
+					<div className="flex flex-col gap-2">
+						<Label htmlFor="agent-expiry">
+							{t("settings.agents.expiresInDays")}
+						</Label>
+						<Input
+							id="agent-expiry"
+							type="number"
+							min={1}
+							max={3650}
+							value={expiresInDays}
+							onChange={(e) => setExpiresInDays(e.target.value)}
+							placeholder={t("settings.agents.noExpiry")}
+						/>
+					</div>
+					{error && (
+						<p className="text-destructive text-sm sm:col-span-2">{error}</p>
+					)}
+					<DialogFooter className="sm:col-span-2">
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => onOpenChange(false)}
+						>
+							{t("settings.cancelAction")}
+						</Button>
+						<Button type="submit" disabled={createMutation.isPending}>
+							{t("settings.agents.createAction")}
+						</Button>
+					</DialogFooter>
+				</form>
+			</DialogContent>
+		</Dialog>
 	);
 }
 
