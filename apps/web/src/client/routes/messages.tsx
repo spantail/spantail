@@ -37,7 +37,7 @@ function MailLayout() {
 						<header className="flex h-12 shrink-0 items-center gap-2 border-b px-2 md:hidden">
 							<SidebarTrigger />
 							<span className="font-heading text-sm font-semibold tracking-tight">
-								{t("notifications.title")}
+								{t("messages.title")}
 							</span>
 						</header>
 						<div className="min-h-0 flex-1">

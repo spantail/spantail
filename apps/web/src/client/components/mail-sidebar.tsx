@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import {
 	ArchiveIcon,
-	ArrowLeftIcon,
 	InboxIcon,
 	SendIcon,
 	StarIcon,
@@ -11,11 +10,11 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { RailHeader } from "@/components/rail-header";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarGroup,
-	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuBadge,
 	SidebarMenuButton,
@@ -24,7 +23,6 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { api } from "@/lib/api";
-import { useWorkspace } from "@/lib/workspace";
 
 const FOLDERS: { folder: MailFolder; icon: typeof InboxIcon }[] = [
 	{ folder: "inbox", icon: InboxIcon },
@@ -36,7 +34,6 @@ const FOLDERS: { folder: MailFolder; icon: typeof InboxIcon }[] = [
 
 export function MailSidebar() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
 	const { setOpenMobile } = useSidebar();
 	const active = useParams({ strict: false, select: (p) => p.folder }) as
 		| MailFolder
@@ -50,34 +47,10 @@ export function MailSidebar() {
 
 	return (
 		<Sidebar collapsible="icon">
-			<SidebarHeader>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<SidebarMenuButton
-							asChild
-							size="lg"
-							tooltip={t("messages.backToWorkspace", {
-								name: current?.name ?? "",
-							})}
-							onClick={dismiss}
-						>
-							<Link to="/">
-								<div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-									<ArrowLeftIcon className="size-4" />
-								</div>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="text-muted-foreground truncate text-xs">
-										{t("messages.back")}
-									</span>
-									<span className="truncate font-medium">
-										{current?.name ?? ""}
-									</span>
-								</div>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-				</SidebarMenu>
-			</SidebarHeader>
+			<RailHeader
+				title={t("messages.title")}
+				closeLabel={t("messages.rail.close")}
+			/>
 			<SidebarContent>
 				<SidebarGroup>
 					<SidebarMenu className="gap-1.5">

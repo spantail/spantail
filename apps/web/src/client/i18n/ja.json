@@ -224,8 +224,6 @@
 	},
 	"reports": {
 		"title": "レポート",
-		"back": "戻る",
-		"backToWorkspace": "{{name}} に戻る",
 		"newAction": "新規レポート",
 		"newFromTemplate": "テンプレートから作成",
 		"newFromTemplateAction": "テンプレートから新規レポート",
@@ -269,7 +267,11 @@
 			"createAction": "最初の {{template}} レポートを作成"
 		},
 		"tab": { "all": "すべて" },
-		"rail": { "library": "レポート", "templates": "テンプレート" },
+		"rail": {
+			"library": "レポート",
+			"templates": "テンプレート",
+			"close": "閉じる"
+		},
 		"filterAction": "フィルター",
 		"moreActions": "その他の操作",
 		"filter": {
@@ -386,8 +388,8 @@
 		"closeAction": "閉じる"
 	},
 	"messages": {
-		"back": "戻る",
-		"backToWorkspace": "{{name}} に戻る",
+		"title": "メッセージ",
+		"rail": { "close": "閉じる" },
 		"documentTitle": {
 			"received": "{{report}}（{{sender}} より）",
 			"sent": "{{report}}（{{recipient}} 宛）"
