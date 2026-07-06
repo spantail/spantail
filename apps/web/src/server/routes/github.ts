@@ -102,10 +102,19 @@ export const githubRoutes = new Hono<AppEnv>().post(
 		let tags: string[] = [];
 		const config = await getGithubAppConfig(c.var.db);
 		if (config) {
-			const installations = await listGithubInstallations(c.var.db);
+			// Mappings without an installation id (older/manual rows): prefer the
+			// installation owned by the repo's owner — in multi-installation
+			// instances the first unsuspended one may not cover this repo at all.
+			const repoOwner = mapping.repoFullName.split("/")[0] ?? "";
+			const active = (await listGithubInstallations(c.var.db)).filter(
+				(row) => row.suspendedAt === null,
+			);
 			const installationId =
 				mapping.installationId ??
-				installations.find((row) => row.suspendedAt === null)?.installationId;
+				(
+					active.find((row) => row.accountLogin.toLowerCase() === repoOwner) ??
+					active[0]
+				)?.installationId;
 			if (installationId !== undefined) {
 				try {
 					installationToken = await getInstallationToken(

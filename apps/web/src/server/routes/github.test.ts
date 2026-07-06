@@ -419,6 +419,20 @@ it("ignores mentions of other accounts sharing the prefix", async () => {
 	expect((reply?.body as { body: string }).body).toContain("Usage");
 });
 
+it("rejects oversized webhook bodies before verification", async () => {
+	await seedIntegration();
+	const body = `{"pad":"${"x".repeat(2 * 1024 * 1024)}"}`;
+	const res = await appFetch("/api/github/webhook", {
+		method: "POST",
+		headers: {
+			"x-github-event": "issue_comment",
+			"x-hub-signature-256": "sha256=deadbeef",
+		},
+		body,
+	});
+	expect(res.status).toBe(413);
+});
+
 it("answers 400 for a signed but malformed body", async () => {
 	await seedIntegration();
 	const body = "{not json";

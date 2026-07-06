@@ -23,6 +23,11 @@ function stubGithubFetch(): void {
 	setGithubFetchForTests(async (input, init) => {
 		const url = String(input);
 		if (url.includes("/access_tokens")) {
+			// Installations other than acme's (555) mint no tokens, so a test can
+			// detect which installation the enrichment picked.
+			if (!url.includes("/app/installations/555/")) {
+				return Response.json({}, { status: 404 });
+			}
 			return Response.json(
 				{
 					token: "itok",
@@ -420,6 +425,38 @@ it("manages workspace repo mappings with admin gating and 409 on conflicts", asy
 		ctx.admin,
 	);
 	expect(removed.status).toBe(204);
+});
+
+it("prefers the repo owner's installation when the mapping has none", async () => {
+	const ctx = await setup();
+	// An earlier-sorted foreign installation that must NOT be picked (its
+	// token minting 404s in the stub), plus a mapping without an installation.
+	await db().insert(schema.githubInstallations).values({
+		id: crypto.randomUUID(),
+		installationId: 111,
+		accountLogin: "aaa-org",
+		accountType: "Organization",
+	});
+	await db().insert(schema.githubRepoMappings).values({
+		id: crypto.randomUUID(),
+		repoFullName: "acme/legacy",
+		repoId: null,
+		projectId: ctx.project.id,
+		workspaceId: ctx.ws.id,
+		source: "manual",
+		installationId: null,
+	});
+	const res = await logWork(ctx.token, {
+		remotes: ["git@github.com:acme/legacy.git"],
+		issueNumber: 9,
+		args: "1h",
+	});
+	expect(res.status).toBe(201);
+	// Owner-aware fallback found acme's installation → enrichment succeeded.
+	expect(
+		((await res.json()) as { resolved: { degraded: boolean } }).resolved
+			.degraded,
+	).toBe(false);
 });
 
 it("requires the admin PAT scope for mapping writes", async () => {

@@ -30,6 +30,9 @@ interface InstallationPayload {
 	};
 }
 
+/** Upper bound for a buffered webhook body (real payloads are ≤ ~1 MB). */
+const MAX_WEBHOOK_BYTES = 2 * 1024 * 1024;
+
 export const githubWebhookRoutes = new Hono<AppEnv>().post("/", async (c) => {
 	const config = await getGithubAppConfig(c.var.db);
 	if (!config) {
@@ -45,6 +48,16 @@ export const githubWebhookRoutes = new Hono<AppEnv>().post("/", async (c) => {
 		return c.json(
 			{ error: { code: "unauthorized", message: "Invalid signature" } },
 			401,
+		);
+	}
+	// And a Content-Length within reason: a fake header on a huge body must
+	// not make the worker buffer it just to fail HMAC. GitHub always sends
+	// Content-Length, and real event payloads are far below this bound.
+	const contentLength = Number(c.req.header("content-length") ?? "");
+	if (!Number.isFinite(contentLength) || contentLength > MAX_WEBHOOK_BYTES) {
+		return c.json(
+			{ error: { code: "bad_request", message: "Payload too large" } },
+			413,
 		);
 	}
 	const body = await c.req.arrayBuffer();
