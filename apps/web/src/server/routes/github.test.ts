@@ -7,6 +7,7 @@ import {
 	getGithubInstallation,
 	listGithubInstallations,
 	schema,
+	updateUser,
 } from "@spantail/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
@@ -420,6 +421,17 @@ it("onboards unlinked insiders with a connect link", async () => {
 	expect((reply?.body as { body: string }).body).toContain(
 		"https://example.com/api/github/connect",
 	);
+});
+
+it("silently ignores commands from disabled accounts", async () => {
+	const ctx = await seedIntegration();
+	await updateUser(db(), ctx.memberId, { disabled: true });
+	await runPipeline(commentPayload());
+	expect(await listEntries()).toHaveLength(0);
+	// No reply either: a reply would leak the account's state to the repo.
+	expect(
+		recorded.filter((call) => call.url.endsWith("/comments")),
+	).toHaveLength(0);
 });
 
 it("does not resolve a reused repo name whose immutable id differs", async () => {

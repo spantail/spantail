@@ -154,8 +154,11 @@ export async function handleIssueCommentCreated(opts: {
 			return;
 		}
 
+		// A disabled account is locked out everywhere (loadAuth rejects its
+		// sessions and tokens); this webhook path bypasses that middleware, so
+		// mirror the check. Silent — a reply would leak account state to the repo.
 		const user = await getUserById(db, identity.userId);
-		if (!user) return;
+		if (!user || user.disabled) return;
 
 		const parsed = parseLogWorkArgs(rawArgs, {
 			timeZone: resolveUserTimezone(user.timezone),
