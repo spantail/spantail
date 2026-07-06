@@ -1,15 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import { ArrowLeftIcon, LayersIcon } from "lucide-react";
+import { LayersIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Dot } from "@/components/dot";
+import { RailHeader } from "@/components/rail-header";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarGroup,
 	SidebarGroupLabel,
-	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
@@ -19,11 +19,9 @@ import {
 import { api } from "@/lib/api";
 import { templateHue } from "@/lib/hue";
 import { useReportTemplates } from "@/lib/use-report-templates";
-import { useWorkspace } from "@/lib/workspace";
 
 export function ReportsSidebar() {
 	const { t } = useTranslation();
-	const { current } = useWorkspace();
 	const { setOpenMobile } = useSidebar();
 	const { enabledTemplates, templateById } = useReportTemplates();
 	const active = useParams({ strict: false, select: (p) => p.tab }) as
@@ -48,34 +46,10 @@ export function ReportsSidebar() {
 
 	return (
 		<Sidebar collapsible="icon">
-			<SidebarHeader>
-				<SidebarMenu>
-					<SidebarMenuItem>
-						<SidebarMenuButton
-							asChild
-							size="lg"
-							tooltip={t("reports.backToWorkspace", {
-								name: current?.name ?? "",
-							})}
-							onClick={dismiss}
-						>
-							<Link to="/">
-								<div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-									<ArrowLeftIcon className="size-4" />
-								</div>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="text-muted-foreground truncate text-xs">
-										{t("reports.back")}
-									</span>
-									<span className="truncate font-medium">
-										{current?.name ?? ""}
-									</span>
-								</div>
-							</Link>
-						</SidebarMenuButton>
-					</SidebarMenuItem>
-				</SidebarMenu>
-			</SidebarHeader>
+			<RailHeader
+				title={t("reports.title")}
+				closeLabel={t("reports.rail.close")}
+			/>
 			<SidebarContent>
 				<SidebarGroup>
 					<SidebarGroupLabel className="text-[11px] tracking-wider uppercase">

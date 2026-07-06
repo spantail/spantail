@@ -33,11 +33,11 @@ function MailLayout() {
 					<MailSidebar />
 					<SidebarInset className="h-svh overflow-hidden">
 						{/* On mobile the sidebar is a closed Sheet; this bar is the only
-						    way to open it (folders + Back to workspace). */}
+						    way to open it (folders + the Close action). */}
 						<header className="flex h-12 shrink-0 items-center gap-2 border-b px-2 md:hidden">
 							<SidebarTrigger />
 							<span className="font-heading text-sm font-semibold tracking-tight">
-								{t("notifications.title")}
+								{t("messages.title")}
 							</span>
 						</header>
 						<div className="min-h-0 flex-1">

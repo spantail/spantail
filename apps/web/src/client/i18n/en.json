@@ -225,8 +225,6 @@
 	},
 	"reports": {
 		"title": "Reports",
-		"back": "Back to",
-		"backToWorkspace": "Back to {{name}}",
 		"newAction": "New report",
 		"newFromTemplate": "New from template",
 		"newFromTemplateAction": "New report from template",
@@ -270,7 +268,11 @@
 			"createAction": "Create the first {{template}} report"
 		},
 		"tab": { "all": "All" },
-		"rail": { "library": "Reports", "templates": "Templates" },
+		"rail": {
+			"library": "Reports",
+			"templates": "Templates",
+			"close": "Close"
+		},
 		"filterAction": "Filter",
 		"moreActions": "More actions",
 		"filter": {
@@ -387,8 +389,8 @@
 		"closeAction": "Close"
 	},
 	"messages": {
-		"back": "Back to",
-		"backToWorkspace": "Back to {{name}}",
+		"title": "Messages",
+		"rail": { "close": "Close" },
 		"documentTitle": {
 			"received": "{{report}} by {{sender}}",
 			"sent": "{{report}} to {{recipient}}"
