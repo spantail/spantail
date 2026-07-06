@@ -12,6 +12,7 @@ export { authOptions } from "./auth-options";
 export * from "./queries/agents";
 export * from "./queries/discussions";
 export * from "./queries/entry-access";
+export * from "./queries/github";
 export * from "./queries/instance";
 export * from "./queries/invitations";
 export * from "./queries/members";

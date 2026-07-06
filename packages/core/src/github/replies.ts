@@ -19,15 +19,15 @@ export function logWorkSuccessReply(p: {
 
 const PARSE_ERROR_REPLIES: Record<LogWorkParseError, string> = {
 	empty_command:
-		'Usage: `@spantail <duration> [date]` — e.g. `@spantail 2h`, `@spantail 30m yesterday`, `@spantail 1h30m 2026-07-05`.',
+		"Usage: `@spantail <duration> [date]` — e.g. `@spantail 2h`, `@spantail 30m yesterday`, `@spantail 1h30m 2026-07-05`.",
 	invalid_duration:
-		'Could not read a duration. Use forms like `30m`, `2h`, `1h30m`, or plain minutes (`90`).',
+		"Could not read a duration. Use forms like `30m`, `2h`, `1h30m`, or plain minutes (`90`).",
 	invalid_date:
-		'Could not read the date. Use `YYYY-MM-DD` (e.g. `2026-07-05`), `M/D`, `today`, or `yesterday`.',
+		"Could not read the date. Use `YYYY-MM-DD` (e.g. `2026-07-05`), `M/D`, `today`, or `yesterday`.",
 	future_date:
 		"That date is in the future. Spantail only logs work for today or earlier.",
 	trailing_input:
-		'Only `<duration> [date]` is supported for now — remove the extra text after the date.',
+		"Only `<duration> [date]` is supported for now — remove the extra text after the date.",
 };
 
 export function logWorkErrorReply(error: LogWorkParseError): string {

@@ -47,7 +47,8 @@ export function parseEntryDate(
 	const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(token);
 	if (iso) {
 		const [y, m, d] = [Number(iso[1]), Number(iso[2]), Number(iso[3])];
-		if (!isRealCalendarDate(y, m, d)) return { ok: false, error: "invalid_date" };
+		if (!isRealCalendarDate(y, m, d))
+			return { ok: false, error: "invalid_date" };
 		const date = toIsoDate(y, m, d);
 		if (date > today) return { ok: false, error: "future_date" };
 		return { ok: true, date };
