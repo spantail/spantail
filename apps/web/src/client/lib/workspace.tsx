@@ -54,16 +54,24 @@ export function WorkspaceProvider({
 		localStorage.setItem(STORAGE_KEY, current.id);
 	}, [current]);
 
-	// Apply the active workspace's accent color theme to the document. The
-	// [data-accent] attribute drives the OKLCH theme tokens in index.css, so the
-	// whole app recolors when the workspace (or its setting) changes. On unmount
-	// (e.g. sign-out drops back to the login screen, which renders outside this
-	// provider) clear it so the default neutral theme applies.
+	// Apply an accent color theme to the document only on workspace-scoped routes
+	// (`/w/{slug}`). The [data-accent] attribute drives the OKLCH theme tokens in
+	// index.css, so the whole app recolors to match the workspace being viewed.
+	// The cross-workspace surfaces (home hub, settings, reports, messages) carry
+	// no workspace, so they stay neutral instead of inheriting whichever workspace
+	// was last viewed — the accent is derived from the URL slug directly, not from
+	// `current` (which falls back to the last-visited workspace off-route). On
+	// unmount (e.g. sign-out drops back to the login screen, which renders outside
+	// this provider) clear it so the default neutral theme applies.
+	const scopedAccent =
+		(urlSlug
+			? workspaces.find((w) => w.slug === urlSlug)?.accentColor
+			: undefined) ?? "neutral";
 	useEffect(() => {
 		const el = document.documentElement;
-		el.setAttribute("data-accent", current?.accentColor ?? "neutral");
+		el.setAttribute("data-accent", scopedAccent);
 		return () => el.removeAttribute("data-accent");
-	}, [current?.accentColor]);
+	}, [scopedAccent]);
 
 	return (
 		<WorkspaceContext.Provider
