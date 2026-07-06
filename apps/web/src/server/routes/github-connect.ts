@@ -69,7 +69,19 @@ async function consumeStateCookie(
 export const githubConnectRoutes = new Hono<AppEnv>()
 	// GitHub redirects here after the admin approves the manifest; the one-time
 	// `code` converts into the new App's credentials.
-	.get("/setup", async (c) => {
+	.get("/setup", loadAuth, async (c) => {
+		// Defense in depth on top of the signed state: the redirect lands in the
+		// browser that started the flow, so a live instance-admin session must be
+		// present — a replayed state pair or a mid-flow rights revocation fails.
+		const auth = c.var.auth;
+		if (
+			!auth ||
+			!("user" in auth) ||
+			auth.via !== "session" ||
+			!auth.user.isAdmin
+		) {
+			return c.redirect("/settings/github?github_error=forbidden", 302);
+		}
 		const ok = await consumeStateCookie(
 			c,
 			c.env.BETTER_AUTH_SECRET,

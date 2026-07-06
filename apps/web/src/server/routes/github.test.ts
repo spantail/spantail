@@ -669,7 +669,10 @@ it("converts the manifest code and stores decryptable credentials", async () => 
 
 	const res = await appFetch(
 		`/api/github/setup?code=onetime&state=${encodeURIComponent(state ?? "")}`,
-		{ headers: { cookie: cookie ?? "" }, redirect: "manual" },
+		{
+			headers: { cookie: `${ctx.admin}; ${cookie ?? ""}` },
+			redirect: "manual",
+		},
 	);
 	expect(res.status).toBe(302);
 	expect(res.headers.get("location")).toBe(
@@ -695,12 +698,39 @@ it("converts the manifest code and stores decryptable credentials", async () => 
 });
 
 it("rejects setup callbacks without a matching state cookie", async () => {
-	await setup();
+	const ctx = await setup();
 	const res = await appFetch("/api/github/setup?code=x&state=forged", {
+		headers: { cookie: ctx.admin },
 		redirect: "manual",
 	});
 	expect(res.status).toBe(302);
 	expect(res.headers.get("location")).toContain("github_error=state");
+	expect(await getGithubAppConfig(db())).toBeUndefined();
+});
+
+it("rejects setup callbacks without a live instance-admin session", async () => {
+	const ctx = await setup();
+	const init = await apiJson(
+		"POST",
+		"/api/v1/instance/github/app/manifest",
+		{ owner: null },
+		ctx.admin,
+	);
+	const stateCookie = init.headers.get("set-cookie")?.split(";")[0];
+	const state = new URL(
+		((await init.json()) as { action: string }).action,
+	).searchParams.get("state");
+
+	// A valid state pair replayed without the admin's session (or by a
+	// non-admin member) must not write the App config.
+	for (const cookie of [stateCookie ?? "", `${ctx.member}; ${stateCookie}`]) {
+		const res = await appFetch(
+			`/api/github/setup?code=onetime&state=${encodeURIComponent(state ?? "")}`,
+			{ headers: { cookie }, redirect: "manual" },
+		);
+		expect(res.status).toBe(302);
+		expect(res.headers.get("location")).toContain("github_error=forbidden");
+	}
 	expect(await getGithubAppConfig(db())).toBeUndefined();
 });
 

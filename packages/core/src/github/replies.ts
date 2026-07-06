@@ -18,8 +18,10 @@ export function logWorkSuccessReply(p: {
 }
 
 const PARSE_ERROR_REPLIES: Record<LogWorkParseError, string> = {
+	// Command-agnostic: this template also answers the log-work API/MCP
+	// callers, who never type the @spantail prefix.
 	empty_command:
-		"Usage: `@spantail <duration> [date]` — e.g. `@spantail 2h`, `@spantail 30m yesterday`, `@spantail 1h30m 2026-07-05`.",
+		"Usage: `<duration> [date]` — e.g. `2h`, `30m yesterday`, `1h30m 2026-07-05`.",
 	invalid_duration:
 		"Could not read a duration. Use forms like `30m`, `2h`, `1h30m`, or plain minutes (`90`).",
 	invalid_date:
