@@ -29,10 +29,13 @@ export function WorkspaceProvider({
 	const urlSlug = useRouterState({
 		select: (s) => s.location.pathname.match(/^\/w\/([^/]+)/)?.[1] ?? null,
 	});
+	// Archived workspaces stay reachable by URL (they are still readable) but
+	// are never picked as a default — the switcher hides them, so defaulting
+	// into one would strand the user in a workspace they cannot switch back to.
 	const current =
 		(urlSlug ? workspaces.find((w) => w.slug === urlSlug) : undefined) ??
-		workspaces.find((w) => w.id === selectedId) ??
-		workspaces[0] ??
+		workspaces.find((w) => w.id === selectedId && !w.archivedAt) ??
+		workspaces.find((w) => !w.archivedAt) ??
 		null;
 
 	// Fold the resolved workspace back into state so a URL-driven selection

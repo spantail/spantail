@@ -27,7 +27,8 @@ Ingest is the untrusted write path. It is rate-limited per token. The token is w
 it can only ingest, never act as its owner elsewhere. The agent acts **for its owner** — on
 every ingest the owner's workspace membership and (when a project is named) project access
 are re-checked live, so a token bound earlier cannot write where the owner no longer
-belongs. A disabled or archived agent's token is rejected.
+belongs. A disabled or archived agent's token is rejected. Ingest into an archived
+workspace returns `409 conflict` — archived workspaces are read-only.
 </Aside>
 
 ## The agent entry object

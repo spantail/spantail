@@ -35,7 +35,7 @@ export const memberRoutes = new Hono<AppEnv>()
 	.post("/", async (c) => {
 		requireScope(c, "admin");
 		const workspaceId = c.req.param("id") ?? "";
-		await requireWorkspaceAccess(c, workspaceId, "admin");
+		await requireWorkspaceAccess(c, workspaceId, "admin", { write: true });
 		const input = validate(addWorkspaceMemberInputSchema, await c.req.json());
 
 		const target = await findUserByEmail(c.var.db, input.email);
@@ -61,7 +61,7 @@ export const memberRoutes = new Hono<AppEnv>()
 		requireScope(c, "admin");
 		const workspaceId = c.req.param("id") ?? "";
 		const userId = c.req.param("userId");
-		await requireWorkspaceAccess(c, workspaceId, "admin");
+		await requireWorkspaceAccess(c, workspaceId, "admin", { write: true });
 
 		const target = await getMembership(c.var.db, workspaceId, userId);
 		if (!target) throw new AppError("not_found", "Member not found");

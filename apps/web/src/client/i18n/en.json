@@ -140,6 +140,9 @@
 		"label": "Workspaces",
 		"none": "No workspace",
 		"createAction": "Create workspace",
+		"archivedBanner": "This workspace is archived and read-only.",
+		"archivedBadge": "Archived",
+		"archivedOption": "{{name}} (archived)",
 		"empty": {
 			"title": "No workspace yet",
 			"admin": "Create your first workspace to start logging work.",
@@ -809,7 +812,28 @@
 			"logoRemove": "Remove",
 			"logoHint": "PNG, JPEG or WebP, up to 1 MB.",
 			"logoErrorType": "Logo must be a PNG, JPEG or WebP image.",
-			"logoErrorSize": "Logo exceeds the maximum size of 1 MB."
+			"logoErrorSize": "Logo exceeds the maximum size of 1 MB.",
+			"archiveLabel": "Archive this workspace",
+			"archiveDescription": "Makes the workspace read-only and hides it from the workspace switcher.",
+			"archivedHint": "This workspace is archived and read-only. Restore it to make changes.",
+			"archiveAction": "Archive workspace",
+			"unarchiveAction": "Restore workspace",
+			"archivedToast": "Workspace archived.",
+			"unarchivedToast": "Workspace restored."
+		},
+		"danger": {
+			"title": "Danger Zone",
+			"description": "Irreversible actions for this workspace.",
+			"deleteLabel": "Delete this workspace",
+			"deleteDescription": "Permanently removes the workspace with all of its projects, entries and agent activity.",
+			"deleteAction": "Delete workspace",
+			"deleteTitle": "Delete {{name}}?",
+			"deleteDialogDescription": "This permanently deletes the workspace and everything in it.",
+			"deleteWarningTitle": "This cannot be undone",
+			"deleteWarningBody": "All projects, members, work entries and agent activity in \"{{name}}\" will be permanently deleted.",
+			"confirmLabel": "Type {{slug}} to confirm",
+			"deleteConfirm": "Delete workspace",
+			"deletedToast": "Workspace deleted."
 		},
 		"appearance": {
 			"title": "Appearance",

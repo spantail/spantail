@@ -80,7 +80,7 @@ export const workspaceProjectRoutes = new Hono<AppEnv>()
 	.post("/", async (c) => {
 		requireScope(c, "write");
 		const workspaceId = c.req.param("id") ?? "";
-		await requireWorkspaceAccess(c, workspaceId, "admin");
+		await requireWorkspaceAccess(c, workspaceId, "admin", { write: true });
 		const input = validate(createProjectInputSchema, await c.req.json());
 		if (await getProjectBySlug(c.var.db, workspaceId, input.slug)) {
 			throw new AppError("conflict", "A project with this slug already exists");
@@ -119,7 +119,9 @@ export const projectRoutes = new Hono<AppEnv>()
 		requireScope(c, "write");
 		const project = await getProjectById(c.var.db, c.req.param("id"));
 		if (!project) throw new AppError("not_found", "Project not found");
-		await requireWorkspaceAccess(c, project.workspaceId, "admin");
+		await requireWorkspaceAccess(c, project.workspaceId, "admin", {
+			write: true,
+		});
 		const input = validate(updateProjectInputSchema, await c.req.json());
 		if (input.slug !== undefined && input.slug !== project.slug) {
 			const existing = await getProjectBySlug(
@@ -150,7 +152,9 @@ export const projectRoutes = new Hono<AppEnv>()
 		requireScope(c, "write");
 		const project = await getProjectById(c.var.db, c.req.param("id"));
 		if (!project) throw new AppError("not_found", "Project not found");
-		await requireWorkspaceAccess(c, project.workspaceId, "admin");
+		await requireWorkspaceAccess(c, project.workspaceId, "admin", {
+			write: true,
+		});
 		// Only archived projects can be deleted, mirroring the UI guard.
 		if (project.status !== "archived") {
 			throw new AppError("conflict", "Archive the project before deleting it");
@@ -173,7 +177,9 @@ export const projectRoutes = new Hono<AppEnv>()
 		requireScope(c, "write");
 		const project = await getProjectById(c.var.db, c.req.param("id"));
 		if (!project) throw new AppError("not_found", "Project not found");
-		await requireWorkspaceAccess(c, project.workspaceId, "admin");
+		await requireWorkspaceAccess(c, project.workspaceId, "admin", {
+			write: true,
+		});
 		const input = validate(addProjectMemberInputSchema, await c.req.json());
 		// A project member must already belong to the project's workspace.
 		if (!(await getMembership(c.var.db, project.workspaceId, input.userId))) {
@@ -191,7 +197,9 @@ export const projectRoutes = new Hono<AppEnv>()
 		requireScope(c, "write");
 		const project = await getProjectById(c.var.db, c.req.param("id"));
 		if (!project) throw new AppError("not_found", "Project not found");
-		await requireWorkspaceAccess(c, project.workspaceId, "admin");
+		await requireWorkspaceAccess(c, project.workspaceId, "admin", {
+			write: true,
+		});
 		await removeProjectMember(c.var.db, project.id, c.req.param("userId"));
 		return c.body(null, 204);
 	});

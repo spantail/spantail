@@ -104,7 +104,11 @@ export function AppearanceCard({
 									<button
 										key={accent.id}
 										type="button"
-										disabled={mutation.isPending}
+										// An archived workspace is read-only; the server would
+										// reject the PATCH, so don't offer the switch.
+										disabled={
+											mutation.isPending || Boolean(workspace.archivedAt)
+										}
 										onClick={() => mutation.mutate(accent.id)}
 										className={cn(
 											"flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors",

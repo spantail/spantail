@@ -61,37 +61,43 @@ export function requireTemplateManager(c: Context<AppEnv>): UserAuthContext {
  *
  * Instance admins bypass membership (Principle 1 in docs/permissions.md): they
  * read and write workspace/project containers without belonging to the
- * workspace. The bypass returns a synthetic `admin` membership so every call
- * site behaves as if the admin were a workspace admin. A missing workspace is
+ * workspace, and satisfy any `minRole` regardless of an incidental stored
+ * role. The bypass returns a synthetic `admin` membership so every call site
+ * behaves as if the admin were a workspace admin. A missing workspace is
  * still 404 for everyone, including admins.
+ *
+ * Pass `{ write: true }` from routes that mutate workspace-scoped data: an
+ * archived workspace is read-only, so those requests are rejected with 409.
+ * The exceptions — unarchiving (PATCH `archived`) and deleting the workspace —
+ * stay in read mode.
  */
 export async function requireWorkspaceAccess(
 	c: Context<AppEnv>,
 	workspaceId: string,
 	minRole: WorkspaceRole = "member",
+	opts: { write?: boolean } = {},
 ): Promise<{ workspace: WorkspaceRow; membership: MembershipRow }> {
 	const { user } = requireAuth(c);
 	const workspace = await getWorkspaceById(c.var.db, workspaceId);
 	if (!workspace) {
 		throw new AppError("not_found", "Workspace not found");
 	}
-	const membership = await getMembership(c.var.db, workspaceId, user.id);
+	let membership = await getMembership(c.var.db, workspaceId, user.id);
 	if (!membership) {
-		if (user.isAdmin) {
-			return {
-				workspace,
-				membership: {
-					workspaceId,
-					userId: user.id,
-					role: "admin",
-					createdAt: workspace.createdAt,
-				},
-			};
+		if (!user.isAdmin) {
+			throw new AppError("not_found", "Workspace not found");
 		}
-		throw new AppError("not_found", "Workspace not found");
-	}
-	if (ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
+		membership = {
+			workspaceId,
+			userId: user.id,
+			role: "admin",
+			createdAt: workspace.createdAt,
+		};
+	} else if (!user.isAdmin && ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
 		throw new AppError("forbidden", `Requires workspace ${minRole} role`);
+	}
+	if (opts.write && workspace.archivedAt) {
+		throw new AppError("conflict", "Workspace is archived");
 	}
 	return { workspace, membership };
 }
@@ -101,7 +107,8 @@ export async function requireWorkspaceAccess(
  * input workspace, or the token's default binding when omitted. Live
  * delegation check — the agent may only write where its owner is currently a
  * member, even if the token was bound earlier. No instance-admin bypass:
- * ingest always acts as the owner, never as an admin.
+ * ingest always acts as the owner, never as an admin. Ingest is always a
+ * write, so an archived workspace rejects it.
  */
 export async function requireAgentIngestWorkspace(
 	c: Context<AppEnv>,
@@ -124,6 +131,9 @@ export async function requireAgentIngestWorkspace(
 			"forbidden",
 			"The agent's owner is not a member of this workspace",
 		);
+	}
+	if (workspace.archivedAt) {
+		throw new AppError("conflict", "Workspace is archived");
 	}
 	return { workspaceId, membership };
 }

@@ -1183,3 +1183,93 @@ it("cascades link rows when either side is deleted", async () => {
 	const entryRes = await apiGet(`/api/v1/work-entries/${second.id}`, admin);
 	expect(entryRes.status).toBe(200);
 });
+
+it("rejects entry writes in an archived workspace, reads still work", async () => {
+	const { admin, ws, project } = await setup();
+	const created = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				entryDate: "2026-06-01",
+				durationMinutes: 30,
+				description: "before archiving",
+			},
+			admin,
+		)
+	).json()) as { id: string };
+
+	await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${ws.id}`,
+		{ archived: true },
+		admin,
+	);
+
+	expect(
+		(
+			await apiJson(
+				"POST",
+				"/api/v1/work-entries",
+				{
+					workspaceId: ws.id,
+					projectId: project.id,
+					entryDate: "2026-06-02",
+					durationMinutes: 10,
+					description: "while archived",
+				},
+				admin,
+			)
+		).status,
+	).toBe(409);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				"/api/v1/work-entries/batch",
+				{
+					workspaceId: ws.id,
+					entries: [
+						{
+							projectId: project.id,
+							entryDate: "2026-06-02",
+							durationMinutes: 10,
+							description: "while archived",
+						},
+					],
+				},
+				admin,
+			)
+		).status,
+	).toBe(409);
+	expect(
+		(
+			await apiJson(
+				"PATCH",
+				`/api/v1/work-entries/${created.id}`,
+				{ description: "edited" },
+				admin,
+			)
+		).status,
+	).toBe(409);
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/work-entries/${created.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(409);
+
+	// Existing entries stay readable.
+	expect(
+		(await apiGet(`/api/v1/work-entries/${created.id}`, admin)).status,
+	).toBe(200);
+	expect(
+		(await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}`, admin)).status,
+	).toBe(200);
+});

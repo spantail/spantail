@@ -53,7 +53,11 @@ function WorkspaceSectionsLayout() {
 								<SelectContent>
 									{workspaces.map((workspace) => (
 										<SelectItem key={workspace.id} value={workspace.id}>
-											{workspace.name}
+											{workspace.archivedAt
+												? t("workspace.archivedOption", {
+														name: workspace.name,
+													})
+												: workspace.name}
 										</SelectItem>
 									))}
 								</SelectContent>

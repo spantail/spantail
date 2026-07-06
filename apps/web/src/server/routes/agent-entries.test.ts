@@ -552,3 +552,48 @@ it("deletes a session's raw events along with its entry", async () => {
 		),
 	).toHaveLength(0);
 });
+
+it("rejects ingest and bulk delete in an archived workspace, reads still work", async () => {
+	const { admin, ws, project } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const before = await ingest(token, {
+		sessionId: "s-archived",
+		projectId: project.id,
+		durationMinutes: 5,
+	});
+	expect(before.status).toBe(200);
+	const [entry] = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{ id: string }>;
+
+	await apiJson(
+		"PATCH",
+		`/api/v1/workspaces/${ws.id}`,
+		{ archived: true },
+		admin,
+	);
+
+	const denied = await ingest(token, {
+		sessionId: "s-archived-2",
+		projectId: project.id,
+		durationMinutes: 5,
+	});
+	expect(denied.status).toBe(409);
+	expect(
+		(
+			await apiJson(
+				"POST",
+				"/api/v1/agent-entries/delete",
+				{ workspaceId: ws.id, ids: [entry?.id] },
+				admin,
+			)
+		).status,
+	).toBe(409);
+
+	// Captured activity stays readable.
+	expect(
+		(await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)).status,
+	).toBe(200);
+});

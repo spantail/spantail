@@ -75,20 +75,24 @@ export function WorkspaceSwitcher({ isAdmin }: { isAdmin: boolean }) {
 						<DropdownMenuLabel className="text-muted-foreground text-xs">
 							{t("workspace.label")}
 						</DropdownMenuLabel>
-						{workspaces.map((workspace) => (
-							<DropdownMenuItem
-								key={workspace.id}
-								onClick={() => selectWorkspace(workspace)}
-								className="gap-2 p-2"
-							>
-								<WorkspaceAvatar
-									name={workspace.name}
-									logoUrl={workspace.logoUrl}
-									className="size-6 text-[0.625rem]"
-								/>
-								{workspace.name}
-							</DropdownMenuItem>
-						))}
+						{/* Archived workspaces are hidden here; they are managed (and
+						    unarchived) from the Settings workspaces pane. */}
+						{workspaces
+							.filter((workspace) => !workspace.archivedAt)
+							.map((workspace) => (
+								<DropdownMenuItem
+									key={workspace.id}
+									onClick={() => selectWorkspace(workspace)}
+									className="gap-2 p-2"
+								>
+									<WorkspaceAvatar
+										name={workspace.name}
+										logoUrl={workspace.logoUrl}
+										className="size-6 text-[0.625rem]"
+									/>
+									{workspace.name}
+								</DropdownMenuItem>
+							))}
 						{isAdmin && (
 							<>
 								<DropdownMenuSeparator />

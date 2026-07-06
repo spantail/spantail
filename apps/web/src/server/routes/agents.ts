@@ -80,8 +80,11 @@ export const agentRoutes = new Hono<AppEnv>()
 
 		// A binding can never exceed its owner's live membership. (Re-checked at
 		// ingest.) The workspace must be one the issuer belongs to; every
-		// associated project must live in that workspace.
-		await requireWorkspaceAccess(c, input.defaultWorkspaceId);
+		// associated project must live in that workspace. Write mode: the binding
+		// only exists to ingest later, which an archived workspace rejects.
+		await requireWorkspaceAccess(c, input.defaultWorkspaceId, "member", {
+			write: true,
+		});
 		// Sort (and de-dupe) so the create response matches the order GET /agents
 		// returns (agent_projects is read back ordered by project_id).
 		const projectIds = [...new Set(input.projectIds ?? [])].sort();

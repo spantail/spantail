@@ -58,11 +58,17 @@ async function requireProjectInWorkspace(
 async function requireEntryAccess(
 	c: Context<AppEnv>,
 	id: string,
+	opts: { write?: boolean } = {},
 ): Promise<WorkEntryRow> {
 	const { user } = requireAuth(c);
 	const entry = await getWorkEntryById(c.var.db, id);
 	if (!entry) throw new AppError("not_found", "Work entry not found");
-	const { membership } = await requireWorkspaceAccess(c, entry.workspaceId);
+	const { membership } = await requireWorkspaceAccess(
+		c,
+		entry.workspaceId,
+		"member",
+		opts,
+	);
 	// Project ACL: an entry assigned to a project is readable only by workspace
 	// admins, the entry's author, or a member of that project. Others get 404 so
 	// the entry's existence is not revealed.
@@ -111,7 +117,12 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	.post("/", ingestRateLimit, async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createWorkEntryInputSchema, await c.req.json());
-		const { membership } = await requireWorkspaceAccess(c, input.workspaceId);
+		const { membership } = await requireWorkspaceAccess(
+			c,
+			input.workspaceId,
+			"member",
+			{ write: true },
+		);
 		await requireProjectInWorkspace(c, input.projectId, input.workspaceId);
 		await requireProjectAccess(c, input.projectId, membership, user.id);
 
@@ -176,7 +187,12 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			createWorkEntriesBatchInputSchema,
 			await c.req.json(),
 		);
-		const { membership } = await requireWorkspaceAccess(c, input.workspaceId);
+		const { membership } = await requireWorkspaceAccess(
+			c,
+			input.workspaceId,
+			"member",
+			{ write: true },
+		);
 
 		// One statement must not touch the same row twice (SQLite errors), so
 		// duplicate externalIds within a request are rejected up front.
@@ -274,7 +290,9 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	})
 	.patch("/:id", async (c) => {
 		const { user } = requireScope(c, "write");
-		const entry = await requireEntryAccess(c, c.req.param("id"));
+		const entry = await requireEntryAccess(c, c.req.param("id"), {
+			write: true,
+		});
 		requireAuthor(c, entry);
 		const input = validate(updateWorkEntryInputSchema, await c.req.json());
 		// A null projectId is only allowed to preserve an already-orphaned entry
@@ -311,7 +329,9 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	})
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");
-		const entry = await requireEntryAccess(c, c.req.param("id"));
+		const entry = await requireEntryAccess(c, c.req.param("id"), {
+			write: true,
+		});
 		requireAuthor(c, entry);
 		await deleteWorkEntry(c.var.db, entry.id);
 		publishToWorkspace(c, {

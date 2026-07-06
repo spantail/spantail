@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 
+import { Badge } from "@/components/ui/badge";
 import { WorkspaceAvatar } from "@/components/workspace-avatar";
 import { useSettingsWorkspace } from "@/lib/settings-workspace";
 import { cn } from "@/lib/utils";
@@ -46,8 +47,15 @@ export function SettingsWorkspacePane() {
 								className="size-8 text-[11px]"
 							/>
 							<div className="min-w-0 flex-1">
-								<div className="truncate text-sm font-medium">
-									{workspace.name}
+								<div className="flex items-center gap-1.5">
+									<span className="truncate text-sm font-medium">
+										{workspace.name}
+									</span>
+									{workspace.archivedAt && (
+										<Badge variant="outline" className="shrink-0">
+											{t("workspace.archivedBadge")}
+										</Badge>
+									)}
 								</div>
 								<div className="text-muted-foreground truncate text-xs">
 									{workspace.slug}

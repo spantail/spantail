@@ -303,6 +303,10 @@ export class SpantailClient {
 		return this.request("PATCH", `/workspaces/${id}`, { body: input });
 	}
 
+	deleteWorkspace(id: string): Promise<void> {
+		return this.request("DELETE", `/workspaces/${id}`);
+	}
+
 	uploadWorkspaceLogo(id: string, file: Blob): Promise<Workspace> {
 		return this.request("PUT", `/workspaces/${id}/logo`, {
 			rawBody: { data: file, contentType: file.type },

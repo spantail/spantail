@@ -9,6 +9,8 @@ interface SettingsWorkspaceValue {
 	selectId: (id: string) => void;
 	/** Whether the signed-in user can manage the selected workspace. */
 	canManage: boolean;
+	/** Whether the signed-in user can delete the selected workspace (owner only). */
+	canDelete: boolean;
 }
 
 const SettingsWorkspaceContext = createContext<SettingsWorkspaceValue | null>(
@@ -40,10 +42,19 @@ export function SettingsWorkspaceProvider({
 	const canManage =
 		selected != null &&
 		(isAdmin || selected.role === "owner" || selected.role === "admin");
+	// Deletion is stricter than management: workspace admins configure, only
+	// the owner (or an instance admin) can destroy the container.
+	const canDelete = selected != null && (isAdmin || selected.role === "owner");
 
 	return (
 		<SettingsWorkspaceContext.Provider
-			value={{ workspaces, selected, selectId: setSelectedId, canManage }}
+			value={{
+				workspaces,
+				selected,
+				selectId: setSelectedId,
+				canManage,
+				canDelete,
+			}}
 		>
 			{children}
 		</SettingsWorkspaceContext.Provider>
