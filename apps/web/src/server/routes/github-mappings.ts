@@ -71,13 +71,45 @@ export const githubMappingRoutes = new Hono<AppEnv>()
 				"This repository is already mapped to a project",
 			);
 		}
+		// One create endpoint serves manual entry AND the unmapped-repos picker.
+		// When an installation covers the repo, resolve its identity server-side
+		// (never client-supplied): the repo id enables rename self-healing and
+		// the installation id keeps enrichment/PR-linking on the right
+		// installation in multi-installation instances. Best-effort — a GitHub
+		// failure just records a manual mapping.
+		let resolved: { repoId: number; installationId: number } | null = null;
+		const config = await getGithubAppConfig(c.var.db);
+		if (config) {
+			for (const installation of await listGithubInstallations(c.var.db)) {
+				if (installation.suspendedAt) continue;
+				try {
+					const token = await getInstallationToken(
+						c.env.BETTER_AUTH_SECRET,
+						config,
+						installation.installationId,
+					);
+					const repo = (await listInstallationRepos(token)).find(
+						(candidate) => candidate.full_name.toLowerCase() === fullName,
+					);
+					if (repo) {
+						resolved = {
+							repoId: repo.id,
+							installationId: installation.installationId,
+						};
+						break;
+					}
+				} catch (error) {
+					console.error("github mapping installation lookup failed", error);
+				}
+			}
+		}
 		const mapping = await createGithubRepoMapping(c.var.db, {
 			repoFullName: fullName,
-			repoId: null,
+			repoId: resolved?.repoId ?? null,
 			projectId: project.id,
 			workspaceId,
-			source: "manual",
-			installationId: null,
+			source: resolved ? "installation" : "manual",
+			installationId: resolved?.installationId ?? null,
 		});
 		return c.json(
 			{

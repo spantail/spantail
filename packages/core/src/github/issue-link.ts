@@ -19,7 +19,8 @@ export function branchMatchesIssue(
 	if (branch === n) return true;
 	if (new RegExp(`^${n}[-_]`).test(branch)) return true;
 	if (new RegExp(`/${n}[-_]`).test(branch)) return true;
-	if (branch.includes(`#${n}`)) return true;
+	// Bounded like the other forms: `#12` must not match `#123`.
+	if (new RegExp(`#${n}(?:$|\\D)`).test(branch)) return true;
 	return new RegExp(
 		`(?:^|[/_-])(?:issue|issues|gh)[-/]?${n}(?:$|[/_-])`,
 		"i",

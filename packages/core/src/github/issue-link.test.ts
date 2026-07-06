@@ -22,6 +22,11 @@ it("does not match unrelated numbers", () => {
 	expect(branchMatchesIssue("fix-1234-auth", 123)).toBe(false);
 	expect(branchMatchesIssue("123fix", 123)).toBe(false);
 	expect(branchMatchesIssue("main", 123)).toBe(false);
+	// The #N form is bounded too: #12 must not match #123 / #1234.
+	expect(branchMatchesIssue("work-on-#123", 12)).toBe(false);
+	expect(branchMatchesIssue("fix/#1234", 123)).toBe(false);
+	expect(branchMatchesIssue("work-on-#12", 12)).toBe(true);
+	expect(branchMatchesIssue("#12-fix", 12)).toBe(true);
 });
 
 it("matches refs exactly, case-insensitively on the full name", () => {

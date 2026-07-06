@@ -37,6 +37,14 @@ function stubGithubFetch(): void {
 				{ status: issueStatus },
 			);
 		}
+		if (url.includes("/installation/repositories")) {
+			return Response.json({
+				repositories: [
+					{ id: 1010, full_name: "acme/spantail", private: true },
+					{ id: 1011, full_name: "Acme/Other", private: false },
+				],
+			});
+		}
 		if (url.includes("/pulls?head=")) {
 			const head = new URL(url).searchParams.get("head") ?? "";
 			return Response.json(head.endsWith(":feature-x") ? pullsByHead : []);
@@ -369,9 +377,33 @@ it("manages workspace repo mappings with admin gating and 409 on conflicts", asy
 		repoFullName: string;
 		source: string;
 	};
-	// Stored lowercased (GitHub full names are case-insensitive).
+	// Stored lowercased (GitHub full names are case-insensitive), and — since
+	// an installation covers this repo — with server-resolved installation
+	// identity rather than a bare manual row.
 	expect(mapping.repoFullName).toBe("acme/other");
-	expect(mapping.source).toBe("manual");
+	expect(mapping.source).toBe("installation");
+	const row = (await db().select().from(schema.githubRepoMappings).all()).find(
+		(m) => m.repoFullName === "acme/other",
+	);
+	expect(row).toMatchObject({ repoId: 1011, installationId: 555 });
+
+	// A repo no installation covers stays a manual mapping.
+	const project2 = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ctx.ws.id}/projects`,
+			{ slug: "ops", name: "Ops", memberUserIds: [ctx.memberId] },
+			ctx.admin,
+		)
+	).json()) as { id: string };
+	const manual = await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ctx.ws.id}/github-mappings`,
+		{ repoFullName: "acme/elsewhere", projectId: project2.id },
+		ctx.admin,
+	);
+	expect(manual.status).toBe(201);
+	expect(((await manual.json()) as { source: string }).source).toBe("manual");
 
 	const conflict = await apiJson(
 		"POST",

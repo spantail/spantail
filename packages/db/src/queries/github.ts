@@ -224,17 +224,19 @@ export async function getGithubRepoMappingForRepo(
 		return byId;
 	}
 	const byName = await getGithubRepoMappingByFullName(db, fullName);
+	if (!byName) return undefined;
+	// A name match carrying a DIFFERENT stored repo id means the old repo was
+	// renamed/transferred and an unrelated repository took its name: never
+	// resolve that impostor to the old repo's project.
+	if (byName.repoId !== null) return undefined;
 	// A name-matched row without a repo id was registered manually; adopt the
 	// id so future renames resolve.
-	if (byName && byName.repoId === null) {
-		const adopted = await db
-			.update(githubRepoMappings)
-			.set({ repoId: repo.repoId })
-			.where(eq(githubRepoMappings.id, byName.id))
-			.returning();
-		return adopted[0] ?? byName;
-	}
-	return byName;
+	const adopted = await db
+		.update(githubRepoMappings)
+		.set({ repoId: repo.repoId })
+		.where(eq(githubRepoMappings.id, byName.id))
+		.returning();
+	return adopted[0] ?? byName;
 }
 
 export async function getGithubIdentityByGithubUserId(

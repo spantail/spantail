@@ -422,6 +422,20 @@ it("onboards unlinked insiders with a connect link", async () => {
 	);
 });
 
+it("does not resolve a reused repo name whose immutable id differs", async () => {
+	await seedIntegration(); // mapping stores repoId 1010
+	// Same full name, different repository.id: the original repo was renamed
+	// and an unrelated repo took the name. Must be treated as unmapped.
+	const payload = commentPayload();
+	payload.repository = { id: 2020, full_name: "acme/spantail" };
+	await runPipeline(payload);
+	expect(await listEntries()).toHaveLength(0);
+	const reply = recorded.find((call) =>
+		call.url.endsWith("/issues/5/comments"),
+	);
+	expect((reply?.body as { body: string }).body).toContain("not mapped");
+});
+
 it("enforces the project ACL for workspace members outside the project", async () => {
 	const ctx = await seedIntegration();
 	// A second workspace member who is NOT a member of the mapped project.
