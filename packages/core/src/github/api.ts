@@ -70,3 +70,46 @@ export type CreateGithubMappingInput = z.infer<
 
 export const githubMappingSources = ["installation", "manual"] as const;
 export type GithubMappingSource = (typeof githubMappingSources)[number];
+
+// Response shapes of the GitHub settings surface, shared by server and SDK.
+
+export interface GithubAppStatus {
+	app: {
+		appId: number;
+		slug: string;
+		ownerLogin: string;
+		createdAt: string;
+	} | null;
+	installations: {
+		installationId: number;
+		accountLogin: string;
+		accountType: "User" | "Organization";
+		suspended: boolean;
+	}[];
+}
+
+export interface GithubInstallationRepo {
+	repoId: number;
+	fullName: string;
+	private: boolean;
+	mapped: boolean;
+}
+
+export interface GithubMapping {
+	id: string;
+	repoFullName: string;
+	projectId: string;
+	projectName: string;
+	source: GithubMappingSource;
+	createdAt: string;
+}
+
+export interface GithubUnmappedRepo {
+	repoId: number;
+	fullName: string;
+	private: boolean;
+}
+
+export type GithubIdentityStatus =
+	| { linked: true; login: string }
+	| { linked: false };

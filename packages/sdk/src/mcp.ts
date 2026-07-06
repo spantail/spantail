@@ -240,6 +240,40 @@ export function registerSpantailTools(
 	);
 
 	server.registerTool(
+		"log_work_github",
+		{
+			title: "Log work against a GitHub issue",
+			description:
+				"Create a work entry for a GitHub issue/PR (#N). The server resolves the " +
+				"project from its repo→project mapping and parses the raw args string — " +
+				"do NOT call list_workspaces/list_projects first and do NOT parse the " +
+				"duration or date yourself. Collect the repo's git remote URLs " +
+				"(`git remote -v` fetch URLs) and pass them verbatim.",
+			inputSchema: {
+				remotes: z
+					.array(z.string().min(1).max(500))
+					.min(1)
+					.max(10)
+					.describe(
+						"Git remote URLs of the working repo, verbatim and deduplicated",
+					),
+				issueNumber: z
+					.number()
+					.int()
+					.positive()
+					.describe("The GitHub issue/PR number (the N in #N)"),
+				args: z
+					.string()
+					.max(200)
+					.describe(
+						'Raw "<duration> [date]" string exactly as the user typed it, e.g. "2h yesterday"',
+					),
+			},
+		},
+		(input) => run(() => client.logWorkFromGithub(input)),
+	);
+
+	server.registerTool(
 		"list_entries",
 		{
 			title: "List work entries",

@@ -455,7 +455,7 @@ it("links agent entries whose context matches the issue", async () => {
 	await db().insert(schema.agents).values({
 		id: agentId,
 		userId: ctx.memberId,
-		type: "claude-code",
+		type: "claude_code",
 		name: "cc",
 	});
 	const mkEntry = (id: string, branches: string[]) =>
