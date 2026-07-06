@@ -207,7 +207,13 @@
 		"deleteAction": "削除",
 		"closeAction": "閉じる",
 		"source": "登録元",
-		"sources": { "web": "Web", "cli": "CLI", "mcp": "MCP", "api": "API" },
+		"sources": {
+			"web": "Web",
+			"cli": "CLI",
+			"mcp": "MCP",
+			"api": "API",
+			"github": "GitHub"
+		},
 		"empty": "まだ記録がありません。",
 		"noProjects": "稼働中のプロジェクトがありません。先にワークスペース設定で作成してください。",
 		"noProject": "プロジェクトなし",

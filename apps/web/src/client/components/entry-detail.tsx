@@ -9,24 +9,28 @@ import {
 	CodeIcon,
 	FolderIcon,
 	GlobeIcon,
-	type LucideIcon,
 	PlugIcon,
 	TerminalIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
 import { ProjectMarker } from "@/components/project-marker";
+import { GitHubIcon } from "@/components/provider-icons";
 import { Badge } from "@/components/ui/badge";
 
 /** Provenance chip icon per logging route. */
-const SOURCE_ICONS: Record<WorkEntry["source"], LucideIcon> = {
+const SOURCE_ICONS: Record<
+	WorkEntry["source"],
+	ComponentType<{ className?: string }>
+> = {
 	web: GlobeIcon,
 	cli: TerminalIcon,
 	mcp: PlugIcon,
 	api: CodeIcon,
+	github: GitHubIcon,
 };
 
 interface EntryDetailProps {
