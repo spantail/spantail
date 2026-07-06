@@ -241,6 +241,8 @@ function TemplateEditor({
 						</div>
 						<div className="flex flex-col gap-2">
 							<Label htmlFor="tpl-body">{t("templates.body")}</Label>
+							{/* The Textarea auto-sizes to content; hold the mockup's 12-row
+							    height even while the body is empty. */}
 							<Textarea
 								id="tpl-body"
 								value={draft.body}
@@ -248,7 +250,7 @@ function TemplateEditor({
 									onDraftChange({ ...draft, body: e.target.value })
 								}
 								rows={12}
-								className="font-mono text-sm"
+								className="min-h-64 font-mono text-sm"
 								required
 							/>
 						</div>
