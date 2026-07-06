@@ -356,9 +356,9 @@ it("hides admin-only settings sections from non-admins", async () => {
 
 	await renderApp("/settings/system");
 
-	// About stays public inside the admin-only System group.
-	expect((await screen.findAllByText("About")).length).toBeGreaterThan(0);
-	expect(screen.queryByText("User management")).toBeNull();
+	// The System (about) item stays public inside the admin-only System group.
+	expect((await screen.findAllByText("System")).length).toBeGreaterThan(0);
+	expect(screen.queryByText("Users")).toBeNull();
 	expect(screen.queryByText("Features")).toBeNull();
 	// Templates need the template-author capability; Agents needs the feature.
 	expect(screen.queryByText("Report templates")).toBeNull();

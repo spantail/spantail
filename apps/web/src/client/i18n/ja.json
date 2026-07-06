@@ -518,9 +518,9 @@
 			"agents": "エージェント",
 			"preferences": "環境設定",
 			"authentication": "認証",
-			"systemUsers": "ユーザー管理",
+			"systemUsers": "ユーザー",
 			"features": "機能",
-			"systemAbout": "システム情報"
+			"systemAbout": "システム"
 		},
 		"systemAdminOnly": "このセクションはインスタンス管理者のみがアクセスできます。",
 		"slug": "スラッグ",
@@ -798,9 +798,10 @@
 		},
 		"adminBannerLead": "インスタンス管理。",
 		"general": {
-			"description": "ワークスペース名とスラッグ。",
-			"logo": "ワークスペースのロゴ",
-			"logoDescription": "サイドバーのワークスペース切り替えに表示されます。",
+			"title": "ワークスペース",
+			"description": "ワークスペースがアプリ全体でどのように表示されるかを設定します。",
+			"save": "変更を保存",
+			"logo": "ロゴ",
 			"logoUpload": "ロゴをアップロード",
 			"logoRemove": "削除",
 			"logoHint": "PNG・JPEG・WebP、最大 1 MB。",

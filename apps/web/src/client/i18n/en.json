@@ -519,9 +519,9 @@
 			"agents": "Agents",
 			"preferences": "Preferences",
 			"authentication": "Authentication",
-			"systemUsers": "User management",
+			"systemUsers": "Users",
 			"features": "Features",
-			"systemAbout": "About"
+			"systemAbout": "System"
 		},
 		"systemAdminOnly": "Only instance admins can access this section.",
 		"slug": "Slug",
@@ -799,9 +799,10 @@
 		},
 		"adminBannerLead": "Instance administration.",
 		"general": {
-			"description": "Workspace name and slug.",
-			"logo": "Workspace logo",
-			"logoDescription": "Shown on the workspace switcher in the sidebar.",
+			"title": "Workspace",
+			"description": "How this workspace appears across the app.",
+			"save": "Save changes",
+			"logo": "Logo",
 			"logoUpload": "Upload logo",
 			"logoRemove": "Remove",
 			"logoHint": "PNG, JPEG or WebP, up to 1 MB.",

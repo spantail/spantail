@@ -1,16 +1,16 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-	BotIcon,
 	FileTextIcon,
 	FingerprintIcon,
 	FolderIcon,
 	InfoIcon,
 	KeyIcon,
+	LayersIcon,
 	SettingsIcon,
 	ShieldIcon,
 	SlidersHorizontalIcon,
-	ToggleRightIcon,
-	UsersIcon,
+	TerminalIcon,
+	ZapIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -82,7 +82,7 @@ const GROUPS: SettingsNavGroup[] = [
 			{
 				to: "/settings/members",
 				labelKey: "settings.nav.members",
-				icon: UsersIcon,
+				icon: LayersIcon,
 			},
 		],
 	},
@@ -118,7 +118,7 @@ const GROUPS: SettingsNavGroup[] = [
 			{
 				to: "/settings/agents",
 				labelKey: "settings.nav.agents",
-				icon: BotIcon,
+				icon: TerminalIcon,
 				requiresAgents: true,
 			},
 		],
@@ -135,7 +135,7 @@ const GROUPS: SettingsNavGroup[] = [
 			{
 				to: "/settings/features",
 				labelKey: "settings.nav.features",
-				icon: ToggleRightIcon,
+				icon: ZapIcon,
 			},
 			{
 				to: "/settings/system",
