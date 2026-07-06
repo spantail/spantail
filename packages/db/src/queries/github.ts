@@ -214,11 +214,20 @@ export async function getGithubRepoMappingForRepo(
 		.get();
 	if (byId) {
 		if (byId.repoFullName !== fullName) {
-			const healed = await db
-				.update(githubRepoMappings)
-				.set({ repoFullName: fullName })
-				.where(eq(githubRepoMappings.id, byId.id))
-				.returning();
+			// Heal the mapping AND the entries' (repo, issue#) refs together —
+			// the refs back the per-issue totals, which would otherwise reset
+			// to zero under the new name.
+			const [healed] = await db.batch([
+				db
+					.update(githubRepoMappings)
+					.set({ repoFullName: fullName })
+					.where(eq(githubRepoMappings.id, byId.id))
+					.returning(),
+				db
+					.update(workEntryGithubRefs)
+					.set({ repoFullName: fullName })
+					.where(eq(workEntryGithubRefs.repoFullName, byId.repoFullName)),
+			]);
 			return healed[0] ?? byId;
 		}
 		return byId;

@@ -186,7 +186,11 @@ export async function handleIssueCommentCreated(opts: {
 				.filter((name) => tagSchema.safeParse(name).success)
 				.slice(0, 20);
 		} catch (error) {
-			if (!(error instanceof GithubApiError)) throw error;
+			// Any failure — HTTP status, network reject, bad JSON — degrades to
+			// the bare issue reference.
+			if (!(error instanceof GithubApiError)) {
+				console.error("github issue enrichment failed", error);
+			}
 		}
 
 		const agentEntryIds = await resolveLinkableAgentEntries({

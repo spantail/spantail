@@ -124,7 +124,12 @@ export const githubRoutes = new Hono<AppEnv>().post(
 						.filter((name) => tagSchema.safeParse(name).success)
 						.slice(0, 20);
 				} catch (error) {
-					if (!(error instanceof GithubApiError)) throw error;
+					// Any failure — HTTP status, network reject, bad JSON — degrades
+					// to the bare issue reference; the log itself must not depend on
+					// GitHub being reachable.
+					if (!(error instanceof GithubApiError)) {
+						console.error("github issue enrichment failed", error);
+					}
 				}
 			}
 		}

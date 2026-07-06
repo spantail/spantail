@@ -109,8 +109,11 @@ export async function resolveLinkableAgentEntries(opts: {
 					}
 				}
 			} catch (error) {
-				if (!(error instanceof GithubApiError)) throw error;
-				// Best-effort: a failed lookup only loses a candidate link.
+				// Best-effort: a failed lookup — HTTP status or network — only
+				// loses a candidate link, never the log itself.
+				if (!(error instanceof GithubApiError)) {
+					console.error("github pr lookup failed", error);
+				}
 			}
 		}
 	}
