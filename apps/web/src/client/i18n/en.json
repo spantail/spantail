@@ -471,7 +471,12 @@
 		}
 	},
 	"templates": {
-		"listTitle": "Templates",
+		"newAction": "New template",
+		"backAction": "Back to templates",
+		"listDescription": "Templates define how a report is generated and what a new report starts with. The default template is used when none is picked.",
+		"composerDefaultsTitle": "Composer defaults",
+		"composerDefaultsHint": "What a new report starts with when composed from this template.",
+		"actions": "Template actions",
 		"newTitle": "New template",
 		"editTitle": "Edit template",
 		"copyName": "Copy of {{name}}",
@@ -493,7 +498,7 @@
 		"setDefaultAction": "Set as default",
 		"managerOnlyHint": "Only instance admins and template authors can manage templates.",
 		"createAction": "Create template",
-		"saveAction": "Save",
+		"saveAction": "Save changes",
 		"cancelAction": "Cancel",
 		"editAction": "Edit",
 		"deleteAction": "Delete",

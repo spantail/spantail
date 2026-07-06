@@ -470,7 +470,12 @@
 		}
 	},
 	"templates": {
-		"listTitle": "テンプレート",
+		"newAction": "新規テンプレート",
+		"backAction": "テンプレート一覧へ戻る",
+		"listDescription": "テンプレートはレポートの生成方法と、新しいレポートの初期内容を定義します。未指定のときはデフォルトのテンプレートが使われます。",
+		"composerDefaultsTitle": "作成時のデフォルト",
+		"composerDefaultsHint": "このテンプレートからレポートを作成したときの初期内容です。",
+		"actions": "テンプレートの操作",
 		"newTitle": "テンプレートを作成",
 		"editTitle": "テンプレートを編集",
 		"copyName": "{{name}} のコピー",
@@ -492,7 +497,7 @@
 		"setDefaultAction": "デフォルトに設定",
 		"managerOnlyHint": "テンプレートの管理はインスタンス管理者とテンプレート作成者のみ可能です。",
 		"createAction": "テンプレートを作成",
-		"saveAction": "保存",
+		"saveAction": "変更を保存",
 		"cancelAction": "キャンセル",
 		"editAction": "編集",
 		"deleteAction": "削除",
