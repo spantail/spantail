@@ -15,6 +15,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { AdminBanner } from "@/components/admin-banner";
+import { PersonAvatar } from "@/components/person-avatar";
 import { GitHubIcon, GoogleIcon } from "@/components/provider-icons";
 import { SettingsSection } from "@/components/settings-section";
 import {
@@ -228,25 +229,27 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 								</div>
 							)}
 						</div>
-						<div className="flex items-center gap-2 text-sm">
-							<Checkbox
-								id="user-grant-admin"
-								checked={grantAdmin}
-								onCheckedChange={(v) => setGrantAdmin(v === true)}
-							/>
-							<Label htmlFor="user-grant-admin">
-								{t("settings.users.grantAdmin")}
-							</Label>
-						</div>
-						<div className="flex items-center gap-2 text-sm">
-							<Checkbox
-								id="user-grant-template-author"
-								checked={grantTemplateAuthor}
-								onCheckedChange={(v) => setGrantTemplateAuthor(v === true)}
-							/>
-							<Label htmlFor="user-grant-template-author">
-								{t("settings.users.grantTemplateAuthor")}
-							</Label>
+						<div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+							<div className="flex items-center gap-2 text-sm">
+								<Checkbox
+									id="user-grant-admin"
+									checked={grantAdmin}
+									onCheckedChange={(v) => setGrantAdmin(v === true)}
+								/>
+								<Label htmlFor="user-grant-admin">
+									{t("settings.users.grantAdmin")}
+								</Label>
+							</div>
+							<div className="flex items-center gap-2 text-sm">
+								<Checkbox
+									id="user-grant-template-author"
+									checked={grantTemplateAuthor}
+									onCheckedChange={(v) => setGrantTemplateAuthor(v === true)}
+								/>
+								<Label htmlFor="user-grant-template-author">
+									{t("settings.users.grantTemplateAuthor")}
+								</Label>
+							</div>
 						</div>
 						<div>
 							<Button type="submit" disabled={submitting}>
@@ -321,13 +324,18 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 										className={user.disabled ? "opacity-60" : undefined}
 									>
 										<TableCell>
-											{user.name}
-											{isSelf && (
-												<span className="text-muted-foreground">
-													{" "}
-													{t("settings.users.you")}
+											<span className="flex items-center gap-2.5">
+												<PersonAvatar name={user.name} size={26} />
+												<span>
+													{user.name}
+													{isSelf && (
+														<span className="text-muted-foreground">
+															{" "}
+															{t("settings.users.you")}
+														</span>
+													)}
 												</span>
-											)}
+											</span>
 										</TableCell>
 										<TableCell className="text-muted-foreground">
 											{user.email}
