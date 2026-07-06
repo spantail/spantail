@@ -117,19 +117,28 @@ export interface GithubRepoSummary {
 	private: boolean;
 }
 
-/** All repos the installation covers (paginated at GitHub's 100/page max). */
+// Pagination bound: 10 pages x 100 repos. Each page is a Workers subrequest,
+// so an unbounded walk could exhaust the per-request subrequest budget on a
+// huge installation; beyond the cap we log rather than silently truncate
+// (manual mapping by full name still works for any repo).
+const INSTALLATION_REPO_PAGES_MAX = 10;
+
+/** Repos the installation covers, bounded at 1000 (see the cap note above). */
 export async function listInstallationRepos(
 	token: string,
 ): Promise<GithubRepoSummary[]> {
 	const repos: GithubRepoSummary[] = [];
-	for (let page = 1; page <= 10; page++) {
+	for (let page = 1; page <= INSTALLATION_REPO_PAGES_MAX; page++) {
 		const batch = await githubRequest<{ repositories: GithubRepoSummary[] }>(
 			`/installation/repositories?per_page=100&page=${page}`,
 			{ token },
 		);
 		repos.push(...batch.repositories);
-		if (batch.repositories.length < 100) break;
+		if (batch.repositories.length < 100) return repos;
 	}
+	console.warn(
+		`github installation repo listing hit the ${INSTALLATION_REPO_PAGES_MAX * 100}-repo cap; further repos are not listed`,
+	);
 	return repos;
 }
 

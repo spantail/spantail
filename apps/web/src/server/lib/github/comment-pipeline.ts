@@ -234,7 +234,12 @@ export async function handleIssueCommentCreated(opts: {
 			// after a project delete, transient D1 error) must surface in the
 			// outer log, not be silently swallowed as a duplicate.
 			const message = error instanceof Error ? error.message : "";
-			if (message.includes("comment_id")) return;
+			if (
+				message.includes("UNIQUE constraint failed") &&
+				message.includes("work_entry_github_refs.comment_id")
+			) {
+				return;
+			}
 			throw error;
 		}
 
