@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { PersonAvatar } from "@/components/person-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -151,7 +152,16 @@ function MembersCard({ canManage }: { canManage: boolean }) {
 					<TableBody>
 						{(members.data ?? []).map((member) => (
 							<TableRow key={member.userId}>
-								<TableCell>{member.name}</TableCell>
+								<TableCell>
+									<span className="flex items-center gap-2.5">
+										<PersonAvatar
+											name={member.name}
+											imageUrl={member.imageUrl}
+											size={26}
+										/>
+										{member.name}
+									</span>
+								</TableCell>
 								<TableCell className="text-muted-foreground">
 									{member.email}
 								</TableCell>
