@@ -41,6 +41,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
+import { isSubmitShortcut } from "@/lib/keyboard";
 import { invalidateReports } from "@/lib/query";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
@@ -360,6 +361,14 @@ export function ReportForm({
 						onSubmit={(e) => {
 							e.preventDefault();
 							if (canSubmit) mutation.mutate();
+						}}
+						onKeyDown={(e) => {
+							// Cmd/Ctrl+Enter submits from any field (e.g. the note
+							// textarea), matching the button's enabled state.
+							if (isSubmitShortcut(e) && canSubmit) {
+								e.preventDefault();
+								e.currentTarget.requestSubmit();
+							}
 						}}
 					>
 						<div className="grid gap-5 sm:grid-cols-2">
