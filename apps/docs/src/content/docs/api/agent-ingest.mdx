@@ -45,6 +45,7 @@ workspace returns `409 conflict` — archived workspaces are read-only.
 | `durationMinutes` | integer | Session duration in minutes. |
 | `usage` | object \| null | Token-usage totals (see below), or `null` when the source can't expose them. |
 | `context` | object \| null | Non-usage session context (see below), or `null` when none was captured. |
+| `eventCount` | integer \| null | Number of events the rollup was computed from, or `null` on summary-path sessions (which carry no events). |
 | `description` | string \| null | Optional short summary (≤ 2000 chars). |
 | `startedAt` | string \| null | ISO 8601 session start. |
 | `endedAt` | string \| null | ISO 8601 session end. |
@@ -132,6 +133,7 @@ curl -X POST "https://<your-instance>/api/v1/agent-entries" \
   "durationMinutes": 42,
   "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
   "context": null,
+  "eventCount": null,
   "description": "Refactored the auth middleware",
   "startedAt": "2026-06-28T09:00:00.000Z",
   "endedAt": "2026-06-28T09:42:00.000Z",
@@ -234,6 +236,7 @@ curl -X POST "https://<your-instance>/api/v1/agent-events" \
   "durationMinutes": 12,
   "usage": { "totalTokens": 18400, "inputTokens": 12000, "outputTokens": 6400 },
   "context": { "models": ["claude-opus-4"], "branches": ["feature/auth-refactor"] },
+  "eventCount": 2,
   "description": null,
   "startedAt": "2026-06-28T09:00:00.000Z",
   "endedAt": "2026-06-28T09:12:00.000Z",

@@ -441,6 +441,7 @@ it("rolls up costUsd and context facets from event metadata", async () => {
 	const list = (await (
 		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
+		eventCount: number | null;
 		usage: { costUsd: number; model: string };
 		context: {
 			models: string[];
@@ -449,6 +450,8 @@ it("rolls up costUsd and context facets from event metadata", async () => {
 		};
 	}>;
 	expect(list).toHaveLength(1);
+	// The rollup's event count is exposed as `eventCount` (two events ingested).
+	expect(list[0]?.eventCount).toBe(2);
 	expect(list[0]?.usage.costUsd).toBeCloseTo(0.35);
 	expect(list[0]?.usage.model).toBe("claude-opus-4-8");
 	// Distinct, first-seen order; the non-string branch value is ignored.

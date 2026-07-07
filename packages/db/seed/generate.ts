@@ -1037,6 +1037,10 @@ export async function generateDataset(
 						...(costUsd !== undefined ? { costUsd } : {}),
 					},
 					context,
+					// The rollup's event count = the session's turns, matching what the
+					// events-fed ingest route would materialize (surfaced as
+					// `eventCount` on the read model).
+					rollupEventCount: turns,
 					description,
 					startedAt: new Date(minTs),
 					endedAt: new Date(maxTs),

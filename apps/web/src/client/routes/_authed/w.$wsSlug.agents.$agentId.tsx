@@ -16,7 +16,7 @@ import { SparklesIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { AgentEntryDialog } from "@/components/agent-entry-dialog";
+import { AgentEntryDetailPanel } from "@/components/agent-entry-detail-panel";
 import { AgentTypeIcon } from "@/components/agent-icon";
 import { AgentStats } from "@/components/agent-stats";
 import {
@@ -190,9 +190,25 @@ function AgentPage() {
 	// Vim-style j/k navigation over the loaded session rows; j at the last row
 	// pulls the next page so keyboard users aren't stuck at the scroll sentinel.
 	const tableRef = useRef<HTMLDivElement>(null);
-	const [active, setActive] = useState(-1);
-	// The session whose read-only detail is shown; opened by row click or `o`.
+	const [localActive, setLocalActive] = useState(-1);
+	// The session whose read-only detail is shown in the docked panel; opened by
+	// row click or `o`.
 	const [viewEntry, setViewEntry] = useState<AgentEntry | null>(null);
+	// While the panel is open its session drives the list (single source of
+	// truth): the highlight follows it and ↑/↓ move the selection live. While
+	// closed the list keeps its own j/k highlight. A viewed session that's no
+	// longer a row (dropped by a period change) leaves the list on its local
+	// highlight and the panel's counter/nav hidden.
+	const panelIndex = viewEntry
+		? list.findIndex((e) => e.id === viewEntry.id)
+		: -1;
+	const panelDrivesList = panelIndex >= 0;
+	const active = panelDrivesList ? panelIndex : localActive;
+	// Mirror the panel selection into the local highlight so closing the panel
+	// leaves the highlight on the last-viewed row (j/k resumes from there).
+	useEffect(() => {
+		if (panelDrivesList) setLocalActive(panelIndex);
+	}, [panelDrivesList, panelIndex]);
 	// Bulk selection over the loaded rows. Only the raw id set is state; the
 	// effective selection is its intersection with the loaded list, so rows
 	// that vanish (deleted, or dropped by a period change) fall out on their own.
@@ -211,7 +227,15 @@ function AgentPage() {
 	useListKeyboardNav({
 		length: list.length,
 		index: active,
-		onMove: setActive,
+		// The arrows are the panel's move keys while it's open; otherwise leave
+		// them to the browser for page scrolling.
+		arrowKeys: panelDrivesList,
+		onMove: (next) => {
+			const entry = list[next];
+			if (!entry) return;
+			if (panelDrivesList) setViewEntry(entry);
+			else setLocalActive(next);
+		},
 		onOpen: () => {
 			const entry = list[active];
 			if (entry) setViewEntry(entry);
@@ -310,7 +334,7 @@ function AgentPage() {
 			toast.success(t("agents.selection.deletedToast", { count }));
 			setPendingDeleteIds(null);
 			clearSelection();
-			setActive(-1);
+			setLocalActive(-1);
 			setViewEntry((v) => (v && ids.includes(v.id) ? null : v));
 			invalidateAgentEntryData(queryClient, workspaceId as string);
 		},
@@ -356,7 +380,18 @@ function AgentPage() {
 						{t(`settings.agents.types.${agent.type}`)}
 					</Badge>
 				</div>
-				<PeriodSelector value={period} onChange={setPeriod} />
+				<PeriodSelector
+					value={period}
+					onChange={(next) => {
+						// A period change rescopes the list; drop the open session so the
+						// panel never lingers on a row the new range doesn't contain, and
+						// reset the list highlight — a stale index into the shorter new
+						// list would leave j/k/o/x acting on out-of-range rows.
+						setViewEntry(null);
+						setLocalActive(-1);
+						setPeriod(next);
+					}}
+				/>
 			</div>
 
 			<AgentStats workspaceId={current.id} agentId={agentId} period={period} />
@@ -611,17 +646,32 @@ function AgentPage() {
 				</AlertDialogContent>
 			</AlertDialog>
 
-			<AgentEntryDialog
-				entry={viewEntry}
-				onClose={() => setViewEntry(null)}
-				project={
-					viewEntry?.projectId
-						? projectById.get(viewEntry.projectId)
-						: undefined
-				}
-				projectName={projectName(viewEntry?.projectId ?? null)}
-				timezone={timezone}
-			/>
+			{viewEntry && (
+				<AgentEntryDetailPanel
+					entry={viewEntry}
+					agentType={agent.type}
+					index={panelIndex}
+					total={list.length}
+					onPrev={
+						panelIndex > 0
+							? () => setViewEntry(list[panelIndex - 1] ?? null)
+							: undefined
+					}
+					onNext={
+						panelIndex >= 0 && panelIndex < list.length - 1
+							? () => setViewEntry(list[panelIndex + 1] ?? null)
+							: undefined
+					}
+					onClose={() => setViewEntry(null)}
+					project={
+						viewEntry.projectId
+							? projectById.get(viewEntry.projectId)
+							: undefined
+					}
+					projectName={projectName(viewEntry.projectId)}
+					timezone={timezone}
+				/>
+			)}
 		</div>
 	);
 }
