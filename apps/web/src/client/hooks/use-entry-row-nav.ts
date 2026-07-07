@@ -23,11 +23,15 @@ export function useEntryRowNav<E extends HTMLElement>(
 	const { openView, viewEntryId, registerEntries } = useEntryDialog();
 	const [localActive, setLocalActive] = useState(-1);
 
-	const panelOpen = viewEntryId != null;
-	const panelIndex = panelOpen
+	// The panel drives this list only when its entry is actually a row here.
+	// An entry opened from elsewhere (e.g. the search palette) that isn't in
+	// this list leaves the list on its own local highlight — it must not steal
+	// the arrow keys from page scrolling or jump the panel to a random row.
+	const panelIndex = viewEntryId
 		? entries.findIndex((e) => e.id === viewEntryId)
 		: -1;
-	const activeIndex = panelOpen ? panelIndex : localActive;
+	const panelDrivesList = panelIndex >= 0;
+	const activeIndex = panelDrivesList ? panelIndex : localActive;
 
 	// Keep the panel's navigation list tracking what this list currently shows
 	// (order, pagination). Register on change; clear only on unmount so a
@@ -40,11 +44,11 @@ export function useEntryRowNav<E extends HTMLElement>(
 	useListKeyboardNav({
 		length: entries.length,
 		index: activeIndex,
-		arrowKeys: panelOpen,
+		arrowKeys: panelDrivesList,
 		onMove: (next) => {
 			const entry = entries[next];
 			if (!entry) return;
-			if (panelOpen) openView(entry);
+			if (panelDrivesList) openView(entry);
 			else setLocalActive(next);
 		},
 		onOpen: () => {
