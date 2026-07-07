@@ -29,6 +29,16 @@ The render context exposes:
 | `groups.by_date` | Entries grouped by day; each group has `key`, `total_minutes`, `entries`. |
 | `groups.by_user` | Entries grouped by member; each group has `name`, `total_minutes`, `entries`. |
 | `entry.description`, `entry.duration_minutes`, `entry.user_name`, `entry.project_name`, `entry.tags` | Per-entry fields. |
+| `agents` | Registered agents in scope; each has `id`, `name`, `type`. |
+| `agent_entries` | The AI-agent sessions in scope; iterate for the per-session fields below. |
+| `totals.agents` | AI-agent rollup: `sessions`, `minutes`, `hours`, `tokens`, `input_tokens`, `output_tokens`. |
+| `agent_groups.by_agent` | Agent sessions grouped by agent; each group has `name`, `session_count`, `total_minutes`, `total_tokens`, `entries` (also `by_date`, `by_project`, `by_user`). |
+| `agent_entry.duration_minutes`, `agent_entry.total_tokens`, `agent_entry.input_tokens`, `agent_entry.output_tokens`, `agent_entry.cost_usd`, `agent_entry.model`, `agent_entry.agent_name` | Per-session fields (iterate `agent_entries`). |
+
+Agent-activity notes: sessions carry no tags, so a report's tag filter never narrows them. Token
+buckets are optional per agent, so `input_tokens + output_tokens` can be less than `total_tokens`,
+and a source that exposes no usage contributes `0`. Guard the section with
+`{% if totals.agents.sessions > 0 %}` so it renders only when there is agent activity.
 
 Filters: `format_duration` (minutes to `1h 30m`), plus the standard safe LiquidJS filters
 (`size`, `join`, …). For safety, raw-HTML passthrough, file/include tags, and prototype access are

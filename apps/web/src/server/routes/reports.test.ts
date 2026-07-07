@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 import {
 	apiGet,
 	apiJson,
+	appFetch,
 	defaultTemplateId,
 	signUpUser,
 } from "../../../test/helpers";
@@ -1139,4 +1140,91 @@ it("lists distinct template ids in use", async () => {
 	expect(
 		await (await apiGet("/api/v1/reports/template-ids", admin)).json(),
 	).toEqual([seededTemplateId]);
+});
+
+it("includes agent activity, own-scoped and ignoring the tag filter", async () => {
+	const { admin, other, ws, project } = await setup();
+	await apiJson("PATCH", "/api/v1/me", { timezone: "Asia/Tokyo" }, admin);
+	await apiJson(
+		"PATCH",
+		"/api/v1/instance/agents",
+		{ agentsEnabled: true },
+		admin,
+	);
+	// `other` joins the workspace so their agent session is a realistic ACL case.
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "other@example.com", role: "member" },
+		admin,
+	);
+
+	const registerAgent = async (cookie: string) =>
+		(await (
+			await apiJson(
+				"POST",
+				"/api/v1/agents",
+				{ type: "claude_code", name: "CC", defaultWorkspaceId: ws.id },
+				cookie,
+			)
+		).json()) as { secret: string };
+	const ingest = (token: string, body: unknown) =>
+		appFetch("/api/v1/agent-entries", {
+			method: "POST",
+			headers: {
+				authorization: `Bearer ${token}`,
+				"content-type": "application/json",
+			},
+			body: JSON.stringify(body),
+		});
+
+	const adminAgent = await registerAgent(admin);
+	const otherAgent = await registerAgent(other);
+	expect(
+		(
+			await ingest(adminAgent.secret, {
+				sessionId: "admin-s1",
+				projectId: project.id,
+				durationMinutes: 42,
+				usage: { totalTokens: 1234, inputTokens: 800, outputTokens: 400 },
+				startedAt: "2026-06-15T09:00:00Z",
+			})
+		).status,
+	).toBe(200);
+	// A workspace-level session owned by `other` (no project → owner-only under
+	// the private-by-default ACL). The report also defaults to own-scope, so it
+	// must never surface in the admin's report.
+	expect(
+		(
+			await ingest(otherAgent.secret, {
+				sessionId: "other-s1",
+				durationMinutes: 15,
+				usage: { totalTokens: 9999 },
+				startedAt: "2026-06-15T09:00:00Z",
+			})
+		).status,
+	).toBe(200);
+
+	// A tag filter that no agent session can match: agent activity is included
+	// regardless, since sessions carry no tags.
+	const res = await apiJson(
+		"POST",
+		"/api/v1/reports/preview",
+		{
+			templateId: seededTemplateId,
+			filters: {
+				workspaceIds: [ws.id],
+				tags: ["api"],
+				dateRange: { from: "2026-06-01", to: "2026-06-30" },
+			},
+		},
+		admin,
+	);
+	expect(res.status).toBe(200);
+	const preview = (await res.json()) as { content: string };
+	expect(preview.content).toContain("Agent activity");
+	expect(preview.content).toContain("1234 tokens");
+	expect(preview.content).toContain("42m");
+	// `other`'s session is excluded by own-scoping + the private-by-default ACL.
+	expect(preview.content).not.toContain("9999");
 });

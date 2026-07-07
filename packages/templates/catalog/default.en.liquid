@@ -14,6 +14,15 @@ _No work entries in this period._
 {% endfor %}
 {% endfor -%}
 {% endif -%}
+{% if totals.agents.sessions > 0 -%}
+## Agent activity
+
+{{ totals.agents.sessions }} sessions · {{ totals.agents.minutes | format_duration }} · {{ totals.agents.tokens }} tokens
+
+{% for group in agent_groups.by_agent -%}
+- {{ group.name }} — {{ group.session_count }} sessions, {{ group.total_minutes | format_duration }}, {{ group.total_tokens }} tokens
+{% endfor %}
+{% endif -%}
 {% if report.note -%}
 ## Notes
 

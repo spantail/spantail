@@ -16,6 +16,7 @@ import {
 	resolveDateRange,
 	resolveUserTimezone,
 	sendReportInputSchema,
+	todayInTimezone,
 	updateReportInputSchema,
 } from "@spantail/core";
 import {
@@ -27,6 +28,8 @@ import {
 	getMembership,
 	getReportById,
 	getReportTemplateById,
+	listAgentEntriesForReport,
+	listAgentsByIds,
 	listMembers,
 	listMembersByProject,
 	listMembersInAllWorkspaces,
@@ -265,12 +268,50 @@ async function renderReportDocument(
 		access,
 	});
 	const entries = filterEntriesByTags(rows, filters.tags);
-	const [projects, users] = await Promise.all([
+	// Agent sessions carry no tags, so the tag filter does not apply to them:
+	// they are included in the report regardless of `filters.tags`.
+	const agentRows = await listAgentEntriesForReport(c.var.db, {
+		workspaceIds,
+		projectIds: filters.projectIds,
+		ownerUserIds: userIds,
+		from: range.from,
+		to: range.to,
+		timezone,
+		access,
+	});
+	// Names for any project/user referenced only by agent sessions must resolve
+	// too, so union their ids into the lookup sets.
+	const [projects, users, agents] = await Promise.all([
 		listProjectsByIds(c.var.db, [
-			...new Set(entries.flatMap((e) => (e.projectId ? [e.projectId] : []))),
+			...new Set(
+				[...entries, ...agentRows].flatMap((e) =>
+					e.projectId ? [e.projectId] : [],
+				),
+			),
 		]),
-		listUsersByIds(c.var.db, [...new Set(entries.map((e) => e.userId))]),
+		listUsersByIds(c.var.db, [
+			...new Set([
+				...entries.map((e) => e.userId),
+				...agentRows.map((e) => e.ownerUserId),
+			]),
+		]),
+		listAgentsByIds(c.var.db, [...new Set(agentRows.map((e) => e.agentId))]),
 	]);
+	// Agent entries store only timestamps; derive each session's calendar day in
+	// the report timezone (same read-time projection as the agent screens).
+	const agentEntries = agentRows.map((entry) => ({
+		id: entry.id,
+		workspaceId: entry.workspaceId,
+		projectId: entry.projectId,
+		ownerUserId: entry.ownerUserId,
+		agentId: entry.agentId,
+		entryDate: todayInTimezone(timezone, entry.startedAt),
+		durationMinutes: entry.durationMinutes,
+		usage: entry.usage,
+		description: entry.description,
+		startedAt: entry.startedAt.toISOString(),
+		endedAt: entry.endedAt ? entry.endedAt.toISOString() : null,
+	}));
 
 	const preset =
 		typeof filters.dateRange === "string" ? filters.dateRange : null;
@@ -289,7 +330,9 @@ async function renderReportDocument(
 		})),
 		projects,
 		users: users.map((u) => ({ id: u.id, name: u.name })),
+		agents: agents.map((a) => ({ id: a.id, name: a.name, type: a.type })),
 		entries,
+		agentEntries,
 	};
 	let body: string;
 	try {
@@ -543,7 +586,9 @@ export const reportRoutes = new Hono<AppEnv>()
 				users: userRows
 					.filter((u) => memberIds.has(u.id))
 					.map((u) => ({ id: u.id, name: u.name })),
+				agents: [],
 				entries: [],
+				agentEntries: [],
 			};
 			suggestedName = await renderReportField(nameTemplate, fieldContext, 100);
 			suggestedNote = await renderReportField(

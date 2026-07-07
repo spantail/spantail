@@ -47,8 +47,10 @@ it. The seeded starter template starts out as the default, so a fresh instance a
 
 A template body is **Markdown** with **Liquid** placeholders. At render time Spantail fills in
 the report's data — its name and note, the resolved period, totals, and the entries grouped by
-project, date, or member — and produces Markdown. A duration filter formats minutes as
-`1h 30m`. To see what a template produces, compose a [report](/guides/reports/) with it.
+project, date, or member — and produces Markdown. AI-agent activity is available too:
+`totals.agents` (session count, minutes, and tokens) and `agent_groups` / `agent_entries` for a
+per-agent or per-session breakdown. A duration filter formats minutes as `1h 30m`. To see what a
+template produces, compose a [report](/guides/reports/) with it.
 
 ## Report defaults from a template
 

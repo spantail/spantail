@@ -585,6 +585,10 @@ export async function generateDataset(
 					})),
 					users: [{ id: user.id, name: user.name }],
 					entries: entries.map(toEngineEntry),
+					// Seed reports are frozen snapshots; agent activity is exercised by
+					// the live report-generation route, not these pre-rendered bodies.
+					agents: [],
+					agentEntries: [],
 				};
 				const rendered = await renderReport(tmpl.body, context);
 				const totalMinutes = entries.reduce((a, e) => a + e.minutes, 0);
@@ -688,6 +692,10 @@ export async function generateDataset(
 				})),
 				users: [{ id: sender.id, name: sender.name }],
 				entries: entries.map(toEngineEntry),
+				// Seed reports are frozen snapshots; agent activity is exercised by
+				// the live report-generation route, not these pre-rendered bodies.
+				agents: [],
+				agentEntries: [],
 			};
 			const rendered = await renderReport(tmpl.body, context);
 			const totalMinutes = entries.reduce((a, e) => a + e.minutes, 0);
@@ -798,6 +806,10 @@ export async function generateDataset(
 					})),
 					users: [{ id: user.id, name: user.name }],
 					entries: entries.map(toEngineEntry),
+					// Seed reports are frozen snapshots; agent activity is exercised by
+					// the live report-generation route, not these pre-rendered bodies.
+					agents: [],
+					agentEntries: [],
 				};
 				const rendered = await renderReport(tmpl.body, context);
 				const totalMinutes = entries.reduce((a, e) => a + e.minutes, 0);
