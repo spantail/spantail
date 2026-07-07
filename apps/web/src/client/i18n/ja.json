@@ -201,12 +201,15 @@
 		"note": "メモ",
 		"noNote": "この記録にメモはありません。",
 		"agentSessions": {
-			"title": "エージェントセッション",
+			"title": "エージェントアクティビティ",
+			"agentFallback": "エージェント",
 			"sessions": "セッション数",
+			"active": "アクティブ",
 			"time": "セッション時間",
 			"tokens": "トークン",
 			"input": "入力",
 			"output": "出力",
+			"untitled": "無題のセッション",
 			"refs": "プルリクエスト"
 		},
 		"tags": "タグ",
@@ -219,6 +222,13 @@
 		"editAction": "編集",
 		"deleteAction": "削除",
 		"closeAction": "閉じる",
+		"panel": {
+			"prevEntry": "前のエントリー",
+			"nextEntry": "次のエントリー",
+			"moveHint": "で移動",
+			"close": "パネルを閉じる",
+			"resize": "ドラッグでサイズ変更"
+		},
 		"source": "登録元",
 		"sources": {
 			"web": "Web",

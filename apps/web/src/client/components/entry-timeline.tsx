@@ -1,13 +1,13 @@
 import type { Project, WorkEntry } from "@spantail/core";
 import { formatDuration } from "@spantail/core";
 import { SquarePenIcon } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { EntryActions } from "@/components/entry-actions";
 import { useEntryDialog } from "@/components/entry-dialog";
 import { ProjectMarker } from "@/components/project-marker";
 import { Badge } from "@/components/ui/badge";
-import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
+import { useEntryRowNav } from "@/hooks/use-entry-row-nav";
 import { formatEntryDate } from "@/lib/format";
 
 export interface TimelineDay {
@@ -68,18 +68,7 @@ export function EntryTimeline({
 		[entries],
 	);
 	const containerRef = useRef<HTMLDivElement>(null);
-	const [active, setActive] = useState(-1);
-	useListKeyboardNav({
-		length: entries.length,
-		index: active,
-		onMove: setActive,
-		onOpen: () => {
-			const entry = entries[active];
-			if (entry) openView(entry);
-		},
-		onReachEnd: onLoadMore,
-		containerRef,
-	});
+	const { activeIndex } = useEntryRowNav(entries, containerRef, onLoadMore);
 
 	return (
 		<div ref={containerRef} className="flex flex-col gap-7">
@@ -135,7 +124,7 @@ export function EntryTimeline({
 											key={entry.id}
 											data-nav-index={idx}
 											data-nav-active={
-												active >= 0 && active === idx ? "" : undefined
+												activeIndex >= 0 && activeIndex === idx ? "" : undefined
 											}
 											className="group relative flex items-start gap-3"
 										>
