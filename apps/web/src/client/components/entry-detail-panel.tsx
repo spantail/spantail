@@ -8,7 +8,7 @@ import {
 	Trash2Icon,
 	XIcon,
 } from "lucide-react";
-import { type ComponentType, useEffect, useState } from "react";
+import { type ComponentType, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EntryDetail } from "@/components/entry-detail";
@@ -18,6 +18,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatEntryDate } from "@/lib/format";
+import { isTypingTarget } from "@/lib/keyboard";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -116,6 +117,10 @@ export function EntryDetailPanel({
 	useEffect(() => {
 		localStorage.setItem(WIDTH_KEY, String(width));
 	}, [width]);
+	// Tears down an in-progress drag; kept in a ref so unmounting mid-drag (e.g.
+	// a delete lands and closes the panel) can detach the window listeners.
+	const endResizeRef = useRef<(() => void) | null>(null);
+	useEffect(() => () => endResizeRef.current?.(), []);
 	const startResize = (e: React.PointerEvent) => {
 		e.preventDefault();
 		setResizing(true);
@@ -123,15 +128,17 @@ export function EntryDetailPanel({
 			const w = Math.round(window.innerWidth - ev.clientX);
 			setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w)));
 		};
-		const onUp = () => {
-			setResizing(false);
+		const stop = () => {
 			window.removeEventListener("pointermove", onMove);
-			window.removeEventListener("pointerup", onUp);
+			window.removeEventListener("pointerup", stop);
 			document.body.style.userSelect = "";
+			endResizeRef.current = null;
+			setResizing(false);
 		};
+		endResizeRef.current = stop;
 		document.body.style.userSelect = "none";
 		window.addEventListener("pointermove", onMove);
-		window.addEventListener("pointerup", onUp);
+		window.addEventListener("pointerup", stop);
 	};
 
 	// Esc closes the panel — but only when nothing more modal is open (an
@@ -139,6 +146,9 @@ export function EntryDetailPanel({
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			if (e.key !== "Escape") return;
+			// Leave Escape to whatever the user is typing in (clearing an input,
+			// closing a combobox popover) or to a more modal surface above.
+			if (isTypingTarget(e.target)) return;
 			if (
 				document.querySelector(
 					'[role="dialog"], [role="alertdialog"], [role="menu"]',

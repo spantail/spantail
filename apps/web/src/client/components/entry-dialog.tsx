@@ -117,11 +117,13 @@ export function EntryDialogProvider({
 		(project) =>
 			project.slug === routeProjectSlug && project.status === "active",
 	)?.id;
-	// The panel is a home/project surface only (like the mockup); on the reports,
-	// settings or other takeovers it stays hidden even if a selection lingers.
-	const onPanelRoute =
-		/^\/w\/[^/]+\/?$/.test(pathname) ||
-		/^\/w\/[^/]+\/projects\/[^/]+/.test(pathname);
+	// A selection is scoped to the list it was opened from, so close the panel on
+	// any navigation — otherwise it would linger onto another page (or, after a
+	// workspace switch, show an entry that belongs to the previous workspace).
+	// biome-ignore lint/correctness/useExhaustiveDependencies: run only on path change
+	useEffect(() => {
+		setSelection(null);
+	}, [pathname]);
 
 	const openCreate = useCallback(
 		(prefill?: EntryCreatePrefill, opts?: { onCreated?: () => void }) => {
@@ -274,7 +276,7 @@ export function EntryDialogProvider({
 	return (
 		<EntryDialogContext.Provider value={value}>
 			{children}
-			{current && viewEntry && onPanelRoute && (
+			{current && viewEntry && (
 				<EntryDetailPanel
 					entry={viewEntry}
 					index={navIndex}
