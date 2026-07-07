@@ -1,6 +1,6 @@
-import { formatDuration, utcToZonedTime, type WorkEntry } from "@spantail/core";
+import type { WorkEntry } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
-import { useRouteContext, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import {
 	createContext,
 	useCallback,
@@ -13,8 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { EntryDetail } from "@/components/entry-detail";
-import { EntryDetailActions } from "@/components/entry-detail-actions";
+import { EntryDetailPanel } from "@/components/entry-detail-panel";
 import { type EntryCreatePrefill, EntryForm } from "@/components/entry-form";
 import {
 	Dialog,
@@ -26,7 +25,6 @@ import {
 import { useProjects } from "@/hooks/use-projects";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
-import { formatEntryDate } from "@/lib/format";
 import { isTypingTarget } from "@/lib/keyboard";
 import { useWorkspace } from "@/lib/workspace";
 
@@ -37,8 +35,10 @@ type EntryDialogState =
 			prefill?: EntryCreatePrefill;
 			onCreated?: () => void;
 	  }
-	| { mode: "edit"; entry: WorkEntry }
-	| { mode: "view"; entry: WorkEntry };
+	| { mode: "edit"; entry: WorkEntry };
+
+/** The selected entry plus the object to fall back to if it leaves the list. */
+type PanelSelection = { id: string; entry: WorkEntry };
 
 /**
  * What a page-registered supplier tells the global `c` shortcut to do:
@@ -56,7 +56,15 @@ interface EntryDialogContextValue {
 		opts?: { onCreated?: () => void },
 	) => void;
 	openEdit: (entry: WorkEntry) => void;
+	/** Shows `entry` in the docked detail panel (opens it, or swaps its content). */
 	openView: (entry: WorkEntry) => void;
+	/** Id of the entry the panel is showing, so lists can highlight its row. */
+	viewEntryId: string | null;
+	/**
+	 * The mounted entry list registers its ordered entries here (null on
+	 * unmount) so the panel can move through them (prev/next, counter, arrows).
+	 */
+	registerEntries: (entries: WorkEntry[] | null) => void;
 	/**
 	 * Registers the supplier the `c` shortcut consults before opening (pass
 	 * null to unregister). Pages with a bulk selection use it so the shortcut
@@ -79,12 +87,18 @@ export function EntryDialogProvider({
 }: {
 	children: React.ReactNode;
 }) {
-	const { t, i18n } = useTranslation();
+	const { t } = useTranslation();
 	const { current } = useWorkspace();
-	const { session } = useRouteContext({ from: "/_authed" });
 	const timezone = useUserTimezone();
 	const projects = useProjects();
 	const [state, setState] = useState<EntryDialogState | null>(null);
+	// The entry shown in the docked detail panel (view mode), independent of the
+	// create/edit dialog above — editing from the panel opens the dialog while
+	// the panel stays put.
+	const [selection, setSelection] = useState<PanelSelection | null>(null);
+	// Ordered entries of the mounted list, kept live so the panel's prev/next
+	// and counter track the same (paginated) order the user sees.
+	const [navEntries, setNavEntries] = useState<WorkEntry[]>([]);
 	// Remount key so the form re-derives its initial state on every open.
 	const [instanceId, setInstanceId] = useState(0);
 	// An archived workspace is read-only, so creating is blocked here — the one
@@ -103,6 +117,11 @@ export function EntryDialogProvider({
 		(project) =>
 			project.slug === routeProjectSlug && project.status === "active",
 	)?.id;
+	// The panel is a home/project surface only (like the mockup); on the reports,
+	// settings or other takeovers it stays hidden even if a selection lingers.
+	const onPanelRoute =
+		/^\/w\/[^/]+\/?$/.test(pathname) ||
+		/^\/w\/[^/]+\/projects\/[^/]+/.test(pathname);
 
 	const openCreate = useCallback(
 		(prefill?: EntryCreatePrefill, opts?: { onCreated?: () => void }) => {
@@ -122,10 +141,23 @@ export function EntryDialogProvider({
 		setState({ mode: "edit", entry });
 	}, []);
 	const openView = useCallback((entry: WorkEntry) => {
-		setInstanceId((id) => id + 1);
-		setState({ mode: "view", entry });
+		setSelection({ id: entry.id, entry });
+	}, []);
+	const registerEntries = useCallback((entries: WorkEntry[] | null) => {
+		// Lists rebuild their array every render (e.g. `pages.flat()`), so bail out
+		// when the entries are the same objects in the same order — this keeps an
+		// unchanged list from churning provider renders, while a refetched/edited
+		// entry (new object reference) still flows through to the panel.
+		setNavEntries((prev) => {
+			const next = entries ?? [];
+			if (prev.length === next.length && prev.every((e, i) => e === next[i])) {
+				return prev;
+			}
+			return next;
+		});
 	}, []);
 	const close = useCallback(() => setState(null), []);
+	const closePanel = useCallback(() => setSelection(null), []);
 
 	// Held in a ref: registering a supplier must not re-render the provider or
 	// re-bind the keydown listener.
@@ -143,7 +175,8 @@ export function EntryDialogProvider({
 			if (e.repeat || e.isComposing || e.defaultPrevented) return;
 			if (isTypingTarget(e.target)) return;
 			// Covers this dialog plus any other open dialog, confirmation, or
-			// menu, where a bare keypress may be Radix typeahead input.
+			// menu, where a bare keypress may be Radix typeahead input. The
+			// detail panel is non-modal, so it doesn't block this shortcut.
 			if (
 				document.querySelector(
 					'[role="dialog"], [role="alertdialog"], [role="menu"]',
@@ -164,9 +197,24 @@ export function EntryDialogProvider({
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [openCreate]);
 
+	const viewEntryId = selection?.id ?? null;
 	const value = useMemo(
-		() => ({ openCreate, openEdit, openView, setCreatePrefillSource }),
-		[openCreate, openEdit, openView, setCreatePrefillSource],
+		() => ({
+			openCreate,
+			openEdit,
+			openView,
+			viewEntryId,
+			registerEntries,
+			setCreatePrefillSource,
+		}),
+		[
+			openCreate,
+			openEdit,
+			openView,
+			viewEntryId,
+			registerEntries,
+			setCreatePrefillSource,
+		],
 	);
 
 	// The entry form may only assign projects the caller can log to: workspace
@@ -187,123 +235,77 @@ export function EntryDialogProvider({
 		return all.filter((p) => allowed.has(p.id) || p.id === editingProjectId);
 	}, [projects.data, canLogToAll, myProjectIds.data, editingProjectId]);
 
-	// In view mode the entry's description is the dialog title; project, date,
-	// duration, tags and note make up the body. The author byline (and the
-	// member lookup it needs) only applies to entries the viewer doesn't own.
-	const viewEntry = state?.mode === "view" ? state.entry : null;
-	const isOthersEntry =
-		viewEntry != null && viewEntry.userId !== session.user.id;
-	const members = useQuery({
-		queryKey: ["members", current?.id],
-		queryFn: () => api.listMembers(current?.id as string),
-		enabled: Boolean(current) && isOthersEntry,
-	});
-	// Agent sessions this entry was logged from — gated on the instance feature
-	// flag and fetched only when a view dialog is open. The server filters the
-	// links by the agent-entry ACL, so a viewer sees only sessions they may read.
-	const agentsEnabled = useQuery({
-		queryKey: ["agents-enabled"],
-		queryFn: () => api.getAgentsEnabled(),
-	});
-	const linkedSessions = useQuery({
-		queryKey: ["work-entry-agent-entries", current?.id, viewEntry?.id],
-		queryFn: () => api.listWorkEntryAgentEntries(viewEntry?.id as string),
-		enabled:
-			Boolean(current) &&
-			viewEntry != null &&
-			(agentsEnabled.data?.enabled ?? false),
-	});
-	const viewProject = viewEntry?.projectId
-		? (projects.data ?? []).find((p) => p.id === viewEntry.projectId)
-		: undefined;
-	const viewProjectName = viewEntry
-		? viewEntry.projectId
-			? (viewProject?.name ?? viewEntry.projectId)
-			: t("projects.unassigned")
-		: "";
-	const viewProjectHue = viewProject?.hue ?? null;
-	const viewProjectSymbol = viewProject?.symbol ?? null;
-	const viewDateLabel = viewEntry
-		? formatEntryDate(viewEntry.entryDate, i18n.language, {
-				year: "numeric",
-				month: "short",
-				day: "numeric",
-				weekday: "short",
-			})
-		: "";
-	const viewTimeRange =
-		viewEntry?.startedAt && viewEntry.endedAt
-			? `${utcToZonedTime(viewEntry.startedAt, timezone)}–${utcToZonedTime(viewEntry.endedAt, timezone)}`
-			: null;
-	// Resolve to the member's name only; while members load (or for a user no
-	// longer in the workspace) the byline stays hidden rather than show a raw id.
-	const viewAuthorName = isOthersEntry
-		? ((members.data ?? []).find((m) => m.userId === viewEntry?.userId)?.name ??
-			null)
+	// Resolve the panel's entry against the live list so edits refetched into the
+	// list flow through; fall back to the object we opened with (an entry opened
+	// from search may not be in the current list).
+	const navIndex = selection
+		? navEntries.findIndex((e) => e.id === selection.id)
+		: -1;
+	const viewEntry = selection
+		? (navEntries[navIndex] ?? selection.entry)
 		: null;
-	// Concise summary kept for the (visually hidden) dialog description.
-	const viewSubtitle = viewEntry
-		? [
-				viewProjectName,
-				viewDateLabel,
-				formatDuration(viewEntry.durationMinutes),
-			].join(" · ")
-		: null;
+
+	// Move the selection to an adjacent entry (prev/next), staying on the list.
+	const goRelative = useCallback(
+		(delta: number) => {
+			setSelection((cur) => {
+				if (!cur) return cur;
+				const i = navEntries.findIndex((e) => e.id === cur.id);
+				if (i < 0) return cur;
+				const next = navEntries[i + delta];
+				return next ? { id: next.id, entry: next } : cur;
+			});
+		},
+		[navEntries],
+	);
+	// After deleting the selected entry, land on a neighbour (or close if none).
+	const selectNeighbor = useCallback(() => {
+		setSelection((cur) => {
+			if (!cur) return null;
+			const i = navEntries.findIndex((e) => e.id === cur.id);
+			if (i < 0) return null;
+			const neighbor = navEntries[i + 1] ?? navEntries[i - 1];
+			return neighbor && neighbor.id !== cur.id
+				? { id: neighbor.id, entry: neighbor }
+				: null;
+		});
+	}, [navEntries]);
 
 	return (
 		<EntryDialogContext.Provider value={value}>
 			{children}
+			{current && viewEntry && onPanelRoute && (
+				<EntryDetailPanel
+					entry={viewEntry}
+					index={navIndex}
+					total={navEntries.length}
+					onPrev={navIndex > 0 ? () => goRelative(-1) : undefined}
+					onNext={
+						navIndex >= 0 && navIndex < navEntries.length - 1
+							? () => goRelative(1)
+							: undefined
+					}
+					onEdit={() => openEdit(viewEntry)}
+					onClose={closePanel}
+					onDeleted={selectNeighbor}
+				/>
+			)}
 			{current && (
 				<Dialog open={state !== null} onOpenChange={(open) => !open && close()}>
-					<DialogContent
-						size="2xl"
-						onOpenAutoFocus={(e) => {
-							if (state?.mode !== "view") return;
-							// Radix focuses the first tabbable element by default — in
-							// view mode that is the Delete button, making a stray Enter
-							// destructive. Send focus to the close (X) button so Enter
-							// merely dismisses.
-							e.preventDefault();
-							(e.currentTarget as HTMLElement)
-								.querySelector<HTMLElement>('[data-slot="dialog-close"]')
-								?.focus();
-						}}
-					>
+					<DialogContent size="2xl">
 						<DialogHeader>
 							<DialogTitle>
-								{viewEntry
-									? viewEntry.description
-									: state?.mode === "edit"
-										? t("entries.editTitle")
-										: t("entries.newTitle")}
+								{state?.mode === "edit"
+									? t("entries.editTitle")
+									: t("entries.newTitle")}
 							</DialogTitle>
-							<DialogDescription className={viewEntry ? "sr-only" : undefined}>
-								{viewSubtitle ??
-									(state?.mode === "edit"
-										? t("entries.editDescription")
-										: t("entries.newDescription"))}
+							<DialogDescription>
+								{state?.mode === "edit"
+									? t("entries.editDescription")
+									: t("entries.newDescription")}
 							</DialogDescription>
 						</DialogHeader>
-						{state?.mode === "view" && (
-							<>
-								<EntryDetail
-									entry={state.entry}
-									projectName={viewProjectName}
-									projectHue={viewProjectHue}
-									projectSymbol={viewProjectSymbol}
-									dateLabel={viewDateLabel}
-									timeRange={viewTimeRange}
-									authorName={viewAuthorName}
-									agentSessions={linkedSessions.data ?? []}
-								/>
-								<EntryDetailActions
-									entry={state.entry}
-									onEdit={() => openEdit(state.entry)}
-									onClose={close}
-								/>
-							</>
-						)}
-						{state && state.mode !== "view" && (
+						{state && (
 							<EntryForm
 								key={instanceId}
 								workspaceId={current.id}

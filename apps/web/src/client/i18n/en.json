@@ -224,6 +224,13 @@
 		"editAction": "Edit",
 		"deleteAction": "Delete",
 		"closeAction": "Close",
+		"panel": {
+			"prevEntry": "Previous entry",
+			"nextEntry": "Next entry",
+			"moveHint": "to move",
+			"close": "Close panel",
+			"resize": "Drag to resize"
+		},
 		"source": "Logged via",
 		"sources": {
 			"web": "Web",

@@ -1,6 +1,6 @@
 import type { Project, WorkEntry, WorkspaceMember } from "@spantail/core";
 import { formatDuration } from "@spantail/core";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EntryActions } from "@/components/entry-actions";
@@ -15,7 +15,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
+import { useEntryRowNav } from "@/hooks/use-entry-row-nav";
 import { formatEntryDate } from "@/lib/format";
 
 interface EntryListProps {
@@ -48,18 +48,7 @@ export function EntryList({
 	const memberName = (id: string) => memberById.get(id)?.name ?? id;
 
 	const containerRef = useRef<HTMLDivElement>(null);
-	const [active, setActive] = useState(-1);
-	useListKeyboardNav({
-		length: entries.length,
-		index: active,
-		onMove: setActive,
-		onOpen: () => {
-			const entry = entries[active];
-			if (entry) openView(entry);
-		},
-		onReachEnd: onLoadMore,
-		containerRef,
-	});
+	const { activeIndex } = useEntryRowNav(entries, containerRef, onLoadMore);
 
 	if (entries.length === 0) {
 		return (
@@ -103,7 +92,7 @@ export function EntryList({
 						<TableRow
 							key={entry.id}
 							data-nav-index={index}
-							data-nav-active={active === index ? "" : undefined}
+							data-nav-active={activeIndex === index ? "" : undefined}
 							className="group data-[nav-active]:bg-muted relative cursor-pointer"
 						>
 							<TableCell className="text-muted-foreground py-3 whitespace-nowrap">

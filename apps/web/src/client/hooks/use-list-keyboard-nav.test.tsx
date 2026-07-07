@@ -11,9 +11,11 @@ afterEach(cleanup);
 function Harness({
 	onOpen,
 	onReachEnd,
+	arrowKeys,
 }: {
 	onOpen?: () => void;
 	onReachEnd?: () => void;
+	arrowKeys?: boolean;
 }) {
 	const containerRef = useRef<HTMLUListElement>(null);
 	const [active, setActive] = useState(-1);
@@ -24,6 +26,7 @@ function Harness({
 		onOpen,
 		onReachEnd,
 		containerRef,
+		arrowKeys,
 	});
 	return (
 		<ul ref={containerRef} data-testid="active" data-active={active}>
@@ -70,6 +73,22 @@ it("fires onReachEnd when j is pressed at the last item", () => {
 	expect(onReachEnd).not.toHaveBeenCalled();
 	fireEvent.keyDown(window, { key: "j" }); // at last → reach end
 	expect(onReachEnd).toHaveBeenCalledTimes(1);
+});
+
+it("ignores the arrow keys by default", () => {
+	const { container } = render(<Harness />);
+	fireEvent.keyDown(window, { key: "ArrowDown" });
+	expect(activeIndex(container)).toBe("-1");
+});
+
+it("moves with the arrow keys when arrowKeys is on", () => {
+	const { container } = render(<Harness arrowKeys />);
+	fireEvent.keyDown(window, { key: "ArrowDown" });
+	expect(activeIndex(container)).toBe("0");
+	fireEvent.keyDown(window, { key: "ArrowDown" });
+	expect(activeIndex(container)).toBe("1");
+	fireEvent.keyDown(window, { key: "ArrowUp" });
+	expect(activeIndex(container)).toBe("0");
 });
 
 it("ignores keys while typing in an input", () => {

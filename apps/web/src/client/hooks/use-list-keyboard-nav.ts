@@ -18,6 +18,13 @@ interface UseListKeyboardNavOptions<E extends HTMLElement> {
 	/** Wraps the rows; each carries `data-nav-index={i}` for scroll-into-view. */
 	containerRef: RefObject<E | null>;
 	enabled?: boolean;
+	/**
+	 * Also treat `ArrowDown`/`ArrowUp` as `j`/`k`. Opt-in (default off) because
+	 * most lists should leave the arrows to the browser for page scrolling; the
+	 * entry lists enable it only while the detail panel is open, where the arrows
+	 * are the panel's move keys.
+	 */
+	arrowKeys?: boolean;
 }
 
 /**
@@ -36,6 +43,7 @@ export function useListKeyboardNav<E extends HTMLElement>({
 	onReachEnd,
 	containerRef,
 	enabled = true,
+	arrowKeys = false,
 }: UseListKeyboardNavOptions<E>): void {
 	// Latest values, read inside a listener that's bound once per `enabled`.
 	// Synced in a layout effect (not during render) so the handler only ever
@@ -47,9 +55,18 @@ export function useListKeyboardNav<E extends HTMLElement>({
 		onOpen,
 		onToggle,
 		onReachEnd,
+		arrowKeys,
 	});
 	useLayoutEffect(() => {
-		latest.current = { length, index, onMove, onOpen, onToggle, onReachEnd };
+		latest.current = {
+			length,
+			index,
+			onMove,
+			onOpen,
+			onToggle,
+			onReachEnd,
+			arrowKeys,
+		};
 	});
 
 	useEffect(() => {
@@ -67,12 +84,14 @@ export function useListKeyboardNav<E extends HTMLElement>({
 			) {
 				return;
 			}
-			const { length, index, onMove, onOpen, onToggle, onReachEnd } =
+			const { length, index, onMove, onOpen, onToggle, onReachEnd, arrowKeys } =
 				latest.current;
-			if (e.key === "j" || e.key === "k") {
+			const isDown = e.key === "j" || (arrowKeys && e.key === "ArrowDown");
+			const isUp = e.key === "k" || (arrowKeys && e.key === "ArrowUp");
+			if (isDown || isUp) {
 				if (length === 0) return;
 				e.preventDefault();
-				const dir = e.key === "j" ? 1 : -1;
+				const dir = isDown ? 1 : -1;
 				if (dir === 1 && index >= length - 1) onReachEnd?.();
 				const next = nextNavIndex(index, length, dir);
 				if (next !== index) onMove(next);

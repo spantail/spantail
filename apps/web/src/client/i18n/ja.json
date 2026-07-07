@@ -219,6 +219,13 @@
 		"editAction": "編集",
 		"deleteAction": "削除",
 		"closeAction": "閉じる",
+		"panel": {
+			"prevEntry": "前のエントリー",
+			"nextEntry": "次のエントリー",
+			"moveHint": "で移動",
+			"close": "パネルを閉じる",
+			"resize": "ドラッグでサイズ変更"
+		},
 		"source": "登録元",
 		"sources": {
 			"web": "Web",
