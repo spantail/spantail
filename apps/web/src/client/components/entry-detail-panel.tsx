@@ -97,11 +97,12 @@ export function EntryDetailPanel({
 		queryFn: () => api.listWorkEntryAgentEntries(entry.id),
 		enabled: Boolean(current) && (agentsEnabled.data?.enabled ?? false),
 	});
-	// Resolves the sessions' agentId to a display name for the activity card.
+	// Resolves the sessions' agentId to a display name for the activity card —
+	// only worth fetching once we know this entry actually has linked sessions.
 	const workspaceAgents = useQuery({
 		queryKey: ["workspace-agents", current?.id],
 		queryFn: () => api.listWorkspaceAgents(current?.id as string),
-		enabled: Boolean(current) && (agentsEnabled.data?.enabled ?? false),
+		enabled: Boolean(current) && (linkedSessions.data?.length ?? 0) > 0,
 	});
 	// Identify the agent behind the card only when every session shares one.
 	const agent = useMemo(() => {
