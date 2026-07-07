@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { createDb, findUserByEmail } from "@spantail/db";
 import { expect, it } from "vitest";
 
-import { assertAuthSecret, socialProviderOf } from "./auth";
+import { assertAuthSecret, backfillAvatarUrl, socialProviderOf } from "./auth";
 
 const BASE = "https://example.com";
 
@@ -92,6 +92,21 @@ it("detects the social provider behind a user-create hook", () => {
 		socialProviderOf({ path: "/callback/:id", params: { id: "apple" } }),
 	).toBeNull();
 	expect(socialProviderOf(null)).toBeNull();
+});
+
+it("backfills a provider avatar only when the user has none", () => {
+	const providerUrl = "https://lh3.googleusercontent.com/a/pic";
+	// No avatar yet + a social sign-in captured a URL → fill it.
+	expect(backfillAvatarUrl(null, providerUrl)).toBe(providerUrl);
+	expect(backfillAvatarUrl(undefined, providerUrl)).toBe(providerUrl);
+	// An existing avatar (uploaded token or stored provider URL) is never
+	// overwritten.
+	expect(backfillAvatarUrl("upload-token", providerUrl)).toBeNull();
+	expect(
+		backfillAvatarUrl("https://avatars.githubusercontent.com/u/1", providerUrl),
+	).toBeNull();
+	// A non-social sign-in (no captured URL) is a no-op even with no avatar.
+	expect(backfillAvatarUrl(null, null)).toBeNull();
 });
 
 it("fails closed on a missing or weak BETTER_AUTH_SECRET", () => {

@@ -76,6 +76,12 @@ export function createAuth(
 	// session secret must stop the request, not silently sign forgeable sessions.
 	const secret = assertAuthSecret(env.BETTER_AUTH_SECRET);
 
+	// Avatar URL supplied by the OAuth provider for this request, captured by the
+	// provider profile mapping below. It is read once, when the session is
+	// created, to backfill a user who has no avatar yet. `createAuth` runs once
+	// per request, so this holder never leaks across requests.
+	let capturedAvatarUrl: string | null = null;
+
 	const socialProviders: NonNullable<
 		Parameters<typeof betterAuth>[0]["socialProviders"]
 	> = {};
@@ -83,6 +89,15 @@ export function createAuth(
 		socialProviders.google = {
 			clientId: social.google.clientId,
 			clientSecret: social.google.clientSecret,
+			// Capture the provider avatar so a user with none yet can be backfilled
+			// (see session.create.before). Returns {} so Better Auth's default
+			// profile mapping — name, email, image — is left untouched.
+			mapProfileToUser: (profile) => {
+				if (typeof profile.picture === "string") {
+					capturedAvatarUrl = profile.picture;
+				}
+				return {};
+			},
 		};
 	}
 	if (social?.github) {
@@ -93,6 +108,12 @@ export function createAuth(
 			// so we trust its verified flag exactly like Google's: a verified GitHub
 			// email links into an existing (verified) account, while an unverified
 			// one still cannot (requireLocalEmailVerified stays at its true default).
+			mapProfileToUser: (profile) => {
+				if (typeof profile.avatar_url === "string") {
+					capturedAvatarUrl = profile.avatar_url;
+				}
+				return {};
+			},
 		};
 	}
 	const googleAllowedDomains = social?.google?.allowedDomains ?? [];
@@ -220,11 +241,37 @@ export function createAuth(
 								message: "This account is disabled; contact an instance admin",
 							});
 						}
+						// Backfill the avatar from the OAuth provider when the user has none
+						// yet. This chokepoint covers both social sign-up and sign-in
+						// (createSession runs for the new-user and the existing/link
+						// branches alike). capturedAvatarUrl is null for a password sign-in,
+						// and an existing image (an uploaded token or an already-stored
+						// provider URL) is never overwritten.
+						if (account) {
+							const image = backfillAvatarUrl(account.image, capturedAvatarUrl);
+							if (image) {
+								await updateUser(db, session.userId, { image });
+							}
+						}
 					},
 				},
 			},
 		},
 	});
+}
+
+/**
+ * The avatar URL to backfill onto a user during sign-in, or null to leave the
+ * avatar untouched. Only a user with no avatar is filled: an existing image — a
+ * locally uploaded token or an already-stored provider URL — is never
+ * overwritten, and a non-social sign-in (no captured provider URL) is a no-op.
+ */
+export function backfillAvatarUrl(
+	currentImage: string | null | undefined,
+	providerAvatarUrl: string | null,
+): string | null {
+	if (currentImage) return null;
+	return providerAvatarUrl ?? null;
 }
 
 /**
