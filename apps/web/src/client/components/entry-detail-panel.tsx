@@ -117,10 +117,11 @@ export function EntryDetailPanel({
 	useEffect(() => {
 		localStorage.setItem(WIDTH_KEY, String(width));
 	}, [width]);
-	// Tears down an in-progress drag; kept in a ref so unmounting mid-drag (e.g.
-	// a delete lands and closes the panel) can detach the window listeners.
-	const endResizeRef = useRef<(() => void) | null>(null);
-	useEffect(() => () => endResizeRef.current?.(), []);
+	// Detaches an in-progress drag's listeners; kept in a ref so unmounting
+	// mid-drag (e.g. a delete lands and closes the panel) can clean up. It only
+	// touches listeners/DOM — never React state — so the unmount path stays safe.
+	const detachResizeRef = useRef<(() => void) | null>(null);
+	useEffect(() => () => detachResizeRef.current?.(), []);
 	const startResize = (e: React.PointerEvent) => {
 		e.preventDefault();
 		setResizing(true);
@@ -128,17 +129,20 @@ export function EntryDetailPanel({
 			const w = Math.round(window.innerWidth - ev.clientX);
 			setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w)));
 		};
-		const stop = () => {
+		const detach = () => {
 			window.removeEventListener("pointermove", onMove);
-			window.removeEventListener("pointerup", stop);
+			window.removeEventListener("pointerup", onUp);
 			document.body.style.userSelect = "";
-			endResizeRef.current = null;
-			setResizing(false);
+			detachResizeRef.current = null;
 		};
-		endResizeRef.current = stop;
+		function onUp() {
+			detach();
+			setResizing(false);
+		}
+		detachResizeRef.current = detach;
 		document.body.style.userSelect = "none";
 		window.addEventListener("pointermove", onMove);
-		window.addEventListener("pointerup", stop);
+		window.addEventListener("pointerup", onUp);
 	};
 
 	// Esc closes the panel — but only when nothing more modal is open (an
@@ -166,6 +170,7 @@ export function EntryDetailPanel({
 
 	return (
 		<aside
+			aria-labelledby="entry-panel-title"
 			className="bg-card fixed top-0 right-0 bottom-0 z-30 flex max-w-[92vw] flex-col border-l shadow-2xl"
 			style={{ width: `${width}px` }}
 		>
@@ -230,7 +235,10 @@ export function EntryDetailPanel({
 			</div>
 
 			<div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-				<h2 className="font-heading mb-4 text-base leading-snug font-semibold">
+				<h2
+					id="entry-panel-title"
+					className="font-heading mb-4 text-base leading-snug font-semibold"
+				>
 					{entry.description}
 				</h2>
 				<EntryDetail
