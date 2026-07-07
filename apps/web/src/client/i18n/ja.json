@@ -115,6 +115,9 @@
 			"open": "セッションの詳細を開く",
 			"noDescription": "無題のセッション",
 			"usage": "使用量",
+			"events": "イベント",
+			"active": "アクティブ",
+			"tokens": "トークン",
 			"cacheWrite": "キャッシュ書き込み",
 			"cacheRead": "キャッシュ読み込み",
 			"totalTokens": "合計",
@@ -125,6 +128,13 @@
 			"refs": "参照",
 			"models": "モデル",
 			"sessionId": "セッション ID"
+		},
+		"panel": {
+			"prevSession": "前のセッション",
+			"nextSession": "次のセッション",
+			"moveHint": "で移動",
+			"close": "パネルを閉じる",
+			"resize": "ドラッグでサイズ変更"
 		},
 		"selection": {
 			"selectEntry": "セッションを選択",

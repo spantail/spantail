@@ -19,6 +19,10 @@ The list shortcuts (<kbd>J</kbd> / <kbd>K</kbd> / <kbd>O</kbd>) apply to the
 lists that support selection, such as the timeline, the reports list, your
 inbox, and an agent's sessions list.
 
+While a detail panel is open — a work entry on the timeline, or a session on an
+agent's activity page — <kbd>↑</kbd> / <kbd>↓</kbd> move through the list live,
+updating the panel as you go.
+
 On an agent's sessions list, <kbd>X</kbd> builds a bulk selection of your own
 sessions. While sessions are checked, <kbd>C</kbd> opens the Log Work dialog
 prefilled from the selection (and links the created entry to those sessions),

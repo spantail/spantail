@@ -123,6 +123,9 @@ export const agentEntrySchema = z.object({
 	// Null when the source can't expose token usage locally (e.g. Cursor).
 	usage: agentUsageSchema.nullable(),
 	context: agentEntryContextSchema.nullable(),
+	// Number of raw events the session's rollup was computed from. Null on
+	// summary-path sessions, which carry no events (e.g. Cursor).
+	eventCount: z.number().int().min(0).nullable(),
 	description: z.string().max(2000).nullable(),
 	startedAt: z.string().nullable(),
 	endedAt: z.string().nullable(),

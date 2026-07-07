@@ -59,8 +59,12 @@ a per-project breakdown, and token usage. This is a read-only rollup — the raw
 per-turn telemetry is not shown.
 
 Click a session row — or select it with <kbd>J</kbd> / <kbd>K</kbd> and press
-<kbd>O</kbd> — to open its details: description, project, duration, token usage,
-and the repositories, branches, and models the session touched.
+<kbd>O</kbd> — to open its details in a panel docked at the right edge: project,
+date, and duration; a usage card with the event count, active time, and tokens,
+the input/output split, and the per-bucket token breakdown; the repositories,
+branches, and references the session touched; and the session id. Move through
+sessions with <kbd>↑</kbd> / <kbd>↓</kbd> (or the panel's prev/next buttons)
+without reopening, and press <kbd>Esc</kbd> to close.
 
 :::note[Screenshot]
 An agent activity page: stats, the session list, and token usage for the
