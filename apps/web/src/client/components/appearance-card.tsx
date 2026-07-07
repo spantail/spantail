@@ -35,7 +35,8 @@ const ACCENTS: ReadonlyArray<{
 	{ id: "pink", swatch: "oklch(0.6 0.18 345)" },
 ];
 
-// Abstract preview decoration: a bar silhouette tinted with the live --brand.
+// Abstract preview decoration: a bar silhouette tinted with the previewed
+// accent (--brand, scoped locally by the `.accent-preview` wrapper below).
 const PREVIEW_BARS = [44, 70, 52, 84, 60, 30, 26, 76, 58, 90, 64, 48];
 const PREVIEW_DIM = new Set([5, 6]);
 
@@ -51,12 +52,12 @@ export function AppearanceCard({
 	const mutation = useMutation({
 		mutationFn: (accentColor: WorkspaceAccentColor) =>
 			api.updateWorkspace(workspace.id, { accentColor }),
-		// Optimistically patch the cached workspace so the provider re-applies the
-		// accent immediately (instant preview). Roll back on error and reconcile
-		// with the server on settle. The provider stays the single source of truth
-		// for the document theme, so a failed request never leaves a stale accent
-		// applied — even if the active workspace changed while it was in flight.
-		// Editing a non-active workspace correctly leaves the app accent alone.
+		// Optimistically patch the cached workspace so the selected accent reflects
+		// instantly — the check mark and the local preview (which reads
+		// `workspace.accentColor`) both update at once. Roll back on error and
+		// reconcile with the server on settle. This never themes the document: the
+		// preview is scoped to its own `.accent-preview` wrapper, so editing any
+		// workspace (active or not) leaves the surrounding app accent alone.
 		onMutate: async (accentColor) => {
 			await queryClient.cancelQueries({ queryKey: ["me"] });
 			const previous = queryClient.getQueryData<Me>(["me"]);
@@ -144,7 +145,13 @@ export function AppearanceCard({
 						<span className="text-sm font-medium">
 							{t("settings.appearance.preview")}
 						</span>
-						<div className="border-border bg-muted/30 flex flex-col gap-5 rounded-xl border p-5">
+						<div
+							// Scope the previewed accent to this panel only: it renders the
+							// edited workspace's accent (not the document's) and updates live
+							// as the selection changes, without recoloring the app.
+							data-accent={selected}
+							className="accent-preview border-border bg-muted/30 flex flex-col gap-5 rounded-xl border p-5"
+						>
 							<div className="flex items-end gap-1.5" style={{ height: 80 }}>
 								{PREVIEW_BARS.map((height, i) => (
 									<div
