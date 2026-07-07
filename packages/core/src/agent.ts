@@ -134,8 +134,8 @@ export type AgentEntry = z.infer<typeof agentEntrySchema>;
 /**
  * Aggregates the sessions linked to a single work entry for the entry-detail
  * summary. The input/output buckets sum only the sessions that expose them (an
- * agent that doesn't contributes 0), so like `agentEntryStats` their sum can be
- * less than `totalTokens`.
+ * agent that doesn't expose them contributes 0), so like `agentEntryStats` their
+ * sum can be less than `totalTokens`.
  */
 export function summarizeAgentSessions(
 	entries: Array<Pick<AgentEntry, "durationMinutes" | "usage">>,
