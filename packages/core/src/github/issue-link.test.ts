@@ -61,4 +61,6 @@ it("rejects non-github, malformed, or non-numeric refs", () => {
 	expect(parseGithubRef("github:acme/repo#12a")).toBeNull();
 	expect(parseGithubRef("github:ac me/repo#5")).toBeNull(); // space
 	expect(parseGithubRef("prefix github:acme/repo#5")).toBeNull(); // not anchored
+	// The number is capped at 9 digits so it never overflows a safe integer.
+	expect(parseGithubRef(`github:acme/repo#${"9".repeat(10)}`)).toBeNull();
 });

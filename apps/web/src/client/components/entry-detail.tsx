@@ -182,7 +182,7 @@ export function EntryDetail({
 										key={`${ref.fullName}#${ref.number}`}
 										href={`${repoUrlFromFullName(ref.fullName)}/issues/${ref.number}`}
 										target="_blank"
-										rel="noreferrer"
+										rel="noopener noreferrer"
 										className="bg-muted hover:bg-muted/70 rounded-md px-2 py-0.5 font-mono text-xs break-all"
 									>
 										{ref.fullName}#{ref.number}

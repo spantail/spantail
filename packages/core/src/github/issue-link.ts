@@ -52,7 +52,11 @@ export function refsMatchIssue(
 export function parseGithubRef(
 	ref: string,
 ): { fullName: string; number: number } | null {
-	const match = /^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)#([0-9]+)$/.exec(
+	// The number is capped at 9 digits so `Number(...)` is always an exact, safe
+	// integer — a real issue/PR number is far smaller, and an overlong digit run
+	// (the ref is opaque, up to 200 chars) must not become Infinity or lose
+	// precision in dedupe keys and hrefs.
+	const match = /^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)#([0-9]{1,9})$/.exec(
 		ref,
 	);
 	const fullName = match?.[1];

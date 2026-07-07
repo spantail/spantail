@@ -1,6 +1,7 @@
 import {
 	type AgentEntryContext,
 	type AgentUsage,
+	MAX_LINKED_AGENT_ENTRIES,
 	shiftDays,
 	todayInTimezone,
 	zonedDateTimeToUtc,
@@ -635,6 +636,10 @@ export async function listAgentEntriesForWorkEntry(
 			.where(and(...conditions))
 			// Chronological, `id` breaking ties on equal `startedAt` for a stable order.
 			.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id))
+			// The write path caps links at MAX_LINKED_AGENT_ENTRIES per entry; cap the
+			// read too so an unexpected surplus (legacy/manual rows) can't make the
+			// route read an unbounded set.
+			.limit(MAX_LINKED_AGENT_ENTRIES)
 	);
 }
 
