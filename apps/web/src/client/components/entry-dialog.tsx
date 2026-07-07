@@ -260,18 +260,23 @@ export function EntryDialogProvider({
 		},
 		[navEntries],
 	);
-	// After deleting the selected entry, land on a neighbour (or close if none).
-	const selectNeighbor = useCallback(() => {
-		setSelection((cur) => {
-			if (!cur) return null;
-			const i = navEntries.findIndex((e) => e.id === cur.id);
-			if (i < 0) return null;
-			const neighbor = navEntries[i + 1] ?? navEntries[i - 1];
-			return neighbor && neighbor.id !== cur.id
-				? { id: neighbor.id, entry: neighbor }
-				: null;
-		});
-	}, [navEntries]);
+	// After a delete, if the deleted entry is still the selected one, land on a
+	// neighbour (or close if none). If the selection has since moved to another
+	// entry, leave it — the delete shouldn't yank the user off what they're on.
+	const handleDeleted = useCallback(
+		(deletedId: string) => {
+			setSelection((cur) => {
+				if (!cur || cur.id !== deletedId) return cur;
+				const i = navEntries.findIndex((e) => e.id === deletedId);
+				if (i < 0) return null;
+				const neighbor = navEntries[i + 1] ?? navEntries[i - 1];
+				return neighbor && neighbor.id !== deletedId
+					? { id: neighbor.id, entry: neighbor }
+					: null;
+			});
+		},
+		[navEntries],
+	);
 
 	return (
 		<EntryDialogContext.Provider value={value}>
@@ -289,7 +294,7 @@ export function EntryDialogProvider({
 					}
 					onEdit={() => openEdit(viewEntry)}
 					onClose={closePanel}
-					onDeleted={selectNeighbor}
+					onDeleted={handleDeleted}
 				/>
 			)}
 			{current && (

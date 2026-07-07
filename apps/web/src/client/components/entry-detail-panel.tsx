@@ -48,8 +48,12 @@ interface EntryDetailPanelProps {
 	onNext?: () => void;
 	onEdit: () => void;
 	onClose: () => void;
-	/** Called after the entry is deleted (advances the selection or closes). */
-	onDeleted: () => void;
+	/**
+	 * Called after an entry is deleted, with the deleted entry's id (captured at
+	 * click time, so a selection change during the async delete can't misattribute
+	 * it). Advances the selection or closes.
+	 */
+	onDeleted: (deletedId: string) => void;
 }
 
 /**
@@ -74,7 +78,12 @@ export function EntryDetailPanel({
 	const { session } = useRouteContext({ from: "/_authed" });
 	const timezone = useUserTimezone();
 	const projects = useProjects();
-	const deleteMutation = useDeleteWorkEntry(entry, onDeleted);
+	// The entry a delete is acting on, captured when the button is pressed so the
+	// success handler reports the right id even if the selection has since moved.
+	const deletingIdRef = useRef<string | null>(null);
+	const deleteMutation = useDeleteWorkEntry(entry, () => {
+		if (deletingIdRef.current) onDeleted(deletingIdRef.current);
+	});
 
 	const isOwn = entry.userId === session.user.id;
 
@@ -298,7 +307,10 @@ export function EntryDetailPanel({
 						variant="ghost"
 						size="sm"
 						disabled={deleteMutation.isPending}
-						onClick={() => deleteMutation.mutate()}
+						onClick={() => {
+							deletingIdRef.current = entry.id;
+							deleteMutation.mutate();
+						}}
 						className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mr-auto"
 					>
 						<Trash2Icon />

@@ -295,7 +295,7 @@ export function EntryDetail({
 						{refs.map((ref) => (
 							<a
 								key={`${ref.fullName}#${ref.number}`}
-								href={`${repoUrlFromFullName(ref.fullName)}/issues/${ref.number}`}
+								href={`${repoUrlFromFullName(ref.fullName)}/pull/${ref.number}`}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="group bg-background hover:border-foreground/25 hover:bg-muted/50 flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm transition-colors"
