@@ -113,31 +113,35 @@ export function EntryDetailPanel({
 		: ((members.data ?? []).find((m) => m.userId === entry.userId)?.name ??
 			null);
 
-	// Draggable width, persisted so the panel reopens at the user's size.
+	// Draggable width. Persisted at the end of a drag (not on every move — that
+	// would hit synchronous localStorage on each pointer-move and jank the drag).
 	const [width, setWidth] = useState(() => {
 		const v = Number.parseInt(localStorage.getItem(WIDTH_KEY) ?? "", 10);
 		return v >= MIN_WIDTH && v <= MAX_WIDTH ? v : DEFAULT_WIDTH;
 	});
+	const widthRef = useRef(width);
 	const [resizing, setResizing] = useState(false);
-	useEffect(() => {
-		localStorage.setItem(WIDTH_KEY, String(width));
-	}, [width]);
-	// Detaches an in-progress drag's listeners; kept in a ref so unmounting
-	// mid-drag (e.g. a delete lands and closes the panel) can clean up. It only
-	// touches listeners/DOM — never React state — so the unmount path stays safe.
+	// Detaches an in-progress drag's listeners and saves the final width; kept in
+	// a ref so unmounting mid-drag (e.g. a delete lands and closes the panel) can
+	// clean up. It never touches React state, so the unmount path stays safe.
 	const detachResizeRef = useRef<(() => void) | null>(null);
 	useEffect(() => () => detachResizeRef.current?.(), []);
 	const startResize = (e: React.PointerEvent) => {
 		e.preventDefault();
 		setResizing(true);
 		const onMove = (ev: PointerEvent) => {
-			const w = Math.round(window.innerWidth - ev.clientX);
-			setWidth(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, w)));
+			const w = Math.max(
+				MIN_WIDTH,
+				Math.min(MAX_WIDTH, Math.round(window.innerWidth - ev.clientX)),
+			);
+			widthRef.current = w;
+			setWidth(w);
 		};
 		const detach = () => {
 			window.removeEventListener("pointermove", onMove);
 			window.removeEventListener("pointerup", onUp);
 			document.body.style.userSelect = "";
+			localStorage.setItem(WIDTH_KEY, String(widthRef.current));
 			detachResizeRef.current = null;
 		};
 		function onUp() {
