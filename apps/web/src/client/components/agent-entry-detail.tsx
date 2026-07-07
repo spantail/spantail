@@ -69,11 +69,15 @@ export function AgentEntryDetail({
 	const usage = entry.usage;
 	const inputTokens = usage?.inputTokens;
 	const outputTokens = usage?.outputTokens;
-	const hasTokenSplit = (inputTokens ?? 0) + (outputTokens ?? 0) > 0;
+	// Only show the split when BOTH buckets are known: a source may expose one
+	// and not the other, and treating a missing bucket as 0 would misrender an
+	// unknown split as a definite 100/0.
+	const hasTokenSplit =
+		inputTokens !== undefined &&
+		outputTokens !== undefined &&
+		inputTokens + outputTokens > 0;
 	const inputPercent = hasTokenSplit
-		? Math.round(
-				((inputTokens ?? 0) / ((inputTokens ?? 0) + (outputTokens ?? 0))) * 100,
-			)
+		? Math.round((inputTokens / (inputTokens + outputTokens)) * 100)
 		: 0;
 
 	const context = entry.context;
