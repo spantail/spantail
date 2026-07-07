@@ -205,6 +205,15 @@
 		"descriptionPlaceholder": "What did you work on?",
 		"note": "Note",
 		"noNote": "No note for this entry.",
+		"agentSessions": {
+			"title": "Agent sessions",
+			"sessions": "Sessions",
+			"time": "Session time",
+			"tokens": "Tokens",
+			"input": "Input",
+			"output": "Output",
+			"refs": "Pull requests"
+		},
 		"tags": "Tags",
 		"tagsPlaceholder": "api, design",
 		"author": "Member",

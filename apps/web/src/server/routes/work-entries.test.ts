@@ -1273,3 +1273,181 @@ it("rejects entry writes in an archived workspace, reads still work", async () =
 		(await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}`, admin)).status,
 	).toBe(200);
 });
+
+// A work entry linked to the given agent entries, created by `cookie`.
+async function createLinkedEntry(
+	cookie: string,
+	wsId: string,
+	projectId: string | null,
+	agentEntryIds: string[],
+): Promise<string> {
+	const res = await apiJson(
+		"POST",
+		"/api/v1/work-entries",
+		{
+			workspaceId: wsId,
+			projectId,
+			entryDate: "2026-06-01",
+			durationMinutes: 20,
+			description: "from sessions",
+			agentEntryIds,
+		},
+		cookie,
+	);
+	expect(res.status).toBe(201);
+	return ((await res.json()) as { id: string }).id;
+}
+
+it("returns the linked agent sessions, serialized and chronological", async () => {
+	const { admin, ws, project, agentFor } = await setupWithAgentIngest();
+	const ingest = await agentFor(admin);
+	const later = await ingest("later", {
+		startedAt: "2026-06-02T10:00:00.000Z",
+		usage: { totalTokens: 500, costUsd: 1.5 },
+		context: { refs: ["github:acme/repo#7"] },
+	});
+	const earlier = await ingest("earlier", {
+		startedAt: "2026-06-01T10:00:00.000Z",
+		usage: { totalTokens: 800 },
+		context: { refs: ["github:acme/repo#8"] },
+	});
+	const entryId = await createLinkedEntry(admin, ws.id, project.id, [
+		later,
+		earlier,
+	]);
+
+	const res = await apiGet(
+		`/api/v1/work-entries/${entryId}/agent-entries`,
+		admin,
+	);
+	expect(res.status).toBe(200);
+	const rows = (await res.json()) as Array<{
+		id: string;
+		entryDate: string;
+		rollupEventCount?: number;
+		usage: { totalTokens: number } | null;
+		context: { refs?: string[] } | null;
+	}>;
+	// Ordered by startedAt ascending.
+	expect(rows.map((r) => r.id)).toEqual([earlier, later]);
+	// Serialized: entryDate derived, internal rollup counter stripped.
+	expect(rows[0]?.entryDate).toBeDefined();
+	expect(rows[0]?.rollupEventCount).toBeUndefined();
+	expect(rows[1]?.usage?.totalTokens).toBe(500);
+	expect(rows[1]?.context?.refs).toEqual(["github:acme/repo#7"]);
+});
+
+it("filters linked sessions by the agent-entry ACL", async () => {
+	const { admin, member, ws, project, agentFor } = await setupWithAgentIngest();
+	const ingest = await agentFor(admin);
+	// One session assigned to the shared project (a project member may read it),
+	// one unassigned (owner-only agent activity).
+	const assigned = await ingest("assigned", { projectId: project.id });
+	const unassigned = await ingest("unassigned");
+	const entryId = await createLinkedEntry(admin, ws.id, project.id, [
+		assigned,
+		unassigned,
+	]);
+
+	const asAdmin = (await (
+		await apiGet(`/api/v1/work-entries/${entryId}/agent-entries`, admin)
+	).json()) as Array<{ id: string }>;
+	expect(asAdmin.map((r) => r.id).sort()).toEqual(
+		[assigned, unassigned].sort(),
+	);
+
+	const asMember = await apiGet(
+		`/api/v1/work-entries/${entryId}/agent-entries`,
+		member,
+	);
+	expect(asMember.status).toBe(200);
+	// The member reads the entry (project member) but sees only the session in
+	// their project — the owner-only unassigned one stays hidden.
+	expect(
+		((await asMember.json()) as Array<{ id: string }>).map((r) => r.id),
+	).toEqual([assigned]);
+});
+
+it("returns an empty list for an entry with no linked sessions", async () => {
+	const { admin, ws, project } = await setupWithAgentIngest();
+	const entryId = await createLinkedEntry(admin, ws.id, project.id, []);
+	const res = await apiGet(
+		`/api/v1/work-entries/${entryId}/agent-entries`,
+		admin,
+	);
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual([]);
+});
+
+it("404s for an unknown or unreadable entry", async () => {
+	const { admin, member, ws, agentFor } = await setupWithAgentIngest();
+	const ingest = await agentFor(admin);
+	const a = await ingest("a", { projectId: undefined });
+
+	expect(
+		(await apiGet("/api/v1/work-entries/no-such-id/agent-entries", admin))
+			.status,
+	).toBe(404);
+
+	// An entry in a project the member does not belong to is invisible to them.
+	const privateProject = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "private", name: "Private" },
+			admin,
+		)
+	).json()) as { id: string };
+	const entryId = await createLinkedEntry(admin, ws.id, privateProject.id, [a]);
+	expect(
+		(await apiGet(`/api/v1/work-entries/${entryId}/agent-entries`, member))
+			.status,
+	).toBe(404);
+});
+
+it("403s when the agents feature is disabled", async () => {
+	const { admin, ws, project } = await setupWithAgentIngest();
+	const entryId = await createLinkedEntry(admin, ws.id, project.id, []);
+	await apiJson(
+		"PATCH",
+		"/api/v1/instance/agents",
+		{ agentsEnabled: false },
+		admin,
+	);
+	expect(
+		(await apiGet(`/api/v1/work-entries/${entryId}/agent-entries`, admin))
+			.status,
+	).toBe(403);
+});
+
+it("never surfaces a linked session from another workspace", async () => {
+	const { admin, ws, project, agentFor } = await setupWithAgentIngest();
+	// A second workspace owned by the same admin, with a session logged there.
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "other", name: "Other" },
+			admin,
+		)
+	).json()) as { id: string };
+	const ingest = await agentFor(admin);
+	const foreign = await ingest("foreign", { workspaceId: ws2.id });
+
+	// A ws1 entry, with a corrupt cross-workspace link inserted directly (the API
+	// rejects such a link at create; this asserts the read-side workspace guard).
+	const entryId = await createLinkedEntry(admin, ws.id, project.id, []);
+	const db = createDb(env.DB as D1Database);
+	await db.insert(schema.workEntryAgentEntries).values({
+		workEntryId: entryId,
+		agentEntryId: foreign,
+		createdAt: new Date(),
+	});
+
+	// Even though the admin owns the foreign session (ACL `self` branch), the
+	// workspace guard keeps a cross-workspace link from surfacing it here.
+	const rows = (await (
+		await apiGet(`/api/v1/work-entries/${entryId}/agent-entries`, admin)
+	).json()) as unknown[];
+	expect(rows).toEqual([]);
+});

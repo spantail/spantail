@@ -20,8 +20,10 @@ import {
 	getWorkEntryOwnersByIds,
 	getWorkEntryStats,
 	isProjectMember,
+	listAgentEntriesForWorkEntry,
 	listWorkEntries,
 	listWorkEntryTags,
+	type MembershipRow,
 	updateWorkEntry,
 	WorkEntryOwnershipConflictError,
 	type WorkEntryRow,
@@ -29,6 +31,7 @@ import {
 import type { Context } from "hono";
 import { Hono } from "hono";
 
+import { serializeAgentEntry } from "../lib/agent-entry";
 import { AppError } from "../lib/errors";
 import {
 	requireProjectAccess,
@@ -36,6 +39,7 @@ import {
 	resolveEntryAccess,
 } from "../lib/permissions";
 import { validate } from "../lib/validate";
+import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAuth, requireScope } from "../middleware/auth";
 import { ingestRateLimit } from "../middleware/rate-limit";
 import { publishToWorkspace } from "../realtime/publish";
@@ -59,7 +63,7 @@ async function requireEntryAccess(
 	c: Context<AppEnv>,
 	id: string,
 	opts: { write?: boolean } = {},
-): Promise<WorkEntryRow> {
+): Promise<{ entry: WorkEntryRow; membership: MembershipRow }> {
 	const { user } = requireAuth(c);
 	const entry = await getWorkEntryById(c.var.db, id);
 	if (!entry) throw new AppError("not_found", "Work entry not found");
@@ -81,7 +85,7 @@ async function requireEntryAccess(
 	) {
 		throw new AppError("not_found", "Work entry not found");
 	}
-	return entry;
+	return { entry, membership };
 }
 
 /**
@@ -285,12 +289,30 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	})
 	.get("/:id", async (c) => {
 		requireScope(c, "read");
-		const entry = await requireEntryAccess(c, c.req.param("id"));
+		const { entry } = await requireEntryAccess(c, c.req.param("id"));
 		return c.json(entry);
+	})
+	// The agent sessions this entry was logged from (write-only provenance made
+	// readable). Requires read access to the entry, then filters linked sessions
+	// by the standard agent-entry ACL so a link never widens visibility.
+	.get("/:id/agent-entries", requireAgentsFeature, async (c) => {
+		const { user } = requireScope(c, "read");
+		const { entry, membership } = await requireEntryAccess(
+			c,
+			c.req.param("id"),
+		);
+		const access = resolveEntryAccess(entry.workspaceId, membership, user.id);
+		const timezone = resolveUserTimezone(user.timezone);
+		const rows = await listAgentEntriesForWorkEntry(c.var.db, {
+			workEntryId: entry.id,
+			workspaceId: entry.workspaceId,
+			access,
+		});
+		return c.json(rows.map((row) => serializeAgentEntry(row, timezone)));
 	})
 	.patch("/:id", async (c) => {
 		const { user } = requireScope(c, "write");
-		const entry = await requireEntryAccess(c, c.req.param("id"), {
+		const { entry } = await requireEntryAccess(c, c.req.param("id"), {
 			write: true,
 		});
 		requireAuthor(c, entry);
@@ -329,7 +351,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	})
 	.delete("/:id", async (c) => {
 		requireScope(c, "write");
-		const entry = await requireEntryAccess(c, c.req.param("id"), {
+		const { entry } = await requireEntryAccess(c, c.req.param("id"), {
 			write: true,
 		});
 		requireAuthor(c, entry);

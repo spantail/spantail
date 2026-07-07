@@ -42,3 +42,25 @@ export function refsMatchIssue(
 	const want = `github:${fullName.toLowerCase()}#${issueNumber}`;
 	return refs.some((ref) => ref.toLowerCase() === want);
 }
+
+/**
+ * Parses a `github:{owner/repo}#{N}` ref (the format the Claude Code plugin
+ * writes into `context.refs`) into its full name and issue/PR number, or null
+ * for any other shape. Refs are opaque client-supplied strings, so the match is
+ * strict — callers must never build a URL from an unparsed ref.
+ */
+export function parseGithubRef(
+	ref: string,
+): { fullName: string; number: number } | null {
+	// The number is capped at 9 digits so `Number(...)` is always an exact, safe
+	// integer — a real issue/PR number is far smaller, and an overlong digit run
+	// (the ref is opaque, up to 200 chars) must not become Infinity or lose
+	// precision in dedupe keys and hrefs.
+	const match = /^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)#([0-9]{1,9})$/.exec(
+		ref,
+	);
+	const fullName = match?.[1];
+	const number = match?.[2];
+	if (fullName === undefined || number === undefined) return null;
+	return { fullName, number: Number(number) };
+}

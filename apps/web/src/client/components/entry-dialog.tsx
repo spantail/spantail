@@ -198,6 +198,21 @@ export function EntryDialogProvider({
 		queryFn: () => api.listMembers(current?.id as string),
 		enabled: Boolean(current) && isOthersEntry,
 	});
+	// Agent sessions this entry was logged from — gated on the instance feature
+	// flag and fetched only when a view dialog is open. The server filters the
+	// links by the agent-entry ACL, so a viewer sees only sessions they may read.
+	const agentsEnabled = useQuery({
+		queryKey: ["agents-enabled"],
+		queryFn: () => api.getAgentsEnabled(),
+	});
+	const linkedSessions = useQuery({
+		queryKey: ["work-entry-agent-entries", current?.id, viewEntry?.id],
+		queryFn: () => api.listWorkEntryAgentEntries(viewEntry?.id as string),
+		enabled:
+			Boolean(current) &&
+			viewEntry != null &&
+			(agentsEnabled.data?.enabled ?? false),
+	});
 	const viewProject = viewEntry?.projectId
 		? (projects.data ?? []).find((p) => p.id === viewEntry.projectId)
 		: undefined;
@@ -279,6 +294,7 @@ export function EntryDialogProvider({
 									dateLabel={viewDateLabel}
 									timeRange={viewTimeRange}
 									authorName={viewAuthorName}
+									agentSessions={linkedSessions.data ?? []}
 								/>
 								<EntryDetailActions
 									entry={state.entry}

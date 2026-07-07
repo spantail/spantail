@@ -1,6 +1,7 @@
 import {
 	type AgentEntryContext,
 	type AgentUsage,
+	MAX_LINKED_AGENT_ENTRIES,
 	shiftDays,
 	todayInTimezone,
 	zonedDateTimeToUtc,
@@ -10,6 +11,7 @@ import {
 	asc,
 	desc,
 	eq,
+	getTableColumns,
 	gte,
 	inArray,
 	isNotNull,
@@ -28,6 +30,7 @@ import {
 	agentProjects,
 	agents,
 	agentTokens,
+	workEntryAgentEntries,
 } from "../schema/agents";
 import { type EntryAccessScope, entryAccessCondition } from "./entry-access";
 
@@ -594,6 +597,57 @@ export async function listAgentEntries(
 			.orderBy(desc(agentEntries.startedAt), desc(agentEntries.id))
 			.limit(query.limit)
 			.offset(query.offset)
+	);
+}
+
+/**
+ * The agent sessions linked to a work entry (`work_entry_agent_entries`),
+ * filtered by the same private-by-default ACL as `listAgentEntries` so a link
+ * never widens visibility: a viewer sees only the subset of linked sessions
+ * they could already read directly. Bounded by `MAX_LINKED_AGENT_ENTRIES`.
+ *
+ * Scoped to `workspaceId` (the work entry's workspace) like `listAgentEntries`:
+ * the ACL's `self` branch has no workspace predicate, so this guard ensures a
+ * corrupt/legacy cross-workspace link row can never surface a foreign session.
+ * `access` is required — this is an ACL-filtered read, never an unscoped one.
+ */
+export async function listAgentEntriesForWorkEntry(
+	db: Database,
+	{
+		workEntryId,
+		workspaceId,
+		access,
+	}: { workEntryId: string; workspaceId: string; access: EntryAccessScope },
+): Promise<AgentEntryRow[]> {
+	const cond = entryAccessCondition(
+		{
+			workspaceId: agentEntries.workspaceId,
+			projectId: agentEntries.projectId,
+			self: agentEntries.ownerUserId,
+		},
+		access,
+		{ unassignedWorkspaceWide: false },
+	);
+	const conditions: SQL[] = [
+		eq(workEntryAgentEntries.workEntryId, workEntryId),
+		eq(agentEntries.workspaceId, workspaceId),
+	];
+	if (cond) conditions.push(cond);
+	return (
+		db
+			.select(getTableColumns(agentEntries))
+			.from(agentEntries)
+			.innerJoin(
+				workEntryAgentEntries,
+				eq(workEntryAgentEntries.agentEntryId, agentEntries.id),
+			)
+			.where(and(...conditions))
+			// Chronological, `id` breaking ties on equal `startedAt` for a stable order.
+			.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id))
+			// The write path caps links at MAX_LINKED_AGENT_ENTRIES per entry; cap the
+			// read too so an unexpected surplus (legacy/manual rows) can't make the
+			// route read an unbounded set.
+			.limit(MAX_LINKED_AGENT_ENTRIES)
 	);
 }
 

@@ -132,6 +132,40 @@ export const agentEntrySchema = z.object({
 export type AgentEntry = z.infer<typeof agentEntrySchema>;
 
 /**
+ * Aggregates the sessions linked to a single work entry for the entry-detail
+ * summary. The input/output buckets sum only the sessions that expose them (an
+ * agent that doesn't expose them contributes 0), so like `agentEntryStats` their
+ * sum can be less than `totalTokens`.
+ */
+export function summarizeAgentSessions(
+	entries: Array<Pick<AgentEntry, "durationMinutes" | "usage">>,
+): {
+	sessionCount: number;
+	totalMinutes: number;
+	totalTokens: number;
+	totalInputTokens: number;
+	totalOutputTokens: number;
+} {
+	let totalMinutes = 0;
+	let totalTokens = 0;
+	let totalInputTokens = 0;
+	let totalOutputTokens = 0;
+	for (const entry of entries) {
+		totalMinutes += entry.durationMinutes;
+		totalTokens += entry.usage?.totalTokens ?? 0;
+		totalInputTokens += entry.usage?.inputTokens ?? 0;
+		totalOutputTokens += entry.usage?.outputTokens ?? 0;
+	}
+	return {
+		sessionCount: entries.length,
+		totalMinutes,
+		totalTokens,
+		totalInputTokens,
+		totalOutputTokens,
+	};
+}
+
+/**
  * Ingest payload for one session. Idempotent on (agent, sessionId): re-sending
  * the same session updates the row rather than inserting a duplicate, so retries
  * and daily batch reconciliation never double-count. workspaceId/projectId

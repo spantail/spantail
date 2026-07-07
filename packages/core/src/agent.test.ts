@@ -1,10 +1,21 @@
 import { expect, it } from "vitest";
 
 import {
+	type AgentEntry,
 	finalizeAgentSessionInputSchema,
 	ingestAgentEntryInputSchema,
+	summarizeAgentSessions,
 } from "./agent";
 import { MAX_DURATION_MINUTES } from "./duration";
+
+type Session = Pick<AgentEntry, "durationMinutes" | "usage">;
+const session = (
+	durationMinutes: number,
+	usage: Session["usage"],
+): Session => ({
+	durationMinutes,
+	usage,
+});
 
 // Timestamps are validated relative to "now". Build them at test-time off the
 // current clock (not a module-level constant, which Vitest can evaluate long
@@ -122,4 +133,47 @@ it("rejects an implausible finalize endedAt", () => {
 			endedAt: "1970-01-01T00:00:00.000Z",
 		}).success,
 	).toBe(false);
+});
+
+it("summarizes linked sessions with input/output buckets", () => {
+	expect(
+		summarizeAgentSessions([
+			session(30, { totalTokens: 1000, inputTokens: 400, outputTokens: 600 }),
+			session(15, { totalTokens: 500, inputTokens: 200, outputTokens: 300 }),
+		]),
+	).toEqual({
+		sessionCount: 2,
+		totalMinutes: 45,
+		totalTokens: 1500,
+		totalInputTokens: 600,
+		totalOutputTokens: 900,
+	});
+});
+
+it("sums only the sessions that expose a bucket (partial sums)", () => {
+	// One session omits the input/output split and one has no usage at all; both
+	// contribute 0 to those buckets, so their sum stays below totalTokens.
+	expect(
+		summarizeAgentSessions([
+			session(10, { totalTokens: 100, inputTokens: 40, outputTokens: 60 }),
+			session(20, { totalTokens: 200 }),
+			session(5, null),
+		]),
+	).toEqual({
+		sessionCount: 3,
+		totalMinutes: 35,
+		totalTokens: 300,
+		totalInputTokens: 40,
+		totalOutputTokens: 60,
+	});
+});
+
+it("is empty for no sessions", () => {
+	expect(summarizeAgentSessions([])).toEqual({
+		sessionCount: 0,
+		totalMinutes: 0,
+		totalTokens: 0,
+		totalInputTokens: 0,
+		totalOutputTokens: 0,
+	});
 });
