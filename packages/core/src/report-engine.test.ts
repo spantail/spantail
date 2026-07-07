@@ -77,6 +77,32 @@ const fixture: ReportContextInput = {
 			"docs",
 		]),
 	],
+	agents: [
+		{ id: "a1", name: "Claude Code", type: "claude_code" },
+		{ id: "a2", name: "Cursor", type: "claude_code" },
+	],
+	agentEntries: [
+		agentEntry("ae1", "a1", "p1", "u1", "2026-05-25", 40, {
+			totalTokens: 1000,
+			inputTokens: 600,
+			outputTokens: 300,
+		}),
+		agentEntry("ae2", "a1", "p1", "u1", "2026-05-26", 20, {
+			totalTokens: 500,
+			inputTokens: 300,
+			outputTokens: 200,
+		}),
+		// Null usage (a source that can't expose tokens, e.g. Cursor): 0 tokens.
+		agentEntry("ae3", "a2", "p3", "u2", "2026-05-27", 60, null),
+		// No project (ON DELETE SET NULL), with cost/model on its usage.
+		agentEntry("ae4", "a1", null, "u1", "2026-05-28", 15, {
+			totalTokens: 200,
+			inputTokens: 100,
+			outputTokens: 100,
+			costUsd: 0.05,
+			model: "claude-opus-4-8",
+		}),
+	],
 };
 
 function entry(
@@ -98,6 +124,38 @@ function entry(
 		description,
 		note: null,
 		tags,
+	};
+}
+
+function agentEntry(
+	id: string,
+	agentId: string,
+	projectId: string | null,
+	ownerUserId: string,
+	entryDate: string,
+	durationMinutes: number,
+	usage: {
+		totalTokens: number;
+		inputTokens?: number;
+		outputTokens?: number;
+		cacheCreationTokens?: number;
+		cacheReadTokens?: number;
+		costUsd?: number;
+		model?: string;
+	} | null,
+) {
+	return {
+		id,
+		workspaceId: projectId === "p3" ? "ws2" : "ws1",
+		projectId,
+		ownerUserId,
+		agentId,
+		entryDate,
+		durationMinutes,
+		usage,
+		description: null,
+		startedAt: `${entryDate}T00:00:00.000Z`,
+		endedAt: null,
 	};
 }
 
@@ -131,7 +189,12 @@ it("computes totals and group ordering in the context", () => {
 		};
 		entries: Array<{ project_name: string; user_name: string }>;
 	};
-	expect(context.totals).toEqual({ minutes: 750, hours: 12.5, entries: 8 });
+	// Work totals stay human-only; agent rollups live under `totals.agents`.
+	expect(context.totals).toMatchObject({
+		minutes: 750,
+		hours: 12.5,
+		entries: 8,
+	});
 	expect(context.groups.by_date.map((g) => g.key)).toEqual([
 		"2026-05-25",
 		"2026-05-26",
@@ -207,11 +270,98 @@ it("exposes user and a period label for name/note templates", async () => {
 
 it("renders name/note templates with a scope-only context (no entries)", async () => {
 	// The compose preview renders name/note Liquid before any entries exist.
-	const scopeOnly: ReportContextInput = { ...fixture, entries: [] };
+	const scopeOnly: ReportContextInput = {
+		...fixture,
+		entries: [],
+		agentEntries: [],
+	};
 	expect(
 		await renderReport(
 			"{% if workspaces.size > 0 %}{{ workspaces[0].name }} {% endif %}{{ user.name }}",
 			scopeOnly,
 		),
 	).toBe("Acme Alice");
+});
+
+it("exposes agent totals, groups, and flattened token buckets", () => {
+	const context = buildReportContext(fixture) as {
+		totals: {
+			agents: {
+				sessions: number;
+				minutes: number;
+				hours: number;
+				tokens: number;
+				input_tokens: number;
+				output_tokens: number;
+			};
+		};
+		agent_entries: Array<{
+			id: string;
+			agent_name: string;
+			total_tokens: number;
+			cost_usd: number | null;
+			model: string | null;
+		}>;
+		agent_groups: {
+			by_agent: Array<{
+				name?: string;
+				session_count: number;
+				total_minutes: number;
+				total_tokens: number;
+			}>;
+		};
+	};
+	// input+output (1000+600) is less than total tokens (1700): buckets are
+	// optional per agent, so the sums are independent.
+	expect(context.totals.agents).toEqual({
+		sessions: 4,
+		minutes: 135,
+		hours: 2.25,
+		tokens: 1700,
+		input_tokens: 1000,
+		output_tokens: 600,
+	});
+	// A null-usage session contributes 0 tokens and no cost/model.
+	const cursor = context.agent_entries.find((e) => e.id === "ae3");
+	expect(cursor?.total_tokens).toBe(0);
+	expect(cursor?.cost_usd).toBeNull();
+	expect(cursor?.model).toBeNull();
+	// Cost/model flatten through from usage when present.
+	const orphan = context.agent_entries.find((e) => e.id === "ae4");
+	expect(orphan?.cost_usd).toBe(0.05);
+	expect(orphan?.model).toBe("claude-opus-4-8");
+	// by_agent groups sorted by name, with per-group rollups.
+	expect(context.agent_groups.by_agent.map((g) => g.name)).toEqual([
+		"Claude Code",
+		"Cursor",
+	]);
+	expect(
+		context.agent_groups.by_agent.find((g) => g.name === "Claude Code"),
+	).toMatchObject({ session_count: 3, total_minutes: 75, total_tokens: 1700 });
+});
+
+it("places a no-project agent session under the no-project placeholder", () => {
+	const context = buildReportContext(fixture) as {
+		agent_entries: Array<{
+			id: string;
+			project_id: string;
+			project_name: string;
+		}>;
+		agent_groups: { by_project: Array<{ name?: string }> };
+	};
+	const orphan = context.agent_entries.find((e) => e.id === "ae4");
+	expect(orphan?.project_id).toBe("");
+	expect(orphan?.project_name).toBe("(no project)");
+	expect(context.agent_groups.by_project.map((g) => g.name)).toContain(
+		"(no project)",
+	);
+});
+
+it("renders agent activity in a template", async () => {
+	const body =
+		"Sessions: {{ totals.agents.sessions }}, Tokens: {{ totals.agents.tokens }}{% for g in agent_groups.by_agent %} | {{ g.name }}: {{ g.total_minutes | format_duration }} ({{ g.total_tokens }} tok){% endfor %}";
+	const rendered = await renderReport(body, fixture);
+	expect(rendered).toBe(
+		"Sessions: 4, Tokens: 1700 | Claude Code: 1h 15m (1700 tok) | Cursor: 1h (0 tok)",
+	);
 });

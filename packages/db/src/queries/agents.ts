@@ -252,6 +252,21 @@ export async function setAgentDisabled(
 	return rows[0];
 }
 
+/**
+ * Resolves agent ids to their display name and type. Used to label agent
+ * activity in reports (mirrors `listUsersByIds` / `listProjectsByIds`).
+ */
+export async function listAgentsByIds(
+	db: Database,
+	ids: string[],
+): Promise<Array<Pick<AgentRow, "id" | "name" | "type">>> {
+	if (ids.length === 0) return [];
+	return db
+		.select({ id: agents.id, name: agents.name, type: agents.type })
+		.from(agents)
+		.where(inArray(agents.id, ids));
+}
+
 export async function getAgentById(
 	db: Database,
 	id: string,
@@ -598,6 +613,59 @@ export async function listAgentEntries(
 			.limit(query.limit)
 			.offset(query.offset)
 	);
+}
+
+/**
+ * Fetches agent sessions for a resolved report scope: the multi-workspace,
+ * multi-owner analogue of `listWorkEntriesForReport`. Agent entries carry no
+ * stored date, so the inclusive local-date window is converted to a half-open
+ * `startedAt` instant range in the report timezone (same as `agentEntryConditions`).
+ * ACL is private-by-default (`unassignedWorkspaceWide: false`), unlike work
+ * entries. Unpaginated — the caller bounds the scan with `from`/`to`.
+ */
+export async function listAgentEntriesForReport(
+	db: Database,
+	query: {
+		workspaceIds: string[];
+		projectIds?: string[];
+		ownerUserIds?: string[];
+		from: string;
+		to: string;
+		timezone: string;
+		access?: EntryAccessScope;
+	},
+): Promise<AgentEntryRow[]> {
+	if (query.workspaceIds.length === 0) return [];
+	const lo = new Date(zonedDateTimeToUtc(query.from, "00:00", query.timezone));
+	const hi = new Date(
+		zonedDateTimeToUtc(shiftDays(query.to, 1), "00:00", query.timezone),
+	);
+	const conditions: SQL[] = [
+		inArray(agentEntries.workspaceId, query.workspaceIds),
+		gte(agentEntries.startedAt, lo),
+		lt(agentEntries.startedAt, hi),
+	];
+	if (query.projectIds?.length)
+		conditions.push(inArray(agentEntries.projectId, query.projectIds));
+	if (query.ownerUserIds?.length)
+		conditions.push(inArray(agentEntries.ownerUserId, query.ownerUserIds));
+	if (query.access) {
+		const cond = entryAccessCondition(
+			{
+				workspaceId: agentEntries.workspaceId,
+				projectId: agentEntries.projectId,
+				self: agentEntries.ownerUserId,
+			},
+			query.access,
+			{ unassignedWorkspaceWide: false },
+		);
+		if (cond) conditions.push(cond);
+	}
+	return db
+		.select()
+		.from(agentEntries)
+		.where(and(...conditions))
+		.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id));
 }
 
 /**

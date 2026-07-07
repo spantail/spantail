@@ -14,6 +14,15 @@ _この期間の稼働記録はありません。_
 {% endfor %}
 {% endfor -%}
 {% endif -%}
+{% if totals.agents.sessions > 0 -%}
+## エージェント稼働
+
+{{ totals.agents.sessions }}セッション · {{ totals.agents.minutes | format_duration }} · {{ totals.agents.tokens }}トークン
+
+{% for group in agent_groups.by_agent -%}
+- {{ group.name }} — {{ group.session_count }}セッション、{{ group.total_minutes | format_duration }}、{{ group.total_tokens }}トークン
+{% endfor %}
+{% endif -%}
 {% if report.note -%}
 ## 備考
 
