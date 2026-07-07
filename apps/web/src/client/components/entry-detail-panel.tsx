@@ -140,6 +140,7 @@ export function EntryDetailPanel({
 		const detach = () => {
 			window.removeEventListener("pointermove", onMove);
 			window.removeEventListener("pointerup", onUp);
+			window.removeEventListener("pointercancel", onUp);
 			document.body.style.userSelect = "";
 			localStorage.setItem(WIDTH_KEY, String(widthRef.current));
 			detachResizeRef.current = null;
@@ -152,6 +153,10 @@ export function EntryDetailPanel({
 		document.body.style.userSelect = "none";
 		window.addEventListener("pointermove", onMove);
 		window.addEventListener("pointerup", onUp);
+		// A cancelled pointer (touch-scroll takeover, OS gesture, lost capture)
+		// never fires pointerup — end the drag on it too, so the move listener and
+		// `user-select: none` don't leak.
+		window.addEventListener("pointercancel", onUp);
 	};
 
 	// Esc closes the panel — but only when nothing more modal is open (an
