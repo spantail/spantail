@@ -33,6 +33,13 @@ export function useEntryRowNav<E extends HTMLElement>(
 	const panelDrivesList = panelIndex >= 0;
 	const activeIndex = panelDrivesList ? panelIndex : localActive;
 
+	// While the panel drives the list, mirror its selection into the local
+	// highlight, so closing the panel leaves the highlight on the last-viewed row
+	// (and j/k resumes from there) instead of snapping back to a stale index.
+	useEffect(() => {
+		if (panelDrivesList) setLocalActive(panelIndex);
+	}, [panelDrivesList, panelIndex]);
+
 	// Keep the panel's navigation list tracking what this list currently shows
 	// (order, pagination). Register on change; clear only on unmount so a
 	// re-render never briefly blanks the list under an open panel.
