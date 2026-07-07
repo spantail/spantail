@@ -8,6 +8,16 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 	);
 }
 
+/** True when the event is a Cmd/Ctrl+Enter form-submit shortcut. Lets a dialog
+ *  submit from a multi-line field where a plain Enter inserts a newline. */
+export function isSubmitShortcut(e: {
+	metaKey: boolean;
+	ctrlKey: boolean;
+	key: string;
+}): boolean {
+	return (e.metaKey || e.ctrlKey) && e.key === "Enter";
+}
+
 /** Next selection index in a list of `length` items when moving `dir` (1 = down,
  *  -1 = up). Clamps at both ends; from "none" (-1), moving down lands on the
  *  first item and moving up on the last. Returns -1 only for an empty list. */

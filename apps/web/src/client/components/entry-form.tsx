@@ -26,6 +26,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { isSubmitShortcut } from "@/lib/keyboard";
 import { invalidateWorkEntryData } from "@/lib/query";
 
 // Sentinel select value for "no project" (Radix Select forbids an empty value).
@@ -170,7 +171,7 @@ export function EntryForm({
 	// Create mode only: keep the dialog open after logging to enter another entry,
 	// preserving project and date while the other fields are cleared.
 	const [keepEntering, setKeepEntering] = useState(false);
-	const durationRef = useRef<HTMLInputElement>(null);
+	const descriptionRef = useRef<HTMLInputElement>(null);
 
 	// Start/end times drive the duration (counted across DST transitions), but
 	// minutes can still be entered directly, which nudges the end time.
@@ -265,8 +266,8 @@ export function EntryForm({
 				setNote("");
 				setAgentEntryIds([]);
 				setError(null);
-				// Land the cursor on duration so the next entry starts there.
-				durationRef.current?.focus();
+				// Land the cursor on description so the next entry starts there.
+				descriptionRef.current?.focus();
 			}
 			onSuccess({ keepOpen });
 		},
@@ -295,6 +296,17 @@ export function EntryForm({
 				e.preventDefault();
 				setError(null);
 				mutation.mutate();
+			}}
+			onKeyDown={(e) => {
+				// Cmd/Ctrl+Enter submits from any field (e.g. the note textarea,
+				// where a plain Enter inserts a newline), matching the button's
+				// enabled state so it can't submit an invalid entry.
+				const canSubmit =
+					!mutation.isPending && Boolean(projectId) && parsedDuration != null;
+				if (isSubmitShortcut(e) && canSubmit) {
+					e.preventDefault();
+					e.currentTarget.requestSubmit();
+				}
 			}}
 		>
 			{/* Driven by the state (not the prefill prop) so it disappears once a
@@ -339,6 +351,7 @@ export function EntryForm({
 				<Label htmlFor="entry-description">{t("entries.description")}</Label>
 				<Input
 					id="entry-description"
+					ref={descriptionRef}
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
 					placeholder={t("entries.descriptionPlaceholder")}
@@ -350,7 +363,6 @@ export function EntryForm({
 					<Label htmlFor="entry-duration">{t("entries.duration")}</Label>
 					<Input
 						id="entry-duration"
-						ref={durationRef}
 						type="text"
 						inputMode="text"
 						placeholder={t("entries.durationPlaceholder")}
