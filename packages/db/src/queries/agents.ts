@@ -609,6 +609,7 @@ export async function listAgentEntries(
  * Scoped to `workspaceId` (the work entry's workspace) like `listAgentEntries`:
  * the ACL's `self` branch has no workspace predicate, so this guard ensures a
  * corrupt/legacy cross-workspace link row can never surface a foreign session.
+ * `access` is required — this is an ACL-filtered read, never an unscoped one.
  */
 export async function listAgentEntriesForWorkEntry(
 	db: Database,
@@ -616,24 +617,22 @@ export async function listAgentEntriesForWorkEntry(
 		workEntryId,
 		workspaceId,
 		access,
-	}: { workEntryId: string; workspaceId: string; access?: EntryAccessScope },
+	}: { workEntryId: string; workspaceId: string; access: EntryAccessScope },
 ): Promise<AgentEntryRow[]> {
+	const cond = entryAccessCondition(
+		{
+			workspaceId: agentEntries.workspaceId,
+			projectId: agentEntries.projectId,
+			self: agentEntries.ownerUserId,
+		},
+		access,
+		{ unassignedWorkspaceWide: false },
+	);
 	const conditions: SQL[] = [
 		eq(workEntryAgentEntries.workEntryId, workEntryId),
 		eq(agentEntries.workspaceId, workspaceId),
 	];
-	if (access) {
-		const cond = entryAccessCondition(
-			{
-				workspaceId: agentEntries.workspaceId,
-				projectId: agentEntries.projectId,
-				self: agentEntries.ownerUserId,
-			},
-			access,
-			{ unassignedWorkspaceWide: false },
-		);
-		if (cond) conditions.push(cond);
-	}
+	if (cond) conditions.push(cond);
 	return (
 		db
 			.select(getTableColumns(agentEntries))
