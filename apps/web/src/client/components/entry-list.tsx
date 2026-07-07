@@ -1,10 +1,11 @@
 import type { Project, WorkEntry, WorkspaceMember } from "@spantail/core";
 import { formatDuration } from "@spantail/core";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { EntryActions } from "@/components/entry-actions";
 import { useEntryDialog } from "@/components/entry-dialog";
+import { PersonAvatar } from "@/components/person-avatar";
 import { Badge } from "@/components/ui/badge";
 import {
 	Table,
@@ -40,8 +41,11 @@ export function EntryList({
 		id
 			? (projects.find((p) => p.id === id)?.name ?? id)
 			: t("projects.unassigned");
-	const memberName = (id: string) =>
-		members.find((m) => m.userId === id)?.name ?? id;
+	const memberById = useMemo(
+		() => new Map(members.map((m) => [m.userId, m])),
+		[members],
+	);
+	const memberName = (id: string) => memberById.get(id)?.name ?? id;
 
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [active, setActive] = useState(-1);
@@ -115,7 +119,14 @@ export function EntryList({
 								</TableCell>
 							)}
 							<TableCell className="py-3 whitespace-nowrap">
-								{memberName(entry.userId)}
+								<span className="flex items-center gap-2">
+									<PersonAvatar
+										name={memberName(entry.userId)}
+										imageUrl={memberById.get(entry.userId)?.imageUrl}
+										size={22}
+									/>
+									{memberName(entry.userId)}
+								</span>
 							</TableCell>
 							<TableCell className="py-3 whitespace-normal">
 								<button
@@ -123,7 +134,7 @@ export function EntryList({
 									onClick={() => openView(entry)}
 									className="flex flex-wrap items-center gap-1.5 text-left before:absolute before:inset-0 before:content-['']"
 								>
-									<span className="min-w-0 break-words underline-offset-4 group-hover:underline">
+									<span className="min-w-0 break-words underline-offset-4 decoration-foreground/20 group-hover:underline">
 										{entry.description}
 									</span>
 									{entry.tags.map((tag) => (
