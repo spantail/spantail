@@ -646,6 +646,7 @@ function AgentPage() {
 			{viewEntry && (
 				<AgentEntryDetailPanel
 					entry={viewEntry}
+					agentType={agent.type}
 					index={panelIndex}
 					total={list.length}
 					onPrev={

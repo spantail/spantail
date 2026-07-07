@@ -1,5 +1,6 @@
 import {
 	type AgentEntry,
+	type AgentType,
 	formatDuration,
 	type Project,
 	parseGithubRef,
@@ -9,15 +10,16 @@ import {
 	CalendarIcon,
 	ChevronRightIcon,
 	ClockIcon,
-	CpuIcon,
 	FolderGitIcon,
 	FolderIcon,
 	GitBranchIcon,
 	GitPullRequestIcon,
+	HashIcon,
 } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AgentTypeIcon } from "@/components/agent-icon";
 import { ProjectMarker } from "@/components/project-marker";
 import { GitHubIcon } from "@/components/provider-icons";
 import {
@@ -28,6 +30,8 @@ import {
 
 interface AgentEntryDetailProps {
 	entry: AgentEntry;
+	/** The agent's kind, for the model row's brand icon (e.g. Claude). */
+	agentType: AgentType;
 	/** Resolved project for the marker; undefined when unassigned. */
 	project?: Project;
 	/** Display name for the entry's project (already resolved by the caller). */
@@ -44,6 +48,7 @@ interface AgentEntryDetailProps {
  */
 export function AgentEntryDetail({
 	entry,
+	agentType,
 	project,
 	projectName,
 	timezone,
@@ -131,7 +136,7 @@ export function AgentEntryDetail({
 					{model && (
 						<div className="flex items-center gap-2.5">
 							<span className="bg-brand/12 text-brand flex size-8 shrink-0 items-center justify-center rounded-lg">
-								<CpuIcon className="size-4" />
+								<AgentTypeIcon type={agentType} className="size-4" />
 							</span>
 							<div className="min-w-0 flex-1">
 								<p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
@@ -253,10 +258,12 @@ export function AgentEntryDetail({
 							))}
 							{context.refs?.map((ref) => {
 								const parsed = parseGithubRef(ref);
+								// refs are opaque external references — only a parsed GitHub PR
+								// gets the PR icon and a link; anything else stays neutral.
 								return (
 									<ContextCard
 										key={`ref:${ref}`}
-										icon={GitPullRequestIcon}
+										icon={parsed ? GitPullRequestIcon : HashIcon}
 										href={
 											parsed
 												? `${repoUrlFromFullName(parsed.fullName)}/pull/${parsed.number}`

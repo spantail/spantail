@@ -1,4 +1,4 @@
-import type { AgentEntry, Project } from "@spantail/core";
+import type { AgentEntry, AgentType, Project } from "@spantail/core";
 import { useTranslation } from "react-i18next";
 
 import { AgentEntryDetail } from "@/components/agent-entry-detail";
@@ -6,6 +6,8 @@ import { DockedPanel } from "@/components/docked-panel";
 
 interface AgentEntryDetailPanelProps {
 	entry: AgentEntry;
+	/** The agent's kind, for the model row's brand icon. */
+	agentType: AgentType;
 	/** Position of `entry` in the sessions list. */
 	index: number;
 	/** Size of the sessions list. */
@@ -28,6 +30,7 @@ interface AgentEntryDetailPanelProps {
  */
 export function AgentEntryDetailPanel({
 	entry,
+	agentType,
 	index,
 	total,
 	onPrev,
@@ -60,6 +63,7 @@ export function AgentEntryDetailPanel({
 		>
 			<AgentEntryDetail
 				entry={entry}
+				agentType={agentType}
 				project={project}
 				projectName={projectName}
 				timezone={timezone}
