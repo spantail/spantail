@@ -384,8 +384,11 @@ function AgentPage() {
 					value={period}
 					onChange={(next) => {
 						// A period change rescopes the list; drop the open session so the
-						// panel never lingers on a row the new range doesn't contain.
+						// panel never lingers on a row the new range doesn't contain, and
+						// reset the list highlight — a stale index into the shorter new
+						// list would leave j/k/o/x acting on out-of-range rows.
 						setViewEntry(null);
+						setLocalActive(-1);
 						setPeriod(next);
 					}}
 				/>
