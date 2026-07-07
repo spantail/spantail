@@ -1,10 +1,21 @@
 import { expect, it } from "vitest";
 
 import {
+	type AgentEntry,
 	finalizeAgentSessionInputSchema,
 	ingestAgentEntryInputSchema,
+	summarizeAgentSessions,
 } from "./agent";
 import { MAX_DURATION_MINUTES } from "./duration";
+
+type Session = Pick<AgentEntry, "durationMinutes" | "usage">;
+const session = (
+	durationMinutes: number,
+	usage: Session["usage"],
+): Session => ({
+	durationMinutes,
+	usage,
+});
 
 // Timestamps are validated relative to "now". Build them at test-time off the
 // current clock (not a module-level constant, which Vitest can evaluate long
@@ -122,4 +133,49 @@ it("rejects an implausible finalize endedAt", () => {
 			endedAt: "1970-01-01T00:00:00.000Z",
 		}).success,
 	).toBe(false);
+});
+
+it("summarizes linked sessions and totals cost only when reported", () => {
+	expect(
+		summarizeAgentSessions([
+			session(30, { totalTokens: 1000, inputTokens: 400, costUsd: 1.5 }),
+			session(15, { totalTokens: 500, costUsd: 0.25 }),
+		]),
+	).toEqual({
+		sessionCount: 2,
+		totalMinutes: 45,
+		totalTokens: 1500,
+		totalCostUsd: 1.75,
+	});
+});
+
+it("returns null cost when no session reports one", () => {
+	expect(
+		summarizeAgentSessions([
+			session(10, { totalTokens: 100 }),
+			session(20, null),
+		]),
+	).toEqual({
+		sessionCount: 2,
+		totalMinutes: 30,
+		totalTokens: 100,
+		totalCostUsd: null,
+	});
+});
+
+it("treats a missing cost as zero once any session reports one", () => {
+	const result = summarizeAgentSessions([
+		session(5, { totalTokens: 50, costUsd: 2 }),
+		session(5, { totalTokens: 50 }),
+	]);
+	expect(result.totalCostUsd).toBe(2);
+});
+
+it("is empty for no sessions", () => {
+	expect(summarizeAgentSessions([])).toEqual({
+		sessionCount: 0,
+		totalMinutes: 0,
+		totalTokens: 0,
+		totalCostUsd: null,
+	});
 });

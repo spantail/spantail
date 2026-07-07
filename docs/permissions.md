@@ -210,8 +210,12 @@ so they are not mistaken for divergence:
 - **Work-entry → agent-entry links assert provenance, not visibility.** When a work entry is
   created from agent sessions (`agentEntryIds` on `POST /api/v1/work-entries`), every linked entry
   must be the caller's **own** — being able to *read* a colleague's session (admin or project
-  member) is not enough, since a link claims "my work came from this session". The link rows are
-  currently write-only (no read route), like raw agent events.
+  member) is not enough, since a link claims "my work came from this session". The read side is
+  the reverse and does not widen visibility: `GET /api/v1/work-entries/:id/agent-entries` (the
+  entry dialog's session summary) requires read access to the work entry, then filters the linked
+  sessions by the **same** private-by-default agent-entry ACL as `GET /api/v1/agent-entries`, so a
+  viewer sees only the subset of linked sessions they could already read directly (a non-owner may
+  get an empty list).
 - **Off-boarding is future work.** Admins never *write* user-scoped resources (see
   [Self-service](#self-service)); acting on a departed user's data will be a dedicated, audited
   admin API when the need arrives.

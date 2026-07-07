@@ -882,6 +882,9 @@ export async function generateDataset(
 	const agentTokenRows: Row[] = [];
 	const agentEntryRows: Row[] = [];
 	const agentEventRows: Row[] = [];
+	// Provenance links from work entries to the agent sessions they were logged
+	// from — the read surface the entry dialog's session summary consumes.
+	const workEntryAgentEntryRows: Row[] = [];
 
 	const projectsByWs = new Map<string, ResolvedProject[]>();
 	for (const p of projByKey.values()) pushTo(projectsByWs, p.workspace.key, p);
@@ -990,8 +993,33 @@ export async function generateDataset(
 					project && hashString(`agdesc:${sessionId}`) % 4 !== 0
 						? pick(project.activities, hashString(`agact:${sessionId}`))
 						: null;
+				const agentEntryId = randomUUID();
+				// A demo GitHub identity per project so the session carries a repo, a
+				// branch, and a PR ref (`github:owner/repo#N`) — the context facets the
+				// agent dialog and the work-entry session summary surface. Opaque demo
+				// values; the repo need not exist.
+				const repoFullName = project ? `spantail-demo/${project.key}` : null;
+				const context = repoFullName
+					? {
+							repositories: [`https://github.com/${repoFullName}`],
+							branches: [
+								`agent/${user.key}-${hashString(`br:${sessionId}`) % 100}`,
+							],
+							refs: [
+								`github:${repoFullName}#${100 + (hashString(`pr:${sessionId}`) % 400)}`,
+							],
+							models: [AGENT_MODEL],
+						}
+					: { models: [AGENT_MODEL] };
+				// Half the sessions report a dollar cost (as a cost-reporting source
+				// like Cursor would), so the summary exercises both the cost stat and
+				// the null-cost path.
+				const costUsd =
+					hashString(`cost:${sessionId}`) % 2 === 0
+						? Number(((totalTokens / 1_000_000) * 3).toFixed(4))
+						: undefined;
 				agentEntryRows.push({
-					id: randomUUID(),
+					id: agentEntryId,
 					workspaceId: ws.id,
 					ownerUserId: user.id,
 					projectId: project?.id ?? null,
@@ -1005,13 +1033,34 @@ export async function generateDataset(
 						cacheReadTokens: cacheRead,
 						totalTokens,
 						model: AGENT_MODEL,
+						...(costUsd !== undefined ? { costUsd } : {}),
 					},
+					context,
 					description,
 					startedAt: new Date(minTs),
 					endedAt: new Date(maxTs),
 					createdAt: new Date(maxTs),
 					updatedAt: new Date(maxTs),
 				});
+				// Link ~2/3 of sessions to one of the owner's work entries that day, so
+				// some entries show a multi-session summary and others none — the
+				// provenance a "log work from sessions" flow records.
+				const dayEntries =
+					entriesByUserWs
+						.get(user.key)
+						?.get(ws.key)
+						?.filter((e) => e.date === date) ?? [];
+				if (
+					dayEntries.length > 0 &&
+					hashString(`link:${sessionId}`) % 3 !== 0
+				) {
+					const target = pick(dayEntries, hashString(`linksel:${sessionId}`));
+					workEntryAgentEntryRows.push({
+						workEntryId: target.id,
+						agentEntryId,
+						createdAt: new Date(maxTs),
+					});
+				}
 			}
 		}
 	}
@@ -1034,6 +1083,9 @@ export async function generateDataset(
 		{ table: "agentTokens", rows: agentTokenRows },
 		{ table: "agentEntries", rows: agentEntryRows },
 		{ table: "agentEvents", rows: agentEventRows },
+		// After both parents (workEntries, agentEntries): the join's FKs are
+		// enforced at insert time.
+		{ table: "workEntryAgentEntries", rows: workEntryAgentEntryRows },
 	];
 
 	return {

@@ -32,6 +32,11 @@ function applyRealtimeEvent(qc: QueryClient, ev: RealtimeEvent): void {
 				qc.invalidateQueries({
 					queryKey: ["workspace-agents", ev.workspaceId],
 				});
+				// A deleted session drops its work-entry links, so refresh any open
+				// entry dialog's session summary too (prefix covers all entry ids).
+				qc.invalidateQueries({
+					queryKey: ["work-entry-agent-entries", ev.workspaceId],
+				});
 			}
 			return;
 		case "project":

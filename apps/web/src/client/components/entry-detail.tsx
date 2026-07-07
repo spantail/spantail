@@ -1,6 +1,10 @@
 import {
+	type AgentEntry,
 	formatDuration,
 	type ProjectSymbol,
+	parseGithubRef,
+	repoUrlFromFullName,
+	summarizeAgentSessions,
 	type WorkEntry,
 } from "@spantail/core";
 import {
@@ -12,7 +16,7 @@ import {
 	PlugIcon,
 	TerminalIcon,
 } from "lucide-react";
-import type { ComponentType, ReactNode } from "react";
+import { type ComponentType, type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import { MarkdownView } from "@/components/markdown-view";
@@ -20,6 +24,7 @@ import { PersonAvatar } from "@/components/person-avatar";
 import { ProjectMarker } from "@/components/project-marker";
 import { GitHubIcon } from "@/components/provider-icons";
 import { Badge } from "@/components/ui/badge";
+import { formatCompactNumber } from "@/lib/format";
 
 /** Provenance chip icon per logging route. */
 const SOURCE_ICONS: Record<
@@ -45,6 +50,8 @@ interface EntryDetailProps {
 	timeRange: string | null;
 	/** Author's display name; null when the viewer owns the entry. */
 	authorName: string | null;
+	/** Agent sessions this entry was logged from, filtered to what the viewer may read. */
+	agentSessions: AgentEntry[];
 }
 
 /**
@@ -60,10 +67,33 @@ export function EntryDetail({
 	dateLabel,
 	timeRange,
 	authorName,
+	agentSessions,
 }: EntryDetailProps) {
 	const { t } = useTranslation();
 	const SourceIcon = SOURCE_ICONS[entry.source];
 	const sourceLabel = t(`entries.sources.${entry.source}`);
+
+	const summary = useMemo(
+		() => summarizeAgentSessions(agentSessions),
+		[agentSessions],
+	);
+	// Distinct GitHub refs the linked sessions carry, deduped case-insensitively.
+	// Only strictly-formatted refs become links — an unparsed ref is never an href.
+	const refs = useMemo(() => {
+		const seen = new Set<string>();
+		const out: { fullName: string; number: number }[] = [];
+		for (const session of agentSessions) {
+			for (const ref of session.context?.refs ?? []) {
+				const parsed = parseGithubRef(ref);
+				if (!parsed) continue;
+				const key = `${parsed.fullName.toLowerCase()}#${parsed.number}`;
+				if (seen.has(key)) continue;
+				seen.add(key);
+				out.push(parsed);
+			}
+		}
+		return out;
+	}, [agentSessions]);
 
 	return (
 		<div className="flex flex-col gap-5">
@@ -118,6 +148,52 @@ export function EntryDetail({
 				</div>
 			)}
 
+			{agentSessions.length > 0 && (
+				<div className="flex flex-col gap-2">
+					<MetaLabel>{t("entries.agentSessions.title")}</MetaLabel>
+					<div className="bg-muted/40 grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-xl border p-4 text-sm sm:grid-cols-4">
+						<Stat
+							label={t("entries.agentSessions.sessions")}
+							value={formatCompactNumber(summary.sessionCount)}
+						/>
+						<Stat
+							label={t("entries.agentSessions.time")}
+							value={formatDuration(summary.totalMinutes)}
+						/>
+						<Stat
+							label={t("entries.agentSessions.tokens")}
+							value={formatCompactNumber(summary.totalTokens)}
+						/>
+						{summary.totalCostUsd !== null && (
+							<Stat
+								label={t("entries.agentSessions.cost")}
+								value={`$${summary.totalCostUsd.toFixed(2)}`}
+							/>
+						)}
+					</div>
+					{refs.length > 0 && (
+						<div className="mt-1 flex flex-col gap-1.5">
+							<span className="text-muted-foreground text-xs font-medium">
+								{t("entries.agentSessions.refs")}
+							</span>
+							<div className="flex flex-wrap gap-1.5">
+								{refs.map((ref) => (
+									<a
+										key={`${ref.fullName}#${ref.number}`}
+										href={`${repoUrlFromFullName(ref.fullName)}/issues/${ref.number}`}
+										target="_blank"
+										rel="noreferrer"
+										className="bg-muted hover:bg-muted/70 rounded-md px-2 py-0.5 font-mono text-xs break-all"
+									>
+										{ref.fullName}#{ref.number}
+									</a>
+								))}
+							</div>
+						</div>
+					)}
+				</div>
+			)}
+
 			<div className="flex flex-col gap-2">
 				<MetaLabel>{t("entries.note")}</MetaLabel>
 				{entry.note?.trim() ? (
@@ -157,6 +233,15 @@ function MetaLabel({ children }: { children: ReactNode }) {
 		<p className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
 			{children}
 		</p>
+	);
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+	return (
+		<div className="flex items-baseline justify-between gap-2">
+			<span className="text-muted-foreground text-xs">{label}</span>
+			<span className="tabular-nums">{value}</span>
+		</div>
 	);
 }
 

@@ -500,6 +500,11 @@ export class SpantailClient {
 		return this.request("GET", `/work-entries/${id}`);
 	}
 
+	/** Agent sessions a work entry was logged from, filtered to what the caller may read. */
+	listWorkEntryAgentEntries(id: string): Promise<AgentEntry[]> {
+		return this.request("GET", `/work-entries/${id}/agent-entries`);
+	}
+
 	/**
 	 * UC2 of the GitHub integration: log work against a GitHub issue. The
 	 * server resolves the project from the repo mapping and parses the raw

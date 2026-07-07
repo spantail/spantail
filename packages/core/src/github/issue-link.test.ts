@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 
-import { branchMatchesIssue, refsMatchIssue } from "./issue-link";
+import {
+	branchMatchesIssue,
+	parseGithubRef,
+	refsMatchIssue,
+} from "./issue-link";
 
 it("matches GitHub's create-branch-from-issue convention", () => {
 	expect(branchMatchesIssue("123-fix-auth", 123)).toBe(true);
@@ -35,4 +39,26 @@ it("matches refs exactly, case-insensitively on the full name", () => {
 	expect(refsMatchIssue(["github:acme/repo#55"], "acme/repo", 5)).toBe(false);
 	expect(refsMatchIssue(["jira:ACME-5"], "acme/repo", 5)).toBe(false);
 	expect(refsMatchIssue(undefined, "acme/repo", 5)).toBe(false);
+});
+
+it("parses a well-formed github ref", () => {
+	expect(parseGithubRef("github:acme/repo#123")).toEqual({
+		fullName: "acme/repo",
+		number: 123,
+	});
+	// Full name is preserved verbatim (dedup lowercases at the call site).
+	expect(parseGithubRef("github:Acme/My.Repo-1#7")).toEqual({
+		fullName: "Acme/My.Repo-1",
+		number: 7,
+	});
+});
+
+it("rejects non-github, malformed, or non-numeric refs", () => {
+	expect(parseGithubRef("jira:ACME-5")).toBeNull();
+	expect(parseGithubRef("github:acme#5")).toBeNull(); // no repo segment
+	expect(parseGithubRef("github:acme/repo")).toBeNull(); // no number
+	expect(parseGithubRef("github:acme/repo#")).toBeNull();
+	expect(parseGithubRef("github:acme/repo#12a")).toBeNull();
+	expect(parseGithubRef("github:ac me/repo#5")).toBeNull(); // space
+	expect(parseGithubRef("prefix github:acme/repo#5")).toBeNull(); // not anchored
 });

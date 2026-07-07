@@ -10,6 +10,7 @@ import {
 	asc,
 	desc,
 	eq,
+	getTableColumns,
 	gte,
 	inArray,
 	isNotNull,
@@ -28,6 +29,7 @@ import {
 	agentProjects,
 	agents,
 	agentTokens,
+	workEntryAgentEntries,
 } from "../schema/agents";
 import { type EntryAccessScope, entryAccessCondition } from "./entry-access";
 
@@ -594,6 +596,45 @@ export async function listAgentEntries(
 			.orderBy(desc(agentEntries.startedAt), desc(agentEntries.id))
 			.limit(query.limit)
 			.offset(query.offset)
+	);
+}
+
+/**
+ * The agent sessions linked to a work entry (`work_entry_agent_entries`),
+ * filtered by the same private-by-default ACL as `listAgentEntries` so a link
+ * never widens visibility: a viewer sees only the subset of linked sessions
+ * they could already read directly. Bounded by `MAX_LINKED_AGENT_ENTRIES`.
+ */
+export async function listAgentEntriesForWorkEntry(
+	db: Database,
+	{ workEntryId, access }: { workEntryId: string; access?: EntryAccessScope },
+): Promise<AgentEntryRow[]> {
+	const conditions: SQL[] = [
+		eq(workEntryAgentEntries.workEntryId, workEntryId),
+	];
+	if (access) {
+		const cond = entryAccessCondition(
+			{
+				workspaceId: agentEntries.workspaceId,
+				projectId: agentEntries.projectId,
+				self: agentEntries.ownerUserId,
+			},
+			access,
+			{ unassignedWorkspaceWide: false },
+		);
+		if (cond) conditions.push(cond);
+	}
+	return (
+		db
+			.select(getTableColumns(agentEntries))
+			.from(agentEntries)
+			.innerJoin(
+				workEntryAgentEntries,
+				eq(workEntryAgentEntries.agentEntryId, agentEntries.id),
+			)
+			.where(and(...conditions))
+			// Chronological, `id` breaking ties on equal `startedAt` for a stable order.
+			.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id))
 	);
 }
 

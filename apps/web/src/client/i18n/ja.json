@@ -200,6 +200,14 @@
 		"descriptionPlaceholder": "何に取り組みましたか?",
 		"note": "メモ",
 		"noNote": "この記録にメモはありません。",
+		"agentSessions": {
+			"title": "エージェントセッション",
+			"sessions": "セッション数",
+			"time": "セッション時間",
+			"tokens": "トークン",
+			"cost": "コスト",
+			"refs": "プルリクエスト"
+		},
 		"tags": "タグ",
 		"tagsPlaceholder": "api, design",
 		"author": "メンバー",

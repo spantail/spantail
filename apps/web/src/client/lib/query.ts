@@ -36,6 +36,11 @@ export function invalidateAgentEntryData(
 	client.invalidateQueries({ queryKey: ["agent-entries", workspaceId] });
 	client.invalidateQueries({ queryKey: ["agent-entry-stats", workspaceId] });
 	client.invalidateQueries({ queryKey: ["workspace-agents", workspaceId] });
+	// A deleted session cascades its work-entry links away, so any open entry
+	// dialog's session summary (["work-entry-agent-entries", ws, entryId]) is stale.
+	client.invalidateQueries({
+		queryKey: ["work-entry-agent-entries", workspaceId],
+	});
 }
 
 /**
