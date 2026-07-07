@@ -1,5 +1,6 @@
 import {
 	type AgentEntry,
+	type AgentType,
 	formatDuration,
 	type ProjectSymbol,
 	parseGithubRef,
@@ -8,6 +9,7 @@ import {
 	type WorkEntry,
 } from "@spantail/core";
 import {
+	BotIcon,
 	CalendarIcon,
 	ChevronRightIcon,
 	ClockIcon,
@@ -16,12 +18,12 @@ import {
 	GitPullRequestIcon,
 	GlobeIcon,
 	PlugIcon,
-	SparklesIcon,
 	TerminalIcon,
 } from "lucide-react";
 import { type ComponentType, type ReactNode, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
+import { AgentTypeIcon } from "@/components/agent-icon";
 import { MarkdownView } from "@/components/markdown-view";
 import { PersonAvatar } from "@/components/person-avatar";
 import { ProjectMarker } from "@/components/project-marker";
@@ -56,10 +58,11 @@ interface EntryDetailProps {
 	/** Agent sessions this entry was logged from, filtered to what the viewer may read. */
 	agentSessions: AgentEntry[];
 	/**
-	 * Display name of the agent behind the sessions, when they all belong to one
-	 * (resolved by the caller); null when unknown or mixed.
+	 * The agent behind the sessions, when they all belong to one (resolved by the
+	 * caller): its display name and type (for the icon). Null when unknown/mixed.
 	 */
 	agentName: string | null;
+	agentType: AgentType | null;
 }
 
 /**
@@ -78,6 +81,7 @@ export function EntryDetail({
 	authorName,
 	agentSessions,
 	agentName,
+	agentType,
 }: EntryDetailProps) {
 	const { t } = useTranslation();
 	const SourceIcon = SOURCE_ICONS[entry.source];
@@ -194,10 +198,14 @@ export function EntryDetail({
 				<div className="flex flex-col gap-2">
 					<MetaLabel>{t("entries.agentSessions.title")}</MetaLabel>
 					<div className="bg-muted/40 flex flex-col gap-4 rounded-xl border p-4">
-						{/* identity: agent + model, with the logging-source chip */}
+						{/* identity: agent + model (agent activity has no logging route) */}
 						<div className="flex items-center gap-2.5">
 							<span className="bg-brand/12 text-brand flex size-8 shrink-0 items-center justify-center rounded-lg">
-								<SparklesIcon className="size-4" />
+								{agentType ? (
+									<AgentTypeIcon type={agentType} className="size-4" />
+								) : (
+									<BotIcon className="size-4" />
+								)}
 							</span>
 							<div className="min-w-0 flex-1">
 								<p className="truncate text-sm font-semibold">
@@ -209,13 +217,6 @@ export function EntryDetail({
 									</p>
 								)}
 							</div>
-							<span
-								title={`${t("entries.source")} ${sourceLabel}`}
-								className="bg-background inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium"
-							>
-								<SourceIcon className="text-muted-foreground size-3" />
-								{sourceLabel}
-							</span>
 						</div>
 
 						{/* aggregate stat strip */}
@@ -345,7 +346,7 @@ function MetaLabel({ children }: { children: ReactNode }) {
 /** One cell of the agent-activity stat strip (label over a large value). */
 function AgentStat({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="flex flex-col gap-0.5 px-3 first:pl-0 last:pr-0">
+		<div className="flex flex-1 flex-col gap-0.5 px-3 first:pl-0 last:pr-0">
 			<p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
 				{label}
 			</p>

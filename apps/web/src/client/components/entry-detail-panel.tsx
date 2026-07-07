@@ -103,14 +103,12 @@ export function EntryDetailPanel({
 		queryFn: () => api.listWorkspaceAgents(current?.id as string),
 		enabled: Boolean(current) && (agentsEnabled.data?.enabled ?? false),
 	});
-	// Name the agent behind the card only when every session shares one agent.
-	const agentName = useMemo(() => {
+	// Identify the agent behind the card only when every session shares one.
+	const agent = useMemo(() => {
 		const sessions = linkedSessions.data ?? [];
 		const ids = [...new Set(sessions.map((s) => s.agentId))];
 		if (ids.length !== 1) return null;
-		return (
-			(workspaceAgents.data ?? []).find((a) => a.id === ids[0])?.name ?? null
-		);
+		return (workspaceAgents.data ?? []).find((a) => a.id === ids[0]) ?? null;
 	}, [linkedSessions.data, workspaceAgents.data]);
 
 	const project = entry.projectId
@@ -149,6 +147,9 @@ export function EntryDetailPanel({
 	useEffect(() => () => detachResizeRef.current?.(), []);
 	const startResize = (e: React.PointerEvent) => {
 		e.preventDefault();
+		// Tear down any drag already in progress (e.g. a second touch on the
+		// handle before the first lifts) so its listeners don't leak.
+		detachResizeRef.current?.();
 		setResizing(true);
 		const onMove = (ev: PointerEvent) => {
 			const w = Math.max(
@@ -285,7 +286,8 @@ export function EntryDetailPanel({
 					timeRange={timeRange}
 					authorName={authorName}
 					agentSessions={linkedSessions.data ?? []}
-					agentName={agentName}
+					agentName={agent?.name ?? null}
+					agentType={agent?.type ?? null}
 				/>
 			</div>
 
