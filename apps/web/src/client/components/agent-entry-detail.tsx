@@ -10,6 +10,7 @@ import {
 	ChevronRightIcon,
 	ClockIcon,
 	CpuIcon,
+	FolderGitIcon,
 	FolderIcon,
 	GitBranchIcon,
 	GitPullRequestIcon,
@@ -237,15 +238,14 @@ export function AgentEntryDetail({
 					<div className="flex flex-col gap-2">
 						<MetaLabel>{t("agents.detail.context")}</MetaLabel>
 						<div className="flex flex-col gap-1.5">
-							{context.repositories?.map((repo) => (
-								<ContextCard
-									key={`repo:${repo}`}
-									icon={GitHubIcon}
-									href={/^https?:\/\//.test(repo) ? repo : undefined}
-								>
-									{repo.replace(/^https?:\/\//, "")}
-								</ContextCard>
-							))}
+							{context.repositories?.map((repo) => {
+								const { icon, href } = repoCard(repo);
+								return (
+									<ContextCard key={`repo:${repo}`} icon={icon} href={href}>
+										{repo.replace(/^https?:\/\//, "")}
+									</ContextCard>
+								);
+							})}
 							{context.branches?.map((branch) => (
 								<ContextCard key={`branch:${branch}`} icon={GitBranchIcon}>
 									{branch}
@@ -342,6 +342,30 @@ function TokenRow({
 			</span>
 		</div>
 	);
+}
+
+/**
+ * Icon + link for a repository context value. `repositories` are
+ * `vcs.repository.url.full` URLs from any host, so the GitHub mark is used only
+ * when the URL is actually on github.com; anything else gets a neutral repo icon
+ * (and a value that isn't an http(s) URL is not linked at all).
+ */
+function repoCard(repo: string): {
+	icon: ComponentType<{ className?: string }>;
+	href?: string;
+} {
+	try {
+		const url = new URL(repo);
+		if (url.protocol === "http:" || url.protocol === "https:") {
+			return {
+				icon: url.hostname === "github.com" ? GitHubIcon : FolderGitIcon,
+				href: repo,
+			};
+		}
+	} catch {
+		// Not a URL (e.g. an SSH remote or a bare name) — fall through to neutral.
+	}
+	return { icon: FolderGitIcon };
 }
 
 /**

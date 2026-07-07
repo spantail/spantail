@@ -441,7 +441,7 @@ it("rolls up costUsd and context facets from event metadata", async () => {
 	const list = (await (
 		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
 	).json()) as Array<{
-		eventCount: number;
+		eventCount: number | null;
 		usage: { costUsd: number; model: string };
 		context: {
 			models: string[];
