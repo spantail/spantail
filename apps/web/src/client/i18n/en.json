@@ -210,7 +210,8 @@
 			"sessions": "Sessions",
 			"time": "Session time",
 			"tokens": "Tokens",
-			"cost": "Cost",
+			"input": "Input",
+			"output": "Output",
 			"refs": "Pull requests"
 		},
 		"tags": "Tags",

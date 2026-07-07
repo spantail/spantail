@@ -133,10 +133,9 @@ export type AgentEntry = z.infer<typeof agentEntrySchema>;
 
 /**
  * Aggregates the sessions linked to a single work entry for the entry-detail
- * summary. `totalCostUsd` is null unless at least one session reports `costUsd`
- * (a zero sum would misrepresent sources that never expose cost); when some do,
- * sources without it contribute 0, so the sum is a lower bound — the same
- * partial-sum caveat as the token buckets.
+ * summary. The input/output buckets sum only the sessions that expose them (an
+ * agent that doesn't contributes 0), so like `agentEntryStats` their sum can be
+ * less than `totalTokens`.
  */
 export function summarizeAgentSessions(
 	entries: Array<Pick<AgentEntry, "durationMinutes" | "usage">>,
@@ -144,25 +143,25 @@ export function summarizeAgentSessions(
 	sessionCount: number;
 	totalMinutes: number;
 	totalTokens: number;
-	totalCostUsd: number | null;
+	totalInputTokens: number;
+	totalOutputTokens: number;
 } {
 	let totalMinutes = 0;
 	let totalTokens = 0;
-	let costUsd = 0;
-	let hasCost = false;
+	let totalInputTokens = 0;
+	let totalOutputTokens = 0;
 	for (const entry of entries) {
 		totalMinutes += entry.durationMinutes;
 		totalTokens += entry.usage?.totalTokens ?? 0;
-		if (entry.usage?.costUsd != null) {
-			hasCost = true;
-			costUsd += entry.usage.costUsd;
-		}
+		totalInputTokens += entry.usage?.inputTokens ?? 0;
+		totalOutputTokens += entry.usage?.outputTokens ?? 0;
 	}
 	return {
 		sessionCount: entries.length,
 		totalMinutes,
 		totalTokens,
-		totalCostUsd: hasCost ? costUsd : null,
+		totalInputTokens,
+		totalOutputTokens,
 	};
 }
 

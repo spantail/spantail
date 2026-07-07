@@ -148,10 +148,21 @@ export function EntryDetail({
 				</div>
 			)}
 
+			<div className="flex flex-col gap-2">
+				<MetaLabel>{t("entries.note")}</MetaLabel>
+				{entry.note?.trim() ? (
+					<MarkdownView markdown={entry.note} />
+				) : (
+					<p className="text-muted-foreground text-sm italic">
+						{t("entries.noNote")}
+					</p>
+				)}
+			</div>
+
 			{agentSessions.length > 0 && (
 				<div className="flex flex-col gap-2">
 					<MetaLabel>{t("entries.agentSessions.title")}</MetaLabel>
-					<div className="bg-muted/40 grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-xl border p-4 text-sm sm:grid-cols-4">
+					<div className="bg-muted/40 grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-xl border p-4 text-sm sm:grid-cols-3">
 						<Stat
 							label={t("entries.agentSessions.sessions")}
 							value={formatCompactNumber(summary.sessionCount)}
@@ -164,12 +175,14 @@ export function EntryDetail({
 							label={t("entries.agentSessions.tokens")}
 							value={formatCompactNumber(summary.totalTokens)}
 						/>
-						{summary.totalCostUsd !== null && (
-							<Stat
-								label={t("entries.agentSessions.cost")}
-								value={`$${summary.totalCostUsd.toFixed(2)}`}
-							/>
-						)}
+						<Stat
+							label={t("entries.agentSessions.input")}
+							value={formatCompactNumber(summary.totalInputTokens)}
+						/>
+						<Stat
+							label={t("entries.agentSessions.output")}
+							value={formatCompactNumber(summary.totalOutputTokens)}
+						/>
 					</div>
 					{refs.length > 0 && (
 						<div className="mt-1 flex flex-col gap-1.5">
@@ -193,17 +206,6 @@ export function EntryDetail({
 					)}
 				</div>
 			)}
-
-			<div className="flex flex-col gap-2">
-				<MetaLabel>{t("entries.note")}</MetaLabel>
-				{entry.note?.trim() ? (
-					<MarkdownView markdown={entry.note} />
-				) : (
-					<p className="text-muted-foreground text-sm italic">
-						{t("entries.noNote")}
-					</p>
-				)}
-			</div>
 
 			<div className="flex items-center justify-between gap-3 border-t pt-3">
 				{authorName ? (

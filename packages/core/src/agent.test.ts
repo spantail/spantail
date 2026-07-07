@@ -135,40 +135,37 @@ it("rejects an implausible finalize endedAt", () => {
 	).toBe(false);
 });
 
-it("summarizes linked sessions and totals cost only when reported", () => {
+it("summarizes linked sessions with input/output buckets", () => {
 	expect(
 		summarizeAgentSessions([
-			session(30, { totalTokens: 1000, inputTokens: 400, costUsd: 1.5 }),
-			session(15, { totalTokens: 500, costUsd: 0.25 }),
+			session(30, { totalTokens: 1000, inputTokens: 400, outputTokens: 600 }),
+			session(15, { totalTokens: 500, inputTokens: 200, outputTokens: 300 }),
 		]),
 	).toEqual({
 		sessionCount: 2,
 		totalMinutes: 45,
 		totalTokens: 1500,
-		totalCostUsd: 1.75,
+		totalInputTokens: 600,
+		totalOutputTokens: 900,
 	});
 });
 
-it("returns null cost when no session reports one", () => {
+it("sums only the sessions that expose a bucket (partial sums)", () => {
+	// One session omits the input/output split and one has no usage at all; both
+	// contribute 0 to those buckets, so their sum stays below totalTokens.
 	expect(
 		summarizeAgentSessions([
-			session(10, { totalTokens: 100 }),
-			session(20, null),
+			session(10, { totalTokens: 100, inputTokens: 40, outputTokens: 60 }),
+			session(20, { totalTokens: 200 }),
+			session(5, null),
 		]),
 	).toEqual({
-		sessionCount: 2,
-		totalMinutes: 30,
-		totalTokens: 100,
-		totalCostUsd: null,
+		sessionCount: 3,
+		totalMinutes: 35,
+		totalTokens: 300,
+		totalInputTokens: 40,
+		totalOutputTokens: 60,
 	});
-});
-
-it("treats a missing cost as zero once any session reports one", () => {
-	const result = summarizeAgentSessions([
-		session(5, { totalTokens: 50, costUsd: 2 }),
-		session(5, { totalTokens: 50 }),
-	]);
-	expect(result.totalCostUsd).toBe(2);
 });
 
 it("is empty for no sessions", () => {
@@ -176,6 +173,7 @@ it("is empty for no sessions", () => {
 		sessionCount: 0,
 		totalMinutes: 0,
 		totalTokens: 0,
-		totalCostUsd: null,
+		totalInputTokens: 0,
+		totalOutputTokens: 0,
 	});
 });
