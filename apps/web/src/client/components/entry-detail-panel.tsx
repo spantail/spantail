@@ -8,7 +8,13 @@ import {
 	Trash2Icon,
 	XIcon,
 } from "lucide-react";
-import { type ComponentType, useEffect, useRef, useState } from "react";
+import {
+	type ComponentType,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import { EntryDetail } from "@/components/entry-detail";
@@ -91,6 +97,21 @@ export function EntryDetailPanel({
 		queryFn: () => api.listWorkEntryAgentEntries(entry.id),
 		enabled: Boolean(current) && (agentsEnabled.data?.enabled ?? false),
 	});
+	// Resolves the sessions' agentId to a display name for the activity card.
+	const workspaceAgents = useQuery({
+		queryKey: ["workspace-agents", current?.id],
+		queryFn: () => api.listWorkspaceAgents(current?.id as string),
+		enabled: Boolean(current) && (agentsEnabled.data?.enabled ?? false),
+	});
+	// Name the agent behind the card only when every session shares one agent.
+	const agentName = useMemo(() => {
+		const sessions = linkedSessions.data ?? [];
+		const ids = [...new Set(sessions.map((s) => s.agentId))];
+		if (ids.length !== 1) return null;
+		return (
+			(workspaceAgents.data ?? []).find((a) => a.id === ids[0])?.name ?? null
+		);
+	}, [linkedSessions.data, workspaceAgents.data]);
 
 	const project = entry.projectId
 		? (projects.data ?? []).find((p) => p.id === entry.projectId)
@@ -264,6 +285,7 @@ export function EntryDetailPanel({
 					timeRange={timeRange}
 					authorName={authorName}
 					agentSessions={linkedSessions.data ?? []}
+					agentName={agentName}
 				/>
 			</div>
 

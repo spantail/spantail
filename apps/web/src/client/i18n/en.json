@@ -206,12 +206,15 @@
 		"note": "Note",
 		"noNote": "No note for this entry.",
 		"agentSessions": {
-			"title": "Agent sessions",
+			"title": "Agent activity",
+			"agentFallback": "Agent",
 			"sessions": "Sessions",
+			"active": "Active",
 			"time": "Session time",
 			"tokens": "Tokens",
 			"input": "Input",
 			"output": "Output",
+			"untitled": "Untitled session",
 			"refs": "Pull requests"
 		},
 		"tags": "Tags",

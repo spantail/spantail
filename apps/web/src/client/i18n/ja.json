@@ -201,12 +201,15 @@
 		"note": "メモ",
 		"noNote": "この記録にメモはありません。",
 		"agentSessions": {
-			"title": "エージェントセッション",
+			"title": "エージェントアクティビティ",
+			"agentFallback": "エージェント",
 			"sessions": "セッション数",
+			"active": "アクティブ",
 			"time": "セッション時間",
 			"tokens": "トークン",
 			"input": "入力",
 			"output": "出力",
+			"untitled": "無題のセッション",
 			"refs": "プルリクエスト"
 		},
 		"tags": "タグ",

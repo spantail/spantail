@@ -9,11 +9,14 @@ import {
 } from "@spantail/core";
 import {
 	CalendarIcon,
+	ChevronRightIcon,
 	ClockIcon,
 	CodeIcon,
 	FolderIcon,
+	GitPullRequestIcon,
 	GlobeIcon,
 	PlugIcon,
+	SparklesIcon,
 	TerminalIcon,
 } from "lucide-react";
 import { type ComponentType, type ReactNode, useMemo } from "react";
@@ -52,12 +55,18 @@ interface EntryDetailProps {
 	authorName: string | null;
 	/** Agent sessions this entry was logged from, filtered to what the viewer may read. */
 	agentSessions: AgentEntry[];
+	/**
+	 * Display name of the agent behind the sessions, when they all belong to one
+	 * (resolved by the caller); null when unknown or mixed.
+	 */
+	agentName: string | null;
 }
 
 /**
  * Read-only body of a work entry, shown in the entry dialog: a metadata panel
- * (project / date / duration), tags, the note, and an author byline for
- * entries the viewer doesn't own.
+ * (project / date / duration), tags, the note, an agent-activity card for
+ * entries logged from agent sessions, and an author byline for entries the
+ * viewer doesn't own.
  */
 export function EntryDetail({
 	entry,
@@ -68,6 +77,7 @@ export function EntryDetail({
 	timeRange,
 	authorName,
 	agentSessions,
+	agentName,
 }: EntryDetailProps) {
 	const { t } = useTranslation();
 	const SourceIcon = SOURCE_ICONS[entry.source];
@@ -77,6 +87,27 @@ export function EntryDetail({
 		() => summarizeAgentSessions(agentSessions),
 		[agentSessions],
 	);
+	// The distinct model(s) the sessions ran on, from usage or session context.
+	const model = useMemo(() => {
+		const models = new Set<string>();
+		for (const session of agentSessions) {
+			if (session.usage?.model) models.add(session.usage.model);
+			for (const m of session.context?.models ?? []) models.add(m);
+		}
+		const list = [...models];
+		if (list.length === 0) return null;
+		return list.length === 1 ? list[0] : `${list[0]} +${list.length - 1}`;
+	}, [agentSessions]);
+	const hasTokenSplit =
+		summary.totalInputTokens + summary.totalOutputTokens > 0;
+	const inputPercent = hasTokenSplit
+		? Math.round(
+				(summary.totalInputTokens /
+					(summary.totalInputTokens + summary.totalOutputTokens)) *
+					100,
+			)
+		: 0;
+
 	// Distinct GitHub refs the linked sessions carry, deduped case-insensitively.
 	// Only strictly-formatted refs become links — an unparsed ref is never an href.
 	const refs = useMemo(() => {
@@ -162,48 +193,121 @@ export function EntryDetail({
 			{agentSessions.length > 0 && (
 				<div className="flex flex-col gap-2">
 					<MetaLabel>{t("entries.agentSessions.title")}</MetaLabel>
-					<div className="bg-muted/40 grid grid-cols-2 gap-x-6 gap-y-1.5 rounded-xl border p-4 text-sm sm:grid-cols-3">
-						<Stat
-							label={t("entries.agentSessions.sessions")}
-							value={formatCompactNumber(summary.sessionCount)}
-						/>
-						<Stat
-							label={t("entries.agentSessions.time")}
-							value={formatDuration(summary.totalMinutes)}
-						/>
-						<Stat
-							label={t("entries.agentSessions.tokens")}
-							value={formatCompactNumber(summary.totalTokens)}
-						/>
-						<Stat
-							label={t("entries.agentSessions.input")}
-							value={formatCompactNumber(summary.totalInputTokens)}
-						/>
-						<Stat
-							label={t("entries.agentSessions.output")}
-							value={formatCompactNumber(summary.totalOutputTokens)}
-						/>
-					</div>
-					{refs.length > 0 && (
-						<div className="mt-1 flex flex-col gap-1.5">
-							<span className="text-muted-foreground text-xs font-medium">
-								{t("entries.agentSessions.refs")}
+					<div className="bg-muted/40 flex flex-col gap-4 rounded-xl border p-4">
+						{/* identity: agent + model, with the logging-source chip */}
+						<div className="flex items-center gap-2.5">
+							<span className="bg-brand/12 text-brand flex size-8 shrink-0 items-center justify-center rounded-lg">
+								<SparklesIcon className="size-4" />
 							</span>
-							<div className="flex flex-wrap gap-1.5">
-								{refs.map((ref) => (
-									<a
-										key={`${ref.fullName}#${ref.number}`}
-										href={`${repoUrlFromFullName(ref.fullName)}/issues/${ref.number}`}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="bg-muted hover:bg-muted/70 rounded-md px-2 py-0.5 font-mono text-xs break-all"
-									>
-										{ref.fullName}#{ref.number}
-									</a>
-								))}
+							<div className="min-w-0 flex-1">
+								<p className="truncate text-sm font-semibold">
+									{agentName ?? t("entries.agentSessions.agentFallback")}
+								</p>
+								{model && (
+									<p className="text-muted-foreground truncate font-mono text-[11px]">
+										{model}
+									</p>
+								)}
 							</div>
+							<span
+								title={`${t("entries.source")} ${sourceLabel}`}
+								className="bg-background inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium"
+							>
+								<SourceIcon className="text-muted-foreground size-3" />
+								{sourceLabel}
+							</span>
 						</div>
-					)}
+
+						{/* aggregate stat strip */}
+						<div className="divide-border flex divide-x">
+							<AgentStat
+								label={t("entries.agentSessions.sessions")}
+								value={formatCompactNumber(summary.sessionCount)}
+							/>
+							<AgentStat
+								label={t("entries.agentSessions.active")}
+								value={formatDuration(summary.totalMinutes)}
+							/>
+							<AgentStat
+								label={t("entries.agentSessions.tokens")}
+								value={formatCompactNumber(summary.totalTokens)}
+							/>
+						</div>
+
+						{/* input / output token split — only when a breakdown exists */}
+						{hasTokenSplit && (
+							<div className="flex flex-col gap-1.5">
+								<div className="flex items-center justify-between text-[11px] tabular-nums">
+									<span className="text-muted-foreground flex items-center gap-1.5">
+										<span className="bg-foreground/25 size-2 rounded-full" />
+										{t("entries.agentSessions.input")}{" "}
+										<span className="text-foreground font-medium">
+											{formatCompactNumber(summary.totalInputTokens)}
+										</span>
+									</span>
+									<span className="text-muted-foreground flex items-center gap-1.5">
+										<span className="text-foreground font-medium">
+											{formatCompactNumber(summary.totalOutputTokens)}
+										</span>
+										{t("entries.agentSessions.output")}
+										<span className="bg-brand size-2 rounded-full" />
+									</span>
+								</div>
+								<div className="bg-foreground/25 flex h-1.5 overflow-hidden rounded-full">
+									<div
+										className="bg-brand h-full"
+										style={{
+											width: `${100 - inputPercent}%`,
+											marginLeft: `${inputPercent}%`,
+										}}
+									/>
+								</div>
+							</div>
+						)}
+
+						{/* per-session list */}
+						<div className="divide-border/70 border-border/70 flex flex-col divide-y border-t pt-1">
+							{agentSessions.map((session, i) => (
+								<div key={session.id} className="flex items-center gap-3 py-2">
+									<span className="bg-background text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold tabular-nums">
+										{i + 1}
+									</span>
+									<span className="min-w-0 flex-1 truncate text-[13px]">
+										{session.description?.trim() ||
+											t("entries.agentSessions.untitled")}
+									</span>
+									<span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
+										{formatDuration(session.durationMinutes)} ·{" "}
+										{formatCompactNumber(session.usage?.totalTokens ?? 0)}
+									</span>
+								</div>
+							))}
+						</div>
+					</div>
+				</div>
+			)}
+
+			{refs.length > 0 && (
+				<div className="flex flex-col gap-2">
+					<MetaLabel>{t("entries.agentSessions.refs")}</MetaLabel>
+					<div className="flex flex-col gap-1.5">
+						{refs.map((ref) => (
+							<a
+								key={`${ref.fullName}#${ref.number}`}
+								href={`${repoUrlFromFullName(ref.fullName)}/issues/${ref.number}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="group bg-background hover:border-foreground/25 hover:bg-muted/50 flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm transition-colors"
+							>
+								<GitPullRequestIcon className="text-muted-foreground size-3.5 shrink-0" />
+								<span className="min-w-0 flex-1 truncate font-mono text-[13px]">
+									<span className="text-muted-foreground">{ref.fullName}</span>
+									<span className="text-foreground">#{ref.number}</span>
+								</span>
+								<ChevronRightIcon className="text-muted-foreground/50 group-hover:text-muted-foreground size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+							</a>
+						))}
+					</div>
 				</div>
 			)}
 
@@ -238,11 +342,14 @@ function MetaLabel({ children }: { children: ReactNode }) {
 	);
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** One cell of the agent-activity stat strip (label over a large value). */
+function AgentStat({ label, value }: { label: string; value: string }) {
 	return (
-		<div className="flex items-baseline justify-between gap-2">
-			<span className="text-muted-foreground text-xs">{label}</span>
-			<span className="tabular-nums">{value}</span>
+		<div className="flex flex-col gap-0.5 px-3 first:pl-0 last:pr-0">
+			<p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
+				{label}
+			</p>
+			<p className="font-heading text-lg font-semibold tabular-nums">{value}</p>
 		</div>
 	);
 }
