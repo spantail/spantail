@@ -305,6 +305,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const timezone = resolveUserTimezone(user.timezone);
 		const rows = await listAgentEntriesForWorkEntry(c.var.db, {
 			workEntryId: entry.id,
+			workspaceId: entry.workspaceId,
 			access,
 		});
 		return c.json(rows.map((row) => serializeAgentEntry(row, timezone)));

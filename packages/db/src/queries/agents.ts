@@ -605,13 +605,22 @@ export async function listAgentEntries(
  * filtered by the same private-by-default ACL as `listAgentEntries` so a link
  * never widens visibility: a viewer sees only the subset of linked sessions
  * they could already read directly. Bounded by `MAX_LINKED_AGENT_ENTRIES`.
+ *
+ * Scoped to `workspaceId` (the work entry's workspace) like `listAgentEntries`:
+ * the ACL's `self` branch has no workspace predicate, so this guard ensures a
+ * corrupt/legacy cross-workspace link row can never surface a foreign session.
  */
 export async function listAgentEntriesForWorkEntry(
 	db: Database,
-	{ workEntryId, access }: { workEntryId: string; access?: EntryAccessScope },
+	{
+		workEntryId,
+		workspaceId,
+		access,
+	}: { workEntryId: string; workspaceId: string; access?: EntryAccessScope },
 ): Promise<AgentEntryRow[]> {
 	const conditions: SQL[] = [
 		eq(workEntryAgentEntries.workEntryId, workEntryId),
+		eq(agentEntries.workspaceId, workspaceId),
 	];
 	if (access) {
 		const cond = entryAccessCondition(

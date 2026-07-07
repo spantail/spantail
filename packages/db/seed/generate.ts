@@ -1012,8 +1012,9 @@ export async function generateDataset(
 						}
 					: { models: [AGENT_MODEL] };
 				// Half the sessions report a dollar cost (as a cost-reporting source
-				// like Cursor would), so the summary exercises both the cost stat and
-				// the null-cost path.
+				// like Cursor would), so the agent session detail dialog shows both the
+				// cost and no-cost cases. (The work-entry summary intentionally omits
+				// cost — see the entry dialog.)
 				const costUsd =
 					hashString(`cost:${sessionId}`) % 2 === 0
 						? Number(((totalTokens / 1_000_000) * 3).toFixed(4))

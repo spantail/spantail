@@ -1419,3 +1419,35 @@ it("403s when the agents feature is disabled", async () => {
 			.status,
 	).toBe(403);
 });
+
+it("never surfaces a linked session from another workspace", async () => {
+	const { admin, ws, project, agentFor } = await setupWithAgentIngest();
+	// A second workspace owned by the same admin, with a session logged there.
+	const ws2 = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "other", name: "Other" },
+			admin,
+		)
+	).json()) as { id: string };
+	const ingest = await agentFor(admin);
+	const foreign = await ingest("foreign", { workspaceId: ws2.id });
+
+	// A ws1 entry, with a corrupt cross-workspace link inserted directly (the API
+	// rejects such a link at create; this asserts the read-side workspace guard).
+	const entryId = await createLinkedEntry(admin, ws.id, project.id, []);
+	const db = createDb(env.DB as D1Database);
+	await db.insert(schema.workEntryAgentEntries).values({
+		workEntryId: entryId,
+		agentEntryId: foreign,
+		createdAt: new Date(),
+	});
+
+	// Even though the admin owns the foreign session (ACL `self` branch), the
+	// workspace guard keeps a cross-workspace link from surfacing it here.
+	const rows = (await (
+		await apiGet(`/api/v1/work-entries/${entryId}/agent-entries`, admin)
+	).json()) as unknown[];
+	expect(rows).toEqual([]);
+});
