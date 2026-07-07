@@ -29,9 +29,14 @@ const WIDTH_KEY = "spantail-entry-panel-width";
 
 interface EntryDetailPanelProps {
 	entry: WorkEntry;
-	/** Position of `entry` in the registered list, or -1 when opened outside it. */
+	/** Position of `entry` in the registered list, or -1 when it isn't in it. */
 	index: number;
-	/** Size of the registered list (0 when `entry` was opened outside a list). */
+	/**
+	 * Size of the registered list. Independent of `index`: it can be > 0 while
+	 * `index` is -1 — an entry opened from elsewhere (e.g. search) that isn't a
+	 * row in the list that happens to be mounted. The counter/nav use `index`,
+	 * not `total`, to decide whether the entry is navigable.
+	 */
 	total: number;
 	onPrev?: () => void;
 	onNext?: () => void;
