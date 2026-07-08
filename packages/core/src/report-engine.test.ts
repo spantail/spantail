@@ -209,7 +209,7 @@ it("escapes entry content so a raw-HTML block cannot swallow the report", async 
 	expect(rendered).toContain("&lt;!--internal");
 	expect(rendered).not.toContain("<!--internal");
 	// Sections after the entry stay intact rather than being swallowed.
-	expect(rendered).toContain("_Generated 2026-06-01_");
+	expect(rendered).toContain("_Generated Mon, Jun 1, 2026_");
 });
 
 it("renders an empty-period placeholder", async () => {
