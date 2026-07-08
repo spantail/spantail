@@ -6,8 +6,9 @@
 		"loadingMore": "Loading more…"
 	},
 	"versionBanner": {
-		"message": "A new version of Spantail is available.",
-		"reload": "Reload"
+		"message": "A new version of <b>{{name}}</b> is available.",
+		"reload": "Reload",
+		"dismiss": "Dismiss"
 	},
 	"auth": {
 		"login": "Log in",

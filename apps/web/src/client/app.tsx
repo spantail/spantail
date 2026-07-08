@@ -11,7 +11,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { VersionReloadBanner } from "@/components/version-reload-banner";
 import { queryClient } from "@/lib/query";
-import { useVersionMismatch } from "@/lib/server-version";
+import { useShowReloadBanner } from "@/lib/server-version";
 import { routeTree } from "@/routeTree.gen";
 
 import "./i18n";
@@ -56,13 +56,13 @@ export function App({
  * (see index.css).
  */
 function AppFrame({ router }: { router: ReturnType<typeof createAppRouter> }) {
-	const showBanner = useVersionMismatch();
+	const showBanner = useShowReloadBanner();
 	return (
 		<div
 			className="flex min-h-svh flex-col"
 			style={
 				{
-					"--app-banner-height": showBanner ? "2.5rem" : "0px",
+					"--app-banner-height": showBanner ? "2.75rem" : "0px",
 				} as CSSProperties
 			}
 		>

@@ -60,20 +60,18 @@ function UpdateNotice() {
 	if (!version.data?.updateAvailable || !latest) return null;
 
 	return (
-		<div className="border-border bg-muted/40 flex items-start gap-2.5 rounded-xl border px-4 py-3">
-			<span className="bg-secondary text-foreground mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg">
-				<ArrowUpCircleIcon className="size-[15px]" />
-			</span>
-			<p className="text-muted-foreground text-sm">
+		<div className="border-border bg-card flex items-start gap-3 rounded-xl border px-4 py-3.5 text-sm leading-relaxed">
+			<ArrowUpCircleIcon className="text-muted-foreground mt-0.5 size-[18px] shrink-0" />
+			<p className="text-muted-foreground">
 				<span className="text-foreground font-medium">
-					{t("settings.system.updateAvailableTitle")}{" "}
-				</span>
+					{t("settings.system.updateAvailableTitle")}
+				</span>{" "}
 				{t("settings.system.updateAvailableBody", { latest })}{" "}
 				<a
 					href={releaseUrl(latest)}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-foreground font-medium underline-offset-4 hover:underline"
+					className="text-foreground decoration-border hover:decoration-foreground font-medium whitespace-nowrap underline underline-offset-4 transition-colors"
 				>
 					{t("settings.system.viewRelease")}
 				</a>

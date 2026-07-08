@@ -1,31 +1,47 @@
 import { useSyncExternalStore } from "react";
 
 // The instance (server) version last seen on an API response's
-// `x-spantail-version` header. The API client (lib/api.ts) records it on every
-// response, so ordinary traffic keeps it fresh — no dedicated request or poll.
-// A tiny external store (not a global-state library, per the SPA invariants)
-// lets any component subscribe.
+// `x-spantail-version` header, plus the version the user last dismissed the
+// reload banner at. The API client (lib/api.ts) records the server version on
+// every response, so ordinary traffic keeps it fresh — no dedicated request or
+// poll. A tiny external store (not a global-state library, per the SPA
+// invariants) lets any component subscribe.
 let serverVersion: string | null = null;
+let dismissedVersion: string | null = null;
 const listeners = new Set<() => void>();
+
+function emit(): void {
+	for (const listener of listeners) listener();
+}
 
 /** Called by the API client's fetch wrapper with each response's version. */
 export function recordServerVersion(version: string): void {
 	if (version === serverVersion) return;
 	serverVersion = version;
-	for (const listener of listeners) listener();
+	emit();
+}
+
+/**
+ * Hides the reload banner until the next deploy: it stays dismissed for the
+ * current server version but reappears once a newer version is seen.
+ */
+export function dismissReloadBanner(): void {
+	if (dismissedVersion === serverVersion) return;
+	dismissedVersion = serverVersion;
+	emit();
 }
 
 function subscribe(listener: () => void): () => void {
 	listeners.add(listener);
-	return () => listeners.delete(listener);
+	return () => {
+		listeners.delete(listener);
+	};
 }
 
-function getSnapshot(): string | null {
-	return serverVersion;
-}
-
-export function useServerVersion(): string | null {
-	return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+// Encodes both pieces of state so useSyncExternalStore re-renders when either
+// the server version or the dismissal changes, and bails out when neither does.
+function getSnapshot(): string {
+	return `${serverVersion ?? ""}|${dismissedVersion ?? ""}`;
 }
 
 // A version string we can meaningfully compare. Only the "unknown" fallback (no
@@ -40,7 +56,7 @@ function isComparable(version: string | null): version is string {
 
 /**
  * Whether the client and server versions differ meaningfully. Pure and exported
- * for testing; `useVersionMismatch` applies it to the live values.
+ * for testing; `useShowReloadBanner` applies it to the live values.
  */
 export function isVersionMismatch(
 	server: string | null,
@@ -51,10 +67,14 @@ export function isVersionMismatch(
 }
 
 /**
- * Whether the running client bundle's version differs from the instance
- * (server) version — i.e. an old cached SPA is talking to a newer Worker and
- * the user should reload. False until a comparable server version is seen.
+ * Whether to show the reload banner: the running client bundle's version
+ * differs from the instance (server) version — an old cached SPA talking to a
+ * newer Worker — and the user hasn't dismissed the banner for this version.
  */
-export function useVersionMismatch(): boolean {
-	return isVersionMismatch(useServerVersion(), __APP_VERSION__);
+export function useShowReloadBanner(): boolean {
+	useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+	return (
+		isVersionMismatch(serverVersion, __APP_VERSION__) &&
+		serverVersion !== dismissedVersion
+	);
 }
