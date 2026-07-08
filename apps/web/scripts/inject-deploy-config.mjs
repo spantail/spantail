@@ -39,11 +39,15 @@ if (!databaseId) {
 
 const source = readFileSync(CONFIG_PATH, "utf8");
 
+// Matches a `"database_id": "<value>"` field, capturing (prefix, value, suffix).
+// Both the drift check and the write scope to this pattern so the script only
+// ever reads and mutates database_id values — never the placeholder string
+// should it appear in a comment or some other field.
+const databaseIdField = () => /("database_id"\s*:\s*")([^"]*)(")/g;
+
 // Collect every configured database_id so drift is detected even if the file
 // grows more than one D1 binding later.
-const ids = [...source.matchAll(/"database_id"\s*:\s*"([^"]*)"/g)].map(
-	(m) => m[1],
-);
+const ids = [...source.matchAll(databaseIdField())].map((m) => m[2]);
 
 if (ids.length === 0) {
 	console.error(
@@ -71,7 +75,10 @@ if (!ids.includes(PLACEHOLDER)) {
 	process.exit(0);
 }
 
-writeFileSync(CONFIG_PATH, source.split(PLACEHOLDER).join(databaseId), "utf8");
+const updated = source.replace(databaseIdField(), (full, pre, value, post) =>
+	value === PLACEHOLDER ? `${pre}${databaseId}${post}` : full,
+);
+writeFileSync(CONFIG_PATH, updated, "utf8");
 console.log(
 	`[inject-deploy-config] Injected D1_DATABASE_ID (${databaseId}) into ${CONFIG_PATH}.`,
 );
