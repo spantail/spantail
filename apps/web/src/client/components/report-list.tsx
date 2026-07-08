@@ -49,7 +49,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
-import { formatInstantDate } from "@/lib/format";
+import { formatDay } from "@/lib/format";
 import { templateHue } from "@/lib/hue";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { cn } from "@/lib/utils";
@@ -123,9 +123,11 @@ function ReportListItem({
 			{/* generated date over total */}
 			<span className="flex shrink-0 flex-col items-end gap-0.5 pt-px text-xs tabular-nums">
 				<span className="text-muted-foreground whitespace-nowrap">
-					{formatInstantDate(report.createdAt, i18n.language, timezone, {
-						now: today,
-					})}
+					{formatDay(
+						todayInTimezone(timezone, new Date(report.createdAt)),
+						i18n.language,
+						{ now: today },
+					)}
 				</span>
 				{report.totalMinutes != null && (
 					<span className="text-foreground/70 font-medium whitespace-nowrap">

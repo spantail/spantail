@@ -1,14 +1,10 @@
-import {
-	formatPeriodLabel,
-	type MailFolder,
-	type MailItem,
-} from "@spantail/core";
+import type { MailFolder, MailItem } from "@spantail/core";
 import { Link } from "@tanstack/react-router";
 import { StarIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { PersonAvatar } from "@/components/person-avatar";
-import { formatRelativeTime } from "@/lib/format";
+import { formatDateRange, formatDay, formatRelativeTime } from "@/lib/format";
 import { useMailActions } from "@/lib/use-mail";
 import { cn } from "@/lib/utils";
 
@@ -17,11 +13,15 @@ export function MessageListItem({
 	folder,
 	selected,
 	index,
+	today,
 }: {
 	item: MailItem;
 	folder: MailFolder;
 	selected: boolean;
 	index: number;
+	// The viewer's today (`YYYY-MM-DD`), hoisted to the list; the year reference
+	// for the report period's date labels.
+	today: string;
 }) {
 	const { t, i18n } = useTranslation();
 	const actions = useMailActions();
@@ -93,7 +93,11 @@ export function MessageListItem({
 							{item.reportName}
 						</span>
 						<span className="text-muted-foreground ml-auto shrink-0 text-xs whitespace-nowrap tabular-nums">
-							{formatPeriodLabel({ from: item.dateFrom, to: item.dateTo })}
+							{item.dateFrom === item.dateTo
+								? formatDay(item.dateFrom, i18n.language, { now: today })
+								: formatDateRange(item.dateFrom, item.dateTo, i18n.language, {
+										now: today,
+									})}
 						</span>
 					</span>
 					{/* line 3 — message preview */}
