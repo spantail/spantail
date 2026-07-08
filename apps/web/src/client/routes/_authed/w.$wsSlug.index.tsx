@@ -18,7 +18,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
-import { formatEntryDate } from "@/lib/format";
+import { formatDay } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
 const PAGE_SIZE = 50;
@@ -64,10 +64,10 @@ function Timeline({
 	// The timeline follows the period selector: resolve the window to absolute
 	// dates so the entry query (and its cache key) tracks the selected range.
 	const range = resolveDateRange(period, timezone);
-	const dateLabel = formatEntryDate(today, i18n.language, {
+	const dateLabel = formatDay(today, i18n.language, {
+		now: today,
 		weekday: "long",
 		month: "long",
-		day: "numeric",
 	});
 	const projects = useProjects();
 	const entries = useInfiniteQuery({

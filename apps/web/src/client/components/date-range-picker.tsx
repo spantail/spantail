@@ -4,6 +4,7 @@ import {
 	type ReportDateRange,
 	resolveDateRange,
 	shiftDays,
+	todayInTimezone,
 } from "@spantail/core";
 import { enUS, ja } from "date-fns/locale";
 import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react";
@@ -18,7 +19,7 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
-import { formatCompactRange } from "@/lib/format";
+import { formatDateRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** Local Date for a `YYYY-MM-DD` string (avoids the `new Date(iso)` UTC shift). */
@@ -80,7 +81,9 @@ export function DateRangePicker({
 
 	const label = presetId
 		? labelFor(presetId)
-		: formatCompactRange(range.from, range.to, i18n.language);
+		: formatDateRange(range.from, range.to, i18n.language, {
+				now: todayInTimezone(timezone),
+			});
 
 	// If a custom span equals a preset's resolved range, keep that preset lit.
 	function matchPreset(from: string, to: string): DateRangePreset | null {

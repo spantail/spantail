@@ -1,3 +1,4 @@
+import { todayInTimezone } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -55,7 +56,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
+import { formatInstantDate } from "@/lib/format";
 
 export const Route = createFileRoute("/settings/users")({
 	component: UsersSection,
@@ -93,7 +96,9 @@ function UsersContent() {
 }
 
 function UsersManager({ currentUserId }: { currentUserId: string }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const timezone = useUserTimezone();
+	const today = todayInTimezone(timezone);
 	const queryClient = useQueryClient();
 
 	const [email, setEmail] = useState("");
@@ -458,7 +463,12 @@ function UsersManager({ currentUserId }: { currentUserId: string }) {
 											</span>
 										</TableCell>
 										<TableCell className="text-muted-foreground">
-											{new Date(invitation.expiresAt).toLocaleDateString()}
+											{formatInstantDate(
+												invitation.expiresAt,
+												i18n.language,
+												timezone,
+												{ now: today },
+											)}
 										</TableCell>
 										<TableCell className="text-right">
 											<Button

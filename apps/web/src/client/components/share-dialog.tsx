@@ -4,6 +4,7 @@ import {
 	type ReportShare,
 	type ShareStatus,
 	shareStatus,
+	todayInTimezone,
 } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -26,7 +27,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
+import { formatInstantDate } from "@/lib/format";
 
 const EXPIRY_DAYS = ["1", "7", "30", "none"] as const;
 
@@ -61,7 +64,9 @@ export function ShareDialog({
 	source: ShareSource;
 	onClose: () => void;
 }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const timezone = useUserTimezone();
+	const today = todayInTimezone(timezone);
 	const queryClient = useQueryClient();
 	const [expiry, setExpiry] = useState<string>("7");
 	const [passcode, setPasscode] = useState("");
@@ -205,10 +210,22 @@ export function ShareDialog({
 											</Badge>
 										)}
 										<span className="text-muted-foreground">
-											{new Date(share.createdAt).toLocaleDateString()}
+											{formatInstantDate(
+												share.createdAt,
+												i18n.language,
+												timezone,
+												{
+													now: today,
+												},
+											)}
 											{share.expiresAt &&
 												` · ${t("reports.shares.expires", {
-													value: new Date(share.expiresAt).toLocaleDateString(),
+													value: formatInstantDate(
+														share.expiresAt,
+														i18n.language,
+														timezone,
+														{ now: today },
+													),
 												})}`}
 											{` · ${t("reports.shares.views", { value: share.viewCount })}`}
 										</span>

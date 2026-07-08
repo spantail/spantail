@@ -9,7 +9,8 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatEntryDate } from "@/lib/format";
+import { useToday } from "@/hooks/use-today";
+import { formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface DailyBarsProps {
@@ -38,6 +39,7 @@ export function DailyBars({
 	className,
 }: DailyBarsProps) {
 	const { t, i18n } = useTranslation();
+	const today = useToday();
 	const [hover, setHover] = useState<number | null>(null);
 
 	const max = Math.max(1, ...daily.map((day) => day.minutes));
@@ -70,7 +72,7 @@ export function DailyBars({
 								<TooltipTrigger asChild>
 									<button
 										type="button"
-										aria-label={`${formatEntryDate(day.date, i18n.language)} · ${formatDuration(day.minutes)}`}
+										aria-label={`${formatDay(day.date, i18n.language, { now: today })} · ${formatDuration(day.minutes)}`}
 										className="flex h-full flex-1 flex-col justify-end"
 										onMouseEnter={() => setHover(i)}
 										onMouseLeave={() => setHover(null)}
@@ -103,7 +105,7 @@ export function DailyBars({
 									</button>
 								</TooltipTrigger>
 								<TooltipContent>
-									{formatEntryDate(day.date, i18n.language)} ·{" "}
+									{formatDay(day.date, i18n.language, { now: today })} ·{" "}
 									{formatDuration(day.minutes)}
 								</TooltipContent>
 							</Tooltip>

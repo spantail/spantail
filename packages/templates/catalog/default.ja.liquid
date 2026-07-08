@@ -1,6 +1,6 @@
 # {{ report.name }}
 
-**期間:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
+**期間:** {{ period.from | format_date: 'year' }}{% if period.to != period.from %} – {{ period.to | format_date: 'year' }}{% endif %} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
 
 {% if totals.entries == 0 -%}
 _この期間の稼働記録はありません。_
@@ -31,4 +31,4 @@ _この期間の稼働記録はありません。_
 {% endif -%}
 ---
 
-_生成日時 {{ generated_date }}_
+_生成日時 {{ generated_date | format_date: 'year' }}_

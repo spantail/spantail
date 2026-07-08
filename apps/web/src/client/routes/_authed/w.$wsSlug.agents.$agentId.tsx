@@ -4,6 +4,7 @@ import {
 	formatDuration,
 	MAX_LINKED_AGENT_ENTRIES,
 	resolveDateRange,
+	todayInTimezone,
 } from "@spantail/core";
 import {
 	useInfiniteQuery,
@@ -53,11 +54,7 @@ import { useProjects } from "@/hooks/use-projects";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { useDocumentTitle } from "@/lib/document-title";
-import {
-	formatClock,
-	formatCompactNumber,
-	formatEntryDate,
-} from "@/lib/format";
+import { formatClock, formatCompactNumber, formatDay } from "@/lib/format";
 import { isTypingTarget } from "@/lib/keyboard";
 import { invalidateAgentEntryData } from "@/lib/query";
 import { useWorkspace } from "@/lib/workspace";
@@ -124,6 +121,7 @@ function AgentPage() {
 	const { current } = useWorkspace();
 	const workspaceId = current?.id;
 	const timezone = useUserTimezone();
+	const today = todayInTimezone(timezone);
 
 	const [period, setPeriod] = useState<DashboardPeriod>("last_30_days");
 	const range = resolveDateRange(period, timezone);
@@ -531,10 +529,8 @@ function AgentPage() {
 											)}
 											<TableCell className="whitespace-nowrap">
 												<div>
-													{formatEntryDate(entry.entryDate, i18n.language, {
-														weekday: "short",
-														month: "short",
-														day: "numeric",
+													{formatDay(entry.entryDate, i18n.language, {
+														now: today,
 													})}
 												</div>
 												{entry.startedAt && entry.endedAt && (

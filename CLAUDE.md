@@ -77,6 +77,20 @@ pnpm deploy             # wrangler deploy (apps/web)
   timezone needed). `agent_entries` store only timestamps (no `entry_date`) — their calendar day is
   derived from `startedAt` in the viewer's timezone at read time. Reports resolve relative ranges and
   the generation date in the running user's timezone.
+- **Date/time display goes through the shared formatters** in `packages/core/src/datetime-format.ts`
+  (`formatDay`, `formatDateRange`, `formatTimestamp`, `formatInstantDate`) — don't hand-format a date
+  with `Date#toLocaleDateString`/`toLocaleString` in a component (formatting a *number* with
+  `Number#toLocaleString`, and library-internal date rendering like the shadcn calendar, are fine).
+  Pass `i18n.language` as the locale and the
+  viewer's today (`useToday()`) as `now`. Policy: work and report dates — ones a user reasons about
+  by day (entry dates, a report's period, a report's list date) — carry a weekday via `formatDay`;
+  ranges (`formatDateRange`) and account/metadata timestamps — created/expiry/last-used, shown with a
+  clock via `formatTimestamp` or as a bare day via `formatInstantDate` — do not. The year is shown
+  only when the date is outside the viewer's current year (`year: "auto"`).
+  Clock times (`formatClock`) are 24-hour in both locales; durations (`formatDuration`) stay
+  locale-independent Latin `h`/`m`. Reports use the same core formatters via the Liquid `format_date`
+  filter, whose optional argument (`'year'`/`'no-year'`) lets a template author force the year on or
+  off; the shipped default templates pass `'year'`. The CLI prints raw ISO dates (a scripting surface).
 - **Permissions.** Every query is scoped by workspace membership. Cross-workspace report filters
   must be validated against the union of the user's workspaces. See
   [`docs/permissions.md`](docs/permissions.md) for the full role × resource access model (the

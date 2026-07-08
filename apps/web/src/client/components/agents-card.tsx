@@ -2,6 +2,7 @@ import {
 	type AgentType,
 	type AgentWithToken,
 	agentTypes,
+	todayInTimezone,
 } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -78,7 +79,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
+import { formatInstantDate, formatTimestamp } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** A freshly issued secret to surface once, with the agent it belongs to. */
@@ -92,7 +95,9 @@ type IssuedSecret = {
 };
 
 export function AgentsCard() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const timezone = useUserTimezone();
+	const today = todayInTimezone(timezone);
 	const queryClient = useQueryClient();
 	const [formOpen, setFormOpen] = useState(false);
 	const [issued, setIssued] = useState<IssuedSecret | null>(null);
@@ -248,12 +253,22 @@ export function AgentsCard() {
 										</TableCell>
 										<TableCell className="text-muted-foreground">
 											{agent.token?.lastUsedAt
-												? new Date(agent.token.lastUsedAt).toLocaleString()
+												? formatTimestamp(
+														agent.token.lastUsedAt,
+														i18n.language,
+														timezone,
+														{ now: today },
+													)
 												: t("settings.agents.never")}
 										</TableCell>
 										<TableCell className="text-muted-foreground">
 											{agent.token?.expiresAt
-												? new Date(agent.token.expiresAt).toLocaleDateString()
+												? formatInstantDate(
+														agent.token.expiresAt,
+														i18n.language,
+														timezone,
+														{ now: today },
+													)
 												: t("settings.agents.noExpiry")}
 										</TableCell>
 										<TableCell className="text-right">

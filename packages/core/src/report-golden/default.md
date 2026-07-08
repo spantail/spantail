@@ -1,6 +1,6 @@
 # Team weekly
 
-**Period:** 2026-05-25 – 2026-05-31 · **Total:** 12h 30m (8 entries)
+**Period:** Mon, May 25, 2026 – Sun, May 31, 2026 · **Total:** 12h 30m (8 entries)
 
 ## Research — 5h 30m
 
@@ -27,4 +27,4 @@ Shipped the report engine.
 
 ---
 
-_Generated 2026-06-01_
+_Generated Mon, Jun 1, 2026_

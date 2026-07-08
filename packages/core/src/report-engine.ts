@@ -2,6 +2,7 @@ import { Liquid } from "liquidjs";
 
 import type { AgentUsage } from "./agent";
 import { todayInTimezone } from "./common";
+import { formatDay, type YearMode } from "./datetime-format";
 import { formatDuration } from "./duration";
 import type { DateRangePreset } from "./report";
 import { formatPeriodLabel } from "./report-period";
@@ -15,6 +16,10 @@ export interface ReportContextInput {
 	// for the generation date and as template context (entries are pre-bucketed
 	// by their stored local date, so grouping itself needs no timezone).
 	timezone: string;
+	// The locale the report is rendered in (from the request), driving the
+	// `format_date` filter's weekday/month names and year formatting. Baked into
+	// the frozen content at render time, like `generatedAt`.
+	locale: string;
 	generatedAt: Date;
 	workspaces: Array<{
 		id: string;
@@ -140,9 +145,29 @@ function createEngine(): Liquid {
 	engine.registerFilter("format_duration", (value: unknown) =>
 		formatDuration(Number(value) || 0),
 	);
-	// Local dates pass through; ISO timestamps reduce to their date part.
-	engine.registerFilter("format_date", (value: unknown) =>
-		String(value ?? "").slice(0, 10),
+	// Formats a `YYYY-MM-DD` (ISO timestamps reduce to their date part) as a
+	// localized date with a weekday, e.g. `Mon, Jun 1` / `6月1日(月)`. The locale
+	// and the year reference (`generated_date`) come from the render context. The
+	// optional argument controls the year: `'year'` always shows it, `'no-year'`
+	// never does, and the default omits it in the generation year. Non-date input
+	// passes through unchanged.
+	engine.registerFilter(
+		"format_date",
+		function (
+			this: { context: { getSync(paths: PropertyKey[]): unknown } },
+			value: unknown,
+			mode?: unknown,
+		) {
+			const raw = String(value ?? "");
+			const date = raw.slice(0, 10);
+			// Non-date input is returned unchanged (not truncated to 10 chars).
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return raw;
+			const locale = String(this.context.getSync(["locale"]) ?? "en");
+			const now = String(this.context.getSync(["generated_date"]) ?? "");
+			const year: YearMode =
+				mode === "year" ? "always" : mode === "no-year" ? "never" : "auto";
+			return formatDay(date, locale, { now: now || undefined, year });
+		},
 	);
 	engine.registerFilter("sum", (items: unknown, prop?: string) => {
 		if (!Array.isArray(items)) return 0;
@@ -338,6 +363,7 @@ export function buildReportContext(
 			}),
 		},
 		timezone: input.timezone,
+		locale: input.locale,
 		generated_at: input.generatedAt.toISOString(),
 		// Local date of generation in the report timezone; the UTC date of
 		// generated_at can lag a day behind for ahead-of-UTC workspaces.

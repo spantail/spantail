@@ -1,49 +1,14 @@
-/**
- * Formats a `YYYY-MM-DD` local-date string for display. Builds the Date from
- * parts: `new Date("YYYY-MM-DD")` would parse as UTC midnight and shift a day
- * in behind-UTC locales.
- */
-export function formatEntryDate(
-	date: string,
-	locale: string,
-	options: Intl.DateTimeFormatOptions = {
-		month: "short",
-		day: "numeric",
-		weekday: "short",
-	},
-): string {
-	const [y = 0, m = 1, d = 1] = date.split("-").map(Number);
-	return new Intl.DateTimeFormat(locale, options).format(new Date(y, m - 1, d));
-}
-
-/**
- * Compact label for an inclusive `YYYY-MM-DD` range, mirroring the dashboard
- * mockup: `Jun 1 – 30`, `May 28 – Jun 13`, or a single `Jun 1`. Same-month
- * ranges drop the repeated month on the end. Locale-aware (e.g. `ja` →
- * `6月1日 – 30日`). Dates are built from parts to avoid the `new Date(iso)` UTC shift.
- */
-export function formatCompactRange(
-	from: string,
-	to: string,
-	locale: string,
-): string {
-	const toDate = (s: string) => {
-		const [y = 0, m = 1, d = 1] = s.split("-").map(Number);
-		return new Date(y, m - 1, d);
-	};
-	const monthDay = new Intl.DateTimeFormat(locale, {
-		month: "short",
-		day: "numeric",
-	});
-	const a = toDate(from);
-	if (from === to) return monthDay.format(a);
-	const b = toDate(to);
-	const sameMonth = from.slice(0, 7) === to.slice(0, 7);
-	const end = sameMonth
-		? new Intl.DateTimeFormat(locale, { day: "numeric" }).format(b)
-		: monthDay.format(b);
-	return `${monthDay.format(a)} – ${end}`;
-}
+// Locale-aware date/range/timestamp formatters live in @spantail/core so the
+// SPA, the report engine, and the CLI share one display policy. Re-exported here
+// as the client's single import site for human-facing date/time formatting;
+// pass `i18n.language` as the locale and `useToday()` as `now`. Clock and
+// relative-time helpers below are web-only (feeds and session rows).
+export {
+	formatDateRange,
+	formatDay,
+	formatInstantDate,
+	formatTimestamp,
+} from "@spantail/core";
 
 // Constructing an Intl formatter is relatively costly, and these run once per
 // token cell / session-row time in large tables — so build each once and reuse.
@@ -66,7 +31,7 @@ export function formatCompactNumber(n: number): string {
 const clockFormats = new Map<string, Intl.DateTimeFormat>();
 
 /**
- * Wall-clock `HH:MM` (24h) for a UTC ISO timestamp, rendered in the workspace
+ * Wall-clock `HH:MM` (24h) for a UTC ISO timestamp, rendered in the viewer's
  * timezone so a session's start/end read in the user's local working hours.
  */
 export function formatClock(iso: string, timeZone: string): string {
