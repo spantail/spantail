@@ -158,8 +158,10 @@ function createEngine(): Liquid {
 			value: unknown,
 			mode?: unknown,
 		) {
-			const date = String(value ?? "").slice(0, 10);
-			if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+			const raw = String(value ?? "");
+			const date = raw.slice(0, 10);
+			// Non-date input is returned unchanged (not truncated to 10 chars).
+			if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return raw;
 			const locale = String(this.context.getSync(["locale"]) ?? "en");
 			const now = String(this.context.getSync(["generated_date"]) ?? "");
 			const year: YearMode =

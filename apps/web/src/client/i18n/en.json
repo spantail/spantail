@@ -540,7 +540,7 @@
 		"name": "Template name",
 		"description": "Description",
 		"body": "Template body",
-		"bodyHint": "Markdown with Liquid tags. Available data: report, user, period, entries, groups, totals; filters: format_date (add ': 'year'' to always show the year, ': 'no-year'' to hide it), format_duration, sum, group_by.",
+		"bodyHint": "Markdown with Liquid tags. Available data: report, user, period, entries, groups, totals; filters: format_date (append \": 'year'\" to always show the year or \": 'no-year'\" to hide it), format_duration, sum, group_by.",
 		"nameTemplate": "Default report name",
 		"nameTemplateHint": "Liquid for a new report's initial name. Available data: user, workspaces, projects, users, period.",
 		"noteTemplate": "Default report note",

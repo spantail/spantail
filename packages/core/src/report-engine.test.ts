@@ -178,6 +178,12 @@ it("formats report dates with a weekday and locale-aware year via format_date", 
 	);
 });
 
+it("returns non-date input unchanged from format_date (no truncation)", async () => {
+	expect(await renderReport("{{ report.name | format_date }}", fixture)).toBe(
+		"Team weekly",
+	);
+});
+
 it("omits the notes section when the note is null", async () => {
 	const rendered = await renderReport(DEFAULT_BODY, {
 		...fixture,
