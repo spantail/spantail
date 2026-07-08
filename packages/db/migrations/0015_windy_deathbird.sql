@@ -1,1 +1,0 @@
-ALTER TABLE `instance_settings` ADD `realtime_enabled` integer DEFAULT false NOT NULL;

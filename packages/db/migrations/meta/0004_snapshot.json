@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a91d2cda-4ef3-40d5-82b3-c1e8cf15a803",
-  "prevId": "c32f3998-d103-465f-b391-433266884dae",
+  "id": "22d5fc29-c033-4cc5-9915-654718ba478f",
+  "prevId": "f085641b-53c6-4a6e-bedd-2f1fbfe790fd",
   "tables": {
     "account": {
       "name": "account",
@@ -302,6 +302,13 @@
           "notNull": false,
           "autoincrement": false,
           "default": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -500,6 +507,14 @@
           "notNull": true,
           "autoincrement": false,
           "default": 264
+        },
+        "symbol": {
+          "name": "symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'circle'"
         },
         "status": {
           "name": "status",
@@ -835,13 +850,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "timezone": {
-          "name": "timezone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "accent_color": {
           "name": "accent_color",
           "type": "text",
@@ -1055,6 +1063,14 @@
           "autoincrement": false,
           "default": false
         },
+        "realtime_enabled": {
+          "name": "realtime_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "updated_at": {
           "name": "updated_at",
           "type": "integer",
@@ -1220,13 +1236,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "entry_date": {
-          "name": "entry_date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "duration_minutes": {
           "name": "duration_minutes",
           "type": "integer",
@@ -1237,6 +1246,20 @@
         "usage": {
           "name": "usage",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "context": {
+          "name": "context",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rollup_event_count": {
+          "name": "rollup_event_count",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1252,7 +1275,7 @@
           "name": "started_at",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "ended_at": {
@@ -1292,7 +1315,7 @@
           "name": "agent_entries_workspace_idx",
           "columns": [
             "workspace_id",
-            "created_at"
+            "started_at"
           ],
           "isUnique": false
         },
@@ -1407,6 +1430,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'chat'"
+        },
         "model": {
           "name": "model",
           "type": "text",
@@ -1419,6 +1450,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "cost_usd": {
+          "name": "cost_usd",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "attributes": {
+          "name": "attributes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "created_at": {
@@ -1735,6 +1780,81 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "work_entry_agent_entries": {
+      "name": "work_entry_agent_entries",
+      "columns": {
+        "work_entry_id": {
+          "name": "work_entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "agent_entry_id": {
+          "name": "agent_entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "work_entry_agent_entries_agent_entry_idx": {
+          "name": "work_entry_agent_entries_agent_entry_idx",
+          "columns": [
+            "agent_entry_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "work_entry_agent_entries_work_entry_id_work_entries_id_fk": {
+          "name": "work_entry_agent_entries_work_entry_id_work_entries_id_fk",
+          "tableFrom": "work_entry_agent_entries",
+          "tableTo": "work_entries",
+          "columnsFrom": [
+            "work_entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "work_entry_agent_entries_agent_entry_id_agent_entries_id_fk": {
+          "name": "work_entry_agent_entries_agent_entry_id_agent_entries_id_fk",
+          "tableFrom": "work_entry_agent_entries",
+          "tableTo": "agent_entries",
+          "columnsFrom": [
+            "agent_entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "work_entry_agent_entries_work_entry_id_agent_entry_id_pk": {
+          "columns": [
+            "work_entry_id",
+            "agent_entry_id"
+          ],
+          "name": "work_entry_agent_entries_work_entry_id_agent_entry_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     }

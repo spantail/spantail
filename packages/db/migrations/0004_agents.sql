@@ -7,6 +7,8 @@ CREATE TABLE `agent_entries` (
 	`session_id` text NOT NULL,
 	`duration_minutes` integer NOT NULL,
 	`usage` text,
+	`context` text,
+	`rollup_event_count` integer,
 	`description` text,
 	`started_at` integer NOT NULL,
 	`ended_at` integer,
@@ -28,8 +30,11 @@ CREATE TABLE `agent_events` (
 	`session_id` text NOT NULL,
 	`source_id` text NOT NULL,
 	`timestamp` integer NOT NULL,
+	`operation` text DEFAULT 'chat' NOT NULL,
 	`model` text,
 	`usage` text NOT NULL,
+	`cost_usd` real,
+	`attributes` text,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	FOREIGN KEY (`agent_id`) REFERENCES `agents`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`workspace_id`) REFERENCES `workspaces`(`id`) ON UPDATE no action ON DELETE cascade
@@ -72,4 +77,14 @@ CREATE TABLE `agents` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `agents_user_idx` ON `agents` (`user_id`);
+CREATE INDEX `agents_user_idx` ON `agents` (`user_id`);--> statement-breakpoint
+CREATE TABLE `work_entry_agent_entries` (
+	`work_entry_id` text NOT NULL,
+	`agent_entry_id` text NOT NULL,
+	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+	PRIMARY KEY(`work_entry_id`, `agent_entry_id`),
+	FOREIGN KEY (`work_entry_id`) REFERENCES `work_entries`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`agent_entry_id`) REFERENCES `agent_entries`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `work_entry_agent_entries_agent_entry_idx` ON `work_entry_agent_entries` (`agent_entry_id`);

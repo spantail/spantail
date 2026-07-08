@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "7ed79f16-9753-4a4b-ba97-5c0655445cfc",
+  "id": "3b2b4079-6102-47d0-9b5f-11aa6c0f7271",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -302,6 +302,13 @@
           "notNull": false,
           "autoincrement": false,
           "default": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
