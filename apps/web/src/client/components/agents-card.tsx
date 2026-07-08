@@ -203,18 +203,7 @@ export function AgentsCard() {
 											</Badge>
 										</TableCell>
 										<TableCell className="text-muted-foreground">
-											{wsId ? (
-												<span className="flex items-center gap-1">
-													{workspaceNames.get(wsId) ?? "—"}
-													<CopyButton
-														value={wsId}
-														label={t("settings.agents.copyWorkspaceId")}
-														className="size-7"
-													/>
-												</span>
-											) : (
-												"—"
-											)}
+											{wsId ? (workspaceNames.get(wsId) ?? "—") : "—"}
 										</TableCell>
 										<TableCell className="text-muted-foreground">
 											{agent.projectIds.length === 0 ? (
@@ -238,18 +227,12 @@ export function AgentsCard() {
 														</p>
 														<div className="flex flex-col gap-2">
 															{agent.projectIds.map((id) => (
-																<div
+																<code
 																	key={id}
-																	className="flex items-center gap-2"
+																	className="bg-muted overflow-x-auto rounded-md p-2 text-xs"
 																>
-																	<code className="bg-muted flex-1 overflow-x-auto rounded-md p-2 text-xs">
-																		{id}
-																	</code>
-																	<CopyButton
-																		value={id}
-																		label={t("settings.agents.copyProjectId")}
-																	/>
-																</div>
+																	{id}
+																</code>
 															))}
 														</div>
 													</PopoverContent>

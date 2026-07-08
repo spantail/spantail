@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ChevronRightIcon, HomeIcon, SettingsIcon } from "lucide-react";
+import {
+	CheckIcon,
+	ChevronRightIcon,
+	CopyIcon,
+	HomeIcon,
+	SettingsIcon,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AgentTypeIcon } from "@/components/agent-icon";
@@ -19,6 +25,7 @@ import {
 	SidebarGroupLabel,
 	SidebarHeader,
 	SidebarMenu,
+	SidebarMenuAction,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	SidebarMenuSkeleton,
@@ -26,6 +33,7 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { useCopy } from "@/hooks/use-copy";
 import { useProjects } from "@/hooks/use-projects";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -80,6 +88,26 @@ function NavItems({ items }: { items: NavItem[] }) {
 				);
 			})}
 		</SidebarMenu>
+	);
+}
+
+// Copies a project id from its sidebar row. `SidebarMenuAction showOnHover`
+// already reveals on hover (desktop), shows on mobile, and hides when the
+// sidebar is collapsed to icons — no extra styling needed.
+function CopyProjectId({ id }: { id: string }) {
+	const { t } = useTranslation();
+	const { copied, copy } = useCopy();
+	const label = t("nav.copyProjectId");
+
+	return (
+		<SidebarMenuAction
+			showOnHover
+			aria-label={label}
+			title={label}
+			onClick={() => copy(id)}
+		>
+			{copied ? <CheckIcon /> : <CopyIcon />}
+		</SidebarMenuAction>
 	);
 }
 
@@ -150,6 +178,7 @@ function ProjectsGroup() {
 													<span>{project.name}</span>
 												</Link>
 											</SidebarMenuButton>
+											<CopyProjectId id={project.id} />
 										</SidebarMenuItem>
 									);
 								})}

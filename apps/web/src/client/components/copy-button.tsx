@@ -1,7 +1,7 @@
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useCopy } from "@/hooks/use-copy";
 
 /**
  * Icon button that copies a string to the clipboard and briefly flips its icon
@@ -17,17 +17,7 @@ export function CopyButton({
 	label: string;
 	className?: string;
 }) {
-	const [copied, setCopied] = useState(false);
-	const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-	useEffect(() => () => clearTimeout(timer.current), []);
-
-	const copy = async () => {
-		await navigator.clipboard.writeText(value);
-		setCopied(true);
-		clearTimeout(timer.current);
-		timer.current = setTimeout(() => setCopied(false), 1600);
-	};
+	const { copied, copy } = useCopy();
 
 	return (
 		<Button
@@ -37,7 +27,7 @@ export function CopyButton({
 			aria-label={label}
 			title={label}
 			className={className}
-			onClick={copy}
+			onClick={() => copy(value)}
 		>
 			{copied ? <CheckIcon /> : <CopyIcon />}
 		</Button>
