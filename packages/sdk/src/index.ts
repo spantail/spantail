@@ -38,6 +38,7 @@ import type {
 	GithubUnmappedRepo,
 	IngestAgentEntryInputData,
 	IngestAgentEventsInputData,
+	InstanceVersion,
 	Invitation,
 	InvitationPreview,
 	ListAgentEntriesQueryData,
@@ -620,6 +621,15 @@ export class SpantailClient {
 		input: UpdateRealtimeEnabledInput,
 	): Promise<RealtimeEnabled> {
 		return this.request("PATCH", "/instance/realtime", { body: input });
+	}
+
+	/**
+	 * Instance admin: the instance's version standing (running version + whether
+	 * a newer upstream release exists). Best-effort — reports no update when the
+	 * upstream check is unavailable.
+	 */
+	getInstanceVersion(): Promise<InstanceVersion> {
+		return this.request("GET", "/instance/version");
 	}
 
 	listReportTemplates(): Promise<ReportTemplate[]> {

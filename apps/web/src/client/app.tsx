@@ -8,6 +8,7 @@ import { ThemeProvider } from "next-themes";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { VersionReloadBanner } from "@/components/version-reload-banner";
 import { queryClient } from "@/lib/query";
 import { routeTree } from "@/routeTree.gen";
 
@@ -38,6 +39,9 @@ export function App({
 		>
 			<QueryClientProvider client={queryClient}>
 				<TooltipProvider>
+					{/* In normal flow above every route so, when shown, it pushes the
+					    shell down rather than covering it; renders nothing otherwise. */}
+					<VersionReloadBanner />
 					<RouterProvider router={router} />
 					<Toaster />
 				</TooltipProvider>

@@ -4,6 +4,7 @@ import {
 	readD1Migrations,
 } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
+import { resolveAppVersion } from "./version";
 
 const migrationsDir = path.join(
 	import.meta.dirname,
@@ -11,6 +12,12 @@ const migrationsDir = path.join(
 );
 
 export default defineConfig({
+	// Mirror the Vite build's __APP_VERSION__ define so server code (the version
+	// header and the update check) resolves a real version under test instead of
+	// throwing on an undefined global.
+	define: {
+		__APP_VERSION__: JSON.stringify(resolveAppVersion()),
+	},
 	test: {
 		name: "web",
 		include: ["src/server/**/*.test.ts"],

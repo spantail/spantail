@@ -43,6 +43,15 @@ app.notFound((c) =>
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
+// Stamp every API response with the running instance version. The SPA compares
+// it against its own build-time __APP_VERSION__ and, on a mismatch (an old
+// cached bundle talking to a freshly deployed Worker), prompts a reload. Riding
+// on responses the client already makes means no extra request is needed.
+app.use("/api/*", async (c, next) => {
+	await next();
+	c.header("x-spantail-version", __APP_VERSION__);
+});
+
 app.use("/api/*", requestContext);
 
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {

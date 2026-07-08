@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { ArrowUpCircleIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SettingsSection } from "@/components/settings-section";
 import { SpantailMark } from "@/components/spantail-mark";
@@ -9,6 +11,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/settings/system")({
 	component: SystemSection,
@@ -29,8 +32,53 @@ function SystemSection() {
 	const { t } = useTranslation();
 	return (
 		<SettingsSection title={t("settings.nav.systemAbout")}>
-			<SystemContent />
+			<div className="flex flex-col gap-4">
+				<UpdateNotice />
+				<SystemContent />
+			</div>
 		</SettingsSection>
+	);
+}
+
+// Admin-only: nudges instance admins when a newer Spantail has been released
+// upstream. The check is admin-gated server-side and cached (long client
+// staleTime + edge cache), so it runs at most occasionally when this page is
+// viewed. Renders nothing for non-admins, when up to date, or when the upstream
+// check is unavailable.
+function UpdateNotice() {
+	const { t } = useTranslation();
+	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
+	const isAdmin = me.data?.user.isAdmin ?? false;
+	const version = useQuery({
+		queryKey: ["instance-version"],
+		queryFn: () => api.getInstanceVersion(),
+		enabled: isAdmin,
+		staleTime: 60 * 60 * 1000,
+	});
+
+	const latest = version.data?.latest;
+	if (!version.data?.updateAvailable || !latest) return null;
+
+	return (
+		<div className="border-border bg-muted/40 flex items-start gap-2.5 rounded-xl border px-4 py-3">
+			<span className="bg-secondary text-foreground mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg">
+				<ArrowUpCircleIcon className="size-[15px]" />
+			</span>
+			<p className="text-muted-foreground text-sm">
+				<span className="text-foreground font-medium">
+					{t("settings.system.updateAvailableTitle")}{" "}
+				</span>
+				{t("settings.system.updateAvailableBody", { latest })}{" "}
+				<a
+					href={releaseUrl(latest)}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-foreground font-medium underline-offset-4 hover:underline"
+				>
+					{t("settings.system.viewRelease")}
+				</a>
+			</p>
+		</div>
 	);
 }
 

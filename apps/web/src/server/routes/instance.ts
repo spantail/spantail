@@ -25,6 +25,7 @@ import { Hono } from "hono";
 import { AppError } from "../lib/errors";
 import { oauthProviderConfigured, resolveSocialConfig } from "../lib/oauth";
 import { requireInstanceAdmin } from "../lib/permissions";
+import { checkForUpdate } from "../lib/update-check";
 import { validate } from "../lib/validate";
 import type { AppEnv } from "../types";
 
@@ -131,6 +132,13 @@ export const instanceRoutes = new Hono<AppEnv>()
 			input.realtimeEnabled,
 		);
 		return c.json({ enabled: row.realtimeEnabled } satisfies RealtimeEnabled);
+	})
+	// Admin-only: the instance's version standing (running version + whether a
+	// newer upstream release exists), surfaced in Settings > System so admins
+	// notice when their self-hosted instance is behind. Best-effort and cached.
+	.get("/version", async (c) => {
+		requireInstanceAdmin(c);
+		return c.json(await checkForUpdate(__APP_VERSION__));
 	})
 	// Public: tells the login screen which social buttons to show. A provider is
 	// "on" only when an admin enabled it and its credentials are configured.
