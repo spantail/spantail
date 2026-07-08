@@ -32,7 +32,7 @@ const databaseId = process.env.D1_DATABASE_ID?.trim();
 
 if (!databaseId) {
 	console.log(
-		"[inject-deploy-config] D1_DATABASE_ID not set; leaving wrangler.jsonc unchanged.",
+		`[inject-deploy-config] D1_DATABASE_ID not set; leaving ${CONFIG_PATH} unchanged.`,
 	);
 	process.exit(0);
 }
@@ -47,7 +47,7 @@ const ids = [...source.matchAll(/"database_id"\s*:\s*"([^"]*)"/g)].map(
 
 if (ids.length === 0) {
 	console.error(
-		"[inject-deploy-config] No database_id field found in wrangler.jsonc.",
+		`[inject-deploy-config] No database_id field found in ${CONFIG_PATH}.`,
 	);
 	process.exit(1);
 }
@@ -55,7 +55,7 @@ if (ids.length === 0) {
 const drifted = ids.filter((id) => id !== PLACEHOLDER && id !== databaseId);
 if (drifted.length > 0) {
 	console.error(
-		`[inject-deploy-config] wrangler.jsonc already pins database_id ${drifted.join(
+		`[inject-deploy-config] ${CONFIG_PATH} already pins database_id ${drifted.join(
 			", ",
 		)}, which differs from D1_DATABASE_ID (${databaseId}).\n` +
 			"Refusing to overwrite a committed id. Reset it to the placeholder " +
@@ -73,5 +73,5 @@ if (!ids.includes(PLACEHOLDER)) {
 
 writeFileSync(CONFIG_PATH, source.split(PLACEHOLDER).join(databaseId), "utf8");
 console.log(
-	`[inject-deploy-config] Injected D1_DATABASE_ID (${databaseId}) into wrangler.jsonc.`,
+	`[inject-deploy-config] Injected D1_DATABASE_ID (${databaseId}) into ${CONFIG_PATH}.`,
 );

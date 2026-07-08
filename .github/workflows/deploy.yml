@@ -20,7 +20,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web run build
-      - run: pnpm --filter web exec wrangler deploy --dry-run
+      # Match the real deploy command shape (deploy / deploy:ci both pass this).
+      - run: pnpm --filter web exec wrangler deploy --dry-run --var APP_ENV:production
 
       # Exercise inject-deploy-config.mjs against a throwaway copy so the
       # committed wrangler.jsonc is never mutated. Covers all three modes:
