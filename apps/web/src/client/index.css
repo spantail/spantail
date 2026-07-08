@@ -249,6 +249,20 @@
 	@apply py-1.5;
 }
 
+/* Version reload banner: an app-wide top bar (app.tsx) shown only on a
+   client/server version mismatch. It lives in normal flow above the shell, so
+   the in-flow content column already sits below it — but the sidebar is
+   position:fixed to the viewport, so it must be pushed down and shortened by
+   the banner's height explicitly. `--app-banner-height` is 0 until app.tsx sets
+   it while the banner is visible, so these rules are inert otherwise. */
+[data-slot="sidebar-wrapper"] {
+	min-height: calc(100svh - var(--app-banner-height, 0px));
+}
+[data-slot="sidebar-container"] {
+	top: var(--app-banner-height, 0px);
+	height: calc(100svh - var(--app-banner-height, 0px));
+}
+
 /* Print scope: the report Print action prints only the markdown preview. The
    `:has(.print-area)` guard keeps every other screen's Ctrl+P normal. Drop every
    region off the preview's ancestor path from layout (display:none — not merely

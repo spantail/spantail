@@ -5,11 +5,13 @@ import {
 	RouterProvider,
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
+import type { CSSProperties } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { VersionReloadBanner } from "@/components/version-reload-banner";
 import { queryClient } from "@/lib/query";
+import { useVersionMismatch } from "@/lib/server-version";
 import { routeTree } from "@/routeTree.gen";
 
 import "./i18n";
@@ -39,13 +41,33 @@ export function App({
 		>
 			<QueryClientProvider client={queryClient}>
 				<TooltipProvider>
-					{/* In normal flow above every route so, when shown, it pushes the
-					    shell down rather than covering it; renders nothing otherwise. */}
-					<VersionReloadBanner />
-					<RouterProvider router={router} />
+					<AppFrame router={router} />
 					<Toaster />
 				</TooltipProvider>
 			</QueryClientProvider>
 		</ThemeProvider>
+	);
+}
+
+/**
+ * Frames the router with the version reload banner. When shown, the banner
+ * takes a row at the very top (above the sidebar) and reserves its height via
+ * `--app-banner-height`, which the sidebar CSS reads to drop below it
+ * (see index.css).
+ */
+function AppFrame({ router }: { router: ReturnType<typeof createAppRouter> }) {
+	const showBanner = useVersionMismatch();
+	return (
+		<div
+			className="flex min-h-svh flex-col"
+			style={
+				{
+					"--app-banner-height": showBanner ? "2.5rem" : "0px",
+				} as CSSProperties
+			}
+		>
+			{showBanner && <VersionReloadBanner />}
+			<RouterProvider router={router} />
+		</div>
 	);
 }
