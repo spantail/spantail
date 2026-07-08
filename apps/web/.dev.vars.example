@@ -5,7 +5,10 @@
 # with a forgeable value. Generate with: openssl rand -base64 32
 BETTER_AUTH_SECRET=
 
-# Base URL the app is served from during local development.
+# Optional. The canonical origin for email links and OAuth callbacks. When
+# unset, the app derives it from each incoming request — enough for local dev
+# and for a deploy served from its own origin. Set it to pin a canonical origin
+# behind a custom domain or a proxy that rewrites the host.
 BETTER_AUTH_URL=http://localhost:5173
 
 # Social login (optional). Set a provider's client id + secret to let an
