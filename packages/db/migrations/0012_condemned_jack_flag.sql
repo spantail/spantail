@@ -1,1 +1,0 @@
-ALTER TABLE `report_templates` ADD `default_date_range` text;

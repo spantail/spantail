@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "042a1108-a38c-4975-b455-5e4917bad2ba",
-  "prevId": "4383bc51-d568-4b6b-ac1c-54c7ec2674e6",
+  "id": "18d28c45-fb72-4b82-aa79-fceed62634e4",
+  "prevId": "93b952ce-0585-4449-9e83-bda3d5df891f",
   "tables": {
     "account": {
       "name": "account",
@@ -302,6 +302,13 @@
           "notNull": false,
           "autoincrement": false,
           "default": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -500,6 +507,14 @@
           "notNull": true,
           "autoincrement": false,
           "default": 264
+        },
+        "symbol": {
+          "name": "symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'circle'"
         },
         "status": {
           "name": "status",
@@ -830,13 +845,6 @@
         },
         "name": {
           "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "timezone": {
-          "name": "timezone",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

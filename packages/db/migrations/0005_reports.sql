@@ -16,12 +16,17 @@ CREATE TABLE `report_templates` (
 	`description` text,
 	`body` text NOT NULL,
 	`enabled` integer DEFAULT true NOT NULL,
+	`is_default` integer DEFAULT false NOT NULL,
+	`name_template` text,
+	`note_template` text,
+	`default_date_range` text,
 	`created_by` text,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	FOREIGN KEY (`created_by`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE set null
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `report_templates_one_default` ON `report_templates` (`is_default`) WHERE "report_templates"."is_default" = 1;--> statement-breakpoint
 CREATE TABLE `reports` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -31,6 +36,7 @@ CREATE TABLE `reports` (
 	`note` text,
 	`total_minutes` integer,
 	`snapshot_project_ids` text,
+	`snapshot_workspace_ids` text,
 	`version` integer DEFAULT 1 NOT NULL,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,

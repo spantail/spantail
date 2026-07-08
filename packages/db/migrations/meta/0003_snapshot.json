@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "c32f3998-d103-465f-b391-433266884dae",
-  "prevId": "042a1108-a38c-4975-b455-5e4917bad2ba",
+  "id": "f085641b-53c6-4a6e-bedd-2f1fbfe790fd",
+  "prevId": "18d28c45-fb72-4b82-aa79-fceed62634e4",
   "tables": {
     "account": {
       "name": "account",
@@ -302,6 +302,13 @@
           "notNull": false,
           "autoincrement": false,
           "default": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -500,6 +507,14 @@
           "notNull": true,
           "autoincrement": false,
           "default": 264
+        },
+        "symbol": {
+          "name": "symbol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'circle'"
         },
         "status": {
           "name": "status",
@@ -835,13 +850,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "timezone": {
-          "name": "timezone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "accent_color": {
           "name": "accent_color",
           "type": "text",
@@ -1049,6 +1057,14 @@
         },
         "agents_enabled": {
           "name": "agents_enabled",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "realtime_enabled": {
+          "name": "realtime_enabled",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

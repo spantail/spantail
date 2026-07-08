@@ -1,1 +1,0 @@
-ALTER TABLE `reports` ADD `snapshot_workspace_ids` text;

@@ -15,6 +15,7 @@ CREATE TABLE `projects` (
 	`name` text NOT NULL,
 	`description` text,
 	`hue` integer DEFAULT 264 NOT NULL,
+	`symbol` text DEFAULT 'circle' NOT NULL,
 	`status` text DEFAULT 'active' NOT NULL,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	`archived_at` integer,

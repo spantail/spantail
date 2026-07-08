@@ -7,6 +7,7 @@ CREATE TABLE `instance_settings` (
 	`github_oauth_enabled` integer DEFAULT false NOT NULL,
 	`google_allowed_domains` text DEFAULT '[]' NOT NULL,
 	`agents_enabled` integer DEFAULT false NOT NULL,
+	`realtime_enabled` integer DEFAULT false NOT NULL,
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL
 );
 --> statement-breakpoint
