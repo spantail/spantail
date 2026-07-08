@@ -128,6 +128,12 @@ function createEngine(): Liquid {
 		parseLimit: 1e5,
 		renderLimit: 1000,
 		memoryLimit: 1e7,
+		// HTML-escape every interpolated value. Entry/tag/note text is untrusted
+		// (see docs/security.md §1); without this a value like `x\n<!--` opens a
+		// block-level HTML construct that swallows the rest of the rendered report
+		// (#173). Escaping only touches `< > & " '`, so authored Markdown syntax
+		// (bold, headings, lists, links) in template output still renders.
+		outputEscape: "escape",
 	});
 	for (const tag of DISABLED_TAGS) {
 		engine.registerTag(tag, {

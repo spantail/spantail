@@ -55,6 +55,26 @@ it("rejects an empty description", () => {
 	).toBe(false);
 });
 
+it("accepts unicode and emoji tags", () => {
+	const parsed = createWorkEntryInputSchema.parse({
+		...base,
+		tags: ["qa-broken", "優先", "P1 🚩"],
+	});
+	expect(parsed.tags).toEqual(["qa-broken", "優先", "P1 🚩"]);
+});
+
+it("rejects tags containing control characters", () => {
+	// A newline lets tag text open a block-level Markdown/HTML construct in a
+	// rendered report (#173); other control characters are rejected the same way.
+	expect(
+		createWorkEntryInputSchema.safeParse({ ...base, tags: ["x\n<!--"] })
+			.success,
+	).toBe(false);
+	expect(
+		createWorkEntryInputSchema.safeParse({ ...base, tags: ["a\tb"] }).success,
+	).toBe(false);
+});
+
 it("coerces and defaults list query pagination", () => {
 	const parsed = listWorkEntriesQuerySchema.parse({
 		workspaceId: "ws1",
