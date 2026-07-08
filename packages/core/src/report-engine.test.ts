@@ -208,8 +208,10 @@ it("escapes entry content so a raw-HTML block cannot swallow the report", async 
 	});
 	expect(rendered).toContain("&lt;!--internal");
 	expect(rendered).not.toContain("<!--internal");
-	// Sections after the entry stay intact rather than being swallowed.
-	expect(rendered).toContain("_Generated 2026-06-01_");
+	// Sections after the entry stay intact rather than being swallowed. Assert
+	// the footer line exists without pinning the date format (covered by the
+	// format_date test above) so a display-policy change can't break this test.
+	expect(rendered).toMatch(/_Generated .+_/);
 });
 
 it("renders an empty-period placeholder", async () => {
