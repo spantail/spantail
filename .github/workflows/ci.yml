@@ -18,6 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      - run: pnpm quality
       - run: pnpm test
       # Builds the cli bundle via prepack, catching bundling regressions.
       - run: pnpm --filter spantail pack
@@ -25,3 +26,16 @@ jobs:
       - name: Plugin hook tests
         run: |
           for t in plugins/claude-code/hooks/*.test.sh; do bash "$t"; done
+
+  # Static security analysis (SAST). Semgrep is Python-based, so it runs in its own
+  # container rather than through pnpm. Registry TypeScript rules + Spantail-specific
+  # rules that machine-check the docs/security.md invariants.
+  semgrep:
+    runs-on: ubuntu-latest
+    container:
+      # Pinned for deterministic CI; bump deliberately.
+      image: semgrep/semgrep:1.168.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: semgrep scan --config p/typescript --config .semgrep --error
+

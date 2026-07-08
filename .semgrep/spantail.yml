@@ -1,0 +1,43 @@
+# Spantail-specific security rules — machine-check the invariants in docs/security.md.
+# Run in CI via a Semgrep container job (alongside the p/typescript registry ruleset).
+rules:
+  - id: liquid-keep-safety-settings
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Report templates are untrusted user input. Keep the LiquidJS safety settings
+      (ownPropertyOnly, strictFilters, parse/render/memory limits) when constructing the
+      engine. See docs/security.md.
+    patterns:
+      - pattern: new Liquid(...)
+      # Safe only when the full set of safety settings is present (order-independent).
+      - pattern-not: "new Liquid({..., ownPropertyOnly: true, ..., strictFilters: true, ..., parseLimit: $PL, ..., renderLimit: $RL, ..., memoryLimit: $ML, ...})"
+
+  - id: no-raw-html-passthrough
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      Rendered Markdown must be displayed without raw-HTML passthrough (XSS via untrusted
+      content). Keep rehype-sanitize; do not add rehype-raw or dangerouslySetInnerHTML.
+      See docs/security.md.
+    pattern-either:
+      - pattern: "<$EL ... dangerouslySetInnerHTML={...} ... />"
+      - pattern: "<$EL ... dangerouslySetInnerHTML={...} ...>...</$EL>"
+      - pattern: rehypeRaw
+
+  - id: no-raw-fetch-in-spa
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      The SPA must reach the Worker through the typed API client (src/client/lib/api.ts),
+      never via raw fetch. See CLAUDE.md (SPA data flow).
+    pattern-either:
+      - pattern: fetch(...)
+      - pattern: window.fetch(...)
+      - pattern: globalThis.fetch(...)
+      - pattern: self.fetch(...)
+    paths:
+      include:
+        - "**/apps/web/src/client/**"
+      exclude:
+        - "**/apps/web/src/client/lib/api.ts"

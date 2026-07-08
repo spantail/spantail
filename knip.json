@@ -1,0 +1,28 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"ignoreDependencies": ["cloudflare"],
+	"ignore": ["**/env.d.ts", "**/worker-configuration.d.ts"],
+	"workspaces": {
+		"apps/web": {
+			"entry": ["src/client/components/ui/**"]
+		},
+		"apps/docs": {
+			"ignoreDependencies": [
+				"@fontsource-variable/geist",
+				"@fontsource-variable/geist-mono"
+			]
+		},
+		"packages/db": {
+			"entry": ["scripts/auth-cli-config.ts"]
+		}
+	},
+	"rules": {
+		"exports": "warn",
+		"types": "warn",
+		"nsExports": "warn",
+		"nsTypes": "warn",
+		"enumMembers": "warn",
+		"classMembers": "warn",
+		"duplicates": "warn"
+	}
+}
