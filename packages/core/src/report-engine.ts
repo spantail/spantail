@@ -133,6 +133,14 @@ function createEngine(): Liquid {
 		parseLimit: 1e5,
 		renderLimit: 1000,
 		memoryLimit: 1e7,
+		// HTML-escape every interpolated value. Entry/tag/note text is untrusted
+		// (see docs/security.md §1); without this a value like `x\n<!--` opens a
+		// block-level HTML construct that swallows the rest of the rendered report
+		// (#173). Escaping only touches `< > & " '`, so most authored Markdown
+		// (bold, headings, lists, `[text](url)` links) in template output still
+		// renders; angle-bracket autolinks (`<https://…>`) and inline HTML do not,
+		// which is acceptable — raw HTML is dropped by the renderers regardless.
+		outputEscape: "escape",
 	});
 	for (const tag of DISABLED_TAGS) {
 		engine.registerTag(tag, {

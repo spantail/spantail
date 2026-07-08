@@ -192,6 +192,26 @@ it("omits the notes section when the note is null", async () => {
 	expect(rendered).not.toContain("## Notes");
 });
 
+it("escapes entry content so a raw-HTML block cannot swallow the report", async () => {
+	// A tag with a newline followed by a block-level HTML opener (`<!--`) would,
+	// unescaped, start a CommonMark HTML block that runs to end-of-document and
+	// collapses every later section into raw text (#173). Output escaping turns
+	// `<` into `&lt;`, so the construct never forms.
+	const rendered = await renderReport(DEFAULT_BODY, {
+		...fixture,
+		entries: [
+			entry("e1", "p1", "u1", "2026-05-25", 60, "Shipped the billing fix", [
+				"qa-broken",
+				"x\n<!--internal",
+			]),
+		],
+	});
+	expect(rendered).toContain("&lt;!--internal");
+	expect(rendered).not.toContain("<!--internal");
+	// Sections after the entry stay intact rather than being swallowed.
+	expect(rendered).toContain("_Generated 2026-06-01_");
+});
+
 it("renders an empty-period placeholder", async () => {
 	const rendered = await renderReport(DEFAULT_BODY, {
 		...fixture,
