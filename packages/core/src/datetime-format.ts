@@ -31,6 +31,20 @@ function includeYear(
 	return Number.isFinite(nowYear) ? dateYear !== nowYear : false;
 }
 
+// Reading the calendar year of an instant in a timezone needs its own formatter.
+// These run per-cell in large tables, and constructing an Intl formatter is
+// costly, so cache one per timezone (as `formatClock` does in the web client).
+const yearInZoneFormats = new Map<string, Intl.DateTimeFormat>();
+
+function instantYearInTimeZone(date: Date, timeZone: string): number {
+	let format = yearInZoneFormats.get(timeZone);
+	if (!format) {
+		format = new Intl.DateTimeFormat("en-CA", { year: "numeric", timeZone });
+		yearInZoneFormats.set(timeZone, format);
+	}
+	return Number(format.format(date));
+}
+
 // `new Date("YYYY-MM-DD")` parses as UTC midnight and shifts a day in behind-UTC
 // locales; build from parts so the stored calendar day is preserved.
 function dateFromParts(isoDate: string): Date {
@@ -132,11 +146,7 @@ export function formatInstantDate(
 		day: "numeric",
 		timeZone,
 	};
-	const dateYear = Number(
-		new Intl.DateTimeFormat("en-CA", { year: "numeric", timeZone }).format(
-			date,
-		),
-	);
+	const dateYear = instantYearInTimeZone(date, timeZone);
 	if (includeYear(year, dateYear, now ? yearOf(now) : Number.NaN))
 		options.year = "numeric";
 	return new Intl.DateTimeFormat(locale, options).format(date);
@@ -163,11 +173,7 @@ export function formatTimestamp(
 		hourCycle: "h23",
 		timeZone,
 	};
-	const dateYear = Number(
-		new Intl.DateTimeFormat("en-CA", { year: "numeric", timeZone }).format(
-			date,
-		),
-	);
+	const dateYear = instantYearInTimeZone(date, timeZone);
 	if (includeYear(year, dateYear, now ? yearOf(now) : Number.NaN))
 		options.year = "numeric";
 	return new Intl.DateTimeFormat(locale, options).format(date);
