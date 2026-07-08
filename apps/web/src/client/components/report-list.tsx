@@ -67,6 +67,8 @@ function ReportListItem({
 	projectChip,
 	selected,
 	index,
+	timezone,
+	today,
 }: {
 	report: ReportMeta;
 	tab: string;
@@ -74,10 +76,12 @@ function ReportListItem({
 	projectChip: { name: string; hue: number; symbol: ProjectSymbol } | null;
 	selected: boolean;
 	index: number;
+	// Hoisted to the parent so a long list doesn't spawn a `me`-query observer
+	// per row: the viewer's timezone and today (its local `YYYY-MM-DD`).
+	timezone: string;
+	today: string;
 }) {
 	const { i18n } = useTranslation();
-	const timezone = useUserTimezone();
-	const today = todayInTimezone(timezone);
 	return (
 		<Link
 			data-nav-index={index}
@@ -198,6 +202,10 @@ export function ReportList({
 	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
 	const { workspaces } = useWorkspace();
+	// Resolved once for the whole list; passed to each row so the date column
+	// doesn't spawn a `me`-query observer per report.
+	const timezone = useUserTimezone();
+	const today = todayInTimezone(timezone);
 	const { openCreate } = useReportDialogs();
 	const { templateById, enabledTemplates, templatesReady, createTargetForTab } =
 		useReportTemplates();
@@ -557,6 +565,8 @@ export function ReportList({
 										projectChip={projectChipFor(report)}
 										selected={report.id === selectedId}
 										index={index}
+										timezone={timezone}
+										today={today}
 									/>
 								))}
 							</div>
