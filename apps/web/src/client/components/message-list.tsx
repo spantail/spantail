@@ -15,7 +15,6 @@ import { MessageListItem } from "@/components/message-list-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
-import { useToday } from "@/hooks/use-today";
 import { api } from "@/lib/api";
 import { invalidateMail } from "@/lib/query";
 
@@ -31,9 +30,6 @@ export function MessageList({
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	// Resolved once for the list; passed to each row so a row's period label
-	// doesn't spawn a `me`-query observer of its own.
-	const today = useToday();
 	// Paginated folder listing. Keyed apart from the toolbar's full-folder query
 	// (["mail", folder]) so the infinite-data cache shape doesn't collide.
 	const query = useInfiniteQuery({
@@ -143,7 +139,6 @@ export function MessageList({
 								folder={folder}
 								selected={item.id === selectedId}
 								index={index}
-								today={today}
 							/>
 						))}
 						<InfiniteSentinel

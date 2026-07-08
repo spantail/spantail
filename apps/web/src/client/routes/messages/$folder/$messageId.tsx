@@ -166,8 +166,8 @@ function ReadingPane() {
 								<div className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
 									{t("messages.detail.attachedReport")}
 								</div>
-								<div className="truncate text-sm font-medium tabular-nums">
-									{period}
+								<div className="truncate text-sm font-medium">
+									{data.reportName}
 								</div>
 							</div>
 							<div className="flex shrink-0 items-center gap-2">
