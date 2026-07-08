@@ -135,10 +135,12 @@ export const instanceRoutes = new Hono<AppEnv>()
 		return c.json({ enabled: row.realtimeEnabled } satisfies RealtimeEnabled);
 	})
 	// The instance's version standing (running version + whether a newer upstream
-	// release exists), surfaced on the System page. Any authenticated member —
-	// not just admins — so more people notice when the instance is behind, but
-	// requireAuth keeps the exact running version from leaking to anonymous
-	// callers. Best-effort and cached.
+	// release exists), surfaced on the System page to any authenticated member —
+	// not just admins — so more people notice when the instance is behind. The
+	// running version is not secret (it's baked into the public SPA bundle and
+	// stamped on every response header); requireAuth is here only because this
+	// endpoint performs an outbound update check, so it shouldn't be an open,
+	// anonymous proxy to GitHub. Best-effort and cached.
 	.get("/version", async (c) => {
 		requireAuth(c);
 		return c.json(await checkForUpdate(__APP_VERSION__));

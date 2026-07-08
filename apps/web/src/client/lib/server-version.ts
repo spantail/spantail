@@ -22,8 +22,10 @@ export function recordServerVersion(version: string): void {
 }
 
 /**
- * Hides the reload banner until the next deploy: it stays dismissed for the
- * current server version but reappears once a newer version is seen.
+ * Hides the reload banner for the current server version; it reappears once a
+ * newer version is seen (the next deploy). Dismissal is in-memory by design — a
+ * page reload loads the up-to-date bundle, which clears the mismatch outright,
+ * so there is nothing to persist across reloads.
  */
 export function dismissReloadBanner(): void {
 	if (dismissedVersion === serverVersion) return;

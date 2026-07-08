@@ -8,9 +8,10 @@ import { dismissReloadBanner } from "@/lib/server-version";
  * App-wide banner prompting a reload when the running SPA bundle is older than
  * the instance (an old cached bundle talking to a freshly deployed Worker).
  * Reload is manual — never automatic — so in-progress edits are never lost.
- * Non-critical, so it stays quiet: a single neutral bar, dismissible until the
- * next deploy. Rendered (and gated) by AppFrame in app.tsx, which measures this
- * bar's height to reserve space so it sits above the fixed sidebar.
+ * Non-critical, so it stays quiet: a single neutral bar, dismissible for the
+ * current version (a newer server version re-shows it). Rendered (and gated) by
+ * AppFrame in app.tsx, which measures this bar's height to reserve space so it
+ * sits above the fixed sidebar.
  */
 export function VersionReloadBanner() {
 	const { t } = useTranslation();
