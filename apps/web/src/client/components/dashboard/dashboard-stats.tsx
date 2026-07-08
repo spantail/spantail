@@ -1,4 +1,4 @@
-import { resolveDateRange } from "@spantail/core";
+import { resolveDateRange, todayInTimezone } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useProjects } from "@/hooks/use-projects";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
-import { formatCompactRange } from "@/lib/format";
+import { formatDateRange } from "@/lib/format";
 import { hueFromString } from "@/lib/hue";
 
 interface DashboardScope {
@@ -63,7 +63,9 @@ export function DashboardStats({
 	const periodLabel =
 		typeof period === "string"
 			? t(periodLabelKey(period))
-			: formatCompactRange(range.from, range.to, i18n.language);
+			: formatDateRange(range.from, range.to, i18n.language, {
+					now: todayInTimezone(timezone),
+				});
 
 	const stats = useQuery({
 		queryKey: [

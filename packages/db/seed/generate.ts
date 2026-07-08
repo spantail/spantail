@@ -575,6 +575,7 @@ export async function generateDataset(
 					user: { name: user.name },
 					period: { from: date, to: date, preset: null },
 					timezone: ws.timezone,
+					locale: ws.language,
 					generatedAt: createdAt,
 					workspaces: [{ id: ws.id, slug: ws.slug, name: ws.name }],
 					projects: scopedProjects.map((p) => ({
@@ -678,6 +679,7 @@ export async function generateDataset(
 				user: { name: sender.name },
 				period: { from: date, to: date, preset: null },
 				timezone: anchor.timezone,
+				locale: anchor.language,
 				generatedAt: createdAt,
 				workspaces: routeWs.map((w) => ({
 					id: w.id,
@@ -796,6 +798,7 @@ export async function generateDataset(
 					user: { name: user.name },
 					period: { from: month.first, to: month.last, preset: null },
 					timezone: ws.timezone,
+					locale: ws.language,
 					generatedAt: createdAt,
 					workspaces: [{ id: ws.id, slug: ws.slug, name: ws.name }],
 					projects: scopedProjects.map((p) => ({

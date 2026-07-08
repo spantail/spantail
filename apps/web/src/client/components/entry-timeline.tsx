@@ -8,7 +8,8 @@ import { useEntryDialog } from "@/components/entry-dialog";
 import { ProjectMarker } from "@/components/project-marker";
 import { Badge } from "@/components/ui/badge";
 import { useEntryRowNav } from "@/hooks/use-entry-row-nav";
-import { formatEntryDate } from "@/lib/format";
+import { useToday } from "@/hooks/use-today";
+import { formatDay } from "@/lib/format";
 
 export interface TimelineDay {
 	date: string;
@@ -57,7 +58,7 @@ export function EntryTimeline({
 		() => new Map(projects.map((p) => [p.id, p])),
 		[projects],
 	);
-	const currentYear = String(new Date().getFullYear());
+	const today = useToday();
 
 	// Keyboard nav over the flat (cross-day) order; the highlight maps back to a
 	// row via its entry id. Derive the grouping and the id→index map once per
@@ -73,11 +74,9 @@ export function EntryTimeline({
 	return (
 		<div ref={containerRef} className="flex flex-col gap-7">
 			{days.map((day) => {
-				const dayLabel = formatEntryDate(day.date, i18n.language, {
+				const dayLabel = formatDay(day.date, i18n.language, {
+					now: today,
 					weekday: "long",
-					month: "short",
-					day: "numeric",
-					...(day.date.startsWith(currentYear) ? {} : { year: "numeric" }),
 				});
 				return (
 					<section key={day.date} className="flex flex-col gap-4">

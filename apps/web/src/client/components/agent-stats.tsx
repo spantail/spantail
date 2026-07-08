@@ -3,6 +3,7 @@ import {
 	formatDuration,
 	resolveDateRange,
 	shiftDays,
+	todayInTimezone,
 } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownIcon, ArrowUpIcon, type LucideIcon } from "lucide-react";
@@ -17,13 +18,10 @@ import { daysInclusive, isWeekend } from "@/components/dashboard/stats-math";
 import { Sparkline } from "@/components/sparkline";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
-import {
-	formatCompactNumber,
-	formatCompactRange,
-	formatEntryDate,
-} from "@/lib/format";
+import { formatCompactNumber, formatDateRange, formatDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** One zero-filled day of agent activity for the selected period. */
@@ -166,6 +164,7 @@ function AgentActivityChart({
 	locale: string;
 }) {
 	const { t } = useTranslation();
+	const today = useToday();
 	const [metric, setMetric] = useState<Metric>("tokens");
 	const [hover, setHover] = useState<number | null>(null);
 
@@ -282,7 +281,7 @@ function AgentActivityChart({
 							<button
 								key={d.date}
 								type="button"
-								aria-label={`${formatEntryDate(d.date, locale)} · ${detail}`}
+								aria-label={`${formatDay(d.date, locale, { now: today })} · ${detail}`}
 								className="group relative flex h-full flex-1 cursor-default flex-col justify-end"
 								onMouseEnter={() => setHover(i)}
 								onMouseLeave={() => setHover(null)}
@@ -369,11 +368,7 @@ function AgentActivityChart({
 						}}
 					>
 						<div className="font-medium">
-							{formatEntryDate(days[hover]?.date ?? "", locale, {
-								weekday: "short",
-								month: "short",
-								day: "numeric",
-							})}
+							{formatDay(days[hover]?.date ?? "", locale, { now: today })}
 						</div>
 						{grouped ? (
 							<div className="mt-0.5 flex flex-col gap-0.5">
@@ -425,11 +420,12 @@ interface AgentStatsProps {
 export function AgentStats({ workspaceId, agentId, period }: AgentStatsProps) {
 	const { t, i18n } = useTranslation();
 	const timezone = useUserTimezone();
+	const today = todayInTimezone(timezone);
 	const range = resolveDateRange(period, timezone);
 	const periodLabel =
 		typeof period === "string"
 			? t(periodLabelKey(period))
-			: formatCompactRange(range.from, range.to, i18n.language);
+			: formatDateRange(range.from, range.to, i18n.language, { now: today });
 
 	const stats = useQuery({
 		// The per-day buckets are derived server-side in the viewer's timezone, so

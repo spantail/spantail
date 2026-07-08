@@ -46,7 +46,10 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
+import { useToday } from "@/hooks/use-today";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
+import { formatInstantDate } from "@/lib/format";
 import { templateHue } from "@/lib/hue";
 import { useReportTemplates } from "@/lib/use-report-templates";
 import { cn } from "@/lib/utils";
@@ -73,6 +76,8 @@ function ReportListItem({
 	index: number;
 }) {
 	const { i18n } = useTranslation();
+	const timezone = useUserTimezone();
+	const today = useToday();
 	return (
 		<Link
 			data-nav-index={index}
@@ -114,9 +119,8 @@ function ReportListItem({
 			{/* generated date over total */}
 			<span className="flex shrink-0 flex-col items-end gap-0.5 pt-px text-xs tabular-nums">
 				<span className="text-muted-foreground whitespace-nowrap">
-					{new Date(report.createdAt).toLocaleDateString(i18n.language, {
-						month: "short",
-						day: "numeric",
+					{formatInstantDate(report.createdAt, i18n.language, timezone, {
+						now: today,
 					})}
 				</span>
 				{report.totalMinutes != null && (

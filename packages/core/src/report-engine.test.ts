@@ -7,7 +7,7 @@ import { buildReportContext, renderReport } from "./report-engine";
 // @spantail/templates; this fixture keeps the engine test self-contained.
 const DEFAULT_BODY = `# {{ report.name }}
 
-**Period:** {{ period.from }}{% if period.to != period.from %} – {{ period.to }}{% endif %} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
+**Period:** {{ period.from | format_date: 'year' }}{% if period.to != period.from %} – {{ period.to | format_date: 'year' }}{% endif %} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
 
 {% if totals.entries == 0 -%}
 _No work entries in this period._
@@ -29,7 +29,7 @@ _No work entries in this period._
 {% endif -%}
 ---
 
-_Generated {{ generated_date }}_
+_Generated {{ generated_date | format_date: 'year' }}_
 `;
 
 const fixture: ReportContextInput = {
@@ -40,6 +40,7 @@ const fixture: ReportContextInput = {
 	user: { name: "Alice" },
 	period: { from: "2026-05-25", to: "2026-05-31", preset: "last_week" },
 	timezone: "Asia/Tokyo",
+	locale: "en",
 	generatedAt: new Date("2026-06-01T09:00:00Z"),
 	workspaces: [
 		{ id: "ws1", slug: "acme", name: "Acme" },
@@ -162,6 +163,19 @@ function agentEntry(
 it("renders the default template (golden)", async () => {
 	const rendered = await renderReport(DEFAULT_BODY, fixture);
 	await expect(rendered).toMatchFileSnapshot("./report-golden/default.md");
+});
+
+it("formats report dates with a weekday and locale-aware year via format_date", async () => {
+	const body =
+		"{{ period.from | format_date }} / {{ period.from | format_date: 'year' }} / {{ period.from | format_date: 'no-year' }}";
+	// The generation year is 2026 (Asia/Tokyo), so the default omits the year for
+	// a 2026 date, 'year' forces it, and 'no-year' drops it.
+	expect(await renderReport(body, fixture)).toBe(
+		"Mon, May 25 / Mon, May 25, 2026 / Mon, May 25",
+	);
+	expect(await renderReport(body, { ...fixture, locale: "ja" })).toBe(
+		"5月25日(月) / 2026年5月25日(月) / 5月25日(月)",
+	);
 });
 
 it("omits the notes section when the note is null", async () => {

@@ -1,9 +1,11 @@
 import { type ShareStatus, shareStatus } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-
 import { Badge } from "@/components/ui/badge";
+import { useToday } from "@/hooks/use-today";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
+import { formatInstantDate, formatTimestamp } from "@/lib/format";
 
 const STATUS_VARIANT: Record<
 	ShareStatus,
@@ -21,7 +23,9 @@ const STATUS_VARIANT: Record<
  * a control surface.
  */
 export function ReportHistory({ reportId }: { reportId: string }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const timezone = useUserTimezone();
+	const today = useToday();
 	const sends = useQuery({
 		queryKey: ["report-sends", reportId],
 		queryFn: () => api.listReportSends(reportId),
@@ -79,7 +83,14 @@ export function ReportHistory({ reportId }: { reportId: string }) {
 											)}
 										</span>
 										<span className="text-muted-foreground text-xs">
-											{new Date(send.createdAt).toLocaleString()}
+											{formatTimestamp(
+												send.createdAt,
+												i18n.language,
+												timezone,
+												{
+													now: today,
+												},
+											)}
 											{send.recipientCount > 0 &&
 												` · ${t("reports.history.read", {
 													read: send.readCount,
@@ -118,12 +129,22 @@ export function ReportHistory({ reportId }: { reportId: string }) {
 												</Badge>
 											)}
 											<span className="text-muted-foreground text-xs">
-												{new Date(share.createdAt).toLocaleDateString()}
+												{formatInstantDate(
+													share.createdAt,
+													i18n.language,
+													timezone,
+													{
+														now: today,
+													},
+												)}
 												{share.expiresAt &&
 													` · ${t("reports.shares.expires", {
-														value: new Date(
+														value: formatInstantDate(
 															share.expiresAt,
-														).toLocaleDateString(),
+															i18n.language,
+															timezone,
+															{ now: today },
+														),
 													})}`}
 												{` · ${t("reports.shares.views", { value: share.viewCount })}`}
 											</span>

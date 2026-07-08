@@ -16,7 +16,8 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useEntryRowNav } from "@/hooks/use-entry-row-nav";
-import { formatEntryDate } from "@/lib/format";
+import { useToday } from "@/hooks/use-today";
+import { formatDay } from "@/lib/format";
 
 interface EntryListProps {
 	entries: WorkEntry[];
@@ -36,6 +37,7 @@ export function EntryList({
 	onLoadMore,
 }: EntryListProps) {
 	const { t, i18n } = useTranslation();
+	const today = useToday();
 	const { openView } = useEntryDialog();
 	const projectName = (id: string | null) =>
 		id
@@ -96,11 +98,7 @@ export function EntryList({
 							className="group data-[nav-active]:bg-muted relative cursor-pointer"
 						>
 							<TableCell className="text-muted-foreground py-3 whitespace-nowrap">
-								{formatEntryDate(entry.entryDate, i18n.language, {
-									weekday: "short",
-									month: "short",
-									day: "numeric",
-								})}
+								{formatDay(entry.entryDate, i18n.language, { now: today })}
 							</TableCell>
 							{showProject && (
 								<TableCell className="py-3 whitespace-nowrap">

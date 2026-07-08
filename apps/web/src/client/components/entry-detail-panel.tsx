@@ -10,9 +10,10 @@ import { EntryDetail } from "@/components/entry-detail";
 import { Button } from "@/components/ui/button";
 import { useDeleteWorkEntry } from "@/hooks/use-delete-work-entry";
 import { useProjects } from "@/hooks/use-projects";
+import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
-import { formatEntryDate } from "@/lib/format";
+import { formatDay } from "@/lib/format";
 import { useWorkspace } from "@/lib/workspace";
 
 interface EntryDetailPanelProps {
@@ -58,6 +59,7 @@ export function EntryDetailPanel({
 	const { current } = useWorkspace();
 	const { session } = useRouteContext({ from: "/_authed" });
 	const timezone = useUserTimezone();
+	const today = useToday();
 	const projects = useProjects();
 	// The entry a delete is acting on, captured when the button is pressed so the
 	// success handler reports the right id even if the selection has since moved.
@@ -108,12 +110,7 @@ export function EntryDetailPanel({
 	const projectName = entry.projectId
 		? (project?.name ?? entry.projectId)
 		: t("projects.unassigned");
-	const dateLabel = formatEntryDate(entry.entryDate, i18n.language, {
-		year: "numeric",
-		month: "short",
-		day: "numeric",
-		weekday: "short",
-	});
+	const dateLabel = formatDay(entry.entryDate, i18n.language, { now: today });
 	const timeRange =
 		entry.startedAt && entry.endedAt
 			? `${utcToZonedTime(entry.startedAt, timezone)}–${utcToZonedTime(entry.endedAt, timezone)}`

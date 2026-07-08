@@ -33,12 +33,17 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useToday } from "@/hooks/use-today";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
+import { formatInstantDate, formatTimestamp } from "@/lib/format";
 
 const ALL_SCOPES: TokenScope[] = ["read", "write", "admin"];
 
 export function TokensCard() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
+	const timezone = useUserTimezone();
+	const today = useToday();
 	const queryClient = useQueryClient();
 	const [name, setName] = useState("");
 	const [scopes, setScopes] = useState<TokenScope[]>(["read", "write"]);
@@ -178,12 +183,26 @@ export function TokensCard() {
 								</TableCell>
 								<TableCell className="text-muted-foreground">
 									{token.lastUsedAt
-										? new Date(token.lastUsedAt).toLocaleString()
+										? formatTimestamp(
+												token.lastUsedAt,
+												i18n.language,
+												timezone,
+												{
+													now: today,
+												},
+											)
 										: t("settings.tokens.never")}
 								</TableCell>
 								<TableCell className="text-muted-foreground">
 									{token.expiresAt
-										? new Date(token.expiresAt).toLocaleDateString()
+										? formatInstantDate(
+												token.expiresAt,
+												i18n.language,
+												timezone,
+												{
+													now: today,
+												},
+											)
 										: t("settings.tokens.noExpiry")}
 								</TableCell>
 								<TableCell className="text-right">

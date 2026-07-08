@@ -535,7 +535,7 @@
 		"name": "テンプレート名",
 		"description": "説明",
 		"body": "テンプレート本文",
-		"bodyHint": "Markdown + Liquid タグで記述します。利用できるデータ: report, user, period, entries, groups, totals / フィルタ: format_date, format_duration, sum, group_by。",
+		"bodyHint": "Markdown + Liquid タグで記述します。利用できるデータ: report, user, period, entries, groups, totals / フィルタ: format_date（': 'year'' で常に年を表示、': 'no-year'' で年を非表示）, format_duration, sum, group_by。",
 		"nameTemplate": "レポート名の初期値",
 		"nameTemplateHint": "新規レポートの初期名を生成する Liquid です。利用できるデータ: user, workspaces, projects, users, period。",
 		"noteTemplate": "ノートの初期値",
