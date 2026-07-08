@@ -33,7 +33,8 @@ jobs:
   semgrep:
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep
+      # Pinned for deterministic CI; bump deliberately.
+      image: semgrep/semgrep:1.168.0
     steps:
       - uses: actions/checkout@v4
       - run: semgrep scan --config p/typescript --config .semgrep --error

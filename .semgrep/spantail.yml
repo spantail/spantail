@@ -1,5 +1,5 @@
 # Spantail-specific security rules — machine-check the invariants in docs/security.md.
-# Run in CI via the semgrep GitHub Action (alongside the p/typescript registry ruleset).
+# Run in CI via a Semgrep container job (alongside the p/typescript registry ruleset).
 rules:
   - id: liquid-keep-safety-settings
     languages: [typescript]
@@ -10,7 +10,8 @@ rules:
       engine. See docs/security.md.
     patterns:
       - pattern: new Liquid(...)
-      - pattern-not: "new Liquid({..., ownPropertyOnly: true, ...})"
+      # Safe only when the full set of safety settings is present (order-independent).
+      - pattern-not: "new Liquid({..., ownPropertyOnly: true, ..., strictFilters: true, ..., parseLimit: $PL, ..., renderLimit: $RL, ..., memoryLimit: $ML, ...})"
 
   - id: no-raw-html-passthrough
     languages: [typescript]
@@ -33,6 +34,6 @@ rules:
     pattern: fetch(...)
     paths:
       include:
-        - "/apps/web/src/client/**"
+        - "**/apps/web/src/client/**"
       exclude:
-        - "/apps/web/src/client/lib/api.ts"
+        - "**/apps/web/src/client/lib/api.ts"
