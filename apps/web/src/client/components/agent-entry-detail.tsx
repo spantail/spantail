@@ -5,6 +5,7 @@ import {
 	type Project,
 	parseGithubRef,
 	repoUrlFromFullName,
+	todayInTimezone,
 } from "@spantail/core";
 import {
 	CalendarIcon,
@@ -22,7 +23,6 @@ import { useTranslation } from "react-i18next";
 import { AgentTypeIcon } from "@/components/agent-icon";
 import { ProjectMarker } from "@/components/project-marker";
 import { GitHubIcon } from "@/components/provider-icons";
-import { useToday } from "@/hooks/use-today";
 import { formatClock, formatCompactNumber, formatDay } from "@/lib/format";
 
 interface AgentEntryDetailProps {
@@ -51,7 +51,7 @@ export function AgentEntryDetail({
 	timezone,
 }: AgentEntryDetailProps) {
 	const { t, i18n } = useTranslation();
-	const today = useToday();
+	const today = todayInTimezone(timezone);
 
 	const dateLabel = formatDay(entry.entryDate, i18n.language, { now: today });
 	const timeRange =

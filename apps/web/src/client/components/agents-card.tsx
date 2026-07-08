@@ -2,6 +2,7 @@ import {
 	type AgentType,
 	type AgentWithToken,
 	agentTypes,
+	todayInTimezone,
 } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -78,7 +79,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatInstantDate, formatTimestamp } from "@/lib/format";
@@ -97,7 +97,7 @@ type IssuedSecret = {
 export function AgentsCard() {
 	const { t, i18n } = useTranslation();
 	const timezone = useUserTimezone();
-	const today = useToday();
+	const today = todayInTimezone(timezone);
 	const queryClient = useQueryClient();
 	const [formOpen, setFormOpen] = useState(false);
 	const [issued, setIssued] = useState<IssuedSecret | null>(null);

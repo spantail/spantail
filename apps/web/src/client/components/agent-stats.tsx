@@ -358,7 +358,7 @@ function AgentActivityChart({
 					})}
 				</div>
 
-				{hover !== null && (
+				{hover !== null && days[hover] && (
 					<div
 						className="border-border bg-popover pointer-events-none absolute z-20 rounded-md border px-2.5 py-1.5 text-xs shadow-md"
 						style={{

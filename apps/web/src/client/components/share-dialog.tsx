@@ -4,6 +4,7 @@ import {
 	type ReportShare,
 	type ShareStatus,
 	shareStatus,
+	todayInTimezone,
 } from "@spantail/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -26,7 +27,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatInstantDate } from "@/lib/format";
@@ -66,7 +66,7 @@ export function ShareDialog({
 }) {
 	const { t, i18n } = useTranslation();
 	const timezone = useUserTimezone();
-	const today = useToday();
+	const today = todayInTimezone(timezone);
 	const queryClient = useQueryClient();
 	const [expiry, setExpiry] = useState<string>("7");
 	const [passcode, setPasscode] = useState("");

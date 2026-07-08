@@ -4,6 +4,7 @@ import {
 	type ProjectSymbol,
 	type ReportMeta,
 	type ReportTemplate,
+	todayInTimezone,
 } from "@spantail/core";
 import { useInfiniteQuery, useQueries } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -46,7 +47,6 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
-import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatInstantDate } from "@/lib/format";
@@ -77,7 +77,7 @@ function ReportListItem({
 }) {
 	const { i18n } = useTranslation();
 	const timezone = useUserTimezone();
-	const today = useToday();
+	const today = todayInTimezone(timezone);
 	return (
 		<Link
 			data-nav-index={index}

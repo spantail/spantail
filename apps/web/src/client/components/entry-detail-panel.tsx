@@ -1,4 +1,8 @@
-import { utcToZonedTime, type WorkEntry } from "@spantail/core";
+import {
+	todayInTimezone,
+	utcToZonedTime,
+	type WorkEntry,
+} from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useRouteContext } from "@tanstack/react-router";
 import { PencilIcon, Trash2Icon } from "lucide-react";
@@ -10,7 +14,6 @@ import { EntryDetail } from "@/components/entry-detail";
 import { Button } from "@/components/ui/button";
 import { useDeleteWorkEntry } from "@/hooks/use-delete-work-entry";
 import { useProjects } from "@/hooks/use-projects";
-import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatDay } from "@/lib/format";
@@ -59,7 +62,7 @@ export function EntryDetailPanel({
 	const { current } = useWorkspace();
 	const { session } = useRouteContext({ from: "/_authed" });
 	const timezone = useUserTimezone();
-	const today = useToday();
+	const today = todayInTimezone(timezone);
 	const projects = useProjects();
 	// The entry a delete is acting on, captured when the button is pressed so the
 	// success handler reports the right id even if the selection has since moved.

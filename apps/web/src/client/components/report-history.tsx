@@ -1,8 +1,7 @@
-import { type ShareStatus, shareStatus } from "@spantail/core";
+import { type ShareStatus, shareStatus, todayInTimezone } from "@spantail/core";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
-import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatInstantDate, formatTimestamp } from "@/lib/format";
@@ -25,7 +24,7 @@ const STATUS_VARIANT: Record<
 export function ReportHistory({ reportId }: { reportId: string }) {
 	const { t, i18n } = useTranslation();
 	const timezone = useUserTimezone();
-	const today = useToday();
+	const today = todayInTimezone(timezone);
 	const sends = useQuery({
 		queryKey: ["report-sends", reportId],
 		queryFn: () => api.listReportSends(reportId),
