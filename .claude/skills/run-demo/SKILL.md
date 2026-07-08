@@ -33,6 +33,12 @@ request specifies otherwise (Playwright `browser_resize`, Chrome DevTools
 `resize_page`, or the Claude-in-Chrome resize action, applied before
 capturing or recording).
 
+Save every screenshot and recording under **`local/screenshots/`** (a
+gitignored path) with an absolute path — e.g.
+`.../<repo>/local/screenshots/login.png` — never at the repo root, so generated
+images don't scatter across the project or risk being committed. Create the
+directory first if it's missing. Send the file to the user from there.
+
 ## Launch recipe (worktree-safe)
 
 ```bash

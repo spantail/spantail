@@ -64,6 +64,20 @@ export type UpdateRealtimeEnabledInput = z.infer<
 	typeof updateRealtimeEnabledInputSchema
 >;
 
+/**
+ * The instance's version standing, shown on the (public) System page to any
+ * member. Read from a best-effort check against upstream GitHub releases:
+ * `current` is the running build's version, `latest` the newest upstream release
+ * tag (null when the check is unavailable), and `updateAvailable` whether an
+ * upgrade exists.
+ */
+export const instanceVersionSchema = z.object({
+	current: z.string(),
+	latest: z.string().nullable(),
+	updateAvailable: z.boolean(),
+});
+export type InstanceVersion = z.infer<typeof instanceVersionSchema>;
+
 /** Social login providers an instance admin can enable. */
 export const oauthProviderSchema = z.enum(["google", "github"]);
 export type OauthProvider = z.infer<typeof oauthProviderSchema>;

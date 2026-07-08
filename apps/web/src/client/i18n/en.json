@@ -5,6 +5,11 @@
 		"loading": "Loading…",
 		"loadingMore": "Loading more…"
 	},
+	"versionBanner": {
+		"message": "A new version of <b>{{name}}</b> is available.",
+		"reload": "Reload",
+		"dismiss": "Dismiss"
+	},
 	"auth": {
 		"login": "Log in",
 		"signup": "Sign up",
@@ -867,7 +872,10 @@
 		"system": {
 			"description": "Open-source work observability platform.",
 			"versionLabel": "Version",
-			"copyrightLabel": "Copyright"
+			"copyrightLabel": "Copyright",
+			"updateAvailableTitle": "Update available.",
+			"updateAvailableBody": "Spantail {{latest}} has been released. Upgrade this instance to stay up to date.",
+			"viewRelease": "View release"
 		},
 		"adminBannerLead": "Instance administration.",
 		"general": {

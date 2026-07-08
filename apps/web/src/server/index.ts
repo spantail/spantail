@@ -43,6 +43,21 @@ app.notFound((c) =>
 
 app.get("/api/health", (c) => c.json({ status: "ok" }));
 
+// Stamp every API response with the running instance version. The SPA compares
+// it against its own build-time __APP_VERSION__ and, on a mismatch (an old
+// cached bundle talking to a freshly deployed Worker), prompts a reload. Riding
+// on responses the client already makes means no extra request is needed, and
+// stamping public responses too lets the banner work even before login. The
+// version is not secret — it's compile-time baked into the public SPA bundle
+// served to everyone — so exposing it in this header discloses nothing new. Set
+// before next() so Hono carries the header onto whatever the handler returns —
+// JSON, a streamed Response, or an onError response — rather than missing
+// streamed/thrown paths.
+app.use("/api/*", async (c, next) => {
+	c.header("x-spantail-version", __APP_VERSION__);
+	await next();
+});
+
 app.use("/api/*", requestContext);
 
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {

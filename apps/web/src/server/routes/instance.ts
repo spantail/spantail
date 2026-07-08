@@ -25,7 +25,9 @@ import { Hono } from "hono";
 import { AppError } from "../lib/errors";
 import { oauthProviderConfigured, resolveSocialConfig } from "../lib/oauth";
 import { requireInstanceAdmin } from "../lib/permissions";
+import { checkForUpdate } from "../lib/update-check";
 import { validate } from "../lib/validate";
+import { requireAuth } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 function toEmailSettings(row: InstanceSettingsRow | undefined): EmailSettings {
@@ -131,6 +133,17 @@ export const instanceRoutes = new Hono<AppEnv>()
 			input.realtimeEnabled,
 		);
 		return c.json({ enabled: row.realtimeEnabled } satisfies RealtimeEnabled);
+	})
+	// The instance's version standing (running version + whether a newer upstream
+	// release exists), surfaced on the System page to any authenticated member —
+	// not just admins — so more people notice when the instance is behind. The
+	// running version is not secret (it's baked into the public SPA bundle and
+	// stamped on every response header); requireAuth is here only because this
+	// endpoint performs an outbound update check, so it shouldn't be an open,
+	// anonymous proxy to GitHub. Best-effort and cached.
+	.get("/version", async (c) => {
+		requireAuth(c);
+		return c.json(await checkForUpdate(__APP_VERSION__));
 	})
 	// Public: tells the login screen which social buttons to show. A provider is
 	// "on" only when an admin enabled it and its credentials are configured.

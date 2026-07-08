@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { ArrowUpCircleIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SettingsSection } from "@/components/settings-section";
 import { SpantailMark } from "@/components/spantail-mark";
@@ -9,6 +11,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/settings/system")({
 	component: SystemSection,
@@ -29,8 +32,48 @@ function SystemSection() {
 	const { t } = useTranslation();
 	return (
 		<SettingsSection title={t("settings.nav.systemAbout")}>
-			<SystemContent />
+			<div className="flex flex-col gap-4">
+				<UpdateNotice />
+				<SystemContent />
+			</div>
 		</SettingsSection>
+	);
+}
+
+// Nudges anyone viewing the (public) System page when a newer Spantail has been
+// released upstream — the more people notice, the sooner an admin upgrades. The
+// check is cached (long client staleTime + edge cache), so it runs at most
+// occasionally when this page is viewed. Renders nothing when up to date or when
+// the upstream check is unavailable.
+function UpdateNotice() {
+	const { t } = useTranslation();
+	const version = useQuery({
+		queryKey: ["instance-version"],
+		queryFn: () => api.getInstanceVersion(),
+		staleTime: 60 * 60 * 1000,
+	});
+
+	const latest = version.data?.latest;
+	if (!version.data?.updateAvailable || !latest) return null;
+
+	return (
+		<div className="border-border bg-card flex items-start gap-3 rounded-xl border px-4 py-3.5 text-sm leading-relaxed">
+			<ArrowUpCircleIcon className="text-muted-foreground mt-0.5 size-[18px] shrink-0" />
+			<p className="text-muted-foreground">
+				<span className="text-foreground font-medium">
+					{t("settings.system.updateAvailableTitle")}
+				</span>{" "}
+				{t("settings.system.updateAvailableBody", { latest })}{" "}
+				<a
+					href={releaseUrl(latest)}
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-foreground decoration-border hover:decoration-foreground font-medium whitespace-nowrap underline underline-offset-4 transition-colors"
+				>
+					{t("settings.system.viewRelease")}
+				</a>
+			</p>
+		</div>
 	);
 }
 
