@@ -1,9 +1,13 @@
 #!/usr/bin/env node
-// Injects the per-instance D1 database_id into wrangler.jsonc at deploy time.
+// Injects the per-instance D1 database_id into wrangler.jsonc at build time.
 //
 // Workers Builds (and any CI) checks out a fresh, ephemeral copy of the repo,
 // so the placeholder database_id in wrangler.jsonc must be replaced with the
-// self-hoster's real D1 id before `wrangler deploy`. The id is supplied as the
+// self-hoster's real D1 id BEFORE `vite build` — the Cloudflare Vite plugin
+// bakes a resolved wrangler config into dist/<worker>/wrangler.json, and
+// `wrangler deploy` ships that snapshot, so an injection that ran after the
+// build would never reach the deployed Worker. Hence the `build` script runs
+// this first (before vite build), not the deploy step. The id is supplied as the
 // `D1_DATABASE_ID` build variable — the ONLY per-instance value a fork needs,
 // which is why nothing has to be committed to the fork (keeping "Sync fork"
 // conflict-free). Everything else (Worker name, DB/bucket names, rate-limit
