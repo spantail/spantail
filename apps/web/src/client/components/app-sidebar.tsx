@@ -101,6 +101,7 @@ function CopyProjectId({ id }: { id: string }) {
 
 	return (
 		<SidebarMenuAction
+			type="button"
 			showOnHover
 			aria-label={label}
 			title={label}
