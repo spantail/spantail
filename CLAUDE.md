@@ -78,8 +78,10 @@ pnpm deploy             # wrangler deploy (apps/web)
   derived from `startedAt` in the viewer's timezone at read time. Reports resolve relative ranges and
   the generation date in the running user's timezone.
 - **Date/time display goes through the shared formatters** in `packages/core/src/datetime-format.ts`
-  (`formatDay`, `formatDateRange`, `formatTimestamp`, `formatInstantDate`) — never call
-  `toLocaleDateString`/`toLocaleString` in a component. Pass `i18n.language` as the locale and the
+  (`formatDay`, `formatDateRange`, `formatTimestamp`, `formatInstantDate`) — don't hand-format a date
+  with `Date#toLocaleDateString`/`toLocaleString` in a component (formatting a *number* with
+  `Number#toLocaleString`, and library-internal date rendering like the shadcn calendar, are fine).
+  Pass `i18n.language` as the locale and the
   viewer's today (`useToday()`) as `now`. Policy: work and report dates — ones a user reasons about
   by day (entry dates, a report's period, a report's list date) — carry a weekday via `formatDay`;
   ranges (`formatDateRange`) and account/metadata timestamps — created/expiry/last-used, shown with a
