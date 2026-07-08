@@ -20,6 +20,7 @@ pnpm test               # all tests (vitest, Workers pool)
 pnpm test <pattern>     # single test file (pnpm forwards args; do not add --)
 pnpm lint               # biome check (use `pnpm lint:fix` to autofix)
 pnpm typecheck          # tsc across all packages
+pnpm quality            # dead code / unused deps (Knip) + architecture-boundary checks (dependency-cruiser)
 pnpm db:generate        # drizzle-kit generate (after editing packages/db/src/schema)
 pnpm db:migrate:local   # apply migrations to local D1
 pnpm db:migrate:remote  # apply migrations to remote D1
@@ -123,5 +124,5 @@ pnpm deploy             # wrangler deploy (apps/web)
 
 ## Definition of done
 
-`pnpm typecheck && pnpm lint && pnpm test` pass; migrations generated if schema changed;
-UI strings exist in `en` and `ja`; docs updated when public behavior changes.
+`pnpm typecheck && pnpm lint && pnpm test && pnpm quality` pass; migrations generated if
+schema changed; UI strings exist in `en` and `ja`; docs updated when public behavior changes.

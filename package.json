@@ -13,6 +13,9 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"typecheck": "pnpm -r run typecheck",
+		"knip": "knip",
+		"depcruise": "depcruise packages apps/web/src",
+		"quality": "pnpm knip && pnpm depcruise",
 		"db:generate": "pnpm --filter @spantail/db run generate",
 		"db:migrate:local": "pnpm --filter web exec wrangler d1 migrations apply spantail-db --local",
 		"db:migrate:remote": "pnpm --filter web exec wrangler d1 migrations apply spantail-db --remote",
@@ -29,6 +32,8 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.16",
+		"dependency-cruiser": "^18.0.0",
+		"knip": "^6.25.0",
 		"tsx": "^4.22.4",
 		"typescript": "^6.0.3",
 		"vitest": "^4.1.8"
