@@ -14,6 +14,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { renderPasswordResetEmail } from "./emails/password-reset-email";
+import { appBaseUrl } from "./lib/app-base-url";
 import { getMailer } from "./lib/mail/mailer";
 
 /**
@@ -131,12 +132,12 @@ export function createAuth(
 			// contact an admin instead, and we send nothing here. Errors are
 			// swallowed so the response never reveals whether an account exists or
 			// that delivery failed.
-			sendResetPassword: async ({ user, token }) => {
+			sendResetPassword: async ({ user, token }, request) => {
 				const deliver = async () => {
 					try {
 						const settings = await getInstanceSettings(db);
 						if (!settings?.emailEnabled) return;
-						const resetUrl = `${env.BETTER_AUTH_URL.replace(/\/$/, "")}/reset-password/${token}`;
+						const resetUrl = `${appBaseUrl(env, request)}/reset-password/${token}`;
 						const { subject, html, text } =
 							await renderPasswordResetEmail(resetUrl);
 						const mailer = getMailer(env, {
@@ -158,7 +159,10 @@ export function createAuth(
 				await deliver();
 			},
 		},
-		baseURL: env.BETTER_AUTH_URL,
+		// Optional: pin a canonical origin for links and OAuth callbacks. When
+		// unset, Better Auth infers the origin from each incoming request, which
+		// is the zero-config path for a fresh *.workers.dev deploy.
+		baseURL: env.BETTER_AUTH_URL?.trim() || undefined,
 		secret,
 		database: drizzleAdapter(db, { provider: "sqlite", schema }),
 		databaseHooks: {

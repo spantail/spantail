@@ -19,6 +19,7 @@ import {
 import type { Context } from "hono";
 import { Hono } from "hono";
 import { renderInvitationEmail } from "../emails/invitation-email";
+import { appBaseUrl } from "../lib/app-base-url";
 import { createAccount } from "../lib/create-account";
 import { AppError } from "../lib/errors";
 import { getMailer } from "../lib/mail/mailer";
@@ -96,7 +97,7 @@ export const invitationRoutes = new Hono<AppEnv>()
 			expiresAt: new Date(Date.now() + INVITE_TTL_MS),
 		});
 
-		const inviteUrl = `${c.env.BETTER_AUTH_URL.replace(/\/$/, "")}/invite/${token}`;
+		const inviteUrl = `${appBaseUrl(c.env, c.req.raw)}/invite/${token}`;
 		try {
 			const { subject, html, text } = await renderInvitationEmail(inviteUrl);
 			// getMailer can throw (e.g. enabled but no from address configured), so

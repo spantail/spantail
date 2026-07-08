@@ -12,7 +12,11 @@
 		{
 			"binding": "DB",
 			"database_name": "spantail-db",
-			// Local development uses Miniflare's local SQLite; this ID is a placeholder.
+			// Local development uses Miniflare's local SQLite, so this ID is a
+			// placeholder. Self-hosters deploying via Workers Builds inject their
+			// real database_id at build time from the D1_DATABASE_ID build variable
+			// (see apps/web/scripts/inject-deploy-config.mjs); manual deployers
+			// replace it in their own copy.
 			"database_id": "00000000-0000-0000-0000-000000000000",
 			"migrations_dir": "../../packages/db/migrations"
 		}
@@ -45,44 +49,11 @@
 		"bindings": [{ "name": "USER_HUB", "class_name": "UserHub" }]
 	},
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["UserHub"] }],
+	// Defaults to "development"; deploys override it to "production" with
+	// `wrangler deploy --var APP_ENV:production` (see the deploy / deploy:ci
+	// scripts). There is no named `production` environment: a single top-level
+	// config is the source of truth, and the deploy-time flag flips the mode.
 	"vars": {
 		"APP_ENV": "development"
-	},
-	"env": {
-		// Bindings are not inherited into named environments; production mirrors
-		// the defaults. Self-hosters: replace the placeholder IDs with the IDs of
-		// the resources created in your Cloudflare account.
-		"production": {
-			"assets": {
-				"not_found_handling": "single-page-application",
-				"run_worker_first": ["/api/*", "/mcp", "/share/*"]
-			},
-			"d1_databases": [
-				{
-					"binding": "DB",
-					"database_name": "spantail-db",
-					"database_id": "00000000-0000-0000-0000-000000000000",
-					"migrations_dir": "../../packages/db/migrations"
-				}
-			],
-			"r2_buckets": [
-				{ "binding": "UPLOADS", "bucket_name": "spantail-uploads" }
-			],
-			"ratelimits": [
-				{
-					"name": "INGEST_RATE_LIMITER",
-					"namespace_id": "1001",
-					"simple": { "limit": 120, "period": 60 }
-				}
-			],
-			"send_email": [{ "name": "EMAIL" }],
-			"durable_objects": {
-				"bindings": [{ "name": "USER_HUB", "class_name": "UserHub" }]
-			},
-			"migrations": [{ "tag": "v1", "new_sqlite_classes": ["UserHub"] }],
-			"vars": {
-				"APP_ENV": "production"
-			}
-		}
 	}
 }

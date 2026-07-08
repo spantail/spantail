@@ -5,9 +5,10 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build",
+		"build": "node scripts/inject-deploy-config.mjs && vite build",
 		"preview": "vite preview",
-		"deploy": "pnpm run build && wrangler deploy",
+		"deploy": "pnpm run build && wrangler deploy --var APP_ENV:production",
+		"deploy:ci": "pnpm run build && wrangler d1 migrations apply DB --remote && wrangler deploy --var APP_ENV:production",
 		"cf-typegen": "wrangler types",
 		"typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.node.json"
 	},
