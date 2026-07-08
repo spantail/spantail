@@ -31,14 +31,18 @@ pnpm dev                # SPA + Worker on http://localhost:5173
 ```
 
 See [Configuration](/self-hosting/configuration/) for every value in `.dev.vars`. The recommended
-deploy below needs no local Node, pnpm, or Wrangler — only a GitHub account and a Cloudflare account.
+deploy below needs no local Node, pnpm, or Wrangler **to deploy** — only a GitHub account and a
+Cloudflare account (a database backup during an upgrade does use local Wrangler).
 
 ## Deploy with Workers Builds (recommended)
 
 <Steps>
 
-1. **Fork the repository** on GitHub (`Fork` → your account or an organization). Your fork can be
-   private; Workers Builds supports private repositories.
+1. **Fork the repository** on GitHub (`Fork` → your account or an organization). A fork of a public
+   repository is itself public — which is fine here, because you commit no secrets or per-instance
+   IDs (they live in Cloudflare). If you require a private repository, push a private mirror instead
+   and upgrade by merging from upstream; the **Sync fork** button only works on a real fork, though
+   Workers Builds itself supports private repositories.
 
 2. **Create the D1 database and R2 bucket** in your Cloudflare account. You can use the dashboard
    (**Storage & Databases → D1** and **R2**) or Wrangler:
