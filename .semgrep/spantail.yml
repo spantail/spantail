@@ -31,7 +31,11 @@ rules:
     message: >-
       The SPA must reach the Worker through the typed API client (src/client/lib/api.ts),
       never via raw fetch. See CLAUDE.md (SPA data flow).
-    pattern: fetch(...)
+    pattern-either:
+      - pattern: fetch(...)
+      - pattern: window.fetch(...)
+      - pattern: globalThis.fetch(...)
+      - pattern: self.fetch(...)
     paths:
       include:
         - "**/apps/web/src/client/**"
