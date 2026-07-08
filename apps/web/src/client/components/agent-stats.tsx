@@ -18,7 +18,6 @@ import { daysInclusive, isWeekend } from "@/components/dashboard/stats-math";
 import { Sparkline } from "@/components/sparkline";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToday } from "@/hooks/use-today";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatCompactNumber, formatDateRange, formatDay } from "@/lib/format";
@@ -157,14 +156,15 @@ function AgentActivityChart({
 	totals,
 	periodLabel,
 	locale,
+	today,
 }: {
 	days: AgentDay[];
 	totals: AgentEntryStats;
 	periodLabel: string;
 	locale: string;
+	today: string;
 }) {
 	const { t } = useTranslation();
-	const today = useToday();
 	const [metric, setMetric] = useState<Metric>("tokens");
 	const [hover, setHover] = useState<number | null>(null);
 
@@ -525,6 +525,7 @@ export function AgentStats({ workspaceId, agentId, period }: AgentStatsProps) {
 				totals={data}
 				periodLabel={periodLabel}
 				locale={i18n.language}
+				today={today}
 			/>
 		</div>
 	);
