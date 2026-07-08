@@ -22,7 +22,7 @@ description: 環境変数・シークレット・バインディング。
 | 名前 | 必須 | 用途 |
 | --- | --- | --- |
 | `BETTER_AUTH_SECRET` | **はい** | セッショントークンの署名。**32 文字以上**が必須で、未設定や短すぎる値では Worker がフェイルクローズします。`openssl rand -base64 32` で生成。 |
-| `BETTER_AUTH_URL` | 推奨 | アプリの配信元ベース URL(例: `https://spantail.example.com`、開発では `http://localhost:5173`)。OAuth コールバックやリンクに使用。 |
+| `BETTER_AUTH_URL` | 任意 | メール内リンクと OAuth コールバックの正規オリジン。未設定ならリクエストごとにオリジンを導出します(`*.workers.dev` やローカル開発はこれで十分)。カスタムドメインや、ホストを書き換えるプロキシの背後で正規オリジンを固定したい場合に設定します。 |
 | `GOOGLE_OAUTH_CLIENT_ID` | 任意 | Google をログインプロバイダとして利用可能にします。有効化は管理者がアプリ内で行います。 |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | 任意 | Google クライアント ID と対で使用。 |
 | `GITHUB_OAUTH_CLIENT_ID` | 任意 | GitHub をログインプロバイダとして利用可能にします。 |
@@ -34,10 +34,12 @@ description: 環境変数・シークレット・バインディング。
 
 ## OAuth コールバック URL
 
-プロバイダの資格情報を設定したら、そのコールバック URL をプロバイダに登録してください。
+プロバイダの資格情報を設定したら、そのコールバック URL をプロバイダに登録してください。インスタンスの
+オリジン — `BETTER_AUTH_URL` を設定していればその値、未設定なら配信元のオリジン(`*.workers.dev` の URL
+またはカスタムドメイン) — を使います。
 
-- Google — `${BETTER_AUTH_URL}/api/auth/callback/google`
-- GitHub — `${BETTER_AUTH_URL}/api/auth/callback/github`
+- Google — `<your-origin>/api/auth/callback/google`
+- GitHub — `<your-origin>/api/auth/callback/github`
 
 設定済みプロバイダの有効化はアプリ内の管理者操作です。[セットアップウィザード](/ja/self-hosting/setup-wizard/)
 の途中、または後から管理者ガイドの[システム設定](/ja/admin/system-settings/)で行います。

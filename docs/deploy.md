@@ -5,9 +5,11 @@ git checkout, using Wrangler. It is the engineer-facing companion to the user-fa
 [self-hosting guide](https://docs.spantail.com/self-hosting/) (concepts, first-time setup, and the
 configuration reference) and to [`releasing.md`](./releasing.md) (how the product is versioned).
 
-This runbook does not restate the conceptual setup or the configuration reference — it links to
-them and focuses on the exact commands, the **migration-bearing upgrade** flow, and
-backup/rollback, which are documented nowhere else.
+The recommended deploy path is a fork connected to **Cloudflare Workers Builds**, where an upgrade is
+GitHub's Sync fork button — see the [self-hosting guide](https://docs.spantail.com/self-hosting/deploy/).
+This runbook covers the **by-hand Wrangler flow** instead, plus the **migration-bearing upgrade** flow
+and backup/rollback, which apply to either path and are documented nowhere else. It does not restate
+the conceptual setup or the configuration reference — it links to them.
 
 All examples are instance-agnostic. Replace `spantail-db`, database IDs, and origins with your own.
 
@@ -51,13 +53,13 @@ narrative version of these steps.
    [configuration reference](https://docs.spantail.com/self-hosting/configuration/) documents every
    field. Edit, at minimum:
 
-   - **`d1_databases[].database_id`** — the ID returned by `wrangler d1 create` above. `pnpm run
-     deploy` deploys the **top-level** (default) environment, so set it in the top-level
-     `d1_databases` block; the `env.production` block applies only to `wrangler deploy -e
-     production`. Set whichever your deploy command targets — keep both in sync if unsure.
+   - **`d1_databases[].database_id`** — the ID returned by `wrangler d1 create` above. There is a
+     single top-level `d1_databases` block (no named environments).
    - **`r2_buckets[].bucket_name`** — match the bucket you created.
-   - **`vars.APP_ENV`** — `production` for a real deployment; the default `development` routes mail
-     to an in-memory dev outbox.
+
+   You do not need to set `APP_ENV`: `pnpm run deploy` passes `--var APP_ENV:production`, so a
+   by-hand deploy always runs in production mode. The committed default stays `development` (mail
+   routes to an in-memory dev outbox locally).
 
 3. **Set the session secret.**
 

@@ -1,12 +1,18 @@
 ---
 title: Deploy to Cloudflare
-description: Provision D1 and R2, set secrets, run migrations, and deploy.
+description: Deploy Spantail to your own Cloudflare account with Cloudflare Workers Builds, or manually with Wrangler.
 ---
 
 import { Steps } from "@astrojs/starlight/components";
 
-Spantail is designed to be deployed to your own Cloudflare account. Make sure you have the
-[requirements](/self-hosting/) in place, then follow the steps below.
+Spantail is designed to be deployed to your own Cloudflare account. The recommended path is a
+**fork connected to [Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/)**:
+after a one-time setup, every push — and GitHub's **Sync fork** button — deploys automatically,
+running database migrations first. You never commit per-instance IDs, so staying up to date with
+upstream never conflicts.
+
+If you would rather drive the deploy from your own machine, a [manual Wrangler
+flow](#deploy-manually-with-wrangler) is kept below.
 
 ## Try it locally first
 
@@ -24,9 +30,86 @@ pnpm db:migrate:local   # apply migrations to the local D1 emulator
 pnpm dev                # SPA + Worker on http://localhost:5173
 ```
 
-See [Configuration](/self-hosting/configuration/) for every value in `.dev.vars`.
+See [Configuration](/self-hosting/configuration/) for every value in `.dev.vars`. The recommended
+deploy below needs no local Node, pnpm, or Wrangler — only a GitHub account and a Cloudflare account.
 
-## Deploy to Cloudflare
+## Deploy with Workers Builds (recommended)
+
+<Steps>
+
+1. **Fork the repository** on GitHub (`Fork` → your account or an organization). Your fork can be
+   private; Workers Builds supports private repositories.
+
+2. **Create the D1 database and R2 bucket** in your Cloudflare account. You can use the dashboard
+   (**Storage & Databases → D1** and **R2**) or Wrangler:
+
+   ```bash
+   wrangler d1 create spantail-db
+   wrangler r2 bucket create spantail-uploads
+   ```
+
+   Copy the D1 **`database_id`** from the output — it is the one per-instance value you supply
+   below.
+
+   :::note
+   R2 must be enabled on the account before the bucket can be created; Cloudflare requires a
+   payment method to enable it (R2 still has a free tier).
+   :::
+
+3. **Create the Worker from your fork.** In the dashboard, go to **Workers & Pages → Create →
+   Import a repository**, install the Cloudflare GitHub app for your fork, and select it. Then set:
+
+   - **Project name:** `spantail` — match `name` in `apps/web/wrangler.jsonc`. If they differ,
+     Cloudflare opens a pull request against your fork to reconcile the name, which would conflict
+     with Sync fork.
+   - **Root directory:** `apps/web`
+   - **Build command:** _leave empty_
+   - **Deploy command:** `pnpm run deploy:ci`
+   - **Build variable:** `D1_DATABASE_ID` = the `database_id` from step 2
+
+   `deploy:ci` builds, applies migrations to your remote database, and deploys — all in one command.
+   The `D1_DATABASE_ID` build variable is injected into the build, so nothing per-instance is ever
+   committed to your fork.
+
+4. **Set the session-signing secret.** Add a Worker **secret** named `BETTER_AUTH_SECRET` (a value
+   of at least 32 characters) — in the Worker's **Settings → Variables and Secrets**, or with
+   Wrangler once the Worker exists:
+
+   ```bash
+   wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
+   ```
+
+   :::caution
+   Without this secret the Worker **fails closed** — any request that touches auth or session code
+   errors out rather than signing sessions with a forgeable value. It is a Worker secret, not a
+   build variable.
+   :::
+
+5. **Deploy.** Save the setup to trigger the first build; it applies all migrations and deploys the
+   Worker to its `*.workers.dev` URL. `BETTER_AUTH_URL` can stay unset — Spantail derives its origin
+   from the request (see [Configuration](/self-hosting/configuration/) to pin a custom domain).
+
+</Steps>
+
+:::note[Screenshot placeholder]
+📸 _The Workers Builds setup form: root directory `apps/web`, deploy command `pnpm run deploy:ci`,
+build variable `D1_DATABASE_ID`._
+:::
+
+### Upgrading
+
+On your fork's page, click **Sync fork** to pull the latest release from upstream. Workers Builds
+picks up the push and runs `deploy:ci` — migrations then deploy — automatically. Because your fork
+carries no committed per-instance IDs, Sync fork never conflicts.
+
+Before a major upgrade, back up your database (`wrangler d1 export spantail-db --remote`); Cloudflare
+[D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) also lets you restore
+to a point in time.
+
+## Deploy manually with Wrangler
+
+If you prefer to deploy from your own machine, provision the resources and deploy directly. This
+needs the local [requirements](/self-hosting/) (Node, pnpm, Wrangler).
 
 <Steps>
 
@@ -38,22 +121,17 @@ See [Configuration](/self-hosting/configuration/) for every value in `.dev.vars`
    pnpm install
    ```
 
-2. **Create the D1 database** and copy the generated ID into `apps/web/wrangler.jsonc`.
+2. **Create the resources** and copy the generated D1 ID into `apps/web/wrangler.jsonc`.
 
    ```bash
    wrangler d1 create spantail-db
-   ```
-
-   Set the returned `database_id` in **both** the top-level `d1_databases` block and the
-   `env.production.d1_databases` block — they ship with placeholder IDs.
-
-3. **Create the R2 bucket** for uploads.
-
-   ```bash
    wrangler r2 bucket create spantail-uploads
    ```
 
-4. **Set the session-signing secret.** Generate a value of at least 32 characters.
+   Set the returned `database_id` in the `d1_databases` block of `apps/web/wrangler.jsonc` (it ships
+   with a placeholder ID).
+
+3. **Set the session-signing secret.** Generate a value of at least 32 characters.
 
    ```bash
    wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
@@ -64,26 +142,23 @@ See [Configuration](/self-hosting/configuration/) for every value in `.dev.vars`
    session code errors out rather than signing sessions with a forgeable value.
    :::
 
-5. **Apply migrations** to the remote database.
+4. **Apply migrations, then deploy.** Order matters — migrate before deploy.
 
    ```bash
    pnpm db:migrate:remote
+   pnpm run deploy
    ```
 
-6. **Deploy** the Worker.
-
-   ```bash
-   pnpm deploy
-   ```
+   Use `pnpm run deploy` (not `pnpm deploy`, which is a built-in pnpm command).
 
 </Steps>
 
 ## After deploying
 
-Set **`BETTER_AUTH_URL`** to your deployed origin (for example your custom domain,
-`https://spantail.example.com`) so login links and OAuth callbacks resolve correctly. This and
-the optional social-login and email secrets are covered on the
-[Configuration](/self-hosting/configuration/) page.
+By default the app derives its origin from each request, so links and OAuth callbacks work on the
+`*.workers.dev` URL with no extra configuration. To pin a canonical origin — a custom domain, or a
+proxy that rewrites the host — set **`BETTER_AUTH_URL`**. This and the optional social-login and
+email secrets are covered on the [Configuration](/self-hosting/configuration/) page.
 
 :::note[Screenshot placeholder]
 📸 _The deployed instance loaded at its Workers URL, showing the sign-up screen._
