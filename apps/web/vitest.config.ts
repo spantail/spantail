@@ -29,6 +29,9 @@ export default defineConfig({
 				},
 				bindings: {
 					TEST_MIGRATIONS: await readD1Migrations(migrationsDir),
+					// Pin the app env so tests always use the in-memory dev outbox,
+					// independent of the deploy-time APP_ENV in wrangler.jsonc.
+					APP_ENV: "development",
 					// Tests must not depend on .dev.vars (absent in CI).
 					BETTER_AUTH_SECRET: "vitest-only-secret-0123456789abcdefghijklmn",
 					BETTER_AUTH_URL: "https://example.com",
