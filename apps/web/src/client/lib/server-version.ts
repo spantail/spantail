@@ -28,10 +28,12 @@ export function useServerVersion(): string | null {
 	return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-// A version string we can meaningfully compare. Dev/off-tag builds and the
-// "unknown" fallback (no git history) are excluded so they never trigger a
-// false mismatch — both the bundle and the Worker come from the same build, so
-// a real deploy is the only way the two differ.
+// A version string we can meaningfully compare. Only the "unknown" fallback (no
+// git history) and empty/absent are excluded — with no resolvable version we
+// can't tell two builds apart. Off-tag builds (e.g. "v0.1.0-2-gabc") are
+// intentionally comparable: two deploys off the same branch carry distinct
+// `git describe` strings, so an old bundle is still flagged against a newer
+// Worker.
 function isComparable(version: string | null): version is string {
 	return version != null && version !== "" && version !== "unknown";
 }
