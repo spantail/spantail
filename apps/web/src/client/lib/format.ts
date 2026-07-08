@@ -4,12 +4,10 @@
 // pass `i18n.language` as the locale and `useToday()` as `now`. Clock and
 // relative-time helpers below are web-only (feeds and session rows).
 export {
-	type DayStyle,
 	formatDateRange,
 	formatDay,
 	formatInstantDate,
 	formatTimestamp,
-	type YearMode,
 } from "@spantail/core";
 
 // Constructing an Intl formatter is relatively costly, and these run once per
