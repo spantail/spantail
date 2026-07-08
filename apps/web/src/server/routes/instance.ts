@@ -133,11 +133,11 @@ export const instanceRoutes = new Hono<AppEnv>()
 		);
 		return c.json({ enabled: row.realtimeEnabled } satisfies RealtimeEnabled);
 	})
-	// Admin-only: the instance's version standing (running version + whether a
-	// newer upstream release exists), surfaced in Settings > System so admins
-	// notice when their self-hosted instance is behind. Best-effort and cached.
+	// The instance's version standing (running version + whether a newer upstream
+	// release exists), surfaced on the public System page. Readable by any caller
+	// (like the other instance readers) so every member — not just admins —
+	// notices when the instance is behind. Best-effort and cached.
 	.get("/version", async (c) => {
-		requireInstanceAdmin(c);
 		return c.json(await checkForUpdate(__APP_VERSION__));
 	})
 	// Public: tells the login screen which social buttons to show. A provider is

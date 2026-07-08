@@ -28,12 +28,15 @@ it("returns the instance version standing to an admin", async () => {
 	expect(body.latest).toBe("v9.9.9");
 });
 
-it("does not let a non-admin read the instance version", async () => {
+it("lets a non-admin member read the instance version too", async () => {
+	setUpdateCheckFetchForTests(async () => tagResponse("v9.9.9"));
 	await signUpUser("Admin", "admin@example.com");
 	const member = await signUpUser("Member", "member@example.com");
 
 	const res = await apiGet("/api/v1/instance/version", member);
-	expect(res.status).toBe(403);
+	expect(res.status).toBe(200);
+	const body = (await res.json()) as { latest: string | null };
+	expect(body.latest).toBe("v9.9.9");
 });
 
 it("reports no update when the upstream check is unavailable", async () => {

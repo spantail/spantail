@@ -65,10 +65,11 @@ export type UpdateRealtimeEnabledInput = z.infer<
 >;
 
 /**
- * The instance's version standing, shown to admins in Settings > System. Read
- * from a best-effort check against upstream GitHub releases: `current` is the
- * running build's version, `latest` the newest upstream release tag (null when
- * the check is unavailable), and `updateAvailable` whether an upgrade exists.
+ * The instance's version standing, shown on the (public) System page to any
+ * member. Read from a best-effort check against upstream GitHub releases:
+ * `current` is the running build's version, `latest` the newest upstream release
+ * tag (null when the check is unavailable), and `updateAvailable` whether an
+ * upgrade exists.
  */
 export const instanceVersionSchema = z.object({
 	current: z.string(),

@@ -624,9 +624,9 @@ export class SpantailClient {
 	}
 
 	/**
-	 * Instance admin: the instance's version standing (running version + whether
-	 * a newer upstream release exists). Best-effort — reports no update when the
-	 * upstream check is unavailable.
+	 * The instance's version standing (running version + whether a newer upstream
+	 * release exists). Readable by any member. Best-effort — reports no update
+	 * when the upstream check is unavailable.
 	 */
 	getInstanceVersion(): Promise<InstanceVersion> {
 		return this.request("GET", "/instance/version");

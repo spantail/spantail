@@ -40,19 +40,16 @@ function SystemSection() {
 	);
 }
 
-// Admin-only: nudges instance admins when a newer Spantail has been released
-// upstream. The check is admin-gated server-side and cached (long client
-// staleTime + edge cache), so it runs at most occasionally when this page is
-// viewed. Renders nothing for non-admins, when up to date, or when the upstream
-// check is unavailable.
+// Nudges anyone viewing the (public) System page when a newer Spantail has been
+// released upstream — the more people notice, the sooner an admin upgrades. The
+// check is cached (long client staleTime + edge cache), so it runs at most
+// occasionally when this page is viewed. Renders nothing when up to date or when
+// the upstream check is unavailable.
 function UpdateNotice() {
 	const { t } = useTranslation();
-	const me = useQuery({ queryKey: ["me"], queryFn: () => api.me() });
-	const isAdmin = me.data?.user.isAdmin ?? false;
 	const version = useQuery({
 		queryKey: ["instance-version"],
 		queryFn: () => api.getInstanceVersion(),
-		enabled: isAdmin,
 		staleTime: 60 * 60 * 1000,
 	});
 
