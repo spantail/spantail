@@ -9,9 +9,8 @@ import { dismissReloadBanner } from "@/lib/server-version";
  * the instance (an old cached bundle talking to a freshly deployed Worker).
  * Reload is manual — never automatic — so in-progress edits are never lost.
  * Non-critical, so it stays quiet: a single neutral bar, dismissible until the
- * next deploy. Rendered (and gated) by AppFrame in app.tsx, which also reserves
- * its height so it sits above the fixed sidebar; its `min-h-11` must stay in
- * sync with that reservation (`--app-banner-height`).
+ * next deploy. Rendered (and gated) by AppFrame in app.tsx, which measures this
+ * bar's height to reserve space so it sits above the fixed sidebar.
  */
 export function VersionReloadBanner() {
 	const { t } = useTranslation();

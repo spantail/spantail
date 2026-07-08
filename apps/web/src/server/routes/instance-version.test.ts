@@ -39,6 +39,13 @@ it("lets a non-admin member read the instance version too", async () => {
 	expect(body.latest).toBe("v9.9.9");
 });
 
+it("rejects an unauthenticated caller (no version leak to anonymous)", async () => {
+	await signUpUser("Admin", "admin@example.com");
+
+	const res = await apiGet("/api/v1/instance/version");
+	expect(res.status).toBe(401);
+});
+
 it("reports no update when the upstream check is unavailable", async () => {
 	setUpdateCheckFetchForTests(async () => {
 		throw new Error("offline");
