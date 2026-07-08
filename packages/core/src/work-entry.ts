@@ -11,7 +11,10 @@ export const tagSchema = z
 	// separators. Those are what let untrusted tag text open a block-level
 	// Markdown/HTML construct in a rendered report and swallow the rest of the
 	// document (see #173); the report engine escapes output as defense in depth.
-	.regex(/^[^\p{Cc}\p{Zl}\p{Zp}]+$/u, "tags cannot contain control characters");
+	.regex(
+		/^[^\p{Cc}\p{Zl}\p{Zp}]+$/u,
+		"tags must be a single line (no control characters or line breaks)",
+	);
 
 /** Client channel a work entry was created through. Server-determined, not user input. */
 export const workEntrySources = ["web", "cli", "mcp", "api", "github"] as const;
