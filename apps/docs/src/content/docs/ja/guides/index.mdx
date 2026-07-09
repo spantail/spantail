@@ -54,8 +54,11 @@ pnpm install
    たとえば `openssl rand -base64 32` で生成できます。
 
    ```bash
-   wrangler secret put BETTER_AUTH_SECRET
+   pnpm --filter web exec wrangler secret put BETTER_AUTH_SECRET
    ```
+
+   シークレットは Worker に属し、Wrangler はその名前を `apps/web/wrangler.jsonc`
+   から読み取ります。リポジトリ直下ではなく、`web` パッケージ経由で実行してください。
 
    :::caution
    このシークレットが無いと Worker は **fail closed** になります。偽造可能な値で

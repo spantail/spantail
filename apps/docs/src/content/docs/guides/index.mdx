@@ -56,8 +56,12 @@ pnpm install
    32 characters, for example `openssl rand -base64 32`:
 
    ```bash
-   wrangler secret put BETTER_AUTH_SECRET
+   pnpm --filter web exec wrangler secret put BETTER_AUTH_SECRET
    ```
+
+   The secret belongs to the Worker, so Wrangler reads its name from
+   `apps/web/wrangler.jsonc` — run the command through the `web` package, not
+   from the repository root.
 
    :::caution
    Without this secret the Worker **fails closed** — any request that touches
