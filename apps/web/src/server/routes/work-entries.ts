@@ -42,6 +42,7 @@ import {
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAuth, requireScope } from "../middleware/auth";
+import { ingestBodyLimit } from "../middleware/body-limit";
 import { ingestRateLimit } from "../middleware/rate-limit";
 import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
@@ -116,9 +117,9 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		const access = resolveEntryAccess(query.workspaceId, membership, user.id);
 		return c.json(await listWorkEntries(c.var.db, { ...query, access }));
 	})
-	// Rate-limited per credential (token, or user for sessions): a write
-	// credential must not flood the store.
-	.post("/", ingestRateLimit, async (c) => {
+	// Size- and rate-limited per credential (token, or user for sessions): a
+	// write credential must not flood the store.
+	.post("/", ingestBodyLimit, ingestRateLimit, async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(createWorkEntryInputSchema, await c.req.json());
 		const { membership } = await requireWorkspaceAccess(
@@ -185,7 +186,7 @@ export const workEntryRoutes = new Hono<AppEnv>()
 	// inserted atomically (one D1 batch), entryDate always explicit. An entry
 	// with an externalId uses it as its primary key, so re-sending the same
 	// batch upserts instead of duplicating.
-	.post("/batch", ingestRateLimit, async (c) => {
+	.post("/batch", ingestBodyLimit, ingestRateLimit, async (c) => {
 		const { user } = requireScope(c, "write");
 		const input = validate(
 			createWorkEntriesBatchInputSchema,

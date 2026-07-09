@@ -20,6 +20,7 @@ import {
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth } from "../middleware/auth";
+import { ingestBodyLimit } from "../middleware/body-limit";
 import { ingestRateLimit } from "../middleware/rate-limit";
 import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
@@ -32,9 +33,9 @@ export const agentEventRoutes = new Hono<AppEnv>()
 	// `agent_entries` — the same row the client-computed POST /agent-entries
 	// writes, so a session is fed by one path only (Claude Code via events,
 	// Cursor via the summary route) and they never collide.
-	// Rate-limited per credential (the agent token): ingestion is the untrusted
-	// write path.
-	.post("/", ingestRateLimit, async (c) => {
+	// Size- and rate-limited per credential (the agent token): ingestion is the
+	// untrusted write path.
+	.post("/", ingestBodyLimit, ingestRateLimit, async (c) => {
 		const auth = requireAgentAuth(c);
 		const input = validate(ingestAgentEventsInputSchema, await c.req.json());
 		const { workspaceId, membership } = await requireAgentIngestWorkspace(
@@ -110,7 +111,7 @@ export const agentEventRoutes = new Hono<AppEnv>()
 	// description, extra context (refs) — while the usage rollup stays derived
 	// from events. 404 when the session has no entry in the workspace yet
 	// (SessionEnd is best-effort; the client may ignore it).
-	.post("/finalize", ingestRateLimit, async (c) => {
+	.post("/finalize", ingestBodyLimit, ingestRateLimit, async (c) => {
 		const auth = requireAgentAuth(c);
 		const input = validate(finalizeAgentSessionInputSchema, await c.req.json());
 		const { workspaceId } = await requireAgentIngestWorkspace(

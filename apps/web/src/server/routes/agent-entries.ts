@@ -27,6 +27,7 @@ import {
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
 import { requireAgentAuth, requireScope } from "../middleware/auth";
+import { ingestBodyLimit } from "../middleware/body-limit";
 import { ingestRateLimit } from "../middleware/rate-limit";
 import { publishToWorkspace } from "../realtime/publish";
 import type { AppEnv } from "../types";
@@ -34,9 +35,9 @@ import type { AppEnv } from "../types";
 export const agentEntryRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
 	// Ingest (agent access token only). Idempotent on (agent, sessionId).
-	// Rate-limited per credential (the agent token): ingestion is the untrusted
-	// write path.
-	.post("/", ingestRateLimit, async (c) => {
+	// Size- and rate-limited per credential (the agent token): ingestion is the
+	// untrusted write path.
+	.post("/", ingestBodyLimit, ingestRateLimit, async (c) => {
 		const auth = requireAgentAuth(c);
 		const input = validate(ingestAgentEntryInputSchema, await c.req.json());
 		const { workspaceId, membership } = await requireAgentIngestWorkspace(

@@ -646,6 +646,25 @@ it("bulk-inserts entries across projects and insert chunks atomically", async ()
 	expect(first?.note).toBe("with a note");
 });
 
+// The size check runs before the body is parsed, so an oversized payload is a
+// 413 rather than the 400 its over-long note would otherwise earn.
+it("rejects an oversized batch body before parsing it", async () => {
+	const { admin, ws, project } = await setup();
+	const res = await postBatch(admin, ws.id, [
+		{
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 60,
+			description: "imported",
+			note: "x".repeat(8 * 1024 * 1024),
+		},
+	]);
+	expect(res.status).toBe(413);
+	expect(await res.json()).toEqual({
+		error: { code: "bad_request", message: "Payload too large" },
+	});
+});
+
 it("upserts entries by externalId instead of duplicating", async () => {
 	const { admin, ws, project } = await setup();
 	const entries: BatchEntry[] = Array.from({ length: 10 }, (_, i) => ({

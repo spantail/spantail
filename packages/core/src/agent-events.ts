@@ -16,11 +16,41 @@ import { z } from "zod";
 /**
  * The agent's native `message.usage` object, stored verbatim (schema-on-read).
  * Lenient on purpose: the transcript format is unversioned and unstable, so we
- * pin nothing as required and read buckets defensively downstream (via
+ * pin no bucket as required and read them defensively downstream (via
  * json_extract on the stored JSON). For Claude Code this is the snake_case
- * usage (`input_tokens`, `cache_creation_input_tokens`, ...).
+ * usage (`input_tokens`, `cache_creation_input_tokens`, ...), some of whose
+ * buckets nest one level (`cache_creation`, `server_tool_use`).
+ *
+ * Bounded, because ingest is the untrusted write path (docs/security.md §1):
+ * a leaked agent token must not be able to write an unbounded blob into D1.
+ * Sizes are capped, shapes are not — with one exception, nesting stops at the
+ * depth the format actually uses, so an array or a third level is rejected
+ * rather than stored.
  */
-export const agentEventUsageSchema = z.object({}).passthrough();
+const usageKeySchema = z.string().min(1).max(100);
+const usageValueSchema = z.union([
+	z.string().max(200),
+	z.number(),
+	z.boolean(),
+	z.null(),
+]);
+export const agentEventUsageSchema = z
+	.record(
+		usageKeySchema,
+		z.union([
+			usageValueSchema,
+			z
+				.record(usageKeySchema, usageValueSchema)
+				.refine(
+					(bucket) => Object.keys(bucket).length <= 20,
+					"usage bucket must have at most 20 entries",
+				),
+		]),
+	)
+	.refine(
+		(usage) => Object.keys(usage).length <= 20,
+		"usage must have at most 20 entries",
+	);
 export type AgentEventUsage = z.infer<typeof agentEventUsageSchema>;
 
 /**

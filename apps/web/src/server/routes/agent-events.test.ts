@@ -620,6 +620,74 @@ it("returns 404 when finalizing a session with no entry yet", async () => {
 	expect(res.status).toBe(404);
 });
 
+// The usage Claude Code actually sends nests one level. The rollup reads the
+// flat buckets with json_extract, so the nested ones ride along untouched.
+it("ingests the real nested usage shape and rolls up the flat buckets", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+
+	const res = await ingest(token, {
+		sessionId: "s1",
+		events: [
+			{
+				sourceId: "m1",
+				timestamp: "2026-06-20T01:00:00.000Z",
+				usage: {
+					input_tokens: 5,
+					output_tokens: 1,
+					cache_creation_input_tokens: 19681,
+					cache_read_input_tokens: 0,
+					service_tier: "standard",
+					cache_creation: {
+						ephemeral_5m_input_tokens: 19681,
+						ephemeral_1h_input_tokens: 0,
+					},
+					server_tool_use: { web_search_requests: 0 },
+				},
+			},
+		],
+	});
+	expect(res.status).toBe(200);
+	const entry = (await res.json()) as { usage: { totalTokens: number } };
+	expect(entry.usage.totalTokens).toBe(19687);
+});
+
+it("rejects an unbounded usage object", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const res = await ingest(token, {
+		sessionId: "s1",
+		events: [
+			{
+				sourceId: "m1",
+				timestamp: "2026-06-20T01:00:00.000Z",
+				usage: { blob: "x".repeat(10_000) },
+			},
+		],
+	});
+	expect(res.status).toBe(400);
+});
+
+it("rejects an oversized ingest body before parsing it", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin, {
+		defaultWorkspaceId: ws.id,
+	});
+	const res = await ingest(token, {
+		sessionId: "s1",
+		pad: "x".repeat(8 * 1024 * 1024),
+		events: [turn("m1", "2026-06-20T01:00:00.000Z", { input_tokens: 1 })],
+	});
+	expect(res.status).toBe(413);
+	expect(await res.json()).toEqual({
+		error: { code: "bad_request", message: "Payload too large" },
+	});
+});
+
 it("treats agent tokens as write-only ingest credentials", async () => {
 	const { admin, ws } = await setup();
 	const { token } = await createAgentToken(admin, {
