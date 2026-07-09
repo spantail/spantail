@@ -1,5 +1,5 @@
 /**
- * dependency-cruiser rules — machine-check the architecture invariants from CLAUDE.md.
+ * dependency-cruiser rules — machine-check the architecture invariants from docs/conventions.md.
  * Run via `pnpm depcruise` (part of `pnpm quality`).
  */
 module.exports = {
@@ -16,7 +16,7 @@ module.exports = {
 			name: "core-is-runtime-agnostic",
 			severity: "error",
 			comment:
-				"packages/core is runtime-agnostic domain logic: no Workers/DOM/framework/data-access APIs (CLAUDE.md).",
+				"packages/core is runtime-agnostic domain logic: no Workers/DOM/framework/data-access APIs (docs/conventions.md).",
 			from: { path: "^packages/core/src" },
 			to: {
 				path: "node_modules/(hono|react|react-dom|better-auth|agents|drizzle-orm)/",
@@ -26,7 +26,7 @@ module.exports = {
 			name: "core-is-the-lowest-layer",
 			severity: "error",
 			comment:
-				"db/sdk/cli depend on core, never the reverse (CLAUDE.md dependency direction).",
+				"db/sdk/cli depend on core, never the reverse (docs/conventions.md dependency direction).",
 			from: { path: "^packages/core/src" },
 			to: { path: "^packages/(db|sdk|cli)/src" },
 		},
@@ -34,7 +34,7 @@ module.exports = {
 			name: "client-must-not-import-server",
 			severity: "error",
 			comment:
-				"The SPA talks to the Worker only through the typed API client, never by importing server code (CLAUDE.md).",
+				"The SPA talks to the Worker only through the typed API client, never by importing server code (docs/conventions.md).",
 			from: { path: "^apps/web/src/client" },
 			to: { path: "^apps/web/src/server" },
 		},
@@ -42,7 +42,7 @@ module.exports = {
 			name: "routes-go-through-db-queries",
 			severity: "error",
 			comment:
-				"Route handlers use @spantail/db query functions, not inline drizzle-orm calls (CLAUDE.md data access).",
+				"Route handlers use @spantail/db query functions, not inline drizzle-orm calls (docs/conventions.md data access).",
 			from: { path: "^apps/web/src/server/routes" },
 			to: { path: "node_modules/drizzle-orm/" },
 		},

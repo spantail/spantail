@@ -8,8 +8,8 @@ and the trade-offs that are deliberate, so neither is mistaken for a bug.
 
 It is a companion to [`permissions.md`](./permissions.md) (who may read and write each
 resource) and [`data-model.md`](./data-model.md) (the entities and how they relate); the
-architecture invariants in [`CLAUDE.md`](../CLAUDE.md) come first. Where a rule already
-lives in one of those, this doc summarizes and links rather than restating it.
+architecture invariants in [`conventions.md`](./conventions.md) come first. Where a rule
+already lives in one of those, this doc summarizes and links rather than restating it.
 
 Enforcement is server-side. The REST API at `/api/v1` and the MCP endpoint are the gate
 for every client — the Web SPA, CLI, and MCP are all clients of that API, so **never trust
@@ -66,8 +66,8 @@ secret-bearing along that entire path:
 ## 3. Report templates and rendered output are untrusted
 
 Report templates are user input and their rendered output is shown to humans. The
-rendering invariants are defined in [`CLAUDE.md`](../CLAUDE.md) ("Report templates are user
-input"); in summary:
+rendering invariants are defined in [`conventions.md`](./conventions.md) ("Report templates are
+user input"); in summary:
 
 - LiquidJS runs with safety settings: own-property access only, strict filters,
   parse/render/memory limits, and `include`/`render`/`layout`/`block` tags disabled
@@ -215,5 +215,5 @@ persisted — only the matched `owner/repo` full name is stored.
 - [`permissions.md`](./permissions.md) — who can read and write each resource (the access
   model).
 - [`data-model.md`](./data-model.md) — the entities and how they relate.
-- [`CLAUDE.md`](../CLAUDE.md) — architecture invariants, including the report-template
+- [`conventions.md`](./conventions.md) — architecture invariants, including the report-template
   rendering rules.

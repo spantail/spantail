@@ -340,7 +340,7 @@ flowchart TB
 ## Conventions
 
 Cross-cutting rules that shape many tables. The authoritative statements live in
-[`CLAUDE.md`](../CLAUDE.md) (architecture invariants) and [`permissions.md`](./permissions.md);
+[`conventions.md`](./conventions.md) (architecture invariants) and [`permissions.md`](./permissions.md);
 summarized here for the data model.
 
 - **Dates vs timestamps.** A **date** and a **timestamp** are independent concepts, not derivable
