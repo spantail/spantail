@@ -41,8 +41,8 @@ settled is the shape of each area — and, just as importantly, what stays in th
 it.
 
 - **Enterprise SSO.** Federation against a corporate identity provider: SAML 2.0 / OIDC, SCIM
-  provisioning, and the ability to require SSO. *Basic authentication stays free* — social
-  login with domain restriction is core, and always will be.
+  provisioning, and the ability to require SSO. *Signing in stays free* — social login (Google,
+  GitHub), including domain restriction, is core, and always will be.
 - **Audit.** Streaming the audit log to an external SIEM, long retention, and fine-grained
   API-level events.
 - **Advanced analytics and insights.** Exploratory dashboards, cross-project and cross-team
@@ -66,7 +66,7 @@ These commitments are load-bearing. We would rather forgo revenue than break one
 
 - **Exporting your data is always free.** Bulk export in open formats is a core feature. You
   can leave whenever you want, and take everything with you.
-- **Basic login is always free.** We will not charge you for the ability to sign in securely.
+- **Signing in is always free.** We will not charge you for the ability to log in securely.
   (Enterprise identity federation is a different capability, and is paid.)
 - **Scale and portability are always free.** Running Spantail fast, running it large, and
   running it on the infrastructure of your choice are never behind a paywall.
