@@ -194,10 +194,12 @@ default is an insecure deployment. The rule is **fail closed**:
 
 The BYO GitHub App adds three surfaces with distinct threats:
 
-**Webhook input is untrusted until the HMAC verifies.** `POST /api/github/webhook` reads
-the raw body bytes first and verifies `X-Hub-Signature-256` (HMAC-SHA256 with the stored
-webhook secret, constant-time compare) before any JSON parsing; a missing or bad signature
-gets 401 and no processing, and an oversized body is rejected with 413 before that. Everything in
+**Webhook input is untrusted until the HMAC verifies.** `POST /api/github/webhook` rejects
+shapeless requests *before* it buffers anything: a missing or malformed `X-Hub-Signature-256`
+header gets 401, and a `Content-Length` above the cap gets 413 — so a forged header on a huge
+body never costs the Worker the buffer. Only then does it read the raw bytes and verify the
+signature (HMAC-SHA256 with the stored webhook secret, constant-time compare), answering 401
+on mismatch. JSON is parsed last, never before the HMAC passes. Everything in
 a verified payload is still *GitHub-mediated user input*:
 command parsing is strictly deterministic (`packages/core/src/github/command.ts` — no
 inference over comment text), and reply templates never echo attacker-controlled input
