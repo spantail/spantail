@@ -71,22 +71,21 @@ pnpm dev
 
 ## Self-hosting
 
-Spantail is designed to be deployed to your own Cloudflare account:
+Spantail is designed to be deployed to your own Cloudflare account. The recommended path is a
+**fork connected to [Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/)**:
 
-```bash
-wrangler d1 create spantail-db
-# set the generated database ID in apps/web/wrangler.jsonc, then:
-pnpm db:migrate:remote
+1. Fork this repo and create a D1 database (`spantail-db`) and an R2 bucket (`spantail-uploads`) in
+   your Cloudflare account.
+2. Create a Worker from your fork — root directory `apps/web`, deploy command `pnpm run deploy:ci`,
+   build variable `D1_DATABASE_ID` set to your D1 database ID.
+3. Set the `BETTER_AUTH_SECRET` Worker secret (≥ 32 chars). Without it the Worker **fails closed**.
 
-# set the required session-signing secret (>= 32 chars); without it the worker
-# fails closed — any request that touches auth/session code errors out, so
-# sessions can never be signed with an empty value:
-wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
+The first build applies migrations and deploys; the first person to sign up becomes the admin.
+Upgrading is GitHub's **Sync fork** button — Workers Builds re-runs migrate + deploy automatically.
+A manual Wrangler flow is also available.
 
-pnpm deploy
-```
-
-See the documentation at [spantail.com](https://spantail.com) for the full self-hosting guide, including required secrets and cost notes.
+See the full self-hosting guide at [spantail.com](https://spantail.com), including required secrets
+and cost notes.
 
 ### The reference Claude Code hook sends telemetry, not transcripts
 
