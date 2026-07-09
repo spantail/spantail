@@ -56,10 +56,10 @@ flowchart TB
 
 | Scope | Resources that live here |
 |---|---|
-| **Instance** | `user`, `verification`, `instance_settings`, `user_invitations`, `report_templates` |
-| **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events`, `work_entry_agent_entries` (follows its parents) |
+| **Instance** | `user`, `verification`, `instance_settings`, `user_invitations`, `report_templates`, `github_app_config`, `github_installations` |
+| **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events`, `github_repo_mappings`, `work_entry_agent_entries` / `work_entry_github_refs` (both follow their parents) |
 | **Project** | `project_members`, `agent_projects`, project-assigned `work_entries` / `agent_entries` |
-| **User** | `session`, `account`, `api_tokens`, `agents`, `agent_tokens`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), profile |
+| **User** | `session`, `account`, `api_tokens`, `agents`, `agent_tokens`, `github_identities`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), profile |
 | **Report** | `report_shares`, `report_comments`, `report_reactions` |
 
 > Two resources are **hybrid-scoped** by a nullable `projectId`: a `work_entries` or `agent_entries`
@@ -99,7 +99,7 @@ flowchart LR
     report -->|"fans out to"| dist
 ```
 
-The four domains below give the precise relationships within each area.
+The five domains below give the precise relationships within each area.
 
 ## Domain: Identity & access
 
@@ -252,7 +252,7 @@ A report combines a template with freely chosen filters, renders to an immutable
 distributed by sharing, sending, or discussing.
 
 Schema: [`packages/db/src/schema/reports.ts`](../packages/db/src/schema/reports.ts), [`shares.ts`](../packages/db/src/schema/shares.ts), [`deliveries.ts`](../packages/db/src/schema/deliveries.ts), [`delivery-flags.ts`](../packages/db/src/schema/delivery-flags.ts), [`discussions.ts`](../packages/db/src/schema/discussions.ts) ·
-Core types: [`packages/core/src/report.ts`](../packages/core/src/report.ts), [`report-templates.ts`](../packages/core/src/report-templates.ts), [`share.ts`](../packages/core/src/share.ts), [`delivery.ts`](../packages/core/src/delivery.ts), [`discussion.ts`](../packages/core/src/discussion.ts)
+Core types: [`packages/core/src/report.ts`](../packages/core/src/report.ts) (reports and templates), [`share.ts`](../packages/core/src/share.ts), [`delivery.ts`](../packages/core/src/delivery.ts), [`discussion.ts`](../packages/core/src/discussion.ts)
 
 ```mermaid
 erDiagram
@@ -272,7 +272,7 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `report_templates` | Instance | Presentation format (Markdown + Liquid). A fresh instance is seeded with one default template from `@spantail/templates`. Exactly one row is the instance default (`is_default`) — the compose fallback; it cannot be deleted or disabled. `name_template` / `note_template` are optional Liquid that produce a new report's initial name/note at compose time (rendered with a scope-only context: `user`, `workspaces`, `projects`, `users`, `period`). `default_date_range` is an optional `DateRangePreset` (`today`, `yesterday`, `this_week`, `last_week`, `this_month`, `last_month`) seeding the compose dialog's initial date range; null falls back to `today`. | optional author `user` (set null) |
+| `report_templates` | Instance | Presentation format (Markdown + Liquid). A fresh instance is seeded with one default template from `@spantail/templates`. Exactly one row is the instance default (`is_default`) — the compose fallback; it cannot be deleted or disabled. `name_template` / `note_template` are optional Liquid that produce a new report's initial name/note at compose time (rendered with a scope-only context: `user`, `workspaces`, `projects`, `users`, `period`). `default_date_range` is an optional `DateRangePreset` (`today`, `yesterday`, `last_7_days`, `last_30_days`, `this_week`, `last_week`, `this_month`, `last_month`) seeding the compose dialog's initial date range; null falls back to `today`. | optional author `user` (set null) |
 | `reports` | User | Mutable report header: `templateId` + `filters` + note. Scope is a single workspace (`filters.workspaceIds === [id]`), or instance scope (`filters.workspaceIds === []`). Instance scope is owner-scoped and spans every workspace the running user belongs to, resolved to a concrete membership set only transiently to bound the entry query at render — that resolved set is **not** persisted, so the stored filter keeps the empty set (a legacy report may still hold a resolved multi-workspace set). Entries are scoped to the owner's **own** work by default: when `filters.userIds` is empty the render restricts to the owner (so the web app, which never sets `userIds`, always produces an own-only report — even an instance-scope one, even for an instance admin); the API can pass explicit `userIds` for a cross-user report, still bounded by the owner's entry access. `version` points at the current snapshot. `snapshot_workspace_ids` freezes the workspace set the current snapshot was rendered against (alongside `snapshot_project_ids`): every membership gate on the report — owner read/edit, list redaction, the Send-to / share ACL, and the recipient pool — is bounded by this frozen scope, not the empty stored filter or live memberships, so access stays stable and cross-user snapshots are never left ungated (null on legacy rows falls back to `filters.workspaceIds`). | owner `user`; `templateId` is a `report_templates` id (no FK) |
 | `report_content` | User (per report) | Immutable rendered snapshot per version: YAML front-matter + Markdown body. | belongs to `reports` (cascade) |
 | `report_shares` | Content version | Public capability link over one immutable `report_content` version (no copied body — the referenced version can never change). Minted by the report owner (report screen) or a delivery recipient (Messages); `created_by_user_id` is the sole ownership anchor and listings scope by (content, creator). Optional passcode (hashed), expiry, revoke; view counter. | belongs to `report_content` (cascade); creator `user` (cascade) |
@@ -287,12 +287,13 @@ How the entities above come into being and flow through the system.
 
 ### Human work logging
 
-A person logs work through any client; all four channels hit the same REST API and produce a
-`work_entries` row. Whether it is project- or workspace-scoped depends on `projectId`.
+A person logs work through any client; all five channels hit the same REST API and produce a
+`work_entries` row, which records the channel in `source`. Whether it is project- or
+workspace-scoped depends on `projectId`.
 
 ```mermaid
 flowchart LR
-    A["Human"] -->|"web / CLI / MCP / API"| B["POST /api/v1/work-entries"]
+    A["Human"] -->|"web / CLI / MCP / API / GitHub"| B["POST /api/v1/work-entries"]
     B --> C["work_entries row<br/>date · duration · description · tags · source"]
     C -->|"projectId set"| D["Project-scoped"]
     C -->|"projectId null"| E["Workspace-scoped"]
