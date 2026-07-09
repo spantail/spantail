@@ -1,6 +1,6 @@
 name: Feature request
 description: Propose an implementation-ready feature to track
-labels: ["enhancement"]
+labels: ["enhancement", "needs-triage"]
 body:
   - type: markdown
     attributes:

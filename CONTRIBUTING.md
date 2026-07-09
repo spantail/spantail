@@ -39,6 +39,25 @@ feature request mirrors the form's structure:
 Keep it behavior-focused. Contributor-workflow details (typecheck/lint/test, migrations) live in
 [`CLAUDE.md`](CLAUDE.md), not in each issue.
 
+## Labels
+
+Labels sit on a few independent axes. You rarely need to apply one yourself:
+
+- **Type** — `bug`, `enhancement`, `documentation`, `chore`, `ci`. Applied automatically: issue
+  forms set it when you file, and a workflow keeps every PR's type label in sync with its
+  Conventional Commits title prefix (so don't hand-pick type labels on PRs — retitle instead).
+  Release notes are grouped from these.
+- **Area** (`area:*`) — which part of the product an issue touches. Maintainers apply these;
+  use them to find issues in a part of the codebase you know.
+- **Status** — triage state: `needs-triage` (set automatically on new issues), `needs-repro`,
+  `needs-info`, `blocked`. Maintainers update these as an issue moves.
+- **Contribution** — [`good first issue`](https://github.com/spantail/spantail/contribute) and
+  `help wanted` mark issues we'd love a hand with.
+
+`security` marks hardening work that is safe to discuss publicly. **Do not** file an issue for a
+suspected vulnerability — use
+[private vulnerability reporting](https://github.com/spantail/spantail/security) instead.
+
 ## Pull requests
 
 Open a PR against `main`. Keep **one PR = one logical change** — don't mix unrelated work.
