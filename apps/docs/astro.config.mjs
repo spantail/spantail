@@ -75,7 +75,11 @@ export default defineConfig({
 								label: "Getting started",
 								translations: { ja: "はじめに" },
 								collapsed: false,
-								items: [{ slug: "guides" }, { slug: "guides/claude-code" }],
+								items: [
+									{ slug: "guides" },
+									{ slug: "guides/claude-code" },
+									{ slug: "guides/github" },
+								],
 							},
 							{
 								label: "Core features",
