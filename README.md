@@ -1,5 +1,11 @@
 <p align="center">
-  <img src=".github/assets/spantail-logo.png" alt="Spantail" width="800">
+  <br>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/spantail-lockup-dark.png">
+    <img alt="Spantail" src=".github/assets/spantail-lockup.png" width="486">
+  </picture>
+  <br>
+  <br>
 </p>
 
 > Understand how you and your AI agents actually work.
