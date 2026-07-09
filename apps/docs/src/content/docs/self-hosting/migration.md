@@ -1,6 +1,6 @@
 ---
 title: Migration
-description: Move existing work entries and workflows from another system into Spantail.
+description: Import existing work entries from another system into Spantail.
 ---
 
 Once your instance is running, you can bring your history with you. Existing **work entries**
