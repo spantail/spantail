@@ -139,6 +139,66 @@ it("does not reveal another user's report send history", async () => {
 	expect(res.status).toBe(404);
 });
 
+it("revokes instance-scope send history when a rendered workspace is left", async () => {
+	// A separate cast from setup(): the owner must not be the bootstrap instance
+	// admin, whose read access survives losing a membership.
+	const admin = await signUpUser("Admin", "admin@example.com");
+	const other = await signUpUser("Other", "other@example.com");
+	const ws = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "acme", name: "Acme" },
+			admin,
+		)
+	).json()) as { id: string };
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "other@example.com" },
+		admin,
+	);
+
+	// An instance-scope report stores an empty filter, so gating the send history
+	// on it would check nothing; the gate must fall back to the frozen render scope.
+	const report = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports",
+			{
+				name: "Instance mine",
+				templateId: await defaultTemplateId(other),
+				filters: { workspaceIds: [], dateRange: "today" },
+			},
+			other,
+		)
+	).json()) as { id: string; filters: { workspaceIds: string[] } };
+	expect(report.filters.workspaceIds).toEqual([]);
+	expect(
+		(await apiGet(`/api/v1/reports/${report.id}/sends`, other)).status,
+	).toBe(200);
+
+	const me = (await (await apiGet("/api/v1/me", other)).json()) as {
+		user: { id: string };
+	};
+	expect(
+		(
+			await apiJson(
+				"DELETE",
+				`/api/v1/workspaces/${ws.id}/members/${me.user.id}`,
+				undefined,
+				admin,
+			)
+		).status,
+	).toBe(204);
+
+	// Frozen scope was [ws]; after leaving it, the send history is revoked too —
+	// the same gate GET /:id applies to the report itself.
+	expect(
+		(await apiGet(`/api/v1/reports/${report.id}/sends`, other)).status,
+	).toBe(403);
+});
+
 it("lets a workspace admin read the owner's send history but redacts read state", async () => {
 	const { owner, alice, wsAdmin, report, aliceId } = await setup();
 	await apiJson(
