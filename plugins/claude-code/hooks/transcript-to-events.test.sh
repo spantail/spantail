@@ -38,6 +38,10 @@ check "msg_A output_tokens == 323 (deduped)" \
 	'(.[] | select(.sourceId == "msg_A") | .usage.output_tokens) == 323'
 check "msg_A keeps cache_creation_input_tokens" \
 	'(.[] | select(.sourceId == "msg_A") | .usage.cache_creation_input_tokens) == 777'
+# Usage is passed through verbatim, nested buckets included — the ingest schema
+# bounds them but accepts one nesting level.
+check "msg_A keeps the nested cache_creation bucket" \
+	'(.[] | select(.sourceId == "msg_A") | .usage.cache_creation.ephemeral_5m_input_tokens) == 777'
 # Earliest line wins for the timestamp.
 check "msg_A earliest timestamp" \
 	'(.[] | select(.sourceId == "msg_A") | .timestamp) == "2026-06-21T11:16:15.122Z"'

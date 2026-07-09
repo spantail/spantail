@@ -38,9 +38,9 @@ Standing rules:
 - **Schema-on-read payloads are still bounded on write.** Fields stored verbatim and read
   defensively later (an event's raw `usage`, its `attributes` metadata, an entry's
   `context` facets) get size/count/length caps at ingest, and every read of them treats
-  the stored value as hostile (type-checked, length-checked, never coerced). An event's raw
-  `usage` is the outstanding exception — it is accepted unbounded
-  ([#195](https://github.com/spantail/spantail/issues/195)).
+  the stored value as hostile (type-checked, length-checked, never coerced).
+- **Bound the request, not just its fields.** Ingest routes cap the body size and answer 413
+  above it, so no per-field cap has to hold the line alone.
 
 A token is write-only ingest, scoped to its owner's workspace membership, re-checked live
 at ingest time — but that only governs *where* it may write, not *what* it may write. The
