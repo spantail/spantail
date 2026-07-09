@@ -157,5 +157,5 @@ covers the conventions a change must meet.
 Spantail is open core. An Enterprise Edition, which adds organizational governance and built-in
 automation on top of this codebase, is distributed separately under its own commercial license.
 [`docs/open-core.md`](docs/open-core.md) explains where that line runs, the principle behind it,
-and what we promise never to move. Native desktop and mobile apps are out of scope for this
-repository.
+and what we promise will never leave the core. Native desktop and mobile apps are out of scope
+for this repository.

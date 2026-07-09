@@ -2,8 +2,8 @@
 
 Spantail is an open-core project. This page explains where the line between the open-source
 core and the commercial Enterprise Edition (EE) runs, the principle we use to draw it, and the
-promises we make about never moving it back. It is written for contributors — so you can tell,
-before you invest in a feature, which side of the line it will land on.
+promises we make about what will never leave the core. It is written for contributors — so you
+can tell, before you invest in a feature, which side of the line it will land on.
 
 It does not cover pricing, a feature-by-feature comparison table, or the EE roadmap.
 
