@@ -19,7 +19,7 @@ MCP are not constrained by the UI and follow this spec directly.**
 |---|---|---|
 | Instance admin | `user.isAdmin` (`packages/db/src/schema/auth.ts`) | System-wide super admin. |
 | Template author | `user.canManageTemplates` | May author instance-wide report templates without being an instance admin. |
-| Workspace owner | `workspace_members.role = "owner"` | Workspace creator. Same powers as workspace admin, but cannot be removed and the last admin cannot be demoted. The only workspace role that can **delete** the workspace. |
+| Workspace owner | `workspace_members.role = "owner"` | Workspace creator. Same powers as workspace admin, but cannot be removed. The only workspace role that can **delete** the workspace. |
 | Workspace admin | `workspace_members.role = "admin"` | Manages a workspace and its resources/settings. |
 | Workspace member | `workspace_members.role = "member"` | Belongs to a workspace. |
 | Project member | `project_members` (`packages/db/src/schema/domain.ts`) | Belongs to a specific project. Binary membership (no per-project role), managed by workspace admins. |
@@ -31,6 +31,11 @@ Workspace roles are ranked `member < admin < owner` (`apps/web/src/server/lib/pe
 An **instance admin satisfies any workspace-role requirement** regardless of whether (or with
 what role) they happen to be a member — the admin bypass (Principle 1) is not demoted by an
 incidental `member` row.
+
+A member's role is fixed when they are added (`POST /api/v1/workspaces/:id/members`): there is no
+role-change route, so a member can only be removed and re-added at another role. **Creating a
+workspace is instance-admin-only**; a workspace admin manages an existing workspace but cannot
+mint new ones.
 
 ## Scopes
 
@@ -76,6 +81,8 @@ full. Every resource belongs to exactly one scope:
    `requireWorkspaceAccess` / `requireAgentIngestWorkspace`
    (`apps/web/src/server/lib/permissions.ts`). Archiving itself is a workspace-settings write
    (workspace admin), but **deletion is owner-only** (plus instance admins via the bypass).
+   A **project** must likewise be archived before it can be deleted (`409 conflict` otherwise),
+   though an active project is not read-only the way an archived workspace is.
 
 ### Self-service
 
@@ -101,7 +108,7 @@ of the project in question (always also a workspace member) · **Self** = the re
 | GitHub App config (instance, secrets hidden) | RW | – | – | – | – | – |
 | GitHub repo mappings (workspace) | RW | RW | – | R | R | – |
 | GitHub identity link (user) | – | – | – | – | – | RW (own, via verified OAuth) |
-| Report templates (instance) | RW | – | RW | R | R | R |
+| Report templates (instance) | RW | R | RW | R | R | R |
 | Workspace settings (workspace) | RW | RW | – | R | R | – |
 | Members (workspace) | RW | RW | – | R | R | – |
 | Projects: list / metadata (workspace) | RW | RW | – | R | R | – |
@@ -129,7 +136,17 @@ Notes:
   admin-writable, via the "Projects: list / metadata" row.
 - **API tokens have no workspace dimension** — a token grants access across all of the owner's
   workspaces. There is no workspace-scoped view of a token, so workspace admins get no token
-  access (`–`); only instance admins can read token metadata. Secret values are never returned.
+  access (`–`); only instance admins can read token metadata (`?ownerUserId`). Secret values are
+  never returned. Listing your *own* tokens requires a **session**, not a PAT: token management is
+  interactive, so this is the one route deliberately narrower over API/MCP than in the UI.
+- **A few instance booleans are readable without any account.** `email-enabled`, `agents-enabled`,
+  `realtime-enabled`, and `auth-providers` are unauthenticated because the login screen needs them
+  before a session exists; `github/enabled` needs a signed-in user. Only these on/off booleans are
+  exposed — the settings values behind them (from-address, OAuth client config) stay instance-admin
+  only, as the matrix says.
+- **Avatars are readable by any signed-in user** (`GET /api/v1/avatars/:userId`), with no
+  shared-workspace check — an image keyed by a user id is not treated as sensitive. The rest of the
+  profile row follows the matrix.
 - **Work entries are hybrid-scoped.** Writes are always author-only (self-service). Reads depend
   on `projectId`: assigned entries are project-scoped (project members + admins); unassigned
   entries (`projectId = null`, the state left when a project is deleted) are workspace-scoped.
@@ -183,20 +200,22 @@ Notes:
   stdio server) issues loopback REST calls carrying the caller's token, so every MCP tool inherits
   the exact same authorization as the REST API.
 - Therefore the API/MCP surface is *broader* than the UI by design. It is never *intentionally*
-  broader than this spec — the API never loosens a rule merely because the UI hides it.
-- The REST API and MCP enforce this spec directly, with no known divergence — there is no class of
-  resource where the API exceeds or falls short of this matrix.
+  broader than this spec — the API never loosens a rule merely because the UI hides it. The lone
+  exception runs the other way: listing your own API tokens is session-only.
 
 ## Intentional deviations
 
-The implementation matches this spec. A few behaviors are deliberate refinements, called out here
-so they are not mistaken for divergence:
+The implementation matches this spec, with one known exception: the instance-admin bypass is
+demoted when the admin also holds a workspace `member` row, so they read work entries as a plain
+member would ([#193](https://github.com/spantail/spantail/issues/193)). It narrows access rather
+than widening it.
 
-- **Workspace-admin `R*` is single-workspace-only.** A workspace admin reads a member's reports,
-  inbox deliveries, shares, and discussion only for reports scoped to exactly that one workspace;
-  a multi-workspace report is not a per-workspace partial view, so it stays instance-admin-only
-  (`R`). The admin read is addressed by `?ownerUserId` (instance admin) or `?workspaceId`
-  (workspace admin) on the collection endpoints. See the Access matrix notes.
+The behaviors below, by contrast, are deliberate refinements, called out here so they are not
+mistaken for divergence:
+
+- **Workspace-admin `R*` is single-workspace-only.** A multi-workspace report is not a
+  per-workspace partial view, so it stays instance-admin-only (`R`). See the `R*` note under the
+  [Access matrix](#access-matrix).
 - **Frozen snapshots are point-in-time.** The project ACL is enforced at live render/read time, so
   a snapshot captures exactly what its author could see when it was generated. Persisted report
   content (`GET /api/v1/reports/:id`, `GET /api/v1/inbox/:id`, public `/share/:token`) is not
