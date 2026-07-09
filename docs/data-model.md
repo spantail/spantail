@@ -124,9 +124,9 @@ erDiagram
 | `user` | Instance | A person's account. Instance flags: `isAdmin`, `canManageTemplates`, `disabled`. Optional `timezone` (IANA, null → UTC) — the per-user lens for local dates and clock display. | Root of most ownership edges |
 | `session` | User | Better Auth login session. | belongs to `user` (cascade) |
 | `account` | User | OAuth provider link (google, github) or password credential. | belongs to `user` (cascade) |
-| `verification` | Instance | Email-verification and password-reset tokens, keyed by email. No user FK — standalone. | none |
+| `verification` | Instance | Email-verification and password-reset tokens, keyed by a generic `identifier` (the email address, in both flows). No user FK — standalone. | none |
 | `api_tokens` | User | Personal access tokens for the REST API; scopes `read` / `write` / `admin`. Hashed; value shown once. | belongs to `user` (cascade) |
-| `instance_settings` | Instance | Singleton row (`id = "singleton"`): email, social login, agents and realtime toggles. | none |
+| `instance_settings` | Instance | Singleton row by convention (`id = "singleton"`, enforced in application code): email, social login, agents and realtime toggles. | none |
 | `user_invitations` | Instance | Pending email invitations; may grant admin or template-author on accept. | invited by `user` (cascade) |
 
 ## Domain: Workspaces & work
