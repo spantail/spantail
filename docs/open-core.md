@@ -41,8 +41,8 @@ settled is the shape of each area — and, just as importantly, what stays in th
 it.
 
 - **Enterprise SSO.** Federation against a corporate identity provider: SAML 2.0 / OIDC, SCIM
-  provisioning, and the ability to require SSO. *Signing in stays free* — social login (Google,
-  GitHub), including domain restriction, is core, and always will be.
+  provisioning, and the ability to require SSO. *Signing in stays free* — email and password,
+  plus social login with Google and GitHub, are core, and always will be.
 - **Audit.** Streaming the audit log to an external SIEM, long retention, and fine-grained
   API-level events.
 - **Advanced analytics and insights.** Exploratory dashboards, cross-project and cross-team
