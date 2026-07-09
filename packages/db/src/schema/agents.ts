@@ -140,7 +140,8 @@ export const agentEntries = sqliteTable(
 /**
  * Provenance link: which agent sessions a human work entry was logged from
  * (many-to-many). Rows are written when a work entry is created from selected
- * agent entries and cascade away with either side; there is no read surface yet.
+ * agent entries and cascade away with either side; read back, ACL-filtered, by
+ * `GET /api/v1/work-entries/:id/agent-entries`.
  */
 export const workEntryAgentEntries = sqliteTable(
 	"work_entry_agent_entries",

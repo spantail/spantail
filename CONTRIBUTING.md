@@ -2,10 +2,10 @@
 
 Thanks for your interest in contributing! This guide covers **how we work** — where to discuss
 ideas, how to file issues, and how to open pull requests. For project conventions and local
-development, see the links below rather than this page (we keep a single source of truth):
+development, see the links below rather than this page (we avoid duplicating them):
 
-- **Dev setup & commands** — [`README.md`](README.md) ("Getting started" / "Development").
-- **Coding conventions & Definition of Done** — [`CLAUDE.md`](CLAUDE.md).
+- **Dev setup** — [`README.md`](README.md) ("Getting started").
+- **Commands, coding conventions & Definition of Done** — [`docs/conventions.md`](docs/conventions.md).
 
 Contributions, issues, and pull requests are in **English**.
 
@@ -37,7 +37,7 @@ feature request mirrors the form's structure:
 - **Open questions** — unresolved decisions.
 
 Keep it behavior-focused. Contributor-workflow details (typecheck/lint/test, migrations) live in
-[`CLAUDE.md`](CLAUDE.md), not in each issue.
+[`docs/conventions.md`](docs/conventions.md), not in each issue.
 
 ## Labels
 
@@ -63,7 +63,7 @@ suspected vulnerability — use
 Open a PR against `main`. Keep **one PR = one logical change** — don't mix unrelated work.
 
 **Title:** use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
-`docs:`, `refactor:`, …), matching the convention in [`CLAUDE.md`](CLAUDE.md).
+`docs:`, `refactor:`, …), matching the convention in [`docs/conventions.md`](docs/conventions.md).
 
 **Body:** the PR template prefills these sections —
 
@@ -73,7 +73,7 @@ Open a PR against `main`. Keep **one PR = one logical change** — don't mix unr
 - **How to test** — steps and results so a reviewer can verify.
 
 Before requesting review, make sure the change meets the **Definition of Done** in
-[`CLAUDE.md`](CLAUDE.md) — including `pnpm typecheck && pnpm lint && pnpm test` passing, generated
-migrations if the schema changed, and UI strings present in both `en` and `ja`.
+[`docs/conventions.md`](docs/conventions.md) — including `pnpm typecheck && pnpm lint && pnpm test`
+passing, generated migrations if the schema changed, and UI strings present in both `en` and `ja`.
 
 Reviewers triage with labels; maintainers may adjust labels and scope during review.

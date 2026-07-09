@@ -1,6 +1,6 @@
 # Security threat model
 
-This is the single source of truth for the **security properties and standing threats
+This is the canonical reference for the **security properties and standing threats
 specific to Spantail** — the ones that fall out of what Spantail *is* (a self-hostable,
 open-source work-observability platform that captures AI-agent activity) rather than from
 generic web or supply-chain concerns. It records the invariants contributors must preserve
@@ -8,8 +8,8 @@ and the trade-offs that are deliberate, so neither is mistaken for a bug.
 
 It is a companion to [`permissions.md`](./permissions.md) (who may read and write each
 resource) and [`data-model.md`](./data-model.md) (the entities and how they relate); the
-architecture invariants in [`CLAUDE.md`](../CLAUDE.md) come first. Where a rule already
-lives in one of those, this doc summarizes and links rather than restating it.
+architecture invariants in [`conventions.md`](./conventions.md) come first. Where a rule
+already lives in one of those, this doc summarizes and links rather than restating it.
 
 Enforcement is server-side. The REST API at `/api/v1` and the MCP endpoint are the gate
 for every client — the Web SPA, CLI, and MCP are all clients of that API, so **never trust
@@ -31,13 +31,16 @@ Standing rules:
   carry explicit limits, defined once in `packages/core` so web/CLI/MCP enforce them
   identically. A value with no plausible ceiling (a duration, a date) is a bug.
 - **Rate-limit and quota the write path.** Ingestion endpoints must not let one token
-  exhaust D1 or inflate the operator's storage/cost.
+  exhaust D1 or inflate the operator's storage/cost. Today a per-credential rate limit
+  (`INGEST_RATE_LIMITER`) guards every ingest route; there is no storage quota yet.
 - **Validate, don't just format-check.** ISO-8601 shape is not a date-range check;
   `min(0)` is not an upper bound.
 - **Schema-on-read payloads are still bounded on write.** Fields stored verbatim and read
   defensively later (an event's raw `usage`, its `attributes` metadata, an entry's
   `context` facets) get size/count/length caps at ingest, and every read of them treats
-  the stored value as hostile (type-checked, length-checked, never coerced).
+  the stored value as hostile (type-checked, length-checked, never coerced). An event's raw
+  `usage` is the outstanding exception — it is accepted unbounded
+  ([#195](https://github.com/spantail/spantail/issues/195)).
 
 A token is write-only ingest, scoped to its owner's workspace membership, re-checked live
 at ingest time — but that only governs *where* it may write, not *what* it may write. The
@@ -66,12 +69,12 @@ secret-bearing along that entire path:
 ## 3. Report templates and rendered output are untrusted
 
 Report templates are user input and their rendered output is shown to humans. The
-rendering invariants are defined in [`CLAUDE.md`](../CLAUDE.md) ("Report templates are user
-input"); in summary:
+rendering invariants are defined in [`conventions.md`](./conventions.md) ("Report templates are
+user input"); in summary:
 
 - LiquidJS runs with safety settings: own-property access only, strict filters,
-  parse/render/memory limits, and `include`/`render`/`layout`/`block` tags disabled
-  (`packages/core/src/report-engine.ts`).
+  parse/render/memory limits, `include`/`render`/`layout`/`block` tags disabled, and interpolated
+  values HTML-escaped on output (`packages/core/src/report-engine.ts`).
 - Rendered Markdown is displayed with **no raw-HTML passthrough** — the SPA uses
   `react-markdown` without `rehype-raw`, and the server twin
   (`apps/web/src/server/lib/markdown.ts`) drops raw HTML and adds `rehype-sanitize` as
@@ -94,11 +97,13 @@ new public surface must satisfy:
   provenance) is stripped before it is rendered.
 
 Send-to deliveries and owner-minted public shares enforce an ACL computed from the report's
-**frozen** snapshot (`snapshotProjectIds` + `snapshotWorkspaceIds`): a recipient must be a
-member of the snapshot's rendered workspaces and able to read every project in it, and the
-owner must still cover that frozen workspace scope to disseminate — checked at send/share time
-against the frozen sets, not the stored filter (empty for instance scope) or live memberships,
-so there is no live/stored drift. See [`permissions.md`](./permissions.md) for the full matrix.
+**frozen** snapshot. Both require the owner to still cover the frozen workspace scope
+(`snapshotWorkspaceIds`) to disseminate. Send-to additionally bounds the recipient: they must be a
+member of the snapshot's rendered workspaces and able to read every project in it
+(`snapshotProjectIds`) — a public link has no recipient identity, so only the owner-side check
+applies. Both are checked at send/share time against the frozen sets, not the stored filter (empty
+for instance scope) or live memberships, so there is no live/stored drift. See
+[`permissions.md`](./permissions.md) for the full matrix.
 
 There is a **second mint path**: a Send-to recipient may re-share their received copy from the
 Messages view (the email model — the delivered version is theirs, and they can already download
@@ -137,9 +142,11 @@ email recipient — see §4. Revoking is always allowed.)
 The access model is owned by [`permissions.md`](./permissions.md); its security-relevant
 invariants:
 
-- Every read is scoped by **workspace membership**, and project-assigned data is further
-  gated by **project ACL** (`entryAccessCondition`). There is no code path that fetches a
-  resource by id without also checking the caller's membership/ownership.
+- Every read of **workspace- or user-scoped** data is gated by membership or ownership, and
+  project-assigned data is further gated by **project ACL** (`entryAccessCondition`). No code path
+  fetches such a resource by id without that check. The exceptions are deliberate and carry no
+  workspace dimension: report templates are instance-scoped and readable by any signed-in user, and
+  an avatar is fetched by user id with no membership check.
 - Cross-scope report filters are validated against the **union of the caller's
   workspaces**; a workspace admin cannot read a multi-workspace report (instance-admin
   only).
@@ -149,7 +156,11 @@ invariants:
 ## 7. Tokens and accounts
 
 - Personal Access Tokens and Agent Access Tokens are **hashed at rest**, scoped (AAT is
-  write-only ingest), expirable, and revocable.
+  write-only ingest), expirable, and revocable. A **share token is stored in plaintext** on
+  purpose: a leaked database already exposes the rendered Markdown the token would unlock, so
+  hashing it would protect nothing, while plaintext lets the UI show the link again after
+  creation. A share passcode, which does guard something the database does not already hold, is
+  PBKDF2-hashed.
 - A **disabled account is locked out at every auth path** — session, PAT, AAT, and MCP —
   not just on next login.
 - Auth responses **do not leak account existence** (uniform errors; password-reset
@@ -164,9 +175,9 @@ invariants:
 Spantail is operated by self-hosters who are not security specialists, so an insecure
 default is an insecure deployment. The rule is **fail closed**:
 
-- Critical secrets (e.g. the session-signing secret) must be validated at startup; a
-  missing or empty value must stop the instance rather than silently degrade to forgeable
-  sessions.
+- Critical secrets (e.g. the session-signing secret) must be validated before they are relied on —
+  a Worker has no startup hook, so the check runs on the auth path itself. A missing, empty, or
+  too-short (`< 32` chars) value throws rather than silently degrading to forgeable sessions.
 - Optional integrations (OAuth providers, email) stay disabled unless fully configured —
   no half-configured surface is exposed.
 - `wrangler.jsonc` carries only non-secret ids; secrets come from `wrangler secret` /
@@ -181,12 +192,15 @@ default is an insecure deployment. The rule is **fail closed**:
 
 ## 9. GitHub integration: untrusted webhooks, stored credentials, comment replies
 
-The BYO GitHub App (issue #159) adds three surfaces with distinct threats:
+The BYO GitHub App adds three surfaces with distinct threats:
 
-**Webhook input is untrusted until the HMAC verifies.** `POST /api/github/webhook` reads
-the raw body bytes first and verifies `X-Hub-Signature-256` (HMAC-SHA256 with the stored
-webhook secret, constant-time compare) before any JSON parsing; failures get 401 and no
-processing. Everything in a verified payload is still *GitHub-mediated user input*:
+**Webhook input is untrusted until the HMAC verifies.** `POST /api/github/webhook` rejects
+shapeless requests *before* it buffers anything: a missing or malformed `X-Hub-Signature-256`
+header gets 401, and a `Content-Length` above the cap gets 413 — so a forged header on a huge
+body never costs the Worker the buffer. Only then does it read the raw bytes and verify the
+signature (HMAC-SHA256 with the stored webhook secret, constant-time compare), answering 401
+on mismatch. JSON is parsed last, never before the HMAC passes. Everything in
+a verified payload is still *GitHub-mediated user input*:
 command parsing is strictly deterministic (`packages/core/src/github/command.ts` — no
 inference over comment text), and reply templates never echo attacker-controlled input
 beyond bounded, validated fragments.
@@ -215,5 +229,5 @@ persisted — only the matched `owner/repo` full name is stored.
 - [`permissions.md`](./permissions.md) — who can read and write each resource (the access
   model).
 - [`data-model.md`](./data-model.md) — the entities and how they relate.
-- [`CLAUDE.md`](../CLAUDE.md) — architecture invariants, including the report-template
+- [`conventions.md`](./conventions.md) — architecture invariants, including the report-template
   rendering rules.

@@ -1,5 +1,11 @@
 <p align="center">
-  <img src=".github/assets/spantail-logo.png" alt="Spantail" width="800">
+  <br>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/spantail-lockup-dark.png">
+    <img alt="Spantail" src=".github/assets/spantail-lockup.png" width="486">
+  </picture>
+  <br>
+  <br>
 </p>
 
 > Understand how you and your AI agents actually work.
@@ -8,20 +14,19 @@ Spantail is an open-source platform for recording human and AI work with as litt
 possible — ideally none — then sharing and reviewing it in seconds. Built for the era of
 human–AI collaboration: humans log work in a few keystrokes, AI coding agents stream their own
 sessions in automatically, and the unified timeline becomes any report you need — daily, weekly,
-monthly — from a single source of truth. Built AI-first: every operation is available to humans
-(web, CLI) and AI agents (MCP) through the same API.
-
-> **Status**: Early development. APIs and schemas are unstable. Not yet ready for production use.
+monthly. Built AI-first: every operation is available to humans (web, CLI) and AI agents (MCP)
+through the same API.
 
 ## Features
 
 - **Low-overhead capture** — work entries are a date, duration, description, and tags, with optional start/end times — built for fast daily logging. AI coding-agent work is captured automatically, with no manual entry.
 - **AI agent sessions** — register an AI coding agent and its sessions stream in automatically: per-session duration and token usage land on the same timeline as human work. The [Claude Code plugin](plugins/claude-code) captures sessions per turn while conversation bodies stay on your machine.
+- **GitHub integration** — log work without leaving GitHub: comment `@spantail 2h yesterday` on an issue or pull request and the entry lands on the project that repository maps to. Each instance registers its own private GitHub App via GitHub's manifest flow, so credentials go straight from GitHub to your instance and no central App sits in between. See [GitHub integration](https://docs.spantail.com/admin/github-integration/).
 - **Workspaces** — organize work by department, team, or client organization. Projects live under workspaces. One deployment serves one company; this is not a multi-tenant SaaS.
 - **Unified reports** — no hardcoded report types. A report is a Markdown + Liquid template applied to filters you choose freely: any combination of workspaces, projects, users, and date range — including across workspaces. Built-in templates cover daily, weekly, and monthly reports.
 - **Safe report sharing** — share an immutable report snapshot via an expiring, revocable link with an optional passcode. Viewers don't need an account — share with clients, stakeholders, or anyone outside your instance.
 - **Collaborate on reports** — discuss a shared report inline with Markdown comments and GitHub-style emoji reactions, keeping the conversation next to the report instead of in email.
-- **Keyboard-first** — operate fast without leaving the keyboard: `c` to quick-create an entry or report, `j`/`k` to move through lists, `o` to open the selected item.
+- **Keyboard-first** — the web UI is driven without the mouse: single-key shortcuts cover creating, moving through lists, opening, and bulk actions. See [keyboard shortcuts](https://docs.spantail.com/guides/keyboard-shortcuts/).
 - **AI-first API** — a built-in MCP server (remote Streamable HTTP, or local stdio via the CLI) and a CLI let AI agents and scripts log work and pull reports through the same REST API the web UI uses.
 - **English / Japanese** — fully localized UI and documentation.
 
@@ -34,9 +39,11 @@ Spantail runs entirely on Cloudflare:
 
 Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and [Better Auth](https://better-auth.com). Frontend is a React SPA built with Vite, TanStack Router/Query, and shadcn/ui.
 
-See [`docs/data-model.md`](docs/data-model.md) for the data model — the resources Spantail stores and how they relate.
-See [`docs/permissions.md`](docs/permissions.md) for the role-based permissions and resource visibility model.
-See [`docs/security.md`](docs/security.md) for the security threat model — the Spantail-specific security properties and standing threats.
+Three docs go deeper:
+
+- **[Data model](docs/data-model.md)** — the resources Spantail stores and how they relate
+- **[Permissions](docs/permissions.md)** — the role-based permissions and resource visibility model
+- **[Security](docs/security.md)** — the Spantail-specific security properties and standing threats
 
 ## Monorepo
 
@@ -84,15 +91,17 @@ The first build applies migrations and deploys; the first person to sign up beco
 Upgrading is GitHub's **Sync fork** button — Workers Builds re-runs migrate + deploy automatically.
 A manual Wrangler flow is also available.
 
-See the full self-hosting guide at [spantail.com](https://spantail.com), including required secrets
-and cost notes.
+See the full [self-hosting guide](https://docs.spantail.com/self-hosting/), including required
+secrets and cost notes.
 
 ### The reference Claude Code hook sends telemetry, not transcripts
 
-It captures AI-agent work as compact per-turn telemetry — token usage and timing — **not your
-conversation transcripts or source code**: it parses the transcript locally and sends only that
-telemetry, so conversation bodies never leave your machine. (What reaches Spantail is only ever
-what a client sends, so other integrations are only as bounded as what they send.)
+It parses the transcript locally and sends compact telemetry — token counts, timing, and context
+such as the model, git branch, and working directory — **not your conversation transcripts or
+source code**, so conversation bodies never leave your machine. The
+[plugin's privacy notes](plugins/claude-code#privacy) list the exact fields. (What reaches
+Spantail is only ever what a client sends, so other integrations are only as bounded as what
+they send.)
 
 Whatever a client does record, though — descriptions, notes, tags, and any event payload it
 sends — is stored verbatim and can appear in reports, public share links, and Send-to
@@ -117,19 +126,33 @@ each turn's transcript locally and posts only compact telemetry.
 
 ## Development
 
-```bash
-pnpm dev          # dev server (SPA + Worker + local D1)
-pnpm test         # vitest (Workers pool)
-pnpm lint         # biome
-pnpm typecheck    # tsc across all packages
-```
+[`docs/conventions.md`](docs/conventions.md) is the contributor's reference: the full command
+list (tests, lint, typecheck, migrations, seeding), the repository conventions, the architecture
+invariants, and the Definition of Done.
 
 For manual checks, the [`run-demo`](./.claude/skills/run-demo/SKILL.md) Claude
 Code skill is a convenient way to seed demo data and drive the app in a
 browser (optional — it also documents the recipe for doing it by hand).
 
-See [CLAUDE.md](./CLAUDE.md) for repository conventions.
+## Contributing
 
-## License
+Spantail is built in the open, and contributions of every size are welcome.
 
-[MIT](./LICENSE)
+- **Shape the direction** — bring ideas, questions, and half-formed proposals to
+  [Discussions](https://github.com/spantail/spantail/discussions). Settling the *what* there keeps
+  issues focused on agreed work.
+- **Report a bug or request a feature** — open an
+  [issue](https://github.com/spantail/spantail/issues/new/choose). Small, obvious fixes don't need
+  a discussion first.
+- **Send a pull request** — [`good first issue`](https://github.com/spantail/spantail/contribute)
+  is a good place to start.
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) covers the workflow; [`docs/conventions.md`](docs/conventions.md)
+covers the conventions a change must meet.
+
+## License and scope
+
+[MIT](./LICENSE).
+
+An Enterprise Edition, built on this codebase and sold commercially, is distributed separately
+under its own license. Native desktop and mobile apps are out of scope for this repository.

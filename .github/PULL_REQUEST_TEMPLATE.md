@@ -20,7 +20,7 @@ Closes #
 
 ## Checklist
 
-<!-- See the Definition of Done in CLAUDE.md. -->
+<!-- See the Definition of Done in docs/conventions.md. -->
 
 - [ ] `pnpm typecheck && pnpm lint && pnpm test` pass
 - [ ] Migrations generated if the schema changed

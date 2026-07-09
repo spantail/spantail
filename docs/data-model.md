@@ -11,9 +11,12 @@ validation stays in code:
 - **Database tables** — Drizzle schema in `packages/db/src/schema` (one file per domain).
 - **Domain types & request/response shapes** — Zod schemas in `packages/core/src`.
 
-Where this page names a table in prose or catalogs it uses the SQL name (`work_entries`); the
-high-level diagrams group resources informally. Where it names a scope or role it matches the
-vocabulary in [`permissions.md`](./permissions.md). All timestamps are UTC; see
+Where this page names a table in prose or catalogs it uses the SQL name (`work_entries`), and
+where it names a column it uses that column's Zod field name (`entryDate`) — noting the SQL name
+too where the two differ. Enum values and identifiers borrowed from other systems (OTel, Claude
+Code transcripts) keep their original spelling. The high-level diagrams group resources
+informally. Where this page names a scope or role it matches the vocabulary in
+[`permissions.md`](./permissions.md). All timestamps are UTC; see
 [Conventions](#conventions) for the date/duration rules.
 
 ## Scope hierarchy
@@ -56,10 +59,10 @@ flowchart TB
 
 | Scope | Resources that live here |
 |---|---|
-| **Instance** | `user`, `verification`, `instance_settings`, `user_invitations`, `report_templates` |
-| **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events`, `work_entry_agent_entries` (follows its parents) |
+| **Instance** | `user`, `verification`, `instance_settings`, `user_invitations`, `report_templates`, `github_app_config`, `github_installations` |
+| **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events`, `github_repo_mappings`, `work_entry_agent_entries` / `work_entry_github_refs` (both follow their parents) |
 | **Project** | `project_members`, `agent_projects`, project-assigned `work_entries` / `agent_entries` |
-| **User** | `session`, `account`, `api_tokens`, `agents`, `agent_tokens`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), profile |
+| **User** | `session`, `account`, `api_tokens`, `agents`, `agent_tokens`, `github_identities`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), profile |
 | **Report** | `report_shares`, `report_comments`, `report_reactions` |
 
 > Two resources are **hybrid-scoped** by a nullable `projectId`: a `work_entries` or `agent_entries`
@@ -99,7 +102,7 @@ flowchart LR
     report -->|"fans out to"| dist
 ```
 
-The four domains below give the precise relationships within each area.
+The five domains below give the precise relationships within each area.
 
 ## Domain: Identity & access
 
@@ -121,9 +124,9 @@ erDiagram
 | `user` | Instance | A person's account. Instance flags: `isAdmin`, `canManageTemplates`, `disabled`. Optional `timezone` (IANA, null → UTC) — the per-user lens for local dates and clock display. | Root of most ownership edges |
 | `session` | User | Better Auth login session. | belongs to `user` (cascade) |
 | `account` | User | OAuth provider link (google, github) or password credential. | belongs to `user` (cascade) |
-| `verification` | Instance | Email-verification and password-reset tokens, keyed by email. No user FK — standalone. | none |
+| `verification` | Instance | Email-verification and password-reset tokens, keyed by a generic `identifier` (the email address, in both flows). No user FK — standalone. | none |
 | `api_tokens` | User | Personal access tokens for the REST API; scopes `read` / `write` / `admin`. Hashed; value shown once. | belongs to `user` (cascade) |
-| `instance_settings` | Instance | Singleton row (`id = "singleton"`): email, social login, agents and realtime toggles. | none |
+| `instance_settings` | Instance | Singleton row by convention (`id = "singleton"`, enforced in application code): email, social login, agents and realtime toggles. | none |
 | `user_invitations` | Instance | Pending email invitations; may grant admin or template-author on accept. | invited by `user` (cascade) |
 
 ## Domain: Workspaces & work
@@ -151,7 +154,7 @@ erDiagram
 | `workspace_members` | Workspace | Membership and role: `owner` / `admin` / `member`. PK (workspaceId, userId). | joins `workspaces` and `user` |
 | `projects` | Workspace | A workspace subdivision. Status `active` / `archived`; marker = color hue + shape symbol (paired so a project is identifiable by shape as well as colour, symbol defaults to `circle`); slug unique per workspace. | belongs to `workspaces` (cascade) |
 | `project_members` | Project | Binary membership (no per-project role), managed by workspace admins. | joins `projects` and `user` |
-| `work_entries` | Project / Workspace | Human-logged work: `entry_date`, `durationMinutes`, description, tags, `source`. | author `user`; denormalized `workspaceId`; optional `projectId` (set null on project delete) |
+| `work_entries` | Project / Workspace | Human-logged work: `entryDate`, `durationMinutes`, description, tags, `source`. | author `user`; denormalized `workspaceId`; optional `projectId` (set null on project delete) |
 
 ## Domain: Agents & observability
 
@@ -182,7 +185,7 @@ erDiagram
 | `agents` | User | A registered AI coding agent — a delegated identity of one user, not an independent principal. Type `claude_code` (v1 targets Claude Code only). `disabledAt` (reversible) vs `archivedAt`. | belongs to `user` (cascade) |
 | `agent_tokens` | User | Agent Access Token (AAT): a write-only **ingest** credential bound to one agent; optional `defaultWorkspaceId`. Hashed; one active token per agent in practice. | belongs to `agents` (cascade) |
 | `agent_projects` | Project | Presentation grouping of an agent to projects — no rows means "all projects". Does **not** gate or default ingest. | joins `agents` and `projects` |
-| `agent_entries` | Project / Workspace | One agent **session** rollup: duration, token usage (plus summed `costUsd` when events carry one), `context` — distinct non-usage facets (`models`, `branches`, `repositories`, client-supplied `refs`) — and `eventCount`, the number of events the rollup was computed from (null on summary-path sessions, which carry no events). Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entry_date` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
+| `agent_entries` | Project / Workspace | One agent **session** rollup: duration, token usage (plus summed `costUsd` when events carry one), `context` — distinct non-usage facets (`models`, `branches`, `repositories`, client-supplied `refs`) — and `eventCount` (SQL `rollup_event_count`), the number of events the rollup was computed from (null on summary-path sessions, which carry no events). Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entryDate` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
 | `agent_events` | Workspace | Raw **per-turn** telemetry — one row per assistant message: `operation` (what the turn is, `chat` by default), native usage stored verbatim, optional client-provided `costUsd`, and `attributes` (bounded key/value metadata, OTel attribute names where one exists — see the mapping below). Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
 | `work_entry_agent_entries` | Workspace (via parents) | Provenance link (m:n): which agent sessions a human work entry was logged from. Written when a work entry is created from selected sessions; read back by `GET /api/v1/work-entries/:id/agent-entries` (the entry dialog's session summary), ACL-filtered so a link never widens visibility. PK (workEntryId, agentEntryId). | joins `work_entries` and `agent_entries` (cascade on both sides) |
 
@@ -252,7 +255,7 @@ A report combines a template with freely chosen filters, renders to an immutable
 distributed by sharing, sending, or discussing.
 
 Schema: [`packages/db/src/schema/reports.ts`](../packages/db/src/schema/reports.ts), [`shares.ts`](../packages/db/src/schema/shares.ts), [`deliveries.ts`](../packages/db/src/schema/deliveries.ts), [`delivery-flags.ts`](../packages/db/src/schema/delivery-flags.ts), [`discussions.ts`](../packages/db/src/schema/discussions.ts) ·
-Core types: [`packages/core/src/report.ts`](../packages/core/src/report.ts), [`report-templates.ts`](../packages/core/src/report-templates.ts), [`share.ts`](../packages/core/src/share.ts), [`delivery.ts`](../packages/core/src/delivery.ts), [`discussion.ts`](../packages/core/src/discussion.ts)
+Core types: [`packages/core/src/report.ts`](../packages/core/src/report.ts) (reports and templates), [`share.ts`](../packages/core/src/share.ts), [`delivery.ts`](../packages/core/src/delivery.ts), [`discussion.ts`](../packages/core/src/discussion.ts)
 
 ```mermaid
 erDiagram
@@ -272,11 +275,11 @@ erDiagram
 
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
-| `report_templates` | Instance | Presentation format (Markdown + Liquid). A fresh instance is seeded with one default template from `@spantail/templates`. Exactly one row is the instance default (`is_default`) — the compose fallback; it cannot be deleted or disabled. `name_template` / `note_template` are optional Liquid that produce a new report's initial name/note at compose time (rendered with a scope-only context: `user`, `workspaces`, `projects`, `users`, `period`). `default_date_range` is an optional `DateRangePreset` (`today`, `yesterday`, `this_week`, `last_week`, `this_month`, `last_month`) seeding the compose dialog's initial date range; null falls back to `today`. | optional author `user` (set null) |
-| `reports` | User | Mutable report header: `templateId` + `filters` + note. Scope is a single workspace (`filters.workspaceIds === [id]`), or instance scope (`filters.workspaceIds === []`). Instance scope is owner-scoped and spans every workspace the running user belongs to, resolved to a concrete membership set only transiently to bound the entry query at render — that resolved set is **not** persisted, so the stored filter keeps the empty set (a legacy report may still hold a resolved multi-workspace set). Entries are scoped to the owner's **own** work by default: when `filters.userIds` is empty the render restricts to the owner (so the web app, which never sets `userIds`, always produces an own-only report — even an instance-scope one, even for an instance admin); the API can pass explicit `userIds` for a cross-user report, still bounded by the owner's entry access. `version` points at the current snapshot. `snapshot_workspace_ids` freezes the workspace set the current snapshot was rendered against (alongside `snapshot_project_ids`): every membership gate on the report — owner read/edit, list redaction, the Send-to / share ACL, and the recipient pool — is bounded by this frozen scope, not the empty stored filter or live memberships, so access stays stable and cross-user snapshots are never left ungated (null on legacy rows falls back to `filters.workspaceIds`). | owner `user`; `templateId` is a `report_templates` id (no FK) |
+| `report_templates` | Instance | Presentation format (Markdown + Liquid). A fresh instance is seeded with one default template from `@spantail/templates`. Exactly one row is the instance default (`isDefault`) — the compose fallback; it cannot be deleted or disabled. `nameTemplate` / `noteTemplate` are optional Liquid that produce a new report's initial name/note at compose time (rendered with a scope-only context: `user`, `workspaces`, `projects`, `users`, `period`). `defaultDateRange` is an optional `DateRangePreset` (`today`, `yesterday`, `last_7_days`, `last_30_days`, `this_week`, `last_week`, `this_month`, `last_month`) seeding the compose dialog's initial date range; null falls back to `today`. | optional author `user` (set null) |
+| `reports` | User | Mutable report header: `templateId` + `filters` + note. Scope is a single workspace (`filters.workspaceIds === [id]`), or instance scope (`filters.workspaceIds === []`). Instance scope is owner-scoped and spans every workspace the running user belongs to, resolved to a concrete membership set only transiently to bound the entry query at render — that resolved set is **not** persisted, so the stored filter keeps the empty set (a legacy report may still hold a resolved multi-workspace set). Entries are scoped to the owner's **own** work by default: when `filters.userIds` is empty the render restricts to the owner (so the web app, which never sets `userIds`, always produces an own-only report — even an instance-scope one, even for an instance admin); the API can pass explicit `userIds` for a cross-user report, still bounded by the owner's entry access. `version` points at the current snapshot. `snapshotWorkspaceIds` freezes the workspace set the current snapshot was rendered against (alongside `snapshotProjectIds`): every membership gate on the report — owner read/edit, list redaction, the Send-to / share ACL, and the recipient pool — is bounded by this frozen scope, not the empty stored filter or live memberships, so access stays stable and cross-user snapshots are never left ungated (null on legacy rows falls back to `filters.workspaceIds`). | owner `user`; `templateId` is a `report_templates` id (no FK) |
 | `report_content` | User (per report) | Immutable rendered snapshot per version: YAML front-matter + Markdown body. | belongs to `reports` (cascade) |
-| `report_shares` | Content version | Public capability link over one immutable `report_content` version (no copied body — the referenced version can never change). Minted by the report owner (report screen) or a delivery recipient (Messages); `created_by_user_id` is the sole ownership anchor and listings scope by (content, creator). Optional passcode (hashed), expiry, revoke; view counter. | belongs to `report_content` (cascade); creator `user` (cascade) |
-| `report_deliveries` | User (recipient) | "Send to" inbox message referencing the exact immutable `report_content` version sent (email model: a later edit appends a new version and never changes what was received). One send fans out to N rows grouped by `batchId`. Title/period/body derive from the version (its front matter) at read time; legacy pre-front-matter versions fall back to the live report header. Only the sender identity (`sender_name`/`sender_email`) is frozen as columns. Deleting the report removes its deliveries through the content-version cascade. | sent version `report_content` (cascade); sender `user` (set null) + recipient `user` (cascade) |
+| `report_shares` | Content version | Public capability link over one immutable `report_content` version (no copied body — the referenced version can never change). Minted by the report owner (report screen) or a delivery recipient (Messages); `createdByUserId` is the sole ownership anchor and listings scope by (content, creator). Optional passcode (hashed), expiry, revoke; view counter. | belongs to `report_content` (cascade); creator `user` (cascade) |
+| `report_deliveries` | User (recipient) | "Send to" inbox message referencing the exact immutable `report_content` version sent (email model: a later edit appends a new version and never changes what was received). One send fans out to N rows grouped by `batchId`. Title/period/body derive from the version (its front matter) at read time; legacy pre-front-matter versions fall back to the live report header. Only the sender identity (`senderName`/`senderEmail`) is frozen as columns. Deleting the report removes its deliveries through the content-version cascade. | sent version `report_content` (cascade); sender `user` (set null) + recipient `user` (cascade) |
 | `delivery_flags` | User | Per-viewer star / archive / trash on a mailbox item. `scope` is `received` (a delivery id) or `sent` (a batch id) — `targetId` is **not** a FK. | belongs to `user` |
 | `report_comments` | Content version | Markdown discussion on one sent `report_content` version, shared by the report owner and that version's Send-to recipients — a later edit's version starts a fresh thread. Author name frozen if the account is deleted. | belongs to `report_content` (cascade); author `user` (set null) |
 | `report_reactions` | Content version | Emoji reaction on the version's body (`commentId` null) or on a comment (`commentId` set). | belongs to `report_content` (cascade); optional `report_comments`; `user` |
@@ -287,12 +290,13 @@ How the entities above come into being and flow through the system.
 
 ### Human work logging
 
-A person logs work through any client; all four channels hit the same REST API and produce a
-`work_entries` row. Whether it is project- or workspace-scoped depends on `projectId`.
+A person logs work through any client; all five channels hit the same REST API and produce a
+`work_entries` row, which records the channel in `source`. Whether it is project- or
+workspace-scoped depends on `projectId`.
 
 ```mermaid
 flowchart LR
-    A["Human"] -->|"web / CLI / MCP / API"| B["POST /api/v1/work-entries"]
+    A["Human"] -->|"web / CLI / MCP / API / GitHub"| B["POST /api/v1/work-entries"]
     B --> C["work_entries row<br/>date · duration · description · tags · source"]
     C -->|"projectId set"| D["Project-scoped"]
     C -->|"projectId null"| E["Workspace-scoped"]
@@ -340,17 +344,17 @@ flowchart TB
 ## Conventions
 
 Cross-cutting rules that shape many tables. The authoritative statements live in
-[`CLAUDE.md`](../CLAUDE.md) (architecture invariants) and [`permissions.md`](./permissions.md);
+[`conventions.md`](./conventions.md) (architecture invariants) and [`permissions.md`](./permissions.md);
 summarized here for the data model.
 
 - **Dates vs timestamps.** A **date** and a **timestamp** are independent concepts, not derivable
-  from each other. `work_entries.entry_date` is a **local date** string `YYYY-MM-DD` in the author's
+  from each other. `work_entries.entryDate` is a **local date** string `YYYY-MM-DD` in the author's
   timezone, frozen at write time (a manual entry can have a date with no start/end time). Timestamps
   (`startedAt`/`endedAt`, and every other time column) are **UTC** millisecond instants. Durations
   are **integer minutes**. **Timezone is per-user** (`user.timezone`, null → UTC) — there is no
   workspace or project timezone. **Daily aggregation needs no timezone**: it groups by the stored
-  `entry_date`, so a user's day is the same for everyone. `agent_entries` are the exception — they
-  store **only** timestamps and **no** `entry_date`, so a session that crosses midnight lands on the
+  `entryDate`, so a user's day is the same for everyone. `agent_entries` are the exception — they
+  store **only** timestamps and **no** `entryDate`, so a session that crosses midnight lands on the
   correct day for whoever is viewing; the day is derived from `startedAt` in the viewer's timezone at
   read time. Reports resolve relative ranges (`this_month`) and the generation date in the running
   user's timezone.

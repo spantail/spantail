@@ -7,9 +7,9 @@ Repository-wide guidance for GitHub Copilot when reviewing pull requests in Span
 - Read the PR body first — especially the **Review points** section. Focus your review where the
   author asked, and confirm the trade-offs and decisions they call out rather than re-opening them.
 - Read the repository's key documents and review against them, not against generic preferences:
-  - `CLAUDE.md` — conventions, architecture invariants, and the Definition of Done.
-  - `docs/permissions.md` — source of truth for the role × resource access model.
-  - `docs/data-model.md` — source of truth for entities and how they relate.
+  - `docs/conventions.md` — conventions, architecture invariants, and the Definition of Done.
+  - `docs/permissions.md` — the role × resource access model.
+  - `docs/data-model.md` — the entities and how they relate.
   - `docs/report-templates.md` — report-template format and rendering-safety rules.
   - `CONTRIBUTING.md` — contribution workflow and PR expectations.
 
@@ -19,7 +19,7 @@ Repository-wide guidance for GitHub Copilot when reviewing pull requests in Span
   everything in a single review pass instead of across multiple rounds. Don't split one concern
   into many separate line comments.
 - Prioritize what matters: correctness, security, permission scoping, and violations of the
-  architecture invariants in `CLAUDE.md`. Lead with these.
+  architecture invariants in `docs/conventions.md`. Lead with these.
 
 ## What to avoid
 

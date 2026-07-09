@@ -30,7 +30,7 @@ rules:
     severity: ERROR
     message: >-
       The SPA must reach the Worker through the typed API client (src/client/lib/api.ts),
-      never via raw fetch. See CLAUDE.md (SPA data flow).
+      never via raw fetch. See docs/conventions.md (SPA data flow).
     pattern-either:
       - pattern: fetch(...)
       - pattern: window.fetch(...)

@@ -127,7 +127,7 @@ export const workEntries = sqliteTable(
 			.$type<string[]>()
 			.notNull()
 			.default([]),
-		// Client channel the entry was created through (web/cli/mcp/api).
+		// Client channel the entry was created through (web/cli/mcp/api/github).
 		source: text("source", { enum: workEntrySources }).notNull().default("web"),
 		createdAt: createdAtMs(),
 		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
