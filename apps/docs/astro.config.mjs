@@ -133,6 +133,7 @@ export default defineConfig({
 							{ slug: "self-hosting/deploy" },
 							{ slug: "self-hosting/configuration" },
 							{ slug: "self-hosting/setup-wizard" },
+							{ slug: "self-hosting/migration" },
 							{ slug: "self-hosting/security" },
 						],
 					},

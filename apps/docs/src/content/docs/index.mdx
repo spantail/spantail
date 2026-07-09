@@ -10,8 +10,8 @@ hero:
     - text: Get started
       link: /guides/
       icon: right-arrow
-    - text: Set up Spantail
-      link: /self-hosting/
+    - text: Visit spantail.com
+      link: https://spantail.com
       icon: external
       variant: minimal
 ---
@@ -53,6 +53,20 @@ import SiteFooter from "../../components/SiteFooter.astro";
 			more: "Open the Setup Guide",
 		},
 		{
+			icon: "window",
+			title: "Template Guide",
+			body: "Build reusable report templates for your team.",
+			href: "/admin/report-templates/",
+			more: "Open the Template Guide",
+		},
+		{
+			icon: "random",
+			title: "Migration Guide",
+			body: "Bring your existing work history into Spantail.",
+			href: "/self-hosting/migration/",
+			more: "Open the Migration Guide",
+		},
+		{
 			icon: "seti:json",
 			title: "API Reference",
 			body: "Automate Spantail over the REST API.",
@@ -75,6 +89,12 @@ Feed and pull your data however you like — these clients all talk to the same 
 			title: "Claude Plugin",
 			body: "Capture Claude Code activity (coming soon).",
 			href: "/guides/tools/claude-plugin/",
+		},
+		{
+			id: "github",
+			title: "GitHub App",
+			body: "Capture commits and pull-request activity.",
+			href: "/admin/github-integration/",
 		},
 	]}
 />
