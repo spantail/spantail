@@ -14,8 +14,8 @@ Spantail is an open-source platform for recording human and AI work with as litt
 possible — ideally none — then sharing and reviewing it in seconds. Built for the era of
 human–AI collaboration: humans log work in a few keystrokes, AI coding agents stream their own
 sessions in automatically, and the unified timeline becomes any report you need — daily, weekly,
-monthly — from a single source of truth. Built AI-first: every operation is available to humans
-(web, CLI) and AI agents (MCP) through the same API.
+monthly. Built AI-first: every operation is available to humans (web, CLI) and AI agents (MCP)
+through the same API.
 
 > **Status**: Early development. APIs and schemas are unstable. Not yet ready for production use.
 

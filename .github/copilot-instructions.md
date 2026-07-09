@@ -8,8 +8,8 @@ Repository-wide guidance for GitHub Copilot when reviewing pull requests in Span
   author asked, and confirm the trade-offs and decisions they call out rather than re-opening them.
 - Read the repository's key documents and review against them, not against generic preferences:
   - `CLAUDE.md` — conventions, architecture invariants, and the Definition of Done.
-  - `docs/permissions.md` — source of truth for the role × resource access model.
-  - `docs/data-model.md` — source of truth for entities and how they relate.
+  - `docs/permissions.md` — the role × resource access model.
+  - `docs/data-model.md` — the entities and how they relate.
   - `docs/report-templates.md` — report-template format and rendering-safety rules.
   - `CONTRIBUTING.md` — contribution workflow and PR expectations.
 

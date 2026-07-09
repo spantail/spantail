@@ -1,6 +1,6 @@
 # Releasing
 
-The single source of truth for **how Spantail is versioned and released**. It is a companion to
+The canonical reference for **how Spantail is versioned and released**. It is a companion to
 [`CONTRIBUTING.md`](../CONTRIBUTING.md) (how we work) and [`CLAUDE.md`](../CLAUDE.md) (conventions
 and Definition of Done); where a rule lives there, this doc links rather than restating it.
 

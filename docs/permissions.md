@@ -1,6 +1,6 @@
 # Permissions & resource visibility
 
-This is the single source of truth for **who can read and write each resource** in
+This is the canonical reference for **who can read and write each resource** in
 Spantail. It defines the model the implementation follows. A few deliberate
 refinements are called out under [Intentional deviations](#intentional-deviations) so
 they are not mistaken for divergence.

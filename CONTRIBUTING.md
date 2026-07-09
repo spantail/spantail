@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing! This guide covers **how we work** — where to discuss
 ideas, how to file issues, and how to open pull requests. For project conventions and local
-development, see the links below rather than this page (we keep a single source of truth):
+development, see the links below rather than this page (we avoid duplicating them):
 
 - **Dev setup & commands** — [`README.md`](README.md) ("Getting started" / "Development").
 - **Coding conventions & Definition of Done** — [`CLAUDE.md`](CLAUDE.md).

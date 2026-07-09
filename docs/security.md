@@ -1,6 +1,6 @@
 # Security threat model
 
-This is the single source of truth for the **security properties and standing threats
+This is the canonical reference for the **security properties and standing threats
 specific to Spantail** — the ones that fall out of what Spantail *is* (a self-hostable,
 open-source work-observability platform that captures AI-agent activity) rather than from
 generic web or supply-chain concerns. It records the invariants contributors must preserve
