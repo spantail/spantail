@@ -1,0 +1,67 @@
+# Syncs the type label (enhancement, bug, documentation, chore, ci) on every PR
+# from its Conventional Commits title prefix, so release.yml can categorize
+# release notes without anyone labeling PRs by hand.
+#
+# pull_request_target (not pull_request) so the token can write labels on PRs
+# from forks. That is safe here because the job never checks out or runs PR
+# code — it only reads the PR title and calls the labels API.
+name: PR labels
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync-type-label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const TYPE_LABELS = {
+              feat: "enhancement",
+              fix: "bug",
+              docs: "documentation",
+              ci: "ci",
+              chore: "chore",
+              refactor: "chore",
+              test: "chore",
+              build: "chore",
+              perf: "chore",
+              style: "chore",
+            };
+            const MANAGED = new Set(Object.values(TYPE_LABELS));
+
+            const pr = context.payload.pull_request;
+            const match = pr.title.match(/^([a-z]+)(\([^)]*\))?!?:/);
+            const wanted = match ? TYPE_LABELS[match[1]] : undefined;
+            if (!wanted) {
+              core.info(`No managed type for title: ${pr.title}`);
+              return;
+            }
+
+            const current = pr.labels.map((l) => l.name);
+            const stale = current.filter((n) => MANAGED.has(n) && n !== wanted);
+            for (const name of stale) {
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo,
+                  issue_number: pr.number,
+                  name,
+                });
+              } catch (error) {
+                // Already removed by a concurrent run or by hand.
+                if (error.status !== 404) throw error;
+              }
+            }
+            if (!current.includes(wanted)) {
+              await github.rest.issues.addLabels({
+                ...context.repo,
+                issue_number: pr.number,
+                labels: [wanted],
+              });
+            }
