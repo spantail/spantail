@@ -1,0 +1,226 @@
+---
+title: Getting started
+description: Deploy Spantail to your own Cloudflare account, log a day of work, and send yourself the report.
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Spantail is a work observability platform: it records what people do as **work
+entries** and captures AI-agent activity as **spans**, then turns both into
+**reports**. It is self-hosted — one deployment, on your own Cloudflare account,
+serving one organization.
+
+This page is a hands-on walkthrough. In about fifteen minutes you go from an
+empty Cloudflare account to a live instance with a workspace, a project, a day
+of logged work, and a daily report sitting in your own inbox. Each step links to
+the reference page that covers it in depth.
+
+## Before you start
+
+You need:
+
+- A **Cloudflare account** (and a GitHub account to clone the repository).
+- **Node.js 24+**, **pnpm 10+**, and **Wrangler v4**, with Wrangler signed in
+  (`wrangler login`).
+
+:::note
+Spantail stores uploaded avatars and logos in an R2 bucket, so **R2 must be
+enabled on your Cloudflare account** before you start. R2 has a free tier, but
+Cloudflare requires a payment method to enable it.
+:::
+
+Clone the repository and install its dependencies:
+
+```bash
+git clone https://github.com/spantail/spantail.git
+cd spantail
+pnpm install
+```
+
+## Deploy and set up your instance
+
+<Steps>
+
+1. **Deploy with Wrangler.**
+
+   Create the two Cloudflare resources Spantail needs:
+
+   ```bash
+   wrangler d1 create spantail-db
+   wrangler r2 bucket create spantail-uploads
+   ```
+
+   Copy the `database_id` that `wrangler d1 create` prints into the
+   `d1_databases` block of `apps/web/wrangler.jsonc` (it ships with a
+   placeholder). Then set the secret that signs sessions — any value of at least
+   32 characters, for example `openssl rand -base64 32`:
+
+   ```bash
+   wrangler secret put BETTER_AUTH_SECRET
+   ```
+
+   :::caution
+   Without this secret the Worker **fails closed** — any request that touches
+   auth or session code errors out rather than signing sessions with a forgeable
+   value.
+   :::
+
+   Apply the migrations, then deploy. The order matters.
+
+   ```bash
+   pnpm db:migrate:remote
+   pnpm run deploy
+   ```
+
+   :::note
+   Use `pnpm run deploy`. Plain `pnpm deploy` is a built-in pnpm command and does
+   something else entirely.
+   :::
+
+   Wrangler prints the `*.workers.dev` URL your instance is now live at. You do
+   not need to configure an origin: Spantail derives one from each request. To
+   pin a custom domain, enable social login, or let Cloudflare deploy on every
+   push instead of doing it from your machine, see
+   [Deploy to Cloudflare](/self-hosting/deploy/) and
+   [Configuration](/self-hosting/configuration/).
+
+2. **Become the instance administrator.**
+
+   Open the URL. On a fresh instance, public sign-up is open until the first
+   account exists: **the first person to sign up with an email and a password
+   becomes the instance administrator**, and sign-up then closes. Everyone else
+   joins by invitation.
+
+   :::note[Screenshot]
+   The sign-up screen of a fresh instance, before the first account exists.
+   🚧 Image to be added.
+   :::
+
+   Sign up. You land in the setup wizard, which has five steps. The first two
+   are the ones that matter here:
+
+   - **Create your first workspace** — a name and a slug. A workspace is the
+     organizational unit that holds your projects and your work.
+   - **Create a project** — a name and a slug. Projects group the work you log;
+     an entry can also stay workspace-wide.
+
+   Skip **Instance settings** and **Invite your team** for now. Email delivery
+   needs a Workers Paid plan and a verified sending domain, and you can invite
+   people later from [User management](/admin/users/). Finish the wizard to land
+   on your new workspace's dashboard.
+
+   :::note[Screenshot]
+   Wizard step 1, "Create your first workspace", with the name and slug fields.
+   🚧 Image to be added.
+   :::
+
+   The wizard only covers the first run; everything it sets up is editable later
+   from the Settings hub. See [Initial setup wizard](/self-hosting/setup-wizard/),
+   [Workspace settings](/admin/workspace-settings/), and [Projects](/admin/projects/).
+
+3. **Log today's work.**
+
+   The dashboard shows your workspace's timeline. Click the **+** button (or
+   press <kbd>C</kbd>) to open the entry dialog, and fill in:
+
+   - **Date** — today, in your timezone, by default.
+   - **Duration** — `90`, `90m`, `1.5h`, and `1h30m` all mean the same thing.
+   - **Description** — what you worked on.
+   - **Project** — the one you just created.
+
+   Save, and the entry appears on the timeline. Log two or three so the report
+   in the next step has something to say; the **Keep entering** toggle keeps the
+   dialog open between them.
+
+   :::note[Screenshot]
+   The new-entry dialog with the date, duration, description, project, and tag
+   fields.
+   🚧 Image to be added.
+   :::
+
+   Entry dates are frozen in the author's timezone, so set yours under
+   [Account & preferences](/guides/account-preferences/) if it isn't right. The
+   full details are in [Logging work](/guides/logging-work/).
+
+4. **Create a daily report.**
+
+   Reports are user-scoped, so they live in the header's top-right corner, not in
+   the workspace sidebar. Open **Reports** and click **New report**. The form is
+   on the left, a live preview on the right. Set:
+
+   - **Template** — the presentation format. Your instance has none yet, so a
+     default template is seeded automatically and preselected.
+   - **Scope** — the workspace you created.
+   - **Date range** — the **Today** preset. That is what makes this a daily
+     report.
+
+   The name and the note fill themselves in from the template. Save to render
+   the report.
+
+   :::note[Screenshot]
+   The new-report dialog: template picker and filters on the left, the live
+   Markdown preview on the right.
+   🚧 Image to be added.
+   :::
+
+   A saved report is an immutable snapshot: editing it appends a new version
+   rather than rewriting the old one, so a report always reflects the data as of
+   when it was rendered. See [Reports & inbox](/guides/reports/) and
+   [Report templates](/admin/report-templates/).
+
+5. **Send it to yourself.**
+
+   Click **Send** in the report's toolbar. Leave the recipient list empty, tick
+   **Also send to my inbox**, and send. Spantail confirms with _"Saved to your
+   inbox."_
+
+   :::note
+   Sending a report delivers a frozen copy to a Spantail **inbox**, in the app —
+   it is not an email. Spantail sends email only for invitations and password
+   resets, and only once you have configured email delivery.
+   :::
+
+   Open your inbox from the header's top-right corner to read the copy you just
+   sent. Every sent version carries its own discussion thread: Markdown comments
+   and emoji reactions, visible to the sender and that version's recipients.
+
+   :::note[Screenshot]
+   The send dialog with the "Also send to my inbox" checkbox, and the delivered
+   copy in the inbox.
+   🚧 Image to be added.
+   :::
+
+</Steps>
+
+## What you built
+
+A Spantail instance on your own Cloudflare account, with a workspace, a project,
+a day of work, and a daily report delivered to your inbox. Everything you logged
+lives in the workspace; the report is yours, and yours to share.
+
+The vocabulary you just used:
+
+| Concept | What it is |
+|---|---|
+| **Workspace** | An organizational unit (a team, department, or client). You can belong to several. |
+| **Project** | A subdivision of a workspace. Work entries can be assigned to a project or left workspace-wide. |
+| **Work entry** | A record of human work: a date, duration, description, optional note, and tags. |
+| **Agent activity** | AI-agent sessions captured as spans, shown on the timeline alongside human work. |
+| **Report** | A snapshot built from a template, filters, and a date range — readable, shareable, and discussable. |
+
+## Where to go next
+
+- [Logging work](/guides/logging-work/) — record work entries in the web UI.
+- [Projects & timeline](/guides/projects-timeline/) — browse projects and your
+  work timeline.
+- [Reports & inbox](/guides/reports/) — create, share, and discuss reports.
+- [Capturing agent activity](/guides/capturing-agents/) — capture AI-agent work
+  as spans.
+- [Account & preferences](/guides/account-preferences/) — API tokens, language,
+  theme, and timezone.
+- [CLI](/guides/tools/cli/) and [MCP](/guides/tools/mcp/) — log and read your
+  data from outside the web app.
+
+To bring your team in, turn on email delivery and social login in
+[System settings](/admin/system-settings/), then invite people from
+[User management](/admin/users/).
