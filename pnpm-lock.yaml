@@ -57,6 +57,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.4
         version: 0.9.9(prettier@3.8.4)(typescript@6.0.3)
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       wrangler:
         specifier: ^4.99.0
         version: 4.99.0(@cloudflare/workers-types@4.20260611.1)
@@ -7788,7 +7791,7 @@ snapshots:
 
   '@img/sharp-wasm32@0.34.5':
     dependencies:
-      '@emnapi/runtime': 1.11.0
+      '@emnapi/runtime': 1.11.1
     optional: true
 
   '@img/sharp-win32-arm64@0.34.5':
@@ -11855,7 +11858,7 @@ snapshots:
 
   node-abi@3.92.0:
     dependencies:
-      semver: 7.8.4
+      semver: 7.8.5
     optional: true
 
   node-addon-api@8.8.0:
@@ -12801,7 +12804,7 @@ snapshots:
     dependencies:
       '@img/colour': 1.1.0
       detect-libc: 2.1.2
-      semver: 7.8.4
+      semver: 7.8.5
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.34.5
       '@img/sharp-darwin-x64': 0.34.5
@@ -13193,7 +13196,7 @@ snapshots:
 
   typescript-auto-import-cache@0.3.6:
     dependencies:
-      semver: 7.8.4
+      semver: 7.8.5
 
   typescript@6.0.3: {}
 
@@ -13446,7 +13449,7 @@ snapshots:
   volar-service-typescript@0.0.70(@volar/language-service@2.4.28):
     dependencies:
       path-browserify: 1.0.1
-      semver: 7.8.4
+      semver: 7.8.5
       typescript-auto-import-cache: 0.3.6
       vscode-languageserver-textdocument: 1.0.12
       vscode-nls: 5.2.0
