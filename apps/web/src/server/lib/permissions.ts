@@ -63,7 +63,8 @@ export function requireTemplateManager(c: Context<AppEnv>): UserAuthContext {
  * read and write workspace/project containers without belonging to the
  * workspace, and satisfy any `minRole` regardless of an incidental stored
  * role. The bypass returns a synthetic `admin` membership so every call site
- * behaves as if the admin were a workspace admin. A missing workspace is
+ * behaves as if the admin were a workspace admin — an incidental `member` row
+ * does not demote it, and an `owner` row is not lowered. A missing workspace is
  * still 404 for everyone, including admins.
  *
  * Pass `{ write: true }` from routes that mutate workspace-scoped data: an
@@ -83,17 +84,16 @@ export async function requireWorkspaceAccess(
 		throw new AppError("not_found", "Workspace not found");
 	}
 	let membership = await getMembership(c.var.db, workspaceId, user.id);
-	if (!membership) {
-		if (!user.isAdmin) {
-			throw new AppError("not_found", "Workspace not found");
-		}
+	if (user.isAdmin) {
 		membership = {
 			workspaceId,
 			userId: user.id,
-			role: "admin",
-			createdAt: workspace.createdAt,
+			role: membership?.role === "owner" ? "owner" : "admin",
+			createdAt: membership?.createdAt ?? workspace.createdAt,
 		};
-	} else if (!user.isAdmin && ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
+	} else if (!membership) {
+		throw new AppError("not_found", "Workspace not found");
+	} else if (ROLE_RANK[membership.role] < ROLE_RANK[minRole]) {
 		throw new AppError("forbidden", `Requires workspace ${minRole} role`);
 	}
 	if (opts.write && workspace.archivedAt) {
@@ -200,19 +200,21 @@ export function resolveEntryAccess(
 }
 
 /**
- * Resolves entry-read access across several workspaces (report scope): the
- * workspaces where the caller is an admin grant full read; elsewhere project
- * membership (checked in-SQL) and own entries apply.
+ * Resolves entry-read access across several workspaces (report scope, search):
+ * the workspaces where the caller is an admin grant full read; elsewhere
+ * project membership (checked in-SQL) and own entries apply. An instance admin
+ * reads every workspace passed in (Principle 1), including ones they only hold
+ * a `member` row in, or none at all (`role: null`).
  */
 export function resolveEntryAccessForWorkspaces(
-	workspaces: MemberWorkspace[],
-	userId: string,
+	workspaces: Array<{ id: string; role: WorkspaceRole | null }>,
+	user: { id: string; isAdmin: boolean },
 ): EntryAccessScope {
 	return {
 		adminWorkspaceIds: workspaces
-			.filter((w) => isWorkspaceAdmin(w.role))
+			.filter((w) => user.isAdmin || (w.role && isWorkspaceAdmin(w.role)))
 			.map((w) => w.id),
-		userId,
+		userId: user.id,
 	};
 }
 

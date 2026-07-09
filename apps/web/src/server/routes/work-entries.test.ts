@@ -8,7 +8,13 @@ import {
 } from "@spantail/db";
 import { expect, it } from "vitest";
 
-import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
+import {
+	apiGet,
+	apiJson,
+	appFetch,
+	signUpAdmin,
+	signUpUser,
+} from "../../../test/helpers";
 
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
@@ -1450,4 +1456,70 @@ it("never surfaces a linked session from another workspace", async () => {
 		await apiGet(`/api/v1/work-entries/${entryId}/agent-entries`, admin)
 	).json()) as unknown[];
 	expect(rows).toEqual([]);
+});
+
+it("keeps the instance-admin bypass when the admin is also a plain member", async () => {
+	// An instance admin holding a plain `member` row in a workspace owned by
+	// someone else, belonging to none of its projects: that incidental row must
+	// not demote the bypass (docs/permissions.md, Principle 1).
+	const owner = await signUpUser("Owner", "owner@example.com");
+	const iAdmin = await signUpAdmin("IAdmin", "iadmin@example.com");
+	const plainMember = await signUpUser("Plain", "plain@example.com");
+	const ws = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "acme", name: "Acme" },
+			owner,
+		)
+	).json()) as { id: string };
+	for (const email of ["iadmin@example.com", "plain@example.com"]) {
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/members`,
+			{ email },
+			owner,
+		);
+	}
+	const project = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "spantail", name: "Spantail" },
+			owner,
+		)
+	).json()) as { id: string };
+	const entry = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				durationMinutes: 30,
+				description: "Owner work",
+			},
+			owner,
+		)
+	).json()) as { id: string };
+
+	// The instance admin reads the project-assigned entry (matrix `R`).
+	expect(
+		(await apiGet(`/api/v1/work-entries/${entry.id}`, iAdmin)).status,
+	).toBe(200);
+	const adminList = (await (
+		await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}`, iAdmin)
+	).json()) as Array<{ id: string }>;
+	expect(adminList.map((e) => e.id)).toEqual([entry.id]);
+
+	// A workspace member who is not an instance admin still cannot: the entry's
+	// existence is not revealed.
+	expect(
+		(await apiGet(`/api/v1/work-entries/${entry.id}`, plainMember)).status,
+	).toBe(404);
+	expect(
+		await (
+			await apiGet(`/api/v1/work-entries?workspaceId=${ws.id}`, plainMember)
+		).json(),
+	).toEqual([]);
 });

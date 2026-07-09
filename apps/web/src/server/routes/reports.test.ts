@@ -6,6 +6,7 @@ import {
 	apiJson,
 	appFetch,
 	defaultTemplateId,
+	signUpAdmin,
 	signUpUser,
 } from "../../../test/helpers";
 
@@ -1227,4 +1228,61 @@ it("includes agent activity, own-scoped and ignoring the tag filter", async () =
 	expect(preview.content).toContain("42m");
 	// `other`'s session is excluded by own-scoping + the private-by-default ACL.
 	expect(preview.content).not.toContain("9999");
+});
+
+it("keeps the instance-admin bypass in report scope when the admin is a plain member", async () => {
+	// A plain `member` row in someone else's workspace must not demote the
+	// instance-admin bypass, so the report still spans every author and project
+	// there (docs/permissions.md, Principle 1).
+	const owner = await signUpUser("Owner", "owner@example.com");
+	const iAdmin = await signUpAdmin("IAdmin", "iadmin@example.com");
+	const templateId = await defaultTemplateId(iAdmin);
+	const ws = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/workspaces",
+			{ slug: "acme", name: "Acme" },
+			owner,
+		)
+	).json()) as { id: string };
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ws.id}/members`,
+		{ email: "iadmin@example.com", role: "member" },
+		owner,
+	);
+	const ownerId = (
+		(await (await apiGet("/api/v1/me", owner)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	const project = (await (
+		await apiJson(
+			"POST",
+			`/api/v1/workspaces/${ws.id}/projects`,
+			{ slug: "spantail", name: "Spantail" },
+			owner,
+		)
+	).json()) as { id: string };
+	await createEntry(owner, ws.id, project.id, "Owner work", ["api"]);
+
+	const preview = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/reports/preview",
+			{
+				name: "Team standup",
+				templateId,
+				filters: {
+					workspaceIds: [ws.id],
+					userIds: [ownerId],
+					tags: ["api"],
+					dateRange: "today",
+				},
+			},
+			iAdmin,
+		)
+	).json()) as { content: string; entryCount: number };
+	expect(preview.entryCount).toBe(1);
+	expect(preview.content).toContain("Owner work");
 });

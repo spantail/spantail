@@ -205,13 +205,8 @@ Notes:
 
 ## Intentional deviations
 
-The implementation matches this spec, with one known exception: the instance-admin bypass is
-demoted when the admin also holds a workspace `member` row, so they read work entries as a plain
-member would ([#193](https://github.com/spantail/spantail/issues/193)). It narrows access rather
-than widening it.
-
-The behaviors below, by contrast, are deliberate refinements, called out here so they are not
-mistaken for divergence:
+The implementation matches this spec. The behaviors below are deliberate refinements, called out
+here so they are not mistaken for divergence:
 
 - **Workspace-admin `R*` is single-workspace-only.** A multi-workspace report is not a
   per-workspace partial view, so it stays instance-admin-only (`R`). See the `R*` note under the
