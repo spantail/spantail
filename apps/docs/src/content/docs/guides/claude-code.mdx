@@ -1,0 +1,173 @@
+---
+title: Capture your Claude Code sessions
+description: Install the Spantail plugin, record your Claude Code sessions, and turn them into work entries and reports.
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+Spantail records human work as **work entries** and AI-agent activity as
+**sessions**. This walkthrough covers the second half: the Spantail plugin for
+Claude Code captures every session you run, and you turn those sessions into
+work entries and reports — from the web app, and from inside Claude Code itself.
+
+Pick up where [Set up your instance](/guides/) left off. When you finish, your
+own Claude Code sessions appear on the timeline next to your work, and you can
+log work and build a report without leaving your editor.
+
+## Before you start
+
+- You have your own instance, with a workspace and a project — the end state of
+  [Set up your instance](/guides/).
+- **Claude Code v2.1.143 or later**, which is when plugin settings arrived.
+- `bash`, `jq`, and `curl` on your `PATH`. The plugin's hooks are shell scripts;
+  they never fail a turn or block a session from ending, and they skip silently
+  when a dependency is missing. `git` is optional — with it, a session also
+  carries the branch and repository it ran against.
+
+## Capture and use a session
+
+<Steps>
+
+1. **Turn on AI agents.**
+
+   Agent capture is **off by default** and only an instance administrator can
+   enable it. Open **Settings → Features** and turn on **Enable agent activity
+   logging**.
+
+   ![The Features settings page with the AI agents card and its enable
+   toggle.](../../../assets/claude-code/01-features-agents.png)
+
+   :::caution
+   Turning this on can grow your data volume substantially — each agent session,
+   and each per-turn event behind it, is stored. Leave it off unless you want
+   this telemetry.
+   :::
+
+   See [System settings](/admin/system-settings/) for the other instance-wide
+   switches.
+
+2. **Register an agent and collect two tokens.**
+
+   Open **Settings → Agents** (under Account) and click **New agent**. Give it a
+   name, pick the type **Claude Code**, choose the workspace its sessions land
+   in, and optionally a project and an expiry.
+
+   Saving shows the **agent access token** (`spantail_aat_…`) once, alongside the
+   **Workspace ID** and **Project ID** you will paste into the plugin. Copy all
+   three now — the token is never shown again.
+
+   ![The dialog shown after creating an agent: the one-time access token and the
+   workspace and project ids for the plugin.](../../../assets/claude-code/02-agent-token.png)
+
+   The agent token is **write-only and ingest-only**: it can send agent activity
+   and nothing else. The plugin's skills act *as you*, so they need a second
+   credential — a **personal API token** (`spantail_pat_…`) from
+   **Settings → API tokens**. Create one now if you plan to do step 5.
+
+   The full model — what an agent is, which token does what — is in
+   [Capturing agent activity](/guides/capturing-agents/).
+
+3. **Install the plugin and record a session.**
+
+   In Claude Code:
+
+   ```
+   /plugin marketplace add spantail/spantail
+   /plugin install spantail@spantail
+   ```
+
+   Enabling the plugin prompts for its settings. Fill in your instance URL
+   (`apiUrl`) and the agent token (`agentToken`); add the personal API token
+   (`apiToken`) to enable the skills, and the workspace and project ids if you
+   copied them.
+
+   The plugin registers three hooks, two of which send anything. On every
+   **Stop** — the end of a turn — it posts that turn's token usage, timestamp,
+   and model name, tagged with your git branch, repository URL, working
+   directory, Claude Code version, and the provider request id. On
+   **SessionEnd** it re-posts idempotently and then finalizes the session with
+   its wall-clock end and the pull requests it touched. **SessionStart** sends
+   nothing: it only exports the session id so `/spantail:summary` can target the
+   session you are in.
+
+   :::note
+   The hooks send **compact telemetry only**. Conversation bodies, thinking, and
+   tool input and output never leave your machine. The one exception is opt-in:
+   `sendSessionSummary` (or `/spantail:summary on` for a single session) sends
+   the title of the session's plan file as the entry's description.
+   :::
+
+   Now use Claude Code normally for a few minutes and end the session. Back in
+   Spantail, open your agent from the workspace sidebar: its activity page lists
+   the session, and opening a row shows its duration, token usage, and the
+   branches and repositories it touched.
+
+   The full settings reference, the environment-variable overrides, and how to
+   run the hooks without the plugin are in
+   [Claude Plugin](/guides/tools/claude-plugin/) — and the wire format in the
+   [ingest API](/api/agent-ingest/).
+
+4. **Turn sessions into a work entry.**
+
+   A session records what your agent did; a work entry records what *you* did.
+   On the agent's activity page, tick one or more of your own sessions and click
+   **Log work from selection** (or press <kbd>C</kbd>).
+
+   ![The agent activity page with two sessions selected and the "Log work from
+   selection" button.](../../../assets/claude-code/03-select-sessions.png)
+
+   The entry dialog opens pre-filled from the selection: the duration is their
+   sum, the date is the day that carries most of it, the description comes from
+   the session (several sessions become a bulleted note instead), and the
+   project is the one they share. Every field stays editable, and a banner
+   reminds you what the entry is being built from.
+
+   ![The Log work dialog pre-filled from the selected sessions, with the banner
+   naming them.](../../../assets/claude-code/04-entry-from-sessions.png)
+
+   You can only link **your own** sessions, they must share one project, and up
+   to 50 at a time. Save, and the entry joins your timeline — linked to the
+   sessions it came from.
+
+5. **Log work and build a report from Claude Code.**
+
+   The plugin also ships skills. Unlike the hooks, they act **as you** over
+   Spantail's MCP connection, which is why they need the personal API token from
+   step 2.
+
+   `/spantail:log-work` with no arguments proposes an entry from the session you
+   are in — it summarizes the work, estimates the time, and asks you to confirm
+   before logging. Give it free text (`/spantail:log-work fixed auth bug, 2h,
+   project core`) to dictate the entry instead.
+
+   `/spantail:log-work #123 2h yesterday` logs against a GitHub issue. The server
+   resolves the project from its repository mapping, fills in the issue title and
+   labels, and links the agent sessions that match — see
+   [GitHub integration](/admin/github-integration/) to set the mapping up.
+
+   `/spantail:create-report` composes a report. It always renders a preview and
+   shows it to you before saving anything.
+
+   Two read-only agents come along too: `spantail-work-analyst` for
+   retrospectives over your work entries, and `spantail-agent-activity-analyst`
+   for the session telemetry the hooks collected.
+
+</Steps>
+
+## What you built
+
+Your Claude Code sessions now flow into Spantail on their own, and both of the
+ways to act on them are wired up: the web app, where you select sessions and
+turn them into a work entry, and Claude Code itself, where a skill logs work or
+builds a report as you.
+
+## Where to go next
+
+- [Capturing agent activity](/guides/capturing-agents/) — agents, tokens, and
+  the activity page in full.
+- [Claude Plugin](/guides/tools/claude-plugin/) — every setting, what each hook
+  sends, and running the hooks without the plugin.
+- [MCP](/guides/tools/mcp/) — connect other AI clients to the same tools.
+- [Reports & inbox](/guides/reports/) — share and discuss what you report.
+- [GitHub integration](/admin/github-integration/) — map repositories to
+  projects so `#123` resolves.

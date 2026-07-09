@@ -63,15 +63,20 @@ export default defineConfig({
 						label: { en: "User Guide", ja: "ユーザーガイド" },
 						link: "/guides/",
 						icon: "open-book",
-						// Two always-expanded groups (Core features, Your account) plus
-						// standalone top items: Getting started, and the three tool
-						// clients (CLI/MCP/Claude Plugin) lifted up one level rather than
-						// nested under a Tools group. Group `collapsed: false` keeps the
+						// Three always-expanded groups (Getting started, Core features,
+						// Your account) plus standalone top items: the three tool clients
+						// (CLI/MCP/Claude Plugin) lifted up one level rather than nested
+						// under a Tools group. Group `collapsed: false` keeps the
 						// tree open on load. Group labels use Starlight's `label` +
 						// `translations`; the topic label above uses the plugin's own
 						// `{ en, ja }` shape — two different schemas, both intentional.
 						items: [
-							{ slug: "guides" },
+							{
+								label: "Getting started",
+								translations: { ja: "はじめに" },
+								collapsed: false,
+								items: [{ slug: "guides" }, { slug: "guides/claude-code" }],
+							},
 							{
 								label: "Core features",
 								translations: { ja: "基本機能" },
