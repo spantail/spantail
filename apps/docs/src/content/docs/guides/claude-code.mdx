@@ -82,9 +82,9 @@ log work and build a report without leaving your editor.
    copied them.
 
    The plugin registers three hooks, two of which send anything. On every
-   **Stop** — the end of a turn — it posts that turn's token usage, timestamps,
+   **Stop** — the end of a turn — it posts that turn's token usage, timestamp,
    and model name, tagged with your git branch, repository URL, working
-   directory, Claude Code version, and the provider request ids. On
+   directory, Claude Code version, and the provider request id. On
    **SessionEnd** it re-posts idempotently and then finalizes the session with
    its wall-clock end and the pull requests it touched. **SessionStart** sends
    nothing: it only exports the session id so `/spantail:summary` can target the
