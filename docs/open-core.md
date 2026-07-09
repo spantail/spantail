@@ -92,9 +92,14 @@ This means the areas above may shrink over time. They will not grow into what is
 
 ## For contributors
 
-Contributions to this repository are, and remain, MIT licensed. Enterprise Edition is developed
-separately and does not accept external contributions, so nothing you send here can be
-relicensed into it.
+Contributions to this repository are, and remain, MIT licensed, and the promises above cover
+them: what you contribute here stays here, free for everyone, no matter who wrote it.
+
+Enterprise builds are built on top of this repository, so MIT-licensed core code — yours
+included — ships inside them. That is what "adds a layer on top" means, and the MIT license
+permits it. What will not happen is your contribution being taken out of the core, or becoming
+something anyone has to pay for. Enterprise Edition itself is developed separately and does not
+accept external contributions.
 
 If you are considering a substantial feature that touches one of the areas above — or that you
 suspect might — **please open a [Discussion](https://github.com/spantail/spantail/discussions)

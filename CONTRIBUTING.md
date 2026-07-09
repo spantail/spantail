@@ -33,8 +33,9 @@ stays free in each of those areas, and the promises we make about never moving a
 the core.
 
 If you're planning a substantial feature that touches one of those areas, open a Discussion
-first and we'll tell you which side of the line it falls on before you write any code. Nothing
-you contribute here can end up in the Enterprise Edition — it stays MIT.
+first and we'll tell you which side of the line it falls on before you write any code. What you
+contribute here stays MIT and stays in the core: Enterprise builds sit on top of this
+repository rather than taking anything out of it.
 
 ## Filing issues
 
