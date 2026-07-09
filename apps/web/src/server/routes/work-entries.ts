@@ -34,6 +34,7 @@ import { Hono } from "hono";
 import { serializeAgentEntry } from "../lib/agent-entry";
 import { AppError } from "../lib/errors";
 import {
+	isWorkspaceAdmin,
 	requireProjectAccess,
 	requireWorkspaceAccess,
 	resolveEntryAccess,
@@ -76,10 +77,9 @@ async function requireEntryAccess(
 	// Project ACL: an entry assigned to a project is readable only by workspace
 	// admins, the entry's author, or a member of that project. Others get 404 so
 	// the entry's existence is not revealed.
-	const isAdmin = membership.role === "owner" || membership.role === "admin";
 	if (
 		entry.projectId !== null &&
-		!isAdmin &&
+		!isWorkspaceAdmin(membership.role) &&
 		entry.userId !== user.id &&
 		!(await isProjectMember(c.var.db, entry.projectId, user.id))
 	) {

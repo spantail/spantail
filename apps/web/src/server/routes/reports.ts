@@ -253,7 +253,7 @@ async function renderReportDocument(
 		filters.dateRange,
 		timezone,
 	);
-	const access = resolveEntryAccessForWorkspaces(scoped, user.id);
+	const access = resolveEntryAccessForWorkspaces(scoped, user);
 	// Reports are scoped to the owner's own work by default. The web UI never
 	// sends userIds, so it always renders own-only — an instance-scope report
 	// still spans every workspace, but includes only the caller's entries. The
