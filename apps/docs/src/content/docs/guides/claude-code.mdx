@@ -19,8 +19,10 @@ log work and build a report without leaving your editor.
 - You have your own instance, with a workspace and a project — the end state of
   [Set up your instance](/guides/).
 - **Claude Code v2.1.143 or later**, which is when plugin settings arrived.
-- `bash`, `jq`, `curl`, and `git` on your `PATH`. The plugin's hooks are shell
-  scripts; they never fail a turn or block a session from ending.
+- `bash`, `jq`, and `curl` on your `PATH`. The plugin's hooks are shell scripts;
+  they never fail a turn or block a session from ending, and they skip silently
+  when a dependency is missing. `git` is optional — with it, a session also
+  carries the branch and repository it ran against.
 
 ## Capture and use a session
 
