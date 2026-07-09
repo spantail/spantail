@@ -75,12 +75,12 @@ pnpm deploy             # wrangler deploy (apps/web)
   User-scoped surfaces — reports and the user menu (account, logout) — live in the header's
   top-right corner, never in the sidebar. New screens render inside this shell.
 - **Dates and time.** Timezone is a per-user concept (`user.timezone`, null → UTC); workspaces and
-  projects have none. A date and a timestamp are independent: `work_entries.entry_date` is a local
-  date string (`YYYY-MM-DD`) in the author's timezone, frozen at write; all timestamps are UTC
-  instants; durations are integer minutes. Daily aggregation groups by the stored `entry_date` (no
-  timezone needed). `agent_entries` store only timestamps (no `entry_date`) — their calendar day is
-  derived from `startedAt` in the viewer's timezone at read time. Reports resolve relative ranges and
-  the generation date in the running user's timezone.
+  projects have none. A date and a timestamp are independent: `work_entries.entryDate` (SQL
+  `entry_date`) is a local date string (`YYYY-MM-DD`) in the author's timezone, frozen at write; all
+  timestamps are UTC instants; durations are integer minutes. Daily aggregation groups by the
+  stored `entryDate` (no timezone needed). `agent_entries` store only timestamps (no `entryDate`) —
+  their calendar day is derived from `startedAt` in the viewer's timezone at read time. Reports
+  resolve relative ranges and the generation date in the running user's timezone.
 - **Date/time display goes through the shared formatters** in `packages/core/src/datetime-format.ts`
   (`formatDay`, `formatDateRange`, `formatTimestamp`, `formatInstantDate`) — don't hand-format a date
   with `Date#toLocaleDateString`/`toLocaleString` in a component (formatting a *number* with
