@@ -10,8 +10,8 @@ hero:
     - text: はじめる
       link: /ja/guides/
       icon: right-arrow
-    - text: セットアップ
-      link: /ja/self-hosting/
+    - text: spantail.com を見る
+      link: https://spantail.com
       icon: external
       variant: minimal
 ---
@@ -53,6 +53,20 @@ import SiteFooter from "../../../components/SiteFooter.astro";
 			more: "セットアップガイドを開く",
 		},
 		{
+			icon: "window",
+			title: "テンプレートガイド",
+			body: "チームで使い回せるレポートテンプレートの作成。",
+			href: "/ja/admin/report-templates/",
+			more: "テンプレートガイドを開く",
+		},
+		{
+			icon: "random",
+			title: "移行ガイド",
+			body: "既存のデータとワークフローの Spantail への移行。",
+			href: "/ja/self-hosting/migration/",
+			more: "移行ガイドを開く",
+		},
+		{
 			icon: "seti:json",
 			title: "API リファレンス",
 			body: "REST API による Spantail の自動化。",
@@ -80,6 +94,12 @@ import SiteFooter from "../../../components/SiteFooter.astro";
 			title: "Claude プラグイン",
 			body: "Claude Code の活動を捕捉（近日公開）。",
 			href: "/ja/guides/tools/claude-plugin/",
+		},
+		{
+			id: "github",
+			title: "GitHub App",
+			body: "コミットとプルリクエストの活動を捕捉。",
+			href: "/ja/admin/github-integration/",
 		},
 	]}
 />
