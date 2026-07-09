@@ -152,7 +152,10 @@ covers the conventions a change must meet.
 
 ## License and scope
 
-[MIT](./LICENSE).
+[MIT](./LICENSE) — this repository in full, permanently.
 
-An Enterprise Edition, built on this codebase and sold commercially, is distributed separately
-under its own license. Native desktop and mobile apps are out of scope for this repository.
+Spantail is open core. An Enterprise Edition, which adds organizational governance and built-in
+automation on top of this codebase, is distributed separately under its own commercial license.
+[`docs/open-core.md`](docs/open-core.md) explains where that line runs, the principle behind it,
+and what we promise will never leave the core. Native desktop and mobile apps are out of scope
+for this repository.

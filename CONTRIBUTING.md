@@ -23,6 +23,20 @@ We split the funnel by maturity. Pick the lighter-weight place that fits:
 
 When in doubt, start a Discussion. It's cheaper to realign there than after code is written.
 
+## Core vs Enterprise Edition
+
+Spantail is open core: this repository is MIT licensed in full, and a few areas — enterprise
+SSO, audit, advanced analytics, content governance, and built-in automation — are planned as a
+separately distributed, commercial Enterprise Edition.
+[`docs/open-core.md`](docs/open-core.md) explains the principle we use to draw that line, what
+stays free in each of those areas, and the promises we make about never moving a feature out of
+the core.
+
+If you're planning a substantial feature that touches one of those areas, open a Discussion
+first and we'll tell you which side of the line it falls on before you write any code. What you
+contribute here stays MIT and stays in the core: Enterprise builds sit on top of this
+repository rather than taking anything out of it.
+
 ## Filing issues
 
 Use the issue forms (the "New issue" button offers **Bug report** and **Feature request**). A good
