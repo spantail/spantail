@@ -64,13 +64,25 @@ Labels sit on a few independent axes. You rarely need to apply one yourself:
 - **Area** (`area:*`) — which part of the product an issue touches. Maintainers apply these;
   use them to find issues in a part of the codebase you know.
 - **Status** — triage state: `needs-triage` (set automatically on new issues), `needs-repro`,
-  `needs-info`, `blocked`. Maintainers update these as an issue moves.
-- **Contribution** — [`good first issue`](https://github.com/spantail/spantail/contribute) and
-  `help wanted` mark issues we'd love a hand with.
+  `needs-info`, `blocked`. A maintainer drops `needs-triage` once the issue carries a type and an
+  area label, which is the signal that it has been read and accepted as described.
+- **Contribution** — [`help wanted`](https://github.com/spantail/spantail/labels/help%20wanted)
+  marks issues we'd welcome a hand with, at any size.
+  [`good first issue`](https://github.com/spantail/spantail/contribute)
+  narrows that to the ones we think are a good first contribution: small, self-contained, and
+  described well enough to start without asking us first.
 
 `security` marks hardening work that is safe to discuss publicly. **Do not** file an issue for a
-suspected vulnerability — use
-[private vulnerability reporting](https://github.com/spantail/spantail/security) instead.
+suspected vulnerability — [`SECURITY.md`](SECURITY.md) explains how to report one privately.
+
+## Claiming an issue
+
+Say so in a comment before you start, and a maintainer will assign the issue to you. That keeps two
+people from building the same thing, and it lets us hand you anything the issue doesn't say.
+
+If an assigned issue goes quiet for two weeks we'll unassign it, so it doesn't sit reserved by
+someone who has moved on. Nothing is lost by that — pick it back up whenever you like. Life gets in
+the way, and a stalled issue is fine; an issue nobody else can take is not.
 
 ## Pull requests
 
@@ -116,3 +128,24 @@ Before requesting review, make sure the change meets the **Definition of Done** 
 passing, generated migrations if the schema changed, and UI strings present in both `en` and `ja`.
 
 Reviewers triage with labels; maintainers may adjust labels and scope during review.
+
+## Documentation and translations
+
+The documentation site ([`apps/docs`](apps/docs)) ships in English and Japanese. **English is the
+source of truth**: a page is written in English first, and the Japanese version follows it.
+
+**Write documentation in English only.** A docs pull request does not need a Japanese counterpart,
+and reviewers will not ask you for one. Improve the English page; we translate it afterwards. If
+you do speak Japanese and want to translate, that is welcome — as a *separate* pull request, so
+that a change to the content and a change to its translation can be reviewed independently. Title
+it `docs(ja):`.
+
+One exception, and it is not a documentation one. UI strings live in i18n catalogs
+(`apps/web/src/client/i18n/{en,ja}.json`) and **must be added to both** in the same change: a key
+missing from a catalog is a bug the user sees, not a page waiting to be translated. That rule is
+part of the [Definition of Done](docs/conventions.md).
+
+*For maintainers:* Starlight falls back to English per **page**, not per section. A new English
+page with no Japanese twin renders in English with a translation notice — safe to merge alone. A
+new *section* added to a page that already has a Japanese twin does not fall back: it is simply
+absent from the Japanese page until someone adds it.
