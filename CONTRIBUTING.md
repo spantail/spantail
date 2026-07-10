@@ -64,13 +64,26 @@ Labels sit on a few independent axes. You rarely need to apply one yourself:
 - **Area** (`area:*`) — which part of the product an issue touches. Maintainers apply these;
   use them to find issues in a part of the codebase you know.
 - **Status** — triage state: `needs-triage` (set automatically on new issues), `needs-repro`,
-  `needs-info`, `blocked`. Maintainers update these as an issue moves.
-- **Contribution** — [`good first issue`](https://github.com/spantail/spantail/contribute) and
-  `help wanted` mark issues we'd love a hand with.
+  `needs-info`, `blocked`. A maintainer drops `needs-triage` once the issue carries a type and an
+  area label, which is the signal that it has been read and accepted as described.
+- **Contribution** — [`help wanted`](https://github.com/spantail/spantail/labels/help%20wanted)
+  marks issues we'd welcome a hand with, at any size.
+  [`good first issue`](https://github.com/spantail/spantail/contribute)
+  narrows that to the ones we think are a good first contribution: small, self-contained, and
+  described well enough to start without asking us first.
 
 `security` marks hardening work that is safe to discuss publicly. **Do not** file an issue for a
 suspected vulnerability — use
 [private vulnerability reporting](https://github.com/spantail/spantail/security) instead.
+
+## Claiming an issue
+
+Say so in a comment before you start, and a maintainer will assign the issue to you. That keeps two
+people from building the same thing, and it lets us hand you anything the issue doesn't say.
+
+If an assigned issue goes quiet for two weeks we'll unassign it, so it doesn't sit reserved by
+someone who has moved on. Nothing is lost by that — pick it back up whenever you like. Life gets in
+the way, and a stalled issue is fine; an issue nobody else can take is not.
 
 ## Pull requests
 
