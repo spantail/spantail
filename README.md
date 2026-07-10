@@ -59,7 +59,7 @@ Three docs go deeper:
 
 ## Getting started
 
-Prerequisites: Node.js 24+, pnpm 10+, a Cloudflare account, and `wrangler` v4.
+Prerequisites: Node.js 24+, pnpm 11+, a Cloudflare account, and `wrangler` v4.
 
 ```bash
 git clone https://github.com/spantail/spantail.git

@@ -2,10 +2,21 @@ packages:
   - apps/*
   - packages/*
 
-# pnpm 10 blocks dependency build scripts by default; allow only what we need.
+# pnpm blocks dependency build scripts by default; allow only what we need.
 allowBuilds:
   workerd: true
   esbuild: true
   "@biomejs/biome": true
   "@tailwindcss/oxide": true
   sharp: true
+  # Native/polyfill build steps under the `agents` SDK that nothing here needs.
+  "@mongodb-js/zstd": false
+  core-js-pure: false
+  node-liblzma: false
+
+# Pin vulnerable transitive build/test dependencies to their patched versions.
+overrides:
+  undici: ^7.28.0
+  ws: ^8.21.0
+  yaml: ^2.9.0
+  esbuild: ^0.28.1
