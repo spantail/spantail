@@ -73,8 +73,7 @@ Labels sit on a few independent axes. You rarely need to apply one yourself:
   described well enough to start without asking us first.
 
 `security` marks hardening work that is safe to discuss publicly. **Do not** file an issue for a
-suspected vulnerability — use
-[private vulnerability reporting](https://github.com/spantail/spantail/security) instead.
+suspected vulnerability — [`SECURITY.md`](SECURITY.md) explains how to report one privately.
 
 ## Claiming an issue
 
