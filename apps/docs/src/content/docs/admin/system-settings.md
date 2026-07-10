@@ -52,7 +52,7 @@ nobody can claim the instance through social sign-in before it is set up. See
 **Settings → System → AI agents.** A single switch for the agent-activity feature.
 
 - **On** — users can create agents and the **Account → Agents** screen appears for them, so AI
-  agents can ingest their activity as spans.
+  agents can ingest their sessions.
 - **Off** — the agents UI is hidden and no new agents can be created.
 
 :::note[Screenshot]

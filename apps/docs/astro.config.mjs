@@ -63,11 +63,12 @@ export default defineConfig({
 						label: { en: "User Guide", ja: "ユーザーガイド" },
 						link: "/guides/",
 						icon: "open-book",
-						// Three always-expanded groups (Getting started, Core features,
-						// Your account) plus standalone top items: the three tool clients
-						// (CLI/MCP/Claude Plugin) lifted up one level rather than nested
-						// under a Tools group. Group `collapsed: false` keeps the
-						// tree open on load. Group labels use Starlight's `label` +
+						// The Getting started hands-on comes first, then the guide's own
+						// overview, then two always-expanded groups (Core features, Your
+						// account) and standalone top items: the four clients (CLI, MCP,
+						// Claude Plugin, GitHub Integration) lifted up one level rather
+						// than nested under a Tools group. Group `collapsed: false` keeps
+						// the tree open on load. Group labels use Starlight's `label` +
 						// `translations`; the topic label above uses the plugin's own
 						// `{ en, ja }` shape — two different schemas, both intentional.
 						items: [
@@ -76,11 +77,12 @@ export default defineConfig({
 								translations: { ja: "はじめに" },
 								collapsed: false,
 								items: [
-									{ slug: "guides" },
-									{ slug: "guides/claude-code" },
-									{ slug: "guides/github" },
+									{ slug: "getting-started" },
+									{ slug: "getting-started/claude-code" },
+									{ slug: "getting-started/github" },
 								],
 							},
+							{ slug: "guides" },
 							{
 								label: "Core features",
 								translations: { ja: "基本機能" },
@@ -104,6 +106,7 @@ export default defineConfig({
 							{ slug: "guides/tools/cli" },
 							{ slug: "guides/tools/mcp" },
 							{ slug: "guides/tools/claude-plugin" },
+							{ slug: "guides/tools/github-integration" },
 						],
 					},
 					{
@@ -188,8 +191,8 @@ export default defineConfig({
 								],
 							},
 							{
-								label: "Notifications",
-								translations: { ja: "通知" },
+								label: "Messages",
+								translations: { ja: "メッセージ" },
 								items: [{ slug: "api/inbox-realtime" }],
 							},
 							{

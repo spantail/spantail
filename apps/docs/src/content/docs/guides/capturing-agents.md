@@ -1,12 +1,12 @@
 ---
 title: Capturing agent activity
-description: Set up agent tokens and capture AI-agent work as spans.
+description: Set up agent tokens and capture the sessions your AI agents run.
 ---
 
 Spantail can capture what your AI agents do — coding sessions, tool calls, token
-usage — and show it on the timeline next to human work. Activity is recorded per
-**session**: each session rolls up into one entry with its duration and token
-usage, and sessions are grouped by agent.
+usage — and show it on the timeline next to human work. Activity is captured per
+**session**: each session carries its own duration and token usage, and sessions
+are grouped by agent.
 
 :::note
 Agent ingest must be enabled for the instance by an administrator. If you don't

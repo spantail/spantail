@@ -4,8 +4,8 @@ description: spantail コマンドラインクライアント。
 ---
 
 `spantail` はコマンドラインクライアントです。稼働中の Spantail インスタンスの REST API と
-通信するので、Web アプリと同じこと — 作業記録の作成・管理、レポートの作成・送信・共有・
-ディスカッション、受信箱の確認 — をターミナルやスクリプトから行えます。管理業務（ユーザー、
+通信するので、Web アプリと同じこと — 作業エントリの作成・管理、レポートの作成・送信・共有・
+ディスカッション、受信トレイの確認 — をターミナルやスクリプトから行えます。管理業務（ユーザー、
 ワークスペース、プロジェクト、テンプレート）は Web アプリで行います。
 
 ## インストール
@@ -61,25 +61,25 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 | `spantail auth logout` | 保存した資格情報を削除（トークン自体は有効なまま）。 |
 | `spantail workspaces list` | 所属するワークスペースを一覧。 |
 | `spantail projects list` | ワークスペース内のプロジェクトを一覧。 |
-| `spantail search <query>` | 作業記録とレポートを横断検索。 |
+| `spantail search <query>` | 作業エントリとレポートを横断検索。 |
 | `spantail mcp` | AI クライアント向けの stdio [MCP](/ja/guides/tools/mcp/) サーバーを実行。 |
 
-### 作業記録
+### 作業エントリ
 
 | コマンド | 説明 |
 |---|---|
-| `spantail log <description>` | 作業記録を作成（`--project`、`--duration`、`--date`、`--note`、`--tag`）。 |
-| `spantail entries list` | 最近の作業記録を一覧（`--project`、`--from`、`--to`、`--limit`）。 |
-| `spantail entries view <id>` | 作業記録 1 件の全項目を表示。 |
-| `spantail entries edit <id>` | 自分の記録を更新（渡したフラグだけが変わります）。 |
-| `spantail entries delete <id>` | 自分の記録を削除（`--yes` がなければ確認）。 |
+| `spantail log <description>` | 作業エントリを作成（`--project`、`--duration`、`--date`、`--note`、`--tag`）。 |
+| `spantail entries list` | 最近の作業エントリを一覧（`--project`、`--from`、`--to`、`--limit`）。 |
+| `spantail entries view <id>` | 作業エントリ 1 件の全項目を表示。 |
+| `spantail entries edit <id>` | 自分の作業エントリを更新（渡したフラグだけが変わります）。 |
+| `spantail entries delete <id>` | 自分の作業エントリを削除（`--yes` がなければ確認）。 |
 | `spantail entries stats` | 合計と日別／プロジェクト別／ユーザー別の集計。 |
 | `spantail entries tags` | スコープ内のタグを 1 行 1 つで一覧。 |
-| `spantail entries import <file.jsonl>` | JSONL ファイルから作業記録を一括インポート（`--workspace`、`--project`、`--dry-run`）。 |
+| `spantail entries import <file.jsonl>` | JSONL ファイルから作業エントリを一括インポート（`--workspace`、`--project`、`--dry-run`）。 |
 
 #### 一括インポート（JSONL）
 
-`spantail entries import` は、別のシステムから作業記録を移行するための
+`spantail entries import` は、別のシステムから作業エントリを移行するための
 コマンドです。ファイルは 1 行につき 1 つの JSON オブジェクトです。
 
 ```json
@@ -119,16 +119,16 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 | コマンド | 説明 |
 |---|---|
 | `spantail report recipients <id>` | レポートの送信先候補を一覧。 |
-| `spantail report send <id>` | 凍結スナップショットを受信箱に送信（`--to`、`--self`、`--message`）。 |
+| `spantail report send <id>` | 凍結スナップショットを受信トレイに送信（`--to`、`--self`、`--message`）。 |
 | `spantail report sends <id>` | 送信履歴を既読数付きで表示。 |
 | `spantail report share <id>` | 公開共有リンクを作成（`--expires-in`、`--passcode`）。 |
 | `spantail report shares <id>` | 共有リンクと状態を一覧。 |
 | `spantail report unshare <share-id>` | 共有リンクを失効。 |
-| `spantail report discussion <id>` | スレッドのリアクションとコメントを表示。`<id>` はレポート ID（現行バージョン）か、受信者の場合は受信箱のメッセージ ID（配信されたバージョン）。 |
+| `spantail report discussion <id>` | スレッドのリアクションとコメントを表示。`<id>` はレポート ID（現行バージョン）か、受信者の場合は受信トレイのメッセージ ID（配信されたバージョン）。 |
 | `spantail report comment <id> <body>` | コメントを追加（自分のものは `--edit`/`--delete`）。 |
 | `spantail report react <id> <emoji>` | 現行バージョンやコメントへのリアクションを切り替え（`--comment`）。 |
 
-### 受信箱
+### 受信トレイ
 
 | コマンド | 説明 |
 |---|---|

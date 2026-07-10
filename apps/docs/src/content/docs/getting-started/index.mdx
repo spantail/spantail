@@ -1,13 +1,13 @@
 ---
-title: Set up your instance
+title: Quick start
 description: Deploy Spantail to your own Cloudflare account, log a day of work, and send yourself the report.
 ---
 
 import { Steps } from "@astrojs/starlight/components";
 
 Spantail is a work observability platform: it records what people do as **work
-entries** and captures AI-agent activity as **spans**, then turns both into
-**reports**. It is self-hosted — one deployment, on your own Cloudflare account,
+entries** and captures AI-agent activity as **agent sessions**, then turns both
+into **reports**. It is self-hosted — one deployment, on your own Cloudflare account,
 serving one organization.
 
 This page is a hands-on walkthrough. In about fifteen minutes you go from an
@@ -159,7 +159,7 @@ pnpm install
 
    A saved report is an immutable snapshot: editing it appends a new version
    rather than rewriting the old one, so a report always reflects the data as of
-   when it was rendered. See [Reports & inbox](/guides/reports/) and
+   when it was rendered. See [Reports & messages](/guides/reports/) and
    [Report templates](/admin/report-templates/).
 
 5. **Send it to yourself.**
@@ -192,26 +192,19 @@ A Spantail instance on your own Cloudflare account, with a workspace, a project,
 a day of work, and a daily report delivered to your inbox. Everything you logged
 lives in the workspace; the report is yours, and yours to share.
 
-The vocabulary you just used:
-
-| Concept | What it is |
-|---|---|
-| **Workspace** | An organizational unit (a team, department, or client). You can belong to several. |
-| **Project** | A subdivision of a workspace. Work entries can be assigned to a project or left workspace-wide. |
-| **Work entry** | A record of human work: a date, duration, description, optional note, and tags. |
-| **Agent activity** | AI-agent sessions captured as spans, shown on the timeline alongside human work. |
-| **Report** | A snapshot built from a template, filters, and a date range — readable, shareable, and discussable. |
+Every word you just met — workspace, project, work entry, report — is defined in
+the [User Guide overview](/guides/).
 
 ## Where to go next
 
-- [Capture your Claude Code sessions](/guides/claude-code/) — the next hands-on:
-  record your agent sessions and turn them into work entries and reports.
-- [Logging work](/guides/logging-work/) — record work entries in the web UI.
+- [Setup Claude Plugin](/getting-started/claude-code/) — the next hands-on:
+  capture your agent sessions and turn them into work entries and reports.
+- [Logging work](/guides/logging-work/) — log work entries in the web UI.
 - [Projects & timeline](/guides/projects-timeline/) — browse projects and your
   work timeline.
-- [Reports & inbox](/guides/reports/) — create, share, and discuss reports.
-- [Capturing agent activity](/guides/capturing-agents/) — capture AI-agent work
-  as spans.
+- [Reports & messages](/guides/reports/) — create, share, and discuss reports.
+- [Capturing agent activity](/guides/capturing-agents/) — capture the sessions
+  your AI agents run.
 - [Account & preferences](/guides/account-preferences/) — API tokens, language,
   theme, and timezone.
 - [CLI](/guides/tools/cli/) and [MCP](/guides/tools/mcp/) — log and read your

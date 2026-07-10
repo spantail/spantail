@@ -1,13 +1,13 @@
 ---
 title: Agent ingest
-description: Ingest AI coding-agent activity with an Agent Access Token, and read back agent entries and stats.
+description: Ingest AI coding-agent activity with an Agent Access Token, and read back agent sessions and stats.
 ---
 
 import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
-The ingest endpoints capture AI coding-agent activity as **agent entries** — one work
-session per agent and session. An [agent](/api/agents/) writes them with its **Agent Access
-Token (AAT)**, passed as `Authorization: Bearer spantail_aat_…`.
+The ingest endpoints capture AI coding-agent activity as **agent sessions** — one row of
+`agent_entries` per agent and session. An [agent](/api/agents/) writes them with its **Agent
+Access Token (AAT)**, passed as `Authorization: Bearer spantail_aat_…`.
 
 There are two write paths into the same `agent_entries` row, and a session is fed by exactly
 one of them:
@@ -31,7 +31,7 @@ belongs. A disabled or archived agent's token is rejected. Ingest into an archiv
 workspace returns `409 conflict` — archived workspaces are read-only.
 </Aside>
 
-## The agent entry object
+## The agent session object
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -283,13 +283,13 @@ curl -X POST "https://<your-instance>/api/v1/agent-events/finalize" \
   }'
 ```
 
-The response is the updated agent entry, in the same shape as the ingest responses.
+The response is the updated agent session, in the same shape as the ingest responses.
 
-## List agent entries
+## List agent sessions
 
 `GET /api/v1/agent-entries` <Badge text="scope: read" variant="note" />
 
-Returns agent entries in a workspace, newest first. The read scope is resolved server-side
+Returns agent sessions in a workspace, newest first. The read scope is resolved server-side
 from the caller's membership: a member sees agent activity in the projects they belong to
 plus their own agents' activity (unassigned activity stays owner-only), while a workspace or
 instance admin sees all agent activity in the workspace.

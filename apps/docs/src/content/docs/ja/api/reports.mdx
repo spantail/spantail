@@ -285,7 +285,7 @@ curl -X PATCH "https://<your-instance>/api/v1/reports/rep_q2" \
 
 `POST /api/v1/reports/:id/send` <Badge text="scope: write" variant="caution" />
 
-所有者のみ。レポートの現在の **不変バージョン** を各受信者の受信箱に届けます。各受信者は
+所有者のみ。レポートの現在の **不変バージョン** を各受信者の受信トレイに届けます。各受信者は
 [受信者](#受信者) の候補集合に含まれている必要があり、送信でデータを見られる範囲を広げることはできません。
 対象外の ID は `400` を返します。各配信は送信されたバージョンを参照するため、後で編集（新しいバージョンの
 追加）があっても受信者は送られた内容を保持します。レポートを削除すると配信も削除されます。
@@ -295,7 +295,7 @@ curl -X PATCH "https://<your-instance>/api/v1/reports/rep_q2" \
 | フィールド | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `recipientUserIds` | string[] | いいえ | 最大 50 の受信者。既定は `[]`。 |
-| `sendToSelf` | boolean | いいえ | 送信者自身の受信箱にもコピーを届ける。既定は `false`。 |
+| `sendToSelf` | boolean | いいえ | 送信者自身の受信トレイにもコピーを届ける。既定は `false`。 |
 | `message` | string | いいえ | 受信者向けの短いメッセージ（1000 文字以下）。 |
 
 受信者か `sendToSelf` のいずれかが必須です。

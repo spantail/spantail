@@ -47,7 +47,7 @@ active pickers but keep all their entries, and you can **restore** them later.
 
 ## Delete a project
 
-Deleting a project is permanent. Its work and agent entries are **not** deleted — they become
+Deleting a project is permanent. Its work entries and agent sessions are **not** deleted — they become
 unassigned (their project link is cleared) and remain in the workspace. A confirmation step
 spells this out before you proceed.
 
