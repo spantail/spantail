@@ -21,11 +21,8 @@ see the [API reference](/api/reports/).)
 From the reports list (or the **New report** action), open the report form. It
 has two panes — the form on the left, a live preview on the right.
 
-:::note[Screenshot]
-The new-report dialog: filters and template picker on the left, the live
-Markdown preview on the right.
-🚧 Image to be added.
-:::
+![The new-report dialog: filters and template picker on the left, the live
+Markdown preview on the right.](../../../assets/reports/01-new-report.png)
 
 Set:
 
@@ -55,11 +52,8 @@ A saved report shows its rendered Markdown body and a toolbar. Re-rendering a
 report (by editing it) appends a new **version**; each version is frozen, so a
 report always reflects the data as of when it was rendered.
 
-:::note[Screenshot]
-A rendered report with its toolbar (edit, send, share, download, duplicate,
-print, delete).
-🚧 Image to be added.
-:::
+![A rendered report with its toolbar (send, share, print, and a more-actions
+menu).](../../../assets/reports/02-rendered.png)
 
 The toolbar lets you **edit**, **send**, **share**, **download** (Markdown),
 **duplicate**, **print**, and **delete**.
@@ -76,10 +70,8 @@ There are two ways to distribute a report:
   frozen copy as a message. The snapshot is captured at send time, so later
   membership changes don't alter what they received.
 
-:::note[Screenshot]
-The share dialog with the passcode and expiry options.
-🚧 Image to be added.
-:::
+![The share dialog with the passcode and expiry
+options.](../../../assets/reports/03-share.png)
 
 ## Discuss
 
@@ -101,7 +93,5 @@ arrives. Two folders hold the reports:
 Each message can be **starred**, **archived**, or moved to **trash**, and you can
 search the list.
 
-:::note[Screenshot]
-Messages: the folder list, the message list, and the reading pane.
-🚧 Image to be added.
-:::
+![Messages: the folder list, the message list, and the reading
+pane.](../../../assets/reports/04-messages.png)

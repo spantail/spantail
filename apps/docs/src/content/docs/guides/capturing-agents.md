@@ -4,9 +4,10 @@ description: Set up agent tokens and capture the sessions your AI agents run.
 ---
 
 Spantail can capture what your AI agents do — coding sessions, tool calls, token
-usage — and show it on the timeline next to human work. Activity is captured per
-**session**: each session carries its own duration and token usage, and sessions
-are grouped by agent.
+usage — and surface it next to your work: on each agent's activity page, and in
+the detail panel of any work entry the sessions are linked to. Activity is
+captured per **session**: each session carries its own duration and token usage,
+and sessions are grouped by agent.
 
 :::note
 Agent ingest must be enabled for the instance by an administrator. If you don't
@@ -23,11 +24,8 @@ Open **Settings → Agents** (under Account) and create an agent. Each agent has
 
 You can enable or disable an agent at any time.
 
-:::note[Screenshot]
-The Agents settings page: the agent list with type, default workspace, and the
-enable/disable toggle.
-🚧 Image to be added.
-:::
+![The Agents settings page: the agent list with type, workspace, and
+status.](../../../assets/capturing-agents/01-agents-settings.png)
 
 ## Get the agent token
 
@@ -47,10 +45,12 @@ Claude Code the easiest path is the dedicated **Claude Code plugin** — see
 automatically. Other agents send activity programmatically through the
 ingest API.
 
-:::note[Screenshot]
-The dashboard timeline with agent sessions interleaved with human entries.
-🚧 Image to be added.
-:::
+Captured sessions link to the work they relate to: open a work entry and its
+detail panel shows an **agent activity** card with the linked sessions, token
+split, and pull requests.
+
+![A work entry's detail panel with its agent-activity card: the linked sessions,
+token split, and pull requests.](../../../assets/capturing-agents/02-entry-activity.png)
 
 ## Review agent activity
 
@@ -66,8 +66,5 @@ branches, and references the session touched; and the session id. Move through
 sessions with <kbd>↑</kbd> / <kbd>↓</kbd> (or the panel's prev/next buttons)
 without reopening, and press <kbd>Esc</kbd> to close.
 
-:::note[Screenshot]
-An agent activity page: stats, the session list, and token usage for the
-selected range.
-🚧 Image to be added.
-:::
+![An agent activity page: stats, the session list, and token usage for the
+selected range.](../../../assets/capturing-agents/03-activity.png)

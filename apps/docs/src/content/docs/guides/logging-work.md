@@ -5,30 +5,25 @@ description: Record work entries in the web UI.
 
 A **work entry** is a record of something you did: a date, how long it took, a
 short description, and optional notes and tags. Entries appear on your workspace
-**timeline**, mixed in with AI-agent activity and sorted newest first.
+**timeline**, newest first.
 
 ## The dashboard timeline
 
-Open a workspace from the sidebar to land on its dashboard. The timeline lists
-recent entries; scroll to load more (50 at a time). Use the filters above the
-list to narrow it by **period**, **project**, **member**, or **tag**.
+Open a workspace from the sidebar to land on its dashboard. Summary cards and a
+**period** selector sit at the top, and the timeline below lists recent entries;
+scroll to load more (50 at a time). To slice work by project, member, or tag,
+open a project from the sidebar — see [Projects & timeline](/guides/projects-timeline/).
 
-:::note[Screenshot]
-The workspace dashboard: the unified timeline with human work entries and agent
-sessions, and the period/project/member/tag filters above it.
-🚧 Image to be added.
-:::
+![The workspace dashboard: the work-entry timeline, with the summary cards and
+period selector above it.](../../../assets/logging-work/01-dashboard.png)
 
 ## Create an entry
 
 Click the **+** button on the dashboard, or press <kbd>C</kbd> (when you're not
 typing in a field). The entry dialog opens.
 
-:::note[Screenshot]
-The new-entry dialog with the date, duration, description, project, and tag
-fields.
-🚧 Image to be added.
-:::
+![The new-entry dialog with the date, duration, description, project, and tag
+fields.](../../../assets/logging-work/02-new-entry.png)
 
 Fill in:
 
@@ -52,10 +47,8 @@ it's on, saving adds the entry and keeps the dialog open with the **project** an
 **date** preserved, clearing the duration, description, note, and tags for the next
 one. The toggle appears only when creating an entry, not when editing.
 
-:::note[Screenshot]
-The Log Work dialog with the "Keep entering" toggle in the footer.
-🚧 Image to be added.
-:::
+![The Log work dialog with the "Keep entering" toggle in the
+footer.](../../../assets/logging-work/03-keep-entering.png)
 
 ### Project-scoped vs. workspace-wide
 
