@@ -11,8 +11,8 @@ pnpm monorepo: a single Worker (`apps/web`) serves the REST API, the MCP endpoin
 ## Language rules
 
 - Code, comments, commit messages, issues, and PRs: **English only**.
-- This repository will become public. Never reference AIRS-internal systems, customers, or any
-  non-public information in code, comments, commits, or issues.
+- This repository is public. Never reference internal systems, customers, or any non-public
+  information in code, comments, commits, or issues.
 - All user-facing UI strings go through i18n catalogs (`en`, `ja`). Never hardcode UI text.
   A feature is not done until both locales are provided.
 
@@ -32,7 +32,7 @@ pnpm db:seed [name]     # seed local D1 from examples/<name>/db/seed (default: d
 pnpm generate-import [name] # write examples/<name>/import/work-entries.jsonl (gitignored) for `spantail entries import`
 pnpm db:drop            # wipe local D1 state
 pnpm db:reset           # db:drop → db:migrate:local (schema only, no seed; local only)
-pnpm deploy             # wrangler deploy (apps/web)
+pnpm run deploy         # wrangler deploy (apps/web); `run` is required — see docs/deploy.md
 ```
 
 ## Monorepo map
