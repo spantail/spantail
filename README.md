@@ -114,7 +114,7 @@ don't emit secrets into agent logs. See [`docs/security.md`](docs/security.md) (
 spantail auth login                                  # store an API token
 spantail log "Implemented report engine" --project core --duration 2h
 spantail entries list --from 2026-06-01
-spantail report run monthly --workspace acme --month 2026-06
+spantail report create --template default --workspace acme --range last-month
 spantail mcp                                         # stdio MCP server for AI clients
 ```
 
