@@ -16,10 +16,8 @@ Spantail は作業可視化プラットフォームです。人の作業を**作
 
 ## 事前準備
 
-必要なもの:
-
-- **Cloudflare アカウント**（およびリポジトリを clone するための GitHub アカウント）
-- **Node.js 24+**、**pnpm 11+**、**Wrangler v4**（`wrangler login` 済みであること）
+**GitHub アカウント**と **Cloudflare アカウント**だけです。以降の作業はすべて
+ブラウザで完結し、手元のマシンでコードを動かすことはありません。
 
 :::note
 Spantail はアップロードされたアバターやロゴを R2 バケットに保存するため、**事前に
@@ -27,66 +25,72 @@ Cloudflare アカウントで R2 を有効化**しておく必要があります
 ありますが、有効化には支払い方法の登録が必要です。
 :::
 
-リポジトリを clone し、依存関係をインストールします。
-
-```bash
-git clone https://github.com/spantail/spantail.git
-cd spantail
-pnpm install
-```
-
 ## デプロイしてセットアップする
 
 <Steps>
 
-1. **Wrangler でデプロイする**
+1. **fork からデプロイする**
 
-   Spantail が必要とする 2 つの Cloudflare リソースを作ります。
+   Spantail は自分の fork から、
+   [Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/)
+   でビルドして動かします。一度つないでしまえば、以降は push するたび —
+   GitHub の **Sync fork** ボタンを含めて — マイグレーションとデプロイが自動で走ります。
 
-   ```bash
-   wrangler d1 create spantail-db
-   wrangler r2 bucket create spantail-uploads
-   ```
+   **a. リポジトリを Fork する。**
+   [`spantail/spantail`](https://github.com/spantail/spantail) を開き、右上の
+   **Fork** をクリック、次の画面で **Create fork** をクリックします。これで
+   `自分のアカウント/spantail` が手に入ります。
 
-   `wrangler d1 create` が出力した `database_id` を、`apps/web/wrangler.jsonc` の
-   `d1_databases` ブロックに設定します（既定ではプレースホルダが入っています）。
-   次にセッション署名用のシークレットを設定します。32 文字以上の任意の値で、
-   たとえば `openssl rand -base64 32` で生成できます。
+   **b. データベースを作る。**
+   [Cloudflare ダッシュボード](https://dash.cloudflare.com)にサインインします。左の
+   サイドバーで **Storage & Databases → D1 SQL Database** を開き、**Create** をクリック、
+   名前を `spantail-db` にして **Create** をクリックします。作成したデータベースを開き、
+   その **Database ID**（データベースのページに表示されます）を控えます。これが手順 **d**
+   で指定する、インスタンスごとに固有の唯一の値です。
 
-   ```bash
-   pnpm --filter web exec wrangler secret put BETTER_AUTH_SECRET
-   ```
+   **c. バケットを作る。** 左のサイドバーで **R2 Object Storage** を開き（未有効なら
+   先に有効化します）、**Create bucket** をクリック、名前を `spantail-uploads` にして
+   **Create bucket** をクリックします。
 
-   シークレットは Worker に属し、Wrangler はその名前を `apps/web/wrangler.jsonc`
-   から読み取ります。リポジトリ直下ではなく、`web` パッケージ経由で実行してください。
+   **d. fork を Worker としてインポートする。** **Workers & Pages** を開き、**Create**
+   をクリックして **Import a repository** タブを選びます。初回は
+   **GitHub → Install & Authorize**（または **+ Add account**）をクリックし、自分の
+   アカウントを選び、**Only select repositories → `spantail`** を選んでインストール
+   します。インポート画面に戻ったら `自分のアカウント/spantail` を選び、次を設定します。
+
+   - **Project name:** `spantail` — `apps/web/wrangler.jsonc` の `name` と一致させます。
+   - **Root directory:** `apps/web`
+   - **Build command:** 空のまま
+   - **Deploy command:** `pnpm run deploy:ci`
+   - **Build variables and secrets** を開き、**variable** を追加:
+     `D1_DATABASE_ID` = 手順 **b** で控えた Database ID。
+
+   **Create and deploy** をクリックします。最初のビルドがマイグレーションを適用して
+   Worker をデプロイします。完了すると Worker のページに公開アドレス
+   `https://spantail.<自分のサブドメイン>.workers.dev` が表示されます（**Visit** ボタンで
+   開けます）。これがインスタンスの URL で、手順 2 でここからサインインします。
+
+   **e. セッション用シークレットを追加する。** Worker はできましたが、まだセッションに
+   署名できません。Worker を開き **Settings → Variables and Secrets → Add** で、種別に
+   **Secret** を選び、名前を `BETTER_AUTH_SECRET`、値に 32 文字以上の任意の文字列を
+   貼り付けます（例: 任意のターミナルで `openssl rand -base64 32` を実行、または
+   パスワードマネージャで生成）。反映するには **Deployments → Retry deployment**
+   （または fork へ何か push）します。
 
    :::caution
-   このシークレットが無いと Worker は **fail closed** になります。偽造可能な値で
-   セッションに署名するのではなく、認証やセッションに触れるリクエストがすべて
-   エラーになります。
+   `BETTER_AUTH_SECRET` は Worker のランタイム **Secret** で、手順 **d** の build variable
+   とは別物です。これが無いと Worker は **fail closed** になり、認証やセッションに触れる
+   リクエストがすべてエラーになります（偽造可能な値で署名しないため）。
    :::
 
-   マイグレーションを適用してから、デプロイします。順番が重要です。
-
-   ```bash
-   pnpm db:migrate:remote
-   pnpm run deploy
-   ```
-
-   :::note
-   必ず `pnpm run deploy` を使ってください。`pnpm deploy` は pnpm の組み込み
-   コマンドで、まったく別の動作をします。
-   :::
-
-   Wrangler がインスタンスの `*.workers.dev` の URL を表示します。Spantail は
-   リクエストから origin を導出するため、オリジンの設定は不要です。カスタム
-   ドメインの割り当て、ソーシャルログインの有効化、手元からではなく push ごとに
-   Cloudflare にデプロイさせる方法は、[Cloudflare へのデプロイ](/ja/self-hosting/deploy/)
-   と [設定](/ja/self-hosting/configuration/) を参照してください。
+   Spantail はリクエストから origin を導出するため、オリジンの設定は不要です。
+   カスタムドメインの割り当てや、手元のマシンから Wrangler でデプロイする方法は、
+   [Cloudflare へのデプロイ](/ja/self-hosting/deploy/) と
+   [設定](/ja/self-hosting/configuration/) を参照してください。
 
 2. **インスタンス管理者になる**
 
-   表示された URL を開きます。まっさらなインスタンスでは、最初のアカウントが
+   手順 1 のインスタンスの `*.workers.dev` の URL を開きます。まっさらなインスタンスでは、最初のアカウントが
    作られるまで公開サインアップが開いています。**メールアドレスとパスワードで
    最初にサインアップした人がインスタンス管理者**になり、その時点でサインアップは
    閉じます。以降のメンバーは招待で参加します。
