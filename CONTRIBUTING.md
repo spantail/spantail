@@ -129,3 +129,24 @@ Before requesting review, make sure the change meets the **Definition of Done** 
 passing, generated migrations if the schema changed, and UI strings present in both `en` and `ja`.
 
 Reviewers triage with labels; maintainers may adjust labels and scope during review.
+
+## Documentation and translations
+
+The documentation site ([`apps/docs`](apps/docs)) ships in English and Japanese. **English is the
+source of truth**: a page is written in English first, and the Japanese version follows it.
+
+**Write documentation in English only.** A docs pull request does not need a Japanese counterpart,
+and reviewers will not ask you for one. Improve the English page; we translate it afterwards. If
+you do speak Japanese and want to translate, that is welcome — as a *separate* pull request, so
+that a change to the content and a change to its translation can be reviewed independently. Title
+it `docs(ja):`.
+
+One exception, and it is not a documentation one. UI strings live in i18n catalogs
+(`apps/web/src/client/i18n/{en,ja}.json`) and **must be added to both** in the same change: a key
+missing from a catalog is a bug the user sees, not a page waiting to be translated. That rule is
+part of the [Definition of Done](docs/conventions.md).
+
+*For maintainers:* Starlight falls back to English per **page**, not per section. A new English
+page with no Japanese twin renders in English with a translation notice — safe to merge alone. A
+new *section* added to a page that already has a Japanese twin does not fall back: it is simply
+absent from the Japanese page until someone adds it.
