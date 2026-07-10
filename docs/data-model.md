@@ -347,25 +347,20 @@ Cross-cutting rules that shape many tables. The authoritative statements live in
 [`conventions.md`](./conventions.md) (architecture invariants) and [`permissions.md`](./permissions.md);
 summarized here for the data model.
 
-- **Dates vs timestamps.** A **date** and a **timestamp** are independent concepts, not derivable
-  from each other. `work_entries.entryDate` is a **local date** string `YYYY-MM-DD` in the author's
-  timezone, frozen at write time (a manual entry can have a date with no start/end time). Timestamps
-  (`startedAt`/`endedAt`, and every other time column) are **UTC** millisecond instants. Durations
-  are **integer minutes**. **Timezone is per-user** (`user.timezone`, null → UTC) — there is no
-  workspace or project timezone. **Daily aggregation needs no timezone**: it groups by the stored
-  `entryDate`, so a user's day is the same for everyone. `agent_entries` are the exception — they
-  store **only** timestamps and **no** `entryDate`, so a session that crosses midnight lands on the
-  correct day for whoever is viewing; the day is derived from `startedAt` in the viewer's timezone at
-  read time. Reports resolve relative ranges (`this_month`) and the generation date in the running
-  user's timezone.
+- **Dates vs timestamps.** Which column holds which concept: `work_entries.entryDate` is a **local
+  date** string `YYYY-MM-DD`, frozen at write time (a manual entry can have a date with no start/end
+  time); `startedAt`/`endedAt` and every other time column are **UTC** millisecond instants;
+  durations are **integer minutes**. `agent_entries` are the exception — they carry **only**
+  timestamps and **no** `entryDate`. The rules these columns exist to serve — timezone is per-user,
+  daily aggregation needs no timezone, an agent session's calendar day is derived at read time — are
+  stated in [`conventions.md`](./conventions.md#architecture-invariants).
 - **Denormalized `workspaceId`.** Copied onto `work_entries`, `agent_entries`, and `agent_events` so
   membership-scoped queries never have to join through a project. The workspace is the cheap filter.
 - **Archival vs deletion.** `archivedAt` / `status = "archived"` hide a workspace, project, or agent
   while preserving data; `disabledAt` reversibly rejects an agent's token. An **archived workspace**
-  is additionally **read-only**: every write into it (entries, agent ingest, projects, members,
-  settings) is rejected with 409 until it is unarchived — only unarchiving and deleting the
-  workspace itself stay allowed — and it is hidden from the workspace switcher while remaining
-  readable. Deleting a project does **not** cascade to its entries — `projectId` is set to null,
+  is additionally **read-only**, and hidden from the workspace switcher while remaining readable;
+  [`permissions.md`](./permissions.md#principles) states which writes it rejects and what stays
+  allowed. Deleting a project does **not** cascade to its entries — `projectId` is set to null,
   leaving them as unassigned history. Deleting a **workspace** does cascade: members, projects,
   work entries, agent entries/events, and agent tokens bound to the workspace are all removed.
   Report snapshots survive (they are user-scoped), but the deleted workspace drops out of scope
