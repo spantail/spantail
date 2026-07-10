@@ -1,0 +1,57 @@
+# Verifies that every commit in a pull request carries a Signed-off-by trailer,
+# certifying the Developer Certificate of Origin (the DCO file at the repo root).
+#
+# pull_request (not pull_request_target) is enough: the job never checks out or
+# runs PR code, it only reads the commit list through the API, which a read-only
+# token from a fork can do.
+name: DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  dco:
+    # Keep this job name stable — branch protection requires the check by name.
+    name: DCO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const SIGN_OFF = /^Signed-off-by: .+ <[^<>@\s]+@[^<>\s]+>$/m;
+
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              ...context.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            const unsigned = commits
+              // Merge commits are authored by the merge, not by a contributor.
+              .filter((c) => c.parents.length <= 1)
+              .filter((c) => !SIGN_OFF.test(c.commit.message));
+
+            if (unsigned.length === 0) {
+              core.info(`All ${commits.length} commit(s) are signed off.`);
+              return;
+            }
+
+            for (const c of unsigned) {
+              const subject = c.commit.message.split("\n")[0];
+              core.error(`Missing Signed-off-by: ${c.sha.slice(0, 8)} ${subject}`);
+            }
+            core.setFailed(
+              [
+                `${unsigned.length} commit(s) are missing a Signed-off-by trailer.`,
+                "",
+                "Sign off with `git commit -s` (--signoff; not the GPG -S). To fix:",
+                "  last commit:   git commit --amend -s --no-edit && git push --force-with-lease",
+                "  whole branch:  git rebase --signoff origin/main && git push --force-with-lease",
+                "",
+                "By signing off you certify the DCO: https://developercertificate.org/",
+              ].join("\n"),
+            );

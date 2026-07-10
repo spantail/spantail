@@ -121,6 +121,9 @@ pnpm deploy             # wrangler deploy (apps/web)
 
 - TypeScript strict mode everywhere. No `any` without a comment justifying it.
 - Conventional Commits (`feat:`, `fix:`, `refactor:`, ...).
+- Sign off every commit with `git commit -s` (`--signoff`, not the GPG `-S`), certifying the
+  [`DCO`](../DCO). CI fails a PR carrying any unsigned commit; see
+  [`CONTRIBUTING.md`](../CONTRIBUTING.md) for the why and how to fix a missing trailer.
 - Versioning and the release runbook live in [`releasing.md`](./releasing.md) (SemVer,
   `vX.Y.Z` tags → GitHub Releases). Docs (`apps/docs`) deploy on a separate lifecycle.
 - YAGNI: prefer the simplest implementation; do not add dependencies, abstractions, or config

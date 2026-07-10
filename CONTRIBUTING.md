@@ -86,6 +86,31 @@ Open a PR against `main`. Keep **one PR = one logical change** — don't mix unr
 - **Review points** — where you'd like reviewers to focus.
 - **How to test** — steps and results so a reviewer can verify.
 
+### Sign your commits (DCO)
+
+Every commit must carry a `Signed-off-by` trailer. Add one with the `-s` flag:
+
+```bash
+git commit -s -m "feat: ..."
+```
+
+`-s` (`--signoff`) appends a line naming you from your git config. It is **not** `-S`, which
+makes a GPG signature — we don't require that. Signing off certifies the
+[Developer Certificate of Origin](https://developercertificate.org/) — the [`DCO`](DCO) file at
+the repository root — a lightweight statement that you wrote the change, or otherwise have the
+right to submit it under this project's license. It's how we keep the provenance of every line
+in Spantail on the record, in place of a contributor license agreement.
+
+The `DCO` status check fails a pull request if **any** commit on it is missing the trailer. If
+you forgot:
+
+```bash
+git commit --amend -s --no-edit    # the last commit
+git rebase --signoff origin/main   # every commit on the branch
+```
+
+Then `git push --force-with-lease`. Merge commits are exempt.
+
 Before requesting review, make sure the change meets the **Definition of Done** in
 [`docs/conventions.md`](docs/conventions.md) — including `pnpm typecheck && pnpm lint && pnpm test`
 passing, generated migrations if the schema changed, and UI strings present in both `en` and `ja`.
