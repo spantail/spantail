@@ -27,3 +27,4 @@ Closes #
 - [ ] UI strings exist in both `en` and `ja` (if user-facing)
 - [ ] Docs updated if public behavior changed
 - [ ] One logical change; Conventional Commits title
+- [ ] Every commit is signed off (`git commit -s`), certifying the [DCO](../DCO)
