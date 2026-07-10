@@ -10,9 +10,8 @@ A template is a **presentation format** — nothing more. It is independent of a
 project, user, or period: when someone composes a report they freely pair any template with any
 scope and date range. Templates are instance-wide, so every workspace draws from the same list.
 
-:::note[Screenshot]
-*Placeholder — the Report templates list with each template's name, description, and enabled state.*
-:::
+![The Report templates list: each template's name, its default badge, and its default date
+range.](../../../assets/admin/templates-list.png)
 
 ## A starter template is always available
 
@@ -39,9 +38,8 @@ it. The seeded starter template starts out as the default, so a fresh instance a
   [The default template](#the-default-template)).
 - **Delete** a template you no longer need.
 
-:::note[Screenshot]
-*Placeholder — the template editor showing the name, description, and the Markdown + Liquid body.*
-:::
+![The template editor showing the name, description, and the Markdown + Liquid
+body.](../../../assets/admin/template-editor.png)
 
 ## Writing a template
 
