@@ -31,7 +31,8 @@ spantail auth login
 ```bash
 spantail log "Fixed the build" --project website --duration 1h30m --tag ci
 spantail entries list
-spantail report run <report-id> > weekly.md
+spantail report create --template default --range last-week   # prints the new report's id
+spantail report view <report-id> > weekly.md
 ```
 
 ## Commands
@@ -45,8 +46,15 @@ spantail report run <report-id> > weekly.md
 | `spantail projects list` | List the projects in a workspace |
 | `spantail log <description>` | Log a work entry (`--project`, `--duration`, `--date`, `--note`, `--tag`) |
 | `spantail entries list` | List recent work entries (`--project`, `--from`, `--to`, `--limit`) |
+| `spantail entries <view\|edit\|delete\|stats\|tags\|import>` | Inspect, change, or bulk-import work entries |
 | `spantail report list` | List your saved reports with their ids |
-| `spantail report run <id>` | Run a report; the markdown goes to stdout, status info to stderr |
+| `spantail report view <id>` | Print a report's rendered markdown to stdout |
+| `spantail report create` | Create a report from a template and filters (`--template`, `--range`, `--from`/`--to`, `--workspace`, ...) |
+| `spantail report <preview\|edit\|delete\|templates>` | Render without saving, re-render, delete, list templates |
+| `spantail report <send\|sends\|recipients\|share\|shares\|unshare>` | Send a report to inboxes, or manage its public share links |
+| `spantail report <discussion\|comment\|react>` | Read and write a report's comments and reactions |
+| `spantail inbox <list\|view\|counts\|read\|unread\|read-all\|flag>` | Work through your mailbox |
+| `spantail search <query>` | Search your work entries and reports |
 | `spantail mcp` | Run a stdio MCP server bridging AI clients to your instance |
 
 Run `spantail <command> --help` for the full options. Durations accept minutes
