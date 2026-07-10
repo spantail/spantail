@@ -49,6 +49,13 @@ it.
   aggregation, long-term trends, and AI-driven analysis of your work and agent activity.
   *Report templates and basic rollups and statistics stay free* — the line here is basic
   versus advanced.
+- **Money.** Attaching a monetary value to recorded work: rates, billing, cost and margin,
+  capitalization, and AI FinOps. The line here is not basic versus advanced but whether an
+  amount of money is attached. Financial data is sensitive in a way effort data is not, and
+  putting it in the core would turn a low-friction record of what people and agents did into a
+  system that touches your books. *The record itself stays free* — effort in minutes and agent
+  usage in tokens are captured, aggregated, and exported by the core, with no currency anywhere
+  in it.
 - **Content governance and DLP.** Server-side detection of secrets and sensitive content at
   ingest, operator-defined policy enforcement, and audited exception approval. *Structural
   safety stays free* — Spantail does not forward your raw captured data anywhere, and the
