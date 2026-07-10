@@ -22,9 +22,8 @@ Starting at **`v0.1.0`**. Bump rules:
 Notes:
 
 - The per-package `version` fields in the monorepo (`apps/*`, `packages/*`) are **not** kept in sync
-  with the product version; the git tag is authoritative.
-- The `spantail` CLI will get its own npm-published versioning (via changesets) when it is
-  published. That is a separate axis and out of scope here.
+  with the product version; the git tag is authoritative. The one exception is `packages/cli`, whose
+  `version` is the npm version of the published `spantail` CLI — a separate axis, described below.
 
 ## Cutting a release
 
@@ -42,6 +41,33 @@ Notes:
 Release notes are generated from merged PRs and grouped by label
 ([`.github/release.yml`](../.github/release.yml)), so **label PRs** (`bug`, `enhancement`, …) for
 good categorization.
+
+## Releasing the CLI
+
+The `spantail` CLI is published to npm on its **own track**: `cli-vX.Y.Z` tags, versioned by
+`packages/cli/package.json`. Its version says nothing about the server version — the two are
+independent, joined only by the `/api/v1` contract (see
+[`conventions.md`](./conventions.md)). SemVer here describes the CLI's own commands and output.
+
+1. Bump `version` in `packages/cli/package.json` and commit it on `main`.
+2. Tag that commit and push:
+   ```bash
+   git tag cli-vX.Y.Z
+   git push origin cli-vX.Y.Z
+   ```
+3. The [`Release CLI` workflow](../.github/workflows/cli-release.yml) refuses to publish unless the
+   tag matches the declared version, then runs `lint` / `typecheck` / `test` and publishes.
+
+There is no GitHub Release and no `CHANGELOG.md` for the CLI: npm's version list is the record.
+
+Publishing uses npm **trusted publishing** — no `NPM_TOKEN` secret. npm mints a short-lived token
+from the workflow's OIDC identity and attaches a provenance attestation. This binds the npm package
+to one workflow file **by name**, so `.github/workflows/cli-release.yml` must not be renamed; the
+trusted publisher registered on npmjs.com for the `spantail` package names it exactly.
+
+When the CLI starts relying on an endpoint or field that only a newer server provides, raise
+`MIN_SERVER_VERSION` in `packages/cli/src/version.ts` in the same change. The CLI warns (never
+blocks) when it is pointed at a server older than that.
 
 ## Deploying
 

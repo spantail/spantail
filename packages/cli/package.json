@@ -1,7 +1,6 @@
 {
 	"name": "spantail",
 	"version": "0.1.0",
-	"private": true,
 	"description": "Command-line client for Spantail, the open-source work logging and reporting platform: log work, list entries, run reports, and serve a stdio MCP server.",
 	"license": "MIT",
 	"type": "module",
@@ -25,6 +24,9 @@
 	},
 	"bin": {
 		"spantail": "./dist/index.mjs"
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"files": [
 		"dist"

@@ -1,4 +1,4 @@
-import type { InstanceVersion } from "@spantail/core";
+import { type InstanceVersion, isNewerVersion } from "@spantail/core";
 
 // Upstream repo whose GitHub releases define "the latest Spantail". A
 // self-hosted instance — whether cloned or forked — checks against upstream so
@@ -11,26 +11,6 @@ const RELEASES_LATEST_URL =
 // queried at most about once per this interval per edge, keeping the check from
 // generating wasteful outbound requests.
 const CACHE_TTL_SECONDS = 21_600;
-
-const SEMVER = /^v(\d+)\.(\d+)\.(\d+)$/;
-
-/**
- * True only when `latest` is a strictly newer clean `vX.Y.Z` than `current`.
- * Any non-release `current` (an off-tag build like `v0.1.0-7-gabc`, or
- * `"unknown"`) or an unparseable `latest` yields false, so clones/forks that
- * don't publish semver tags simply never prompt.
- */
-export function isNewerVersion(latest: string, current: string): boolean {
-	const l = SEMVER.exec(latest);
-	const c = SEMVER.exec(current);
-	if (!l || !c) return false;
-	for (let i = 1; i <= 3; i++) {
-		const a = Number(l[i]);
-		const b = Number(c[i]);
-		if (a !== b) return a > b;
-	}
-	return false;
-}
 
 // The single outbound choke point for the update check. Tests replace it via
 // setUpdateCheckFetchForTests — vitest-pool-workers runs the tests and the
