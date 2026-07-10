@@ -22,6 +22,17 @@ use your own Worker domain. A few endpoints sit outside `/api/v1`: authenticatio
 `/api/auth` (see [Authentication](/api/authentication/)), the [health check](#health-check)
 at `/api/health`, and the public share views under `/share`.
 
+## Stability
+
+Spantail is pre-1.0, so `/api/v1` may still change in breaking ways between releases.
+
+From `v1.0.0` on, `/api/v1` only grows: endpoints and fields may be added, but never removed
+or repurposed. A breaking change would ship as `/api/v2` alongside the existing `/api/v1`,
+which keeps working. Write clients that ignore response fields they do not recognize.
+
+Every `/api` response carries the instance's version in the `x-spantail-version` header, so a
+client can tell which server it is talking to without an extra request.
+
 ## Conventions
 
 - **JSON by default.** Request and response bodies are `application/json; charset=utf-8`;

@@ -25,5 +25,6 @@ export * from "./search";
 export * from "./share";
 export * from "./token";
 export * from "./user";
+export * from "./version";
 export * from "./work-entry";
 export * from "./workspace";

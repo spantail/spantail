@@ -1,0 +1,47 @@
+# Publishes the `spantail` CLI to npm when a `cli-vX.Y.Z` tag is pushed. The CLI releases on its
+# own track, independent of the product's `vX.Y.Z` tags (see ../release.yml); docs/releasing.md
+# has the runbook.
+#
+# Do NOT rename this file. npm's trusted publisher for the `spantail` package names it exactly,
+# so a rename silently breaks the OIDC exchange and the publish falls back to failing.
+name: Release CLI
+
+on:
+  push:
+    tags:
+      # Strict cli-vX.Y.Z; avoids accidental publishes from tags like `cli-vnext`.
+      - "cli-v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+  # Lets npm mint an OIDC token for trusted publishing. No NPM_TOKEN secret exists.
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The tag names the version being published, but npm reads it from package.json. Refuse to
+      # publish anything other than what the tag claims.
+      - name: Verify the tag matches the package version
+        run: |
+          tagged="${GITHUB_REF_NAME#cli-v}"
+          declared="$(jq -r .version packages/cli/package.json)"
+          if [ "$tagged" != "$declared" ]; then
+            echo "tag $GITHUB_REF_NAME wants $tagged, packages/cli/package.json declares $declared" >&2
+            exit 1
+          fi
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      # No token: pnpm exchanges the OIDC token for a short-lived npm one. --provenance is required
+      # for that exchange to be attempted (pnpm/pnpm#11513).
+      - name: Publish to npm
+        run: pnpm --filter spantail publish --access public --provenance --no-git-checks

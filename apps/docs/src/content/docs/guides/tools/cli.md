@@ -23,6 +23,13 @@ npm install -g spantail
 
 Requires Node.js 24 or later.
 
+The CLI is versioned and released independently of the Spantail server, so its
+version number has nothing to do with your instance's. The two meet only at the
+REST API, which grows by addition — a newer server always works with an older
+CLI. The reverse can fall short, so the CLI prints a warning when it is pointed
+at a server older than the oldest one it is tested against. It is only a
+warning: most commands still work.
+
 ## Sign in
 
 1. In the web app, create an API token under **Settings → API tokens** (read and

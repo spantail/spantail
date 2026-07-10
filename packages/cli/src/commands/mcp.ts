@@ -2,10 +2,9 @@ import { parseArgs } from "node:util";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { SpantailClient } from "@spantail/sdk";
 import { registerSpantailTools } from "@spantail/sdk/mcp";
 
-import { resolveConnection } from "../client";
+import { createClient, resolveConnection } from "../client";
 import type { CliContext } from "../context";
 import { CliError } from "../errors";
 import { registerStdioTools } from "../mcp-tools";
@@ -39,11 +38,9 @@ export async function mcpCommand(
 	}
 
 	const server = new McpServer({ name: "spantail", version: VERSION });
-	const client = new SpantailClient({
-		baseUrl: connection.baseUrl,
-		token: connection.token,
-		client: "mcp",
-	});
+	// Same client the commands use: an unreachable server reads as such, and an
+	// out-of-date one warns. Both write to stderr — stdout carries MCP frames.
+	const client = createClient(ctx, { ...connection, client: "mcp" });
 	registerSpantailTools(server, client);
 	// File-based tools exist only here: the remote /mcp Worker has no filesystem.
 	registerStdioTools(server, client);

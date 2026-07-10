@@ -53,6 +53,13 @@ pnpm run deploy         # wrangler deploy (apps/web); `run` is required — see 
 
 - **One API.** Web, CLI, and MCP are all clients of the same REST API. Business logic never
   lives in a client; it lives in `packages/core`. Route handlers: validate → call core/db → respond.
+- **`/api/v1` grows by addition.** From `v1.0.0` on, endpoints and fields may be added but never
+  removed or repurposed; a breaking change ships as `/api/v2` alongside. Until then (`0.x`) the API
+  may still break — see [`releasing.md`](./releasing.md). This is what lets the CLI ship on its own
+  release track: an older CLI keeps working against a newer server. Only the reverse can break,
+  since the API rejects request fields it does not know, so the CLI declares the oldest server it is
+  tested against (`MIN_SERVER_VERSION` in `packages/cli/src/version.ts`) and warns when it meets an
+  older one. Raise it in the same change that starts depending on something newer.
 - **Single source of truth for types.** Zod schemas in `packages/core` define entities and
   request/response shapes. Validate at the API boundary with them. Never redeclare these types.
 - **Data access** goes through query functions in `packages/db`. No inline SQL or ad-hoc Drizzle
