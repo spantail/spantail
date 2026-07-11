@@ -20,8 +20,8 @@ truth in the repository.
 
 ## Captured content may be sensitive
 
-Span descriptions, notes, and event payloads are stored **verbatim** and can surface downstream
-in reports, public share links, and Send-to deliveries. Treat them as potentially
+Entry descriptions, notes, and agent event payloads are stored **verbatim** and can surface
+downstream in reports, public share links, and sent messages. Treat them as potentially
 secret-bearing:
 
 - Don't put secrets in those fields, and don't emit secrets into agent logs.

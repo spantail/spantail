@@ -6,11 +6,11 @@ description: Rename a workspace, change its URL, set its logo, and archive or de
 **Settings → Workspace → General.** Visible to the workspace **owner** and **admins**; members
 see a read-only notice.
 
-Each workspace has its own identity — a name, a URL slug, and a logo — shared by everyone in it.
+Each workspace has its own identity — a name, a URL slug, a logo, and an accent color — shared by
+everyone in it. A middle **Workspaces** pane lets an admin pick which workspace these settings edit.
 
-:::note[Screenshot]
-*Placeholder — the General settings page with the name/URL form and the logo card.*
-:::
+![The General settings page: the workspace form, the logo, and the accent-color
+picker.](../../../assets/admin/general.png)
 
 ## Name and URL
 
@@ -29,11 +29,13 @@ The logo appears on the workspace switcher in the sidebar. When no logo is set, 
 generated initials avatar instead.
 
 - **Upload** — choose a **PNG, JPEG, or WebP** file, up to **1 MB**.
-- **Remove** — clears the logo and returns to the initials avatar.
+- **Remove** — clears the logo and returns to the initials avatar (shown once a logo is set).
 
-:::note[Screenshot]
-*Placeholder — the logo card showing the current avatar with the Upload and Remove buttons.*
-:::
+## Appearance
+
+Pick an **accent color** for the workspace. It recolors highlights, charts, and surfaces across
+the app for everyone in the workspace, with a live preview. Leave it at **None** for the default
+neutral theme.
 
 ## Archiving
 

@@ -28,10 +28,10 @@ best-effort and model-dependent; do not add defensive scaffolding.
    Use the Claude-in-Chrome `gif_creator` when available; otherwise fall back
    to a screenshot at each step.
 
-For screenshots and recordings, size the viewport to **1280×960** unless the
-request specifies otherwise (Playwright `browser_resize`, Chrome DevTools
-`resize_page`, or the Claude-in-Chrome resize action, applied before
-capturing or recording).
+Size the viewport before capturing or recording (Playwright `browser_resize`,
+Chrome DevTools `resize_page`, or the Claude-in-Chrome resize action), unless
+the request specifies otherwise: **1280×960** for screenshots, **1280×720** for
+recordings.
 
 Save every screenshot and recording under **`local/screenshots/`** (a
 gitignored path) with an absolute path — e.g.

@@ -9,9 +9,8 @@ Projects organize the work inside a workspace. Members assign work entries and a
 a project, and reports can be scoped to one. Project membership also controls who can read a
 project's entries.
 
-:::note[Screenshot]
-*Placeholder — the Projects list with each project's color, member avatars, and row actions.*
-:::
+![The Projects list with each project's color, member avatars, and
+status.](../../../assets/admin/projects-list.png)
 
 ## Create a project
 
@@ -19,13 +18,14 @@ Choose **New project** and set:
 
 - **Name** — the project's display name.
 - **URL** — a slug, used in project links. Lowercase letters, digits, and hyphens.
-- **Description** — optional, shown alongside the project.
 - **Color** — an accent hue that marks the project across timelines and reports.
+- **Symbol** — a shape shown with the color, so projects can be told apart without relying on
+  color alone.
 - **Members** — optionally pick the initial members from the workspace's members.
+- **Description** — optional, shown alongside the project.
 
-:::note[Screenshot]
-*Placeholder — the New project dialog with the name, URL, color picker, and member multi-select.*
-:::
+![The New project dialog with the name, slug, color, symbol, members, and
+description fields.](../../../assets/admin/project-new.png)
 
 ## Edit a project
 
@@ -47,7 +47,7 @@ active pickers but keep all their entries, and you can **restore** them later.
 
 ## Delete a project
 
-Deleting a project is permanent. Its work and agent entries are **not** deleted — they become
+Deleting a project is permanent. Its work entries and agent sessions are **not** deleted — they become
 unassigned (their project link is cleared) and remain in the workspace. A confirmation step
 spells this out before you proceed.
 

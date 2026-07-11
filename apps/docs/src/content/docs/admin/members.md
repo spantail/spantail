@@ -9,9 +9,8 @@ see the roster read-only.
 A workspace's members are the users who can see it and log work in it. Each member has one of
 three roles.
 
-:::note[Screenshot]
-*Placeholder — the Members table listing each member's name, email, and role.*
-:::
+![The Members table listing each member's name, email, and role, with the add-member
+form above it.](../../../assets/admin/members.png)
 
 ## Roles
 

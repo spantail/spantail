@@ -111,6 +111,32 @@ curl -X POST "https://<your-instance>/api/v1/me/avatar" \
 呼び出し元のアバターを削除します。`imageUrl` は `null` に戻り、どこでもイニシャルが表示されます。
 更新後の `{ user, memberships }` を返します。
 
+## GitHub 接続
+
+GitHub アカウントを接続すると、GitHub の Issue から作業を記録できます
+（[GitHub 連携](/ja/admin/github-integration/)を参照）。リンク自体はブラウザでの OAuth コールバックで
+作られます。これらのエンドポイントはそのリンクの読み取りと削除を行います。
+
+### GitHub リンクの取得
+
+`GET /api/v1/me/github` <Badge text="scope: read" variant="note" />
+
+呼び出し元のアカウントが GitHub アイデンティティに接続されているか、接続されている場合はその
+ログイン名を返します。
+
+```json
+{ "linked": true, "login": "octocat" }
+```
+
+未接続の場合のレスポンスは `{ "linked": false }` です。
+
+### GitHub の切断
+
+`DELETE /api/v1/me/github` <Badge text="scope: write" variant="caution" />
+
+呼び出し元の GitHub リンクを削除します。`204 No Content` を返します。再接続するまでコメントからの
+作業記録は止まりますが、すでに記録したエントリは残ります。
+
 ## Personal Access Tokens
 
 Personal Access Token（PAT）は、あなたとしてプログラムからのアクセスを認証します。送信方法とスコープの

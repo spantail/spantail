@@ -151,11 +151,17 @@ curl -X POST "https://<your-instance>/api/v1/reports/preview" \
   "content": "---\nname: Website — this week\n...\n---\n\n# Website — this week\n...",
   "totalMinutes": 540,
   "entryCount": 12,
-  "projectCount": 1
+  "projectCount": 1,
+  "suggestedName": "Website — this week",
+  "suggestedNote": ""
 }
 ```
 </TabItem>
 </Tabs>
+
+`suggestedName` and `suggestedNote` are the template's `nameTemplate` / `noteTemplate` rendered
+against this scope and period — what the compose form pre-fills. Both are empty when the template
+defines no such default.
 
 ## Create a report
 
@@ -323,3 +329,35 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/send" \
 </Tabs>
 
 Returns `201 Created`. `delivered` counts only teammate recipients; a self-copy is not counted.
+
+## Send history
+
+`GET /api/v1/reports/:id/sends` <Badge text="scope: read" variant="note" />
+
+The report's send history — one entry per **Send** batch, newest first. Same read access as
+[recipients](#recipients) and shares (owner, instance admin, or an admin of the report's
+workspace). `readCount` is the recipient's own read state and is **redacted to `0` for anyone
+but the owner**, so an admin reader can't see whether a single recipient opened a send.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/reports/rep_q2/sends" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "snd_1",
+    "createdAt": "2026-07-10T09:42:05.000Z",
+    "message": "Here is this week's site report.",
+    "recipientNames": ["Bo", "Carol"],
+    "recipientCount": 2,
+    "readCount": 1
+  }
+]
+```
+</TabItem>
+</Tabs>

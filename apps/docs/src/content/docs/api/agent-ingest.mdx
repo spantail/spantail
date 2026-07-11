@@ -1,13 +1,13 @@
 ---
 title: Agent ingest
-description: Ingest AI coding-agent activity with an Agent Access Token, and read back agent entries and stats.
+description: Ingest AI coding-agent activity with an Agent Access Token, and read back agent sessions and stats.
 ---
 
 import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
-The ingest endpoints capture AI coding-agent activity as **agent entries** — one work
-session per agent and session. An [agent](/api/agents/) writes them with its **Agent Access
-Token (AAT)**, passed as `Authorization: Bearer spantail_aat_…`.
+The ingest endpoints capture AI coding-agent activity as **agent sessions** — one row of
+`agent_entries` per agent and session. An [agent](/api/agents/) writes them with its **Agent
+Access Token (AAT)**, passed as `Authorization: Bearer spantail_aat_…`.
 
 There are two write paths into the same `agent_entries` row, and a session is fed by exactly
 one of them:
@@ -29,9 +29,13 @@ every ingest the owner's workspace membership and (when a project is named) proj
 are re-checked live, so a token bound earlier cannot write where the owner no longer
 belongs. A disabled or archived agent's token is rejected. Ingest into an archived
 workspace returns `409 conflict` — archived workspaces are read-only.
+
+Every endpoint on this page is gated by the instance's **AI agents** feature. When an
+instance admin has it off, these routes are unavailable — see
+[System settings](/admin/system-settings/).
 </Aside>
 
-## The agent entry object
+## The agent session object
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -283,13 +287,13 @@ curl -X POST "https://<your-instance>/api/v1/agent-events/finalize" \
   }'
 ```
 
-The response is the updated agent entry, in the same shape as the ingest responses.
+The response is the updated agent session, in the same shape as the ingest responses.
 
-## List agent entries
+## List agent sessions
 
 `GET /api/v1/agent-entries` <Badge text="scope: read" variant="note" />
 
-Returns agent entries in a workspace, newest first. The read scope is resolved server-side
+Returns agent sessions in a workspace, newest first. The read scope is resolved server-side
 from the caller's membership: a member sees agent activity in the projects they belong to
 plus their own agents' activity (unassigned activity stays owner-only), while a workspace or
 instance admin sees all agent activity in the workspace.
@@ -309,6 +313,39 @@ instance admin sees all agent activity in the workspace.
 curl "https://<your-instance>/api/v1/agent-entries?workspaceId=wrk_demo&agentId=agt_bot" \
   -H "Authorization: Bearer spantail_pat_yourtoken"
 ```
+
+## Delete sessions
+
+`POST /api/v1/agent-entries/delete` <Badge text="scope: write" variant="caution" />
+
+Bulk-deletes agent sessions you own. It is a `POST` with a body (not `DELETE`, whose bodies
+intermediaries handle poorly) and is **all-or-nothing**: if any id is missing, belongs to
+another owner, or is outside the given workspace, nothing is deleted and the call returns
+`404` (never `403`, so foreign ids are never confirmed to exist). Owner-only — an admin cannot
+delete another user's sessions.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `workspaceId` | string | yes | Workspace the sessions belong to. |
+| `ids` | string[] | yes | Session ids to delete (deduplicated). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/agent-entries/delete" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{ "workspaceId": "wrk_demo", "ids": ["ae_01K2", "ae_01K3"] }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{ "count": 2 }
+```
+</TabItem>
+</Tabs>
 
 ## Stats
 

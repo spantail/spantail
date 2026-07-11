@@ -9,9 +9,8 @@ This is the instance-wide list of every user. From here you onboard new people, 
 capabilities, and lock or remove accounts. (Workspace membership is separate — see
 [Members & roles](/admin/members).)
 
-:::note[Screenshot]
-*Placeholder — the User management page: the user list with each user's role and the invite/create form.*
-:::
+![The User management page: the invite/create form above the user list, with each user's
+role.](../../../assets/admin/users.png)
 
 ## Adding users
 
@@ -23,11 +22,8 @@ How you add a user depends on whether [email](/admin/system-settings#email) is c
   immediately, showing a **temporary password once**. Copy it and pass it to the person through a
   secure channel — it is never shown again.
 
-When adding a user you can also grant capabilities up front (see below).
-
-:::note[Screenshot]
-*Placeholder — the create/invite form, including the grant-admin and grant-template-author options.*
-:::
+When adding a user you can also grant capabilities up front with the **Grant instance admin** and
+**Grant template author** checkboxes (see below).
 
 ## Capabilities
 

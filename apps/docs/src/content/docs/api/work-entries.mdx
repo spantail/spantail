@@ -103,6 +103,7 @@ have access to the target project. Rate-limited per credential.
 | `endedAt` | string | no | ISO 8601 end instant. |
 | `note` | string | no | Long-form note (≤ 10000 chars). |
 | `tags` | string[] | no | Up to 20 tags. Defaults to `[]`. |
+| `agentEntryIds` | string[] | no | Agent sessions to link to this entry (the ones it was logged from). Only on the single-entry create, not the bulk one. |
 
 <Tabs>
 <TabItem label="curl">
@@ -233,6 +234,19 @@ Returns `201 Created` with the number of entries processed (created or updated).
 
 Returns a single entry. Subject to the same project ACL as listing — a hidden entry returns
 `404`.
+
+## Get an entry's linked agent sessions
+
+`GET /api/v1/work-entries/:id/agent-entries` <Badge text="scope: read" variant="note" />
+
+Returns the [agent sessions](/api/agent-ingest/) linked to this entry — the ones it was logged
+from. Same read access as the entry itself. Gated by the instance's **AI agents** feature: when
+that is off, the route is unavailable.
+
+```bash
+curl "https://<your-instance>/api/v1/work-entries/we_01/agent-entries" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
 
 ## Update a work entry
 

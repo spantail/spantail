@@ -1,6 +1,6 @@
 ---
-title: Reports & inbox
-description: Create, view, share, and discuss reports; manage your inbox.
+title: Reports & messages
+description: Create, view, share, and discuss reports; manage the messages sent to you.
 ---
 
 A **report** turns your entries into a readable document. It combines a
@@ -21,11 +21,8 @@ see the [API reference](/api/reports/).)
 From the reports list (or the **New report** action), open the report form. It
 has two panes — the form on the left, a live preview on the right.
 
-:::note[Screenshot]
-The new-report dialog: filters and template picker on the left, the live
-Markdown preview on the right.
-🚧 Image to be added.
-:::
+![The new-report dialog: filters and template picker on the left, the live
+Markdown preview on the right.](../../../assets/reports/01-new-report.png)
 
 Set:
 
@@ -55,11 +52,8 @@ A saved report shows its rendered Markdown body and a toolbar. Re-rendering a
 report (by editing it) appends a new **version**; each version is frozen, so a
 report always reflects the data as of when it was rendered.
 
-:::note[Screenshot]
-A rendered report with its toolbar (edit, send, share, download, duplicate,
-print, delete).
-🚧 Image to be added.
-:::
+![A rendered report with its toolbar (send, share, print, and a more-actions
+menu).](../../../assets/reports/02-rendered.png)
 
 The toolbar lets you **edit**, **send**, **share**, **download** (Markdown),
 **duplicate**, **print**, and **delete**.
@@ -68,17 +62,16 @@ The toolbar lets you **edit**, **send**, **share**, **download** (Markdown),
 
 There are two ways to distribute a report:
 
-- **Share link** — generate a public capability URL that needs no login. You can
+- **Share link** — generate a read-only public link that needs no login. You can
   protect it with a **passcode**, set an **expiry**, and **revoke** it at any
-  time. Filters and internal ids are stripped from the public view.
-- **Send to inbox** — pick recipients from the report's workspace(s) and send
-  them a frozen copy. The snapshot is captured at send time, so later membership
-  changes don't alter what they received.
+  time. Filters and internal ids are stripped from the public view. Anyone who
+  knows the link can open it, so treat it as a secret.
+- **Send** — pick recipients from the report's workspace(s) and send them a
+  frozen copy as a message. The snapshot is captured at send time, so later
+  membership changes don't alter what they received.
 
-:::note[Screenshot]
-The share dialog with the passcode and expiry options.
-🚧 Image to be added.
-:::
+![The share dialog with the passcode and expiry
+options.](../../../assets/reports/03-share.png)
 
 ## Discuss
 
@@ -89,17 +82,16 @@ sending it again starts a fresh thread for the new version, so a conversation
 always refers to the exact body its participants received. You can edit your
 own comments.
 
-## Inbox
+## Messages
 
-Your **inbox** (in the header's top-right corner) has two folders:
+**Messages** (in the header's top-right corner) is where everything sent to you
+arrives. Two folders hold the reports:
 
 - **Inbox** — reports sent to you.
 - **Sent** — reports you sent, grouped by send batch.
 
-Each item can be **starred**, **archived**, or moved to **trash**, and you can
+Each message can be **starred**, **archived**, or moved to **trash**, and you can
 search the list.
 
-:::note[Screenshot]
-The inbox: the folder list, the message list, and the reading pane.
-🚧 Image to be added.
-:::
+![Messages: the folder list, the message list, and the reading
+pane.](../../../assets/reports/04-messages.png)
