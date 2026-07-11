@@ -71,6 +71,16 @@ it("rejects duplicate externalIds pointing at the first occurrence", () => {
 	);
 });
 
+it("carries a valid author email and rejects a malformed one", () => {
+	const items = parseImportJsonl(line({ user: "Dana@Example.com" }));
+	// The email is lowercased so membership matching is case-insensitive.
+	expect(items[0]?.entry).toMatchObject({ user: "dana@example.com" });
+
+	expect(() => parseImportJsonl(line({ user: "not-an-email" }))).toThrowError(
+		/line 1: user/,
+	);
+});
+
 it("rejects an empty file", () => {
 	expect(() => parseImportJsonl("\n\n")).toThrowError(/no entries in file/);
 });

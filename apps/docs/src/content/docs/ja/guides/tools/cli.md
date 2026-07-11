@@ -75,7 +75,7 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 | `spantail entries delete <id>` | 自分の記録を削除（`--yes` がなければ確認）。 |
 | `spantail entries stats` | 合計と日別／プロジェクト別／ユーザー別の集計。 |
 | `spantail entries tags` | スコープ内のタグを 1 行 1 つで一覧。 |
-| `spantail entries import <file.jsonl>` | JSONL ファイルから作業記録を一括インポート（`--workspace`、`--project`、`--dry-run`）。 |
+| `spantail entries import <file.jsonl>` | JSONL ファイルから作業記録を一括インポート（`--workspace`、`--project`、`--user`、`--dry-run`）。 |
 
 #### 一括インポート（JSONL）
 
@@ -88,13 +88,20 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 
 各行のフィールド: `entryDate`（必須 — 日付は値のまま使われ、タイムゾーン
 変換は行われません）、`durationMinutes`、`description`、および任意の
-`project`（スラッグ。ない行は `--project` を使用）、`note`、`tags`、
-`startedAt`、`endedAt`、`externalId`。
+`project`（スラッグ。ない行は `--project` を使用）、`user`（作成者のメール
+アドレス。ない行は `--user` を使用）、`note`、`tags`、`startedAt`、`endedAt`、
+`externalId`。
+
+既定では各エントリの作成者はあなた自身です。`user` フィールド（または
+`--user`）はメールアドレスで別のアカウントにエントリを帰属させます — チーム
+全体の履歴を 1 回でインポートする方法です — が、自分以外の作成者を指定できるの
+は**インスタンス管理者**のみで、そのメールは対象ワークスペースのメンバーで
+なければなりません。管理者以外は自分のエントリしかインポートできません。
 
 まずファイル全体を検証します — 不正な行が 1 つでもあれば、何も送信する前に
 行番号付きで失敗します。その後、エントリは 100 件ずつのアトミックなバッチで
 送信されます（各リクエストは全件成功か全件失敗）。`--dry-run` を使うと、
-インポートせずに検証とプロジェクトスラッグの解決だけを行えます。
+インポートせずに検証とプロジェクトスラッグ・作成者メールの解決だけを行えます。
 
 `externalId` は通常は省略します。移行元システムの ID を保持したい場合に
 指定すると、その値がエントリの id になり（インスタンス全体でユニーク、

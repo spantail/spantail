@@ -12,21 +12,24 @@ imported — it starts flowing the moment you connect an agent.
 1. Create the destination [workspace and its projects](/admin/projects/). Import resolves
    projects by **slug** and never creates them: an unknown slug fails the run and prints the
    slugs that do exist.
-2. [Install the CLI and sign in](/guides/tools/cli/#install) as the user the entries should
-   belong to. Every imported entry is authored by the account behind the credentials, so a
-   per-person history is imported once per person.
+2. [Install the CLI and sign in](/guides/tools/cli/#install). As an **instance admin** you can
+   import the whole team at once: each line names its author's email in a `user` field (lines
+   without one fall back to `--user`), and every named account must be a member of the target
+   workspace. Signed in as a regular user, every entry is authored by you — so a per-person
+   history is imported once per person.
 
 ## Export to JSONL
 
 Convert your source system's export into a file with **one JSON object per line**:
 
 ```json
-{"project":"website","entryDate":"2024-07-15","durationMinutes":90,"description":"Reviewed onboarding flow","tags":["review"],"externalId":"legacy-4711"}
+{"project":"website","user":"dana@acme.example","entryDate":"2024-07-15","durationMinutes":90,"description":"Reviewed onboarding flow","tags":["review"],"externalId":"legacy-4711"}
 ```
 
 `entryDate` is required and taken verbatim — it is a local date in the author's timezone, never
-converted. `project` is a slug and may be omitted on lines covered by the `--project` flag. See
-[Bulk import (JSONL)](/guides/tools/cli/#bulk-import-jsonl) for every field.
+converted. `project` is a slug and may be omitted on lines covered by the `--project` flag;
+`user` is the author's email (instance admins only) and may be omitted on lines covered by
+`--user`. See [Bulk import (JSONL)](/guides/tools/cli/#bulk-import-jsonl) for every field.
 
 ### Keep your source ids
 
@@ -40,7 +43,7 @@ the old system (`4711` → `legacy-4711`) rather than importing it raw.
 
 ## Rehearse, then import
 
-Validate the file and resolve every project slug without writing anything:
+Validate the file and resolve every project slug and author email without writing anything:
 
 ```bash
 spantail entries import work-entries.jsonl --workspace acme --dry-run

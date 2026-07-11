@@ -294,6 +294,12 @@ A person logs work through any client; all five channels hit the same REST API a
 `work_entries` row, which records the channel in `source`. Whether it is project- or
 workspace-scoped depends on `projectId`.
 
+Every channel authors the entry as the calling human, with one exception: **bulk import**
+(`POST /api/v1/work-entries/batch`) lets an **instance admin** attribute each entry to another
+user by email (the `user` field), so a whole team's history can migrate in one pass. The named
+account must be a member of the target workspace; non-admins can only author their own entries.
+See [`permissions.md`](./permissions.md) for the bounds.
+
 ```mermaid
 flowchart LR
     A["Human"] -->|"web / CLI / MCP / API / GitHub"| B["POST /api/v1/work-entries"]

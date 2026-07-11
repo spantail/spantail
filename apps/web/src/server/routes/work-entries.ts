@@ -21,6 +21,7 @@ import {
 	getWorkEntryStats,
 	isProjectMember,
 	listAgentEntriesForWorkEntry,
+	listMembers,
 	listWorkEntries,
 	listWorkEntryTags,
 	type MembershipRow,
@@ -226,12 +227,63 @@ export const workEntryRoutes = new Hono<AppEnv>()
 			await requireProjectAccess(c, projectId, membership, user.id);
 		}
 
+		// Author attribution. By default every row is authored by the caller. An
+		// instance admin may instead name each entry's author by email (`user`) —
+		// so one import can land a whole team's history at once — as long as the
+		// email belongs to a member of the target workspace. Non-admins may only
+		// author as themselves (a deliberate security control).
+		const callerEmail = user.email.toLowerCase();
+		const requestedEmails = [
+			...new Set(
+				input.entries
+					.map((e) => e.user)
+					.filter((email): email is string => email !== undefined),
+			),
+		];
+		if (
+			requestedEmails.some((email) => email !== callerEmail) &&
+			!user.isAdmin
+		) {
+			throw new AppError(
+				"forbidden",
+				"Only an instance admin may attribute imported entries to other users",
+			);
+		}
+		// Resolve each named author to a workspace member in one query. An email
+		// that is not a member — unknown account or non-member — fails the run up
+		// front with the offending line number, nothing written.
+		const userIdByEmail = new Map<string, string>();
+		if (requestedEmails.length > 0) {
+			for (const m of await listMembers(c.var.db, input.workspaceId)) {
+				userIdByEmail.set(m.email.toLowerCase(), m.userId);
+			}
+		}
+		const resolved = input.entries.map((e, i) => {
+			if (!e.user) return { entry: e, userId: user.id };
+			const userId = userIdByEmail.get(e.user);
+			if (!userId) {
+				throw new AppError(
+					"bad_request",
+					`Line ${i + 1}: user "${e.user}" is not a member of this workspace`,
+				);
+			}
+			return { entry: e, userId };
+		});
+
 		// Client-supplied primary keys: reject any externalId that already exists
 		// as another user's or another workspace's entry (409, nothing written).
+		// The owner is compared against the entry's resolved author, so an admin
+		// re-importing a teammate's history stays idempotent.
 		if (externalIds.length > 0) {
+			const authorByExternalId = new Map<string, string>();
+			for (const { entry, userId } of resolved) {
+				if (entry.externalId) authorByExternalId.set(entry.externalId, userId);
+			}
 			const owners = await getWorkEntryOwnersByIds(c.var.db, externalIds);
 			const foreign = owners.find(
-				(o) => o.workspaceId !== input.workspaceId || o.userId !== user.id,
+				(o) =>
+					o.workspaceId !== input.workspaceId ||
+					o.userId !== authorByExternalId.get(o.id),
 			);
 			if (foreign) {
 				throw new AppError(
@@ -242,11 +294,11 @@ export const workEntryRoutes = new Hono<AppEnv>()
 		}
 
 		const source = resolveSource(c);
-		const rows = input.entries.map((e) => ({
+		const rows = resolved.map(({ entry: e, userId }) => ({
 			id: e.externalId ?? crypto.randomUUID(),
 			workspaceId: input.workspaceId,
 			projectId: e.projectId,
-			userId: user.id,
+			userId,
 			entryDate: e.entryDate,
 			durationMinutes: e.durationMinutes,
 			startedAt: e.startedAt ? new Date(e.startedAt) : null,

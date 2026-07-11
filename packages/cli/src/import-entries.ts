@@ -103,6 +103,7 @@ export interface ImportSummary {
 	dryRun: boolean;
 	workspace: string;
 	projects: string[];
+	users: string[];
 }
 
 /**
@@ -110,12 +111,20 @@ export interface ImportSummary {
  * ids (all before the first request), then posts the entries in batches of
  * MAX_WORK_ENTRIES_PER_BATCH, atomically per request. A mid-file failure
  * reports exactly which lines were imported and how to resume.
+ *
+ * An entry's `user` (an author's email) rides through unresolved — the server
+ * maps it to an account — but when any line names an author (or --user is set)
+ * every email is validated against the workspace's members here, so a dry run
+ * reports an unknown author the same way it reports an unknown project. Naming
+ * an author other than yourself requires instance admin; the server enforces
+ * that and its error surfaces on the first request.
  */
 export async function importEntries(
 	client: SpantailClient,
 	opts: {
 		workspaceSlug: string;
 		defaultProjectSlug?: string;
+		defaultUserEmail?: string;
 		content: string;
 		dryRun?: boolean;
 		onProgress?: (progress: ImportProgress) => void;
@@ -123,10 +132,22 @@ export async function importEntries(
 ): Promise<ImportSummary> {
 	const items = parseImportJsonl(opts.content);
 	const workspace = await resolveWorkspace(client, opts.workspaceSlug);
+	const defaultUserEmail = opts.defaultUserEmail?.toLowerCase();
 
 	// One projects lookup resolves every slug in the file.
 	const projects = await client.listProjects(workspace.id);
 	const idBySlug = new Map(projects.map((p) => [p.slug, p.id]));
+	// Members are fetched only when authorship is in play, to validate emails.
+	const authored =
+		defaultUserEmail !== undefined ||
+		items.some((item) => item.entry.user !== undefined);
+	const memberEmails = authored
+		? new Set(
+				(await client.listMembers(workspace.id)).map((m) =>
+					m.email.toLowerCase(),
+				),
+			)
+		: null;
 	const errors: string[] = [];
 	const entries = items.map((item) => {
 		const slug = item.project ?? opts.defaultProjectSlug;
@@ -144,7 +165,15 @@ export async function importEntries(
 			);
 			return null;
 		}
-		return { line: item.line, entry: { ...item.entry, projectId } };
+		const user = item.entry.user ?? defaultUserEmail;
+		if (user !== undefined && memberEmails && !memberEmails.has(user)) {
+			const available = [...memberEmails].join(", ") || "none";
+			errors.push(
+				`line ${item.line}: unknown user "${user}" in workspace "${workspace.slug}" (available: ${available})`,
+			);
+			return null;
+		}
+		return { line: item.line, entry: { ...item.entry, projectId, user } };
 	});
 	if (errors.length > 0) throw fileError(errors);
 	const resolved = entries.filter((e) => e !== null);
@@ -154,6 +183,13 @@ export async function importEntries(
 			items
 				.map((item) => item.project ?? opts.defaultProjectSlug)
 				.filter((slug): slug is string => slug !== undefined),
+		),
+	];
+	const usedEmails = [
+		...new Set(
+			items
+				.map((item) => item.entry.user ?? defaultUserEmail)
+				.filter((email): email is string => email !== undefined),
 		),
 	];
 	// Chunk in file order, closing a request when it would exceed either the
@@ -182,6 +218,7 @@ export async function importEntries(
 		dryRun: opts.dryRun === true,
 		workspace: workspace.slug,
 		projects: usedSlugs,
+		users: usedEmails,
 	};
 	if (opts.dryRun) return summary;
 
