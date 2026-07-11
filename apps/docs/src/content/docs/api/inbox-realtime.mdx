@@ -39,6 +39,7 @@ Per-scope fields are simply empty for the other scope (received: `recipientNames
 | `reportContentId` | string | The immutable content version this delivery carried — the key for the version's [discussion](/api/report-sharing/#discussion). Always present — deleting a report also removes its versions and their deliveries. |
 | `senderName` | string | Display name of the sender. |
 | `senderEmail` | string | Email of the sender. |
+| `senderImageUrl` | string \| null | Received: the sender's avatar URL, or `null`. |
 | `reportName` | string | Name of the delivered report. |
 | `dateFrom` | string | Report range start `YYYY-MM-DD`. |
 | `dateTo` | string | Report range end `YYYY-MM-DD`. |
@@ -49,6 +50,7 @@ Per-scope fields are simply empty for the other scope (received: `recipientNames
 | `archived` | boolean | The caller's archive flag. |
 | `trashed` | boolean | The caller's trash flag. |
 | `recipientNames` | string[] | Sent only: recipient names for the "To: …" summary. |
+| `recipientImageUrls` | (string \| null)[] | Sent only: recipient avatar URLs for the "To: …" summary, aligned with `recipientNames`. |
 | `recipientCount` | integer | Sent only: number of recipients. |
 
 Opening a single item (`GET /inbox/:id`) returns the same fields plus `renderedMarkdown`

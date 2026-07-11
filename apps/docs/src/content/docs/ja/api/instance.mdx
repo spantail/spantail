@@ -242,3 +242,33 @@ curl -X PATCH "https://<your-instance>/api/v1/instance/oauth" \
   -H "Content-Type: application/json" \
   -d '{ "googleOAuthEnabled": true, "googleAllowedDomains": ["example.com"] }'
 ```
+
+## バージョン
+
+### バージョンの状態
+
+`GET /api/v1/instance/version` <Badge text="要認証" variant="note" />
+
+管理者に限らず、サインイン済みの任意のメンバーが利用できます。インスタンスの稼働バージョンと、
+より新しいアップストリームリリースがあるかどうかを返します — System ページの更新通知の裏側の
+データです。稼働バージョンは秘密ではありません。認証が必要なのは、この処理が外部への更新
+チェックを行うため、オープンなプロキシにしないためです。ベストエフォートでキャッシュされ、
+チェックに失敗すると `latest` は `null` になります。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/version" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "current": "v0.5.1",
+  "latest": "v0.6.0",
+  "updateAvailable": true
+}
+```
+</TabItem>
+</Tabs>

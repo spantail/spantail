@@ -208,6 +208,7 @@ export default defineConfig({
 								items: [
 									{ slug: "api/users-invitations" },
 									{ slug: "api/instance" },
+									{ slug: "api/github" },
 								],
 							},
 						],

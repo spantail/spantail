@@ -149,11 +149,17 @@ curl -X POST "https://<your-instance>/api/v1/reports/preview" \
   "content": "---\nname: Website — this week\n...\n---\n\n# Website — this week\n...",
   "totalMinutes": 540,
   "entryCount": 12,
-  "projectCount": 1
+  "projectCount": 1,
+  "suggestedName": "Website — this week",
+  "suggestedNote": ""
 }
 ```
 </TabItem>
 </Tabs>
+
+`suggestedName` と `suggestedNote` は、テンプレートの `nameTemplate` / `noteTemplate` をこの
+スコープと期間でレンダリングした結果 — 作成フォームが初期値として埋める値です。テンプレートに
+その初期値が無い場合は両方とも空になります。
 
 ## レポートの作成
 
@@ -320,3 +326,35 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/send" \
 </Tabs>
 
 `201 Created` を返します。`delivered` はチームメイトの受信者のみを数え、自身へのコピーは数えません。
+
+## 送信履歴
+
+`GET /api/v1/reports/:id/sends` <Badge text="scope: read" variant="note" />
+
+レポートの送信履歴 — **送信**バッチごとに 1 件、新しい順です。読み取りアクセスは
+[受信者](#受信者)や共有と同じ（オーナー、インスタンス管理者、またはそのレポートのワークスペースの
+管理者）です。`readCount` は受信者自身の既読状態で、**オーナー以外には `0` に伏せられます**。
+管理者が読んでも、単一の受信者がその送信を開いたかどうかは分かりません。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/reports/rep_q2/sends" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "snd_1",
+    "createdAt": "2026-07-10T09:42:05.000Z",
+    "message": "Here is this week's site report.",
+    "recipientNames": ["Bo", "Carol"],
+    "recipientCount": 2,
+    "readCount": 1
+  }
+]
+```
+</TabItem>
+</Tabs>

@@ -39,6 +39,7 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `reportContentId` | string | この配信が運んだ不変のコンテンツバージョン — そのバージョンの[ディスカッション](/ja/api/report-sharing/#ディスカッション)のキー。常に存在する — レポートを削除するとバージョンも配信も一緒に削除される。 |
 | `senderName` | string | 送信者の表示名。 |
 | `senderEmail` | string | 送信者のメールアドレス。 |
+| `senderImageUrl` | string \| null | received: 送信者のアバター URL、無ければ `null`。 |
 | `reportName` | string | 配信されたレポート名。 |
 | `dateFrom` | string | レポート範囲の開始 `YYYY-MM-DD`。 |
 | `dateTo` | string | レポート範囲の終了 `YYYY-MM-DD`。 |
@@ -49,6 +50,7 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `archived` | boolean | 呼び出し元のアーカイブフラグ。 |
 | `trashed` | boolean | 呼び出し元のゴミ箱フラグ。 |
 | `recipientNames` | string[] | sent のみ: 「To: …」要約用の受信者名。 |
+| `recipientImageUrls` | (string \| null)[] | sent のみ: 「To: …」要約用の受信者アバター URL。`recipientNames` と対応。 |
 | `recipientCount` | integer | sent のみ: 受信者数。 |
 
 単一アイテムを開く（`GET /inbox/:id`）と、同じフィールドに加えて `renderedMarkdown`（凍結された

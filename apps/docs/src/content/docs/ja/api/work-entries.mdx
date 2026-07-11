@@ -102,6 +102,7 @@ curl "https://<your-instance>/api/v1/work-entries?workspaceId=wrk_demo&from=2026
 | `endedAt` | string | いいえ | ISO 8601 終了時刻。 |
 | `note` | string | いいえ | 長文ノート（10000 文字以下）。 |
 | `tags` | string[] | いいえ | 最大 20 件のタグ。既定は `[]`。 |
+| `agentEntryIds` | string[] | いいえ | このエントリに紐づけるエージェントセッション（このエントリの記録元）。単一作成のみで、一括作成では使えません。 |
 
 <Tabs>
 <TabItem label="curl">
@@ -232,6 +233,19 @@ curl -X POST "https://<your-instance>/api/v1/work-entries/batch" \
 `GET /api/v1/work-entries/:id` <Badge text="scope: read" variant="note" />
 
 単一のエントリを返します。一覧と同じプロジェクト ACL が適用され、隠されたエントリは `404` を返します。
+
+## エントリに紐づくエージェントセッションの取得
+
+`GET /api/v1/work-entries/:id/agent-entries` <Badge text="scope: read" variant="note" />
+
+このエントリに紐づく[エージェントセッション](/ja/api/agent-ingest/)（このエントリの記録元）を
+返します。読み取りアクセスはエントリ本体と同じです。インスタンスの **AI エージェント**機能で
+ゲートされ、オフのときはこのルートは利用できません。
+
+```bash
+curl "https://<your-instance>/api/v1/work-entries/we_01/agent-entries" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
 
 ## 作業エントリの更新
 
