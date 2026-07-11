@@ -189,6 +189,12 @@ App が未登録のとき `app` は `null` です。
 呼び出し元のブラウザに紐づけます。その後 GitHub が `/api/github/setup` にコールバックし、App の認証情報が
 暗号化して保存されます。コピー&ペーストは不要です。
 
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `owner` | string \| null | はい | App を登録する組織のログイン名。呼び出し元の個人アカウントに登録する場合は `null`。 |
+
 ### App の削除
 
 `DELETE /api/v1/instance/github/app` <Badge text="scope: admin" variant="danger" />

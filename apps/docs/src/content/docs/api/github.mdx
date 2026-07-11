@@ -187,6 +187,12 @@ returns the GitHub form target and the manifest JSON the SPA posts to GitHub, an
 to the caller's browser. GitHub then calls back to `/api/github/setup`, which stores the App's
 credentials encrypted. There is nothing to copy or paste.
 
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `owner` | string \| null | yes | The organization login to register the App under, or `null` for the caller's personal account. |
+
 ### Remove the App
 
 `DELETE /api/v1/instance/github/app` <Badge text="scope: admin" variant="danger" />
