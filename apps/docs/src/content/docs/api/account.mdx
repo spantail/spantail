@@ -114,6 +114,32 @@ curl -X POST "https://<your-instance>/api/v1/me/avatar" \
 Removes the caller's avatar; `imageUrl` falls back to `null` (initials are shown everywhere).
 Returns the updated `{ user, memberships }`.
 
+## GitHub connection
+
+Connecting a GitHub account lets you log work from GitHub issues (see
+[GitHub integration](/admin/github-integration/)). The link itself is created by the OAuth
+callback in the browser; these endpoints read and remove it.
+
+### Get the GitHub link
+
+`GET /api/v1/me/github` <Badge text="scope: read" variant="note" />
+
+Returns whether the caller's account is linked to a GitHub identity, and the linked login when it
+is.
+
+```json
+{ "linked": true, "login": "octocat" }
+```
+
+When not linked, the response is `{ "linked": false }`.
+
+### Disconnect GitHub
+
+`DELETE /api/v1/me/github` <Badge text="scope: write" variant="caution" />
+
+Removes the caller's GitHub link. Returns `204 No Content`. Comment commands stop logging work
+until the account is reconnected; entries already logged stay.
+
 ## Personal Access Tokens
 
 Personal Access Tokens (PATs) authenticate programmatic access as you. See

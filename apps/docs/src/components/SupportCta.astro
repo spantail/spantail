@@ -1,14 +1,16 @@
 ---
 // Home support CTA banner: a neutral card pointing readers to the Spantail
 // team at spantail.com. Replaces the earlier "work in progress" notice.
-// Localized strings come from index.mdx; the link is the same for every locale.
+// Localized strings and the link both come from index.mdx (the link is
+// locale-specific — e.g. the ja page points at the /ja/ path).
 interface Props {
 	title: string;
 	body: string;
 	cta: string;
+	href: string;
 }
 
-const { title, body, cta } = Astro.props as Props;
+const { title, body, cta, href } = Astro.props as Props;
 ---
 
 <div class="support-cta not-content">
@@ -25,7 +27,7 @@ const { title, body, cta } = Astro.props as Props;
 			<p>{body}</p>
 		</div>
 	</div>
-	<a class="cta" href="https://spantail.com" target="_blank" rel="noopener">
+	<a class="cta" href={href} target="_blank" rel="noopener">
 		{cta}
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
 			<path d="M15 3h6v6" />

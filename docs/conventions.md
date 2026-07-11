@@ -5,7 +5,7 @@ for humans and coding agents alike; [`CLAUDE.md`](../CLAUDE.md) imports this fil
 Code session starts with it in context.
 
 Spantail is an open-source work observability platform on Cloudflare Workers + D1: log human
-work and capture AI-agent activity as spans, then turn them into reports.
+work and capture AI-agent activity as agent sessions, then turn them into reports.
 pnpm monorepo: a single Worker (`apps/web`) serves the REST API, the MCP endpoint, and the React SPA.
 
 ## Language rules
@@ -15,6 +15,10 @@ pnpm monorepo: a single Worker (`apps/web`) serves the REST API, the MCP endpoin
   information in code, comments, commits, or issues.
 - All user-facing UI strings go through i18n catalogs (`en`, `ja`). Never hardcode UI text.
   A feature is not done until both locales are provided.
+- User-facing terminology — in the UI, the docs, and the marketing site — follows the glossary
+  in [`apps/docs/src/content/docs/guides/index.md`](../apps/docs/src/content/docs/guides/index.md).
+  It is the single source of truth for what a thing is called in `en` and `ja`. When you name a
+  new concept, add it there first.
 
 ## Commands
 

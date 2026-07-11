@@ -8,31 +8,22 @@ live in the **Settings hub**. Open it with the **Settings** cog at the bottom of
 the sidebar. The hub has a left sub-nav grouping every section; this page covers
 the **Account** ones.
 
-:::note[Screenshot]
-The Settings hub with its left sub-nav; the Account section selected.
-🚧 Image to be added.
-:::
-
-## Profile
-
-Set your display **name** and **avatar**. These are account-level and shown
-wherever your work appears.
+![The Settings hub with its left sub-nav; the Account section
+selected.](../../../assets/account/01-settings-hub.png)
 
 ## Preferences
 
+The **Preferences** page holds:
+
+- **Profile photo** — an avatar, shown wherever your work appears.
 - **Language** — the UI language (English or Japanese).
-- **Theme** — light, dark, or follow your system.
 - **Timezone** — an IANA timezone (for example `Asia/Tokyo`). This matters:
   work-entry dates are frozen in your timezone when you write them, and reports
   resolve relative date ranges in it. Leaving it unset means UTC.
-- **Email digest** — how often you receive summary emails (if your instance
-  sends them).
+- **Theme** — system, light, or dark.
 
-:::note[Screenshot]
-The Preferences page with the language, theme, timezone, and email digest
-controls.
-🚧 Image to be added.
-:::
+![The Preferences page with the profile photo, language, timezone, and theme
+controls.](../../../assets/account/02-preferences.png)
 
 ## Authentication
 
@@ -50,8 +41,5 @@ create a **personal API token** under **Settings → API tokens**.
   revoke it and create a new one.
 - Tokens can be **revoked** at any time.
 
-:::note[Screenshot]
-The API tokens page showing a newly created token (value visible once) and the
-list of existing tokens.
-🚧 Image to be added.
-:::
+![The API tokens page: a newly created token shown once, above the list of
+existing tokens.](../../../assets/account/03-tokens.png)

@@ -33,14 +33,13 @@ instance admin cannot edit another user's reports or tokens. Secrets are never s
 Open the **Settings** cog pinned at the bottom of the sidebar. The Settings hub groups every
 management section in a left sub-nav:
 
-- **Workspace** — General, Projects, Members (workspace owner/admin)
-- **Account** — your own profile, password, API tokens, preferences (self-service)
-- **Reporting** — Report templates (instance admin or template author)
-- **System** — User management, AI agents, Realtime updates, Email, Social login (instance admin only), plus About (visible to everyone)
+- **Workspace** — General, Projects, Members, Integrations (workspace owner/admin)
+- **Account** — your own preferences, authentication, API tokens, agents (self-service)
+- **Report** — Report templates (instance admin or template author)
+- **System** — Users, Features, GitHub (instance admin only), and System (its About info is visible to everyone)
 
-:::note[Screenshot]
-*Placeholder — the Settings hub with the left sub-nav showing the Workspace, Account, Reporting, and System groups.*
-:::
+![The Settings hub with the left sub-nav grouping every management
+section.](../../../assets/admin/general.png)
 
 ## What this guide covers
 
@@ -50,11 +49,16 @@ management section in a left sub-nav:
 - [Projects](/admin/projects) — create, edit, archive, and staff projects
 - [Members & roles](/admin/members) — add members and set their role
 
+**Report administration** — the instance-wide report formats (instance admin or template author):
+
+- [Managing templates](/admin/report-templates) — manage the list, the starter, and the default
+- [Editing templates](/admin/editing-templates) — write a template's Markdown + Liquid body
+
 **Instance administration** — manage the whole deployment (instance admin):
 
 - [User management](/admin/users) — create or invite users and grant capabilities
-- [System settings](/admin/system-settings) — email, social login, the agents feature, realtime updates, and the About page
-- [Report templates](/admin/report-templates) — author instance-wide report formats
+- [System settings](/admin/system-settings) — the Features page (email, social login, the agents
+  feature, realtime updates) and the System info page
 
 First-time deployment — provisioning Cloudflare, configuring secrets, and creating the first
 admin — is covered separately in the [Setup Guide](/self-hosting/).

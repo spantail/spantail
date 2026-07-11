@@ -1,5 +1,5 @@
 ---
-title: Log work from GitHub
+title: Setup GitHub Integration
 description: Register the GitHub App, map a repository to your project, and log work by commenting @spantail on an issue.
 ---
 
@@ -11,8 +11,8 @@ repository belongs to — no context switch, no second window.
 
 This walkthrough finishes where the first two left off. You already have an
 instance, a workspace, and a project from
-[Set up your instance](/guides/), and Claude Code sessions flowing in from
-[Capture your Claude Code sessions](/guides/claude-code/). Now GitHub joins
+[Quick start](/getting-started/), and Claude Code sessions flowing in from
+[Setup Claude Plugin](/getting-started/claude-code/). Now GitHub joins
 them, and the sessions your agent ran against a repository attach themselves to
 the entry you log from its issues.
 
@@ -20,7 +20,7 @@ the entry you log from its issues.
 
 - Your instance must be **reachable from GitHub**. Webhooks are delivered over
   the public internet, so the `*.workers.dev` deployment from
-  [Set up your instance](/guides/) works and a local dev server does not.
+  [Quick start](/getting-started/) works and a local dev server does not.
 - You are the **instance administrator** — registering the App is an
   instance-wide, one-time action — and an **admin of the workspace** whose
   project you will map to.
@@ -65,7 +65,7 @@ the entry you log from its issues.
 
    Open **Settings → Workspace → Integrations**. Repositories the App can reach
    show up under **Unmapped repositories** — pick the project you created in
-   [Set up your instance](/guides/) for the one you want, and map it.
+   [Quick start](/getting-started/) for the one you want, and map it.
 
    ![The workspace integrations page: one repository mapped to a project, and
    the form for adding a mapping by hand.](../../../assets/github/02-map-repo.png)
@@ -105,7 +105,7 @@ the entry you log from its issues.
    the issue labels as tags, and a link back to the issue. Recent agent sessions
    on that repository whose branch or pull request points at the issue are
    attached automatically — the ones you captured in
-   [Capture your Claude Code sessions](/guides/claude-code/).
+   [Setup Claude Plugin](/getting-started/claude-code/).
 
    The grammar is `@spantail <duration> [date]`:
 
@@ -132,7 +132,7 @@ share, and discuss.
 
 - [GitHub integration](/admin/github-integration/) — the full reference: manual
   mappings, what the bot replies in each failure, and what uninstalling breaks.
-- [Reports & inbox](/guides/reports/) — turn all of it into a report.
+- [Reports & messages](/guides/reports/) — turn all of it into a report.
 - [Logging work](/guides/logging-work/) and
   [Projects & timeline](/guides/projects-timeline/) — the day-to-day web app.
 - [CLI](/guides/tools/cli/) and [MCP](/guides/tools/mcp/) — the same API from

@@ -242,3 +242,32 @@ curl -X PATCH "https://<your-instance>/api/v1/instance/oauth" \
   -H "Content-Type: application/json" \
   -d '{ "googleOAuthEnabled": true, "googleAllowedDomains": ["example.com"] }'
 ```
+
+## Version
+
+### Version standing
+
+`GET /api/v1/instance/version` <Badge text="auth required" variant="note" />
+
+Any signed-in member (not just admins). Returns the instance's running version and whether a
+newer upstream release exists — the data behind the System page's update notice. The running
+version is not secret; auth is required only because this performs an outbound update check, so
+it is not an open proxy. Best-effort and cached; `latest` is `null` when the check fails.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/version" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "current": "v0.5.1",
+  "latest": "v0.6.0",
+  "updateAvailable": true
+}
+```
+</TabItem>
+</Tabs>

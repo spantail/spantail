@@ -1,23 +1,23 @@
 ---
-title: Capture your Claude Code sessions
+title: Setup Claude Plugin
 description: Install the Spantail plugin, record your Claude Code sessions, and turn them into work entries and reports.
 ---
 
 import { Steps } from "@astrojs/starlight/components";
 
 Spantail records human work as **work entries** and AI-agent activity as
-**sessions**. This walkthrough covers the second half: the Spantail plugin for
+**agent sessions**. This walkthrough covers the second half: the Spantail plugin for
 Claude Code captures every session you run, and you turn those sessions into
 work entries and reports — from the web app, and from inside Claude Code itself.
 
-Pick up where [Set up your instance](/guides/) left off. When you finish, your
+Pick up where [Quick start](/getting-started/) left off. When you finish, your
 own Claude Code sessions appear on the timeline next to your work, and you can
 log work and build a report without leaving your editor.
 
 ## Before you start
 
 - You have your own instance, with a workspace and a project — the end state of
-  [Set up your instance](/guides/).
+  [Quick start](/getting-started/).
 - **Claude Code v2.1.143 or later**, which is when plugin settings arrived.
 - `bash`, `jq`, and `curl` on your `PATH`. The plugin's hooks are shell scripts;
   they never fail a turn or block a session from ending, and they skip silently
@@ -163,13 +163,13 @@ builds a report as you.
 
 ## Where to go next
 
-- [Log work from GitHub](/guides/github/) — the last hands-on: comment
+- [Setup GitHub Integration](/getting-started/github/) — the last hands-on: comment
   `@spantail 2h` on an issue and let the entry find your sessions.
 - [Capturing agent activity](/guides/capturing-agents/) — agents, tokens, and
   the activity page in full.
 - [Claude Plugin](/guides/tools/claude-plugin/) — every setting, what each hook
   sends, and running the hooks without the plugin.
 - [MCP](/guides/tools/mcp/) — connect other AI clients to the same tools.
-- [Reports & inbox](/guides/reports/) — share and discuss what you report.
+- [Reports & messages](/guides/reports/) — share and discuss what you report.
 - [GitHub integration](/admin/github-integration/) — map repositories to
   projects so `#123` resolves.

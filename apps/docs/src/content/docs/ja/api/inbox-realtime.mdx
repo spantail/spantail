@@ -1,14 +1,15 @@
 ---
-title: 受信トレイとリアルタイム
-description: レポート配信の受信箱の読み取りと管理、およびリアルタイムの無効化シグナルの購読。
+title: メッセージとリアルタイム
+description: 呼び出し元のメッセージの読み取りと管理、およびリアルタイムの無効化シグナルの購読。
 ---
 
 import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
-**受信箱（inbox）** は呼び出し元のレポート配信のメールボックスです（「Send to」の宛先）。
-レポートが送信されると、各受信者は凍結・レンダリング済みのコピーを受信箱に受け取り、送信者は
-**Sent** フォルダに記録を残します。フォルダは呼び出し元自身の配信に対するサーバー側のフィルタで、
-各ルートは呼び出し元にスコープされるため、他人のメールボックスを読み書きすることはできません
+**メッセージ**は、呼び出し元に送られてきたものです（いまはレポート）。ルートは、それを受け取る
+フォルダの名前をとって `/inbox` 以下にあります。レポートが送信されると、各受信者は凍結・
+レンダリング済みのコピーを**受信トレイ**に受け取り、送信者は**送信済み**フォルダに記録を残します。
+フォルダは呼び出し元自身のメッセージに対するサーバー側のフィルタで、各ルートは呼び出し元に
+スコープされるため、他人のメールボックスを読み書きすることはできません
 （管理者は後述の明示的な読み取りバリアントを通じてのみ可能）。
 
 ## フォルダ
@@ -38,6 +39,7 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `reportContentId` | string | この配信が運んだ不変のコンテンツバージョン — そのバージョンの[ディスカッション](/ja/api/report-sharing/#ディスカッション)のキー。常に存在する — レポートを削除するとバージョンも配信も一緒に削除される。 |
 | `senderName` | string | 送信者の表示名。 |
 | `senderEmail` | string | 送信者のメールアドレス。 |
+| `senderImageUrl` | string \| null | received: 送信者のアバター URL、無ければ `null`。 |
 | `reportName` | string | 配信されたレポート名。 |
 | `dateFrom` | string | レポート範囲の開始 `YYYY-MM-DD`。 |
 | `dateTo` | string | レポート範囲の終了 `YYYY-MM-DD`。 |
@@ -48,6 +50,7 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `archived` | boolean | 呼び出し元のアーカイブフラグ。 |
 | `trashed` | boolean | 呼び出し元のゴミ箱フラグ。 |
 | `recipientNames` | string[] | sent のみ: 「To: …」要約用の受信者名。 |
+| `recipientImageUrls` | (string \| null)[] | sent のみ: 「To: …」要約用の受信者アバター URL。`recipientNames` と対応。 |
 | `recipientCount` | integer | sent のみ: 受信者数。 |
 
 単一アイテムを開く（`GET /inbox/:id`）と、同じフィールドに加えて `renderedMarkdown`（凍結された

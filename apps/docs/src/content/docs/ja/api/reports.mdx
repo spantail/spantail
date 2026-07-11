@@ -149,11 +149,17 @@ curl -X POST "https://<your-instance>/api/v1/reports/preview" \
   "content": "---\nname: Website — this week\n...\n---\n\n# Website — this week\n...",
   "totalMinutes": 540,
   "entryCount": 12,
-  "projectCount": 1
+  "projectCount": 1,
+  "suggestedName": "Website — this week",
+  "suggestedNote": ""
 }
 ```
 </TabItem>
 </Tabs>
+
+`suggestedName` と `suggestedNote` は、テンプレートの `nameTemplate` / `noteTemplate` をこの
+スコープと期間でレンダリングした結果 — 作成フォームが初期値として埋める値です。テンプレートに
+その初期値が無い場合は両方とも空になります。
 
 ## レポートの作成
 
@@ -285,7 +291,7 @@ curl -X PATCH "https://<your-instance>/api/v1/reports/rep_q2" \
 
 `POST /api/v1/reports/:id/send` <Badge text="scope: write" variant="caution" />
 
-所有者のみ。レポートの現在の **不変バージョン** を各受信者の受信箱に届けます。各受信者は
+所有者のみ。レポートの現在の **不変バージョン** を各受信者の受信トレイに届けます。各受信者は
 [受信者](#受信者) の候補集合に含まれている必要があり、送信でデータを見られる範囲を広げることはできません。
 対象外の ID は `400` を返します。各配信は送信されたバージョンを参照するため、後で編集（新しいバージョンの
 追加）があっても受信者は送られた内容を保持します。レポートを削除すると配信も削除されます。
@@ -295,7 +301,7 @@ curl -X PATCH "https://<your-instance>/api/v1/reports/rep_q2" \
 | フィールド | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `recipientUserIds` | string[] | いいえ | 最大 50 の受信者。既定は `[]`。 |
-| `sendToSelf` | boolean | いいえ | 送信者自身の受信箱にもコピーを届ける。既定は `false`。 |
+| `sendToSelf` | boolean | いいえ | 送信者自身の受信トレイにもコピーを届ける。既定は `false`。 |
 | `message` | string | いいえ | 受信者向けの短いメッセージ（1000 文字以下）。 |
 
 受信者か `sendToSelf` のいずれかが必須です。
@@ -320,3 +326,35 @@ curl -X POST "https://<your-instance>/api/v1/reports/rep_q2/send" \
 </Tabs>
 
 `201 Created` を返します。`delivered` はチームメイトの受信者のみを数え、自身へのコピーは数えません。
+
+## 送信履歴
+
+`GET /api/v1/reports/:id/sends` <Badge text="scope: read" variant="note" />
+
+レポートの送信履歴 — **送信**バッチごとに 1 件、新しい順です。読み取りアクセスは
+[受信者](#受信者)や共有と同じ（オーナー、インスタンス管理者、またはそのレポートのワークスペースの
+管理者）です。`readCount` は受信者自身の既読状態で、**オーナー以外には `0` に伏せられます**。
+管理者が読んでも、単一の受信者がその送信を開いたかどうかは分かりません。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/reports/rep_q2/sends" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "snd_1",
+    "createdAt": "2026-07-10T09:42:05.000Z",
+    "message": "Here is this week's site report.",
+    "recipientNames": ["Bo", "Carol"],
+    "recipientCount": 2,
+    "readCount": 1
+  }
+]
+```
+</TabItem>
+</Tabs>

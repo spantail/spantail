@@ -1,14 +1,14 @@
 ---
 title: Spantail
-description: 人と AI エージェントの作業を可観測に。作業を記録し、エージェントの活動を span として捕捉して、レポートに変換します。
+description: 人と AI エージェントの作業を可観測に。作業を記録し、エージェントセッションを捕捉して、レポートに変換します。
 template: splash
 hero:
-  tagline: 人の作業を記録し、AI エージェントの活動を span として捕捉して、レポートに変換します。
+  tagline: 人の作業を記録し、AI エージェントのセッションを捕捉して、レポートに変換します。
   image:
     html: '<div class="video-slot" role="img" aria-label="製品紹介動画（近日公開）"><span class="vs-play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span><span class="vs-label">YouTube embed · 16:9</span></div>'
   actions:
     - text: はじめる
-      link: /ja/guides/
+      link: /ja/getting-started/
       icon: right-arrow
     - text: spantail.com を見る
       link: https://spantail.com
@@ -25,6 +25,7 @@ import SiteFooter from "../../../components/SiteFooter.astro";
 	title="専門的なサポートが必要ですか？"
 	body="セットアップ・デプロイ・レポート運用について、Spantail チームが実地でサポートします。"
 	cta="相談する"
+	href="https://spantail.com/ja/enterprise/plans/"
 />
 
 ## 目的別ガイド
@@ -34,7 +35,7 @@ import SiteFooter from "../../../components/SiteFooter.astro";
 		{
 			icon: "open-book",
 			title: "ユーザーガイド",
-			body: "Web UI での作業記録、エージェント活動の捕捉、レポートの閲覧。",
+			body: "Web UI での作業エントリ、エージェント活動の捕捉、レポートの閲覧。",
 			href: "/ja/guides/",
 			more: "ユーザーガイドを開く",
 		},
@@ -97,9 +98,9 @@ import SiteFooter from "../../../components/SiteFooter.astro";
 		},
 		{
 			id: "github",
-			title: "GitHub App",
-			body: "コミットとプルリクエストの活動を捕捉。",
-			href: "/ja/admin/github-integration/",
+			title: "GitHub 連携",
+			body: "Issue やプルリクエストから作業を記録。",
+			href: "/ja/guides/tools/github-integration/",
 		},
 	]}
 />

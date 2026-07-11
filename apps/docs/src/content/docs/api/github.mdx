@@ -1,0 +1,212 @@
+---
+title: GitHub integration
+description: Log work from a GitHub issue, manage repository→project mappings, and configure the instance's GitHub App over the REST API.
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+These endpoints back the [GitHub integration](/admin/github-integration/): logging work from a
+GitHub issue, mapping repositories to projects, and configuring the instance's GitHub App. The
+per-user account link (`/me/github`) lives on the [Account](/api/account/#github-connection) page.
+
+<Aside type="note">
+The browser and webhook flows under `/api/github/*` — the App-manifest callback, the account
+OAuth connect/callback, and the signed webhook receiver — are not part of the JSON API. They
+are redirects and a webhook endpoint driven by GitHub and the SPA, not called directly.
+</Aside>
+
+## Log work from a GitHub issue
+
+`POST /api/v1/github/log-work` <Badge text="scope: write" variant="caution" />
+
+Logs a work entry against a GitHub issue for a client that only knows its git remotes. The
+server normalizes the remotes, resolves the repo→project mapping, parses the duration/date in the
+caller's timezone, enriches with the issue title and labels, and links recent agent sessions that
+point at the issue. Rate-limited on the ingest path. Returns `404` with a help message when no
+remote is a mapped `github.com` repo.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `remotes` | string[] | yes | Git remote fetch URLs, verbatim (1–10). The first that maps to a project wins. |
+| `issueNumber` | integer | yes | The issue (or pull request) number. |
+| `args` | string | yes | The raw `<duration> [date]` string, exactly as typed (≤ 200 chars). |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/github/log-work" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "remotes": ["git@github.com:acme/website.git"],
+    "issueNumber": 123,
+    "args": "2h yesterday"
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "entry": { "id": "we_01", "projectId": "prj_site", "durationMinutes": 120, "description": "Fix the login redirect (#123)" },
+  "resolved": {
+    "repo": "acme/website",
+    "workspaceId": "wrk_demo",
+    "projectId": "prj_site",
+    "projectName": "Website",
+    "issue": { "number": 123, "title": "Fix the login redirect", "url": "https://github.com/acme/website/issues/123" },
+    "tags": ["bug"],
+    "linkedAgentEntryIds": ["ae_01K2"],
+    "degraded": false
+  }
+}
+```
+</TabItem>
+</Tabs>
+
+Returns `201 Created`. `degraded` is `true` when the App was unreachable and the entry carries
+only the bare issue reference (no title or labels). `entry` is a full
+[work entry](/api/work-entries/#the-work-entry-object).
+
+## Repository mappings
+
+A mapping says "work logged from this repository belongs to this project". Repo full names are
+unique instance-wide. The collection is nested under a workspace.
+
+### List mappings
+
+`GET /api/v1/workspaces/:id/github-mappings` <Badge text="scope: read" variant="note" />
+
+Any workspace member. Returns the workspace's mappings.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces/wrk_demo/github-mappings" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "map_1",
+    "repoFullName": "acme/website",
+    "projectId": "prj_site",
+    "projectName": "Website",
+    "source": "installation",
+    "createdAt": "2026-06-01T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+`source` is `installation` when the App covers the repo, or `manual` for a hand-entered mapping.
+
+### Create a mapping
+
+`POST /api/v1/workspaces/:id/github-mappings` <Badge text="scope: admin" variant="danger" />
+
+Workspace admin. Maps a repository to a project in this workspace. Works without the App (records
+a `manual` mapping); with the App, the repo id and installation are resolved server-side. A repo
+already mapped anywhere returns `409 conflict`; a project outside the workspace returns `400`.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `repoFullName` | string | yes | `owner/repo` (case-insensitive). |
+| `projectId` | string | yes | Project in this workspace to map to. |
+
+Returns `201 Created` with the created mapping (same shape as the list rows).
+
+### Delete a mapping
+
+`DELETE /api/v1/workspaces/:id/github-mappings/:mappingId` <Badge text="scope: admin" variant="danger" />
+
+Workspace admin. Removes the mapping. Returns `204 No Content`.
+
+### Unmapped repositories
+
+`GET /api/v1/workspaces/:id/github-mappings/unmapped-repos` <Badge text="scope: admin" variant="danger" />
+
+Workspace admin. Repositories the App's installations cover that no one has mapped yet — the
+picker's source. Read live from GitHub; empty (`{ "repos": [] }`) without an App.
+
+```json
+{ "repos": [ { "repoId": 42, "fullName": "acme/website", "private": true } ] }
+```
+
+## The GitHub App
+
+Every instance registers its own GitHub App. These endpoints report and manage it. Secrets never
+leave the server — only display data and toggles are returned.
+
+### App enabled
+
+`GET /api/v1/instance/github/enabled` <Badge text="auth required" variant="note" />
+
+Any signed-in user. Gates the "Connect GitHub" card. Returns `{ "enabled": true }`.
+
+### Get the App configuration
+
+`GET /api/v1/instance/github` <Badge text="scope: admin" variant="danger" />
+
+Instance admin. Returns the App's display fields and its installations.
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/github" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "app": { "appId": 12345, "slug": "spantail-acme", "ownerLogin": "acme", "createdAt": "2026-06-01T08:00:00.000Z" },
+  "installations": [
+    { "installationId": 987, "accountLogin": "acme", "accountType": "Organization", "suspended": false }
+  ]
+}
+```
+</TabItem>
+</Tabs>
+
+`app` is `null` before an App is registered.
+
+### Register the App
+
+`POST /api/v1/instance/github/app/manifest` <Badge text="scope: admin" variant="danger" />
+
+Instance admin. Starts the GitHub
+[App Manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest):
+returns the GitHub form target and the manifest JSON the SPA posts to GitHub, and binds the flow
+to the caller's browser. GitHub then calls back to `/api/github/setup`, which stores the App's
+credentials encrypted. There is nothing to copy or paste.
+
+**Request body**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `owner` | string \| null | yes | The organization login to register the App under, or `null` for the caller's personal account. |
+
+### Remove the App
+
+`DELETE /api/v1/instance/github/app` <Badge text="scope: admin" variant="danger" />
+
+Instance admin. Removes the App configuration. Mappings survive, so `#N` log-work keeps working
+in the degraded, link-only form. Returns `204 No Content`.
+
+### List an installation's repositories
+
+`GET /api/v1/instance/github/installations/:installationId/repos` <Badge text="scope: admin" variant="danger" />
+
+Instance admin. Read live from GitHub — the repositories a given installation can reach.
+
+## Account connection
+
+Connecting your own GitHub account (so comments log work as you) is a per-user action — see
+[GitHub connection](/api/account/#github-connection) on the Account page.

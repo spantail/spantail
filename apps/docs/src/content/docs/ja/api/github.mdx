@@ -1,0 +1,214 @@
+---
+title: GitHub 連携
+description: GitHub の Issue から作業を記録し、リポジトリ→プロジェクトの対応付けを管理し、インスタンスの GitHub App を REST API で設定する。
+---
+
+import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
+
+これらのエンドポイントは [GitHub 連携](/ja/admin/github-integration/)の裏側です。GitHub の Issue から
+作業を記録する、リポジトリをプロジェクトに対応付ける、インスタンスの GitHub App を設定する、の 3 つを
+担います。ユーザー単位のアカウント接続（`/me/github`）は[アカウント](/ja/api/account/#github-接続)の
+ページにあります。
+
+<Aside type="note">
+`/api/github/*` 配下のブラウザ/webhook フロー — App マニフェストのコールバック、アカウントの OAuth
+接続/コールバック、署名付き webhook 受信 — は JSON API の一部ではありません。GitHub と SPA が駆動する
+リダイレクトと webhook エンドポイントで、直接呼び出すものではありません。
+</Aside>
+
+## GitHub の Issue から作業を記録する
+
+`POST /api/v1/github/log-work` <Badge text="scope: write" variant="caution" />
+
+git リモートしか知らないクライアントのために、GitHub の Issue に対して作業エントリを記録します。
+サーバーがリモートを正規化し、リポジトリ→プロジェクトの対応付けを解決し、呼び出し元のタイムゾーンで
+時間/日付を解析し、Issue のタイトルとラベルで補完し、その Issue を指す最近のエージェントセッションを
+紐づけます。ingest 経路のレート制限があります。どのリモートも対応付け済みの `github.com` リポジトリで
+ない場合は、ヘルプメッセージとともに `404` を返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `remotes` | string[] | はい | git リモートの fetch URL をそのまま（1〜10）。最初に対応付くものが採用されます。 |
+| `issueNumber` | integer | はい | Issue（またはプルリクエスト）番号。 |
+| `args` | string | はい | 入力どおりの `<duration> [date]` 文字列（200 文字以下）。 |
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl -X POST "https://<your-instance>/api/v1/github/log-work" \
+  -H "Authorization: Bearer spantail_pat_yourtoken" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "remotes": ["git@github.com:acme/website.git"],
+    "issueNumber": 123,
+    "args": "2h yesterday"
+  }'
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "entry": { "id": "we_01", "projectId": "prj_site", "durationMinutes": 120, "description": "Fix the login redirect (#123)" },
+  "resolved": {
+    "repo": "acme/website",
+    "workspaceId": "wrk_demo",
+    "projectId": "prj_site",
+    "projectName": "Website",
+    "issue": { "number": 123, "title": "Fix the login redirect", "url": "https://github.com/acme/website/issues/123" },
+    "tags": ["bug"],
+    "linkedAgentEntryIds": ["ae_01K2"],
+    "degraded": false
+  }
+}
+```
+</TabItem>
+</Tabs>
+
+`201 Created` を返します。`degraded` が `true` のときは App に到達できず、エントリは Issue への素の
+参照のみ（タイトルやラベルなし）を持ちます。`entry` は完全な
+[作業エントリ](/ja/api/work-entries/#作業エントリオブジェクト)です。
+
+## リポジトリの対応付け
+
+対応付けは「このリポジトリから記録した作業はこのプロジェクトに属する」という意味です。リポジトリの
+フルネームはインスタンス全体で一意です。コレクションはワークスペースの下にネストされます。
+
+### 対応付けの一覧
+
+`GET /api/v1/workspaces/:id/github-mappings` <Badge text="scope: read" variant="note" />
+
+任意のワークスペースメンバー。ワークスペースの対応付けを返します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/workspaces/wrk_demo/github-mappings" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+[
+  {
+    "id": "map_1",
+    "repoFullName": "acme/website",
+    "projectId": "prj_site",
+    "projectName": "Website",
+    "source": "installation",
+    "createdAt": "2026-06-01T08:00:00.000Z"
+  }
+]
+```
+</TabItem>
+</Tabs>
+
+`source` は、App がリポジトリをカバーしている場合は `installation`、手入力の対応付けは `manual` です。
+
+### 対応付けの作成
+
+`POST /api/v1/workspaces/:id/github-mappings` <Badge text="scope: admin" variant="danger" />
+
+ワークスペース管理者。リポジトリをこのワークスペースのプロジェクトに対応付けます。App なしでも動作し
+（`manual` の対応付けを記録）、App があればリポジトリ id とインストールがサーバー側で解決されます。
+すでにどこかに対応付け済みのリポジトリは `409 conflict`、ワークスペース外のプロジェクトは `400` を
+返します。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `repoFullName` | string | はい | `owner/repo`（大文字小文字を区別しません）。 |
+| `projectId` | string | はい | 対応付ける、このワークスペースのプロジェクト。 |
+
+`201 Created` と、作成された対応付け（一覧の行と同じ形）を返します。
+
+### 対応付けの削除
+
+`DELETE /api/v1/workspaces/:id/github-mappings/:mappingId` <Badge text="scope: admin" variant="danger" />
+
+ワークスペース管理者。対応付けを削除します。`204 No Content` を返します。
+
+### 未対応付けのリポジトリ
+
+`GET /api/v1/workspaces/:id/github-mappings/unmapped-repos` <Badge text="scope: admin" variant="danger" />
+
+ワークスペース管理者。App のインストールがカバーしていて、まだ誰も対応付けていないリポジトリ — ピッカーの
+ソースです。GitHub からライブで読み取り、App が無ければ空（`{ "repos": [] }`）です。
+
+```json
+{ "repos": [ { "repoId": 42, "fullName": "acme/website", "private": true } ] }
+```
+
+## GitHub App
+
+各インスタンスは自前の GitHub App を登録します。これらのエンドポイントはその App を報告・管理します。
+秘匿情報はサーバーから出ず、表示用データとトグルだけが返ります。
+
+### App の有効状態
+
+`GET /api/v1/instance/github/enabled` <Badge text="要認証" variant="note" />
+
+サインイン済みの任意のユーザー。「GitHub を接続」カードのゲートです。`{ "enabled": true }` を返します。
+
+### App 設定の取得
+
+`GET /api/v1/instance/github` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者。App の表示用フィールドとインストールを返します。
+
+<Tabs>
+<TabItem label="curl">
+```bash
+curl "https://<your-instance>/api/v1/instance/github" \
+  -H "Authorization: Bearer spantail_pat_yourtoken"
+```
+</TabItem>
+<TabItem label="Response">
+```json
+{
+  "app": { "appId": 12345, "slug": "spantail-acme", "ownerLogin": "acme", "createdAt": "2026-06-01T08:00:00.000Z" },
+  "installations": [
+    { "installationId": 987, "accountLogin": "acme", "accountType": "Organization", "suspended": false }
+  ]
+}
+```
+</TabItem>
+</Tabs>
+
+App が未登録のとき `app` は `null` です。
+
+### App の登録
+
+`POST /api/v1/instance/github/app/manifest` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者。GitHub の
+[App マニフェストフロー](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
+を開始します。GitHub のフォーム送信先と、SPA が GitHub に POST するマニフェスト JSON を返し、フローを
+呼び出し元のブラウザに紐づけます。その後 GitHub が `/api/github/setup` にコールバックし、App の認証情報が
+暗号化して保存されます。コピー&ペーストは不要です。
+
+**リクエストボディ**
+
+| フィールド | 型 | 必須 | 説明 |
+| --- | --- | --- | --- |
+| `owner` | string \| null | はい | App を登録する組織のログイン名。呼び出し元の個人アカウントに登録する場合は `null`。 |
+
+### App の削除
+
+`DELETE /api/v1/instance/github/app` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者。App 設定を削除します。対応付けは残るため、`#N` の作業記録はリンクのみの縮退モードで
+動き続けます。`204 No Content` を返します。
+
+### インストールのリポジトリ一覧
+
+`GET /api/v1/instance/github/installations/:installationId/repos` <Badge text="scope: admin" variant="danger" />
+
+インスタンス管理者。GitHub からライブで読み取り — 指定インストールが到達できるリポジトリです。
+
+## アカウント接続
+
+自分の GitHub アカウントを接続する（コメントを自分として作業記録にする）のはユーザー単位の操作です —
+アカウントページの [GitHub 接続](/ja/api/account/#github-接続)を参照してください。

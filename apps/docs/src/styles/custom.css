@@ -370,3 +370,10 @@ starlight-toc nav a[aria-current="true"] {
 	border-inline-start-color: var(--sp-fg);
 	font-weight: 550;
 }
+
+/* screenshots in the docs body: a hairline frame + radius so a UI capture with
+   a light background is distinguishable from the page around it */
+.sl-markdown-content img {
+	border: 1px solid var(--sp-border-strong);
+	border-radius: 8px;
+}

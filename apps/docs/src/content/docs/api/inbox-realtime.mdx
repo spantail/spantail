@@ -1,15 +1,16 @@
 ---
-title: Inbox & realtime
-description: Read and manage the report-delivery mailbox, and subscribe to realtime invalidation signals.
+title: Messages & realtime
+description: Read and manage the caller's messages, and subscribe to realtime invalidation signals.
 ---
 
 import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 
-The **inbox** is the caller's mailbox of report deliveries — the "Send to" target. When a
-report is sent, each recipient gets a frozen, rendered copy in their inbox, and the sender
-keeps a record in their **Sent** folder. Folders are server-side filters over the caller's
-own deliveries; every route is scoped to the caller, so no one can read or mutate another
-mailbox (except admins, through the explicit read variants below).
+**Messages** are what has been sent to the caller — today, reports. The routes live under
+`/inbox`, after the folder that receives them. When a report is sent, each recipient gets a
+frozen, rendered copy in their **Inbox**, and the sender keeps a record in their **Sent**
+folder. Folders are server-side filters over the caller's own messages; every route is scoped
+to the caller, so no one can read or mutate another mailbox (except admins, through the
+explicit read variants below).
 
 ## Folders
 
@@ -38,6 +39,7 @@ Per-scope fields are simply empty for the other scope (received: `recipientNames
 | `reportContentId` | string | The immutable content version this delivery carried — the key for the version's [discussion](/api/report-sharing/#discussion). Always present — deleting a report also removes its versions and their deliveries. |
 | `senderName` | string | Display name of the sender. |
 | `senderEmail` | string | Email of the sender. |
+| `senderImageUrl` | string \| null | Received: the sender's avatar URL, or `null`. |
 | `reportName` | string | Name of the delivered report. |
 | `dateFrom` | string | Report range start `YYYY-MM-DD`. |
 | `dateTo` | string | Report range end `YYYY-MM-DD`. |
@@ -48,6 +50,7 @@ Per-scope fields are simply empty for the other scope (received: `recipientNames
 | `archived` | boolean | The caller's archive flag. |
 | `trashed` | boolean | The caller's trash flag. |
 | `recipientNames` | string[] | Sent only: recipient names for the "To: …" summary. |
+| `recipientImageUrls` | (string \| null)[] | Sent only: recipient avatar URLs for the "To: …" summary, aligned with `recipientNames`. |
 | `recipientCount` | integer | Sent only: number of recipients. |
 
 Opening a single item (`GET /inbox/:id`) returns the same fields plus `renderedMarkdown`
