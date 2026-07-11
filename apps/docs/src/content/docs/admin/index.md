@@ -49,12 +49,16 @@ section.](../../../assets/admin/general.png)
 - [Projects](/admin/projects) — create, edit, archive, and staff projects
 - [Members & roles](/admin/members) — add members and set their role
 
+**Report administration** — the instance-wide report formats (instance admin or template author):
+
+- [Managing templates](/admin/report-templates) — manage the list, the starter, and the default
+- [Editing templates](/admin/editing-templates) — write a template's Markdown + Liquid body
+
 **Instance administration** — manage the whole deployment (instance admin):
 
 - [User management](/admin/users) — create or invite users and grant capabilities
 - [System settings](/admin/system-settings) — the Features page (email, social login, the agents
   feature, realtime updates) and the System info page
-- [Report templates](/admin/report-templates) — author instance-wide report formats
 
 First-time deployment — provisioning Cloudflare, configuring secrets, and creating the first
 admin — is covered separately in the [Setup Guide](/self-hosting/).

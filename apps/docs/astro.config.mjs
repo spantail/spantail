@@ -125,13 +125,20 @@ export default defineConfig({
 								],
 							},
 							{
+								label: "Report",
+								translations: { ja: "レポート" },
+								items: [
+									{ slug: "admin/report-templates" },
+									{ slug: "admin/editing-templates" },
+								],
+							},
+							{
 								label: "Instance",
 								translations: { ja: "インスタンス" },
 								items: [
 									{ slug: "admin/users" },
 									{ slug: "admin/system-settings" },
 									{ slug: "admin/github-integration" },
-									{ slug: "admin/report-templates" },
 								],
 							},
 						],
