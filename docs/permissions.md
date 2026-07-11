@@ -56,7 +56,9 @@ full. Every resource belongs to exactly one scope:
 1. **Instance admin** can read and write instance-, workspace-, and project-scoped resources and
    settings (the "containers"), **without requiring workspace/project membership** (admin bypass).
    For **user-scoped** resources, instance admin is **read-only** (never write — see self-service
-   below). For **report-scoped** resources (shares, comments, reactions), instance admin is also
+   below), with one bounded exception: **bulk work-entry import** lets an instance admin *set the
+   author* of new entries (see the work-entries note). For **report-scoped** resources (shares,
+   comments, reactions), instance admin is also
    **read-only** — writing them belongs to the report owner and discussion participants, not admins.
    Secrets are never exposed.
 2. **Workspace admin** can read and write workspace resources and settings. For user-scoped
@@ -132,8 +134,9 @@ Notes:
   they belong to.
 - **A project's contained resources are user-authored entries.** Admins/project members read them
   (per the row above and the work-entries rows), but **writes are always author-only** — no admin
-  can edit or delete another user's entry. Only the project *container* (name, color, archive) is
-  admin-writable, via the "Projects: list / metadata" row.
+  can edit or delete another user's entry (the one exception is bulk import setting an entry's
+  author on *creation*; see the work-entries note). Only the project *container* (name, color,
+  archive) is admin-writable, via the "Projects: list / metadata" row.
 - **API tokens have no workspace dimension** — a token grants access across all of the owner's
   workspaces. There is no workspace-scoped view of a token, so workspace admins get no token
   access (`–`); only instance admins can read token metadata (`?ownerUserId`). Secret values are
@@ -150,6 +153,14 @@ Notes:
 - **Work entries are hybrid-scoped.** Writes are always author-only (self-service). Reads depend
   on `projectId`: assigned entries are project-scoped (project members + admins); unassigned
   entries (`projectId = null`, the state left when a project is deleted) are workspace-scoped.
+- **Bulk import may attribute entries to other users — instance admin only.** The batch import
+  endpoint (`POST /api/v1/work-entries/batch`, behind `spantail entries import`) lets a line name
+  its author by email (the `user` field). This is the one write path where an admin sets another
+  user's authorship, and it is bounded: only an instance admin may name an author other than
+  themselves, the email must resolve to an existing **member of the target workspace**, and the
+  result stays idempotent by `externalId` (a re-import updates the same author's entries, never
+  re-owns them). Non-admins may only author as themselves — like the `filters.userIds` report
+  path, this is an API-level admin capability, not a relaxation of author-only editing.
 - **A report's content is owner-scoped by default.** Rendering restricts entries to the owner's
   own work unless `filters.userIds` lists other authors. The web app never sets `userIds`, so a
   web-created report always covers only the owner's entries — even an instance-scope report

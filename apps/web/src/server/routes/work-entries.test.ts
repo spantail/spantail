@@ -3,6 +3,7 @@ import { todayInTimezone } from "@spantail/core";
 import {
 	createDb,
 	createWorkEntriesBatch,
+	getWorkEntryById,
 	schema,
 	WorkEntryOwnershipConflictError,
 } from "@spantail/db";
@@ -586,6 +587,7 @@ type BatchEntry = {
 	tags?: string[];
 	startedAt?: string;
 	endedAt?: string;
+	user?: string;
 };
 
 const postBatch = (
@@ -983,6 +985,143 @@ it("enforces workspace membership, project access, and write scope on batch", as
 		}),
 	});
 	expect(scoped.status).toBe(403);
+});
+
+it("lets an instance admin attribute imported entries to other users by email", async () => {
+	const { admin, member, memberId, ws, project } = await setup();
+	const adminId = (
+		(await (await apiGet("/api/v1/me", admin)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+
+	const res = await postBatch(admin, ws.id, [
+		{
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "member's history",
+			externalId: "for-member",
+			user: "member@example.com",
+		},
+		{
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "admin's own",
+			externalId: "for-admin",
+		},
+	]);
+	expect(res.status).toBe(201);
+
+	// The named author owns their line; a line without `user` stays the caller's.
+	const db = createDb(env.DB as D1Database);
+	expect((await getWorkEntryById(db, "for-member"))?.userId).toBe(memberId);
+	expect((await getWorkEntryById(db, "for-admin"))?.userId).toBe(adminId);
+
+	// The member can reach their attributed entry as its author.
+	const mine = await apiGet("/api/v1/work-entries/for-member", member);
+	expect(mine.status).toBe(200);
+});
+
+it("rejects cross-user attribution from a non-admin, but allows self-attribution", async () => {
+	const { admin, member, memberId, ws, project } = await setup();
+
+	// A member naming someone else as author is forbidden — nothing written.
+	const forbidden = await postBatch(member, ws.id, [
+		{
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "impersonation",
+			user: "admin@example.com",
+		},
+	]);
+	expect(forbidden.status).toBe(403);
+	expect(await listEntries(admin, ws.id)).toHaveLength(0);
+
+	// Naming yourself is a no-op and stays allowed.
+	const ok = await postBatch(member, ws.id, [
+		{
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "my own",
+			externalId: "self",
+			user: "member@example.com",
+		},
+	]);
+	expect(ok.status).toBe(201);
+	const db = createDb(env.DB as D1Database);
+	expect((await getWorkEntryById(db, "self"))?.userId).toBe(memberId);
+});
+
+it("fails up front when an author email is unknown or not a workspace member", async () => {
+	const { admin, ws, project } = await setup();
+	// An account outside the workspace exists but is not a member.
+	await signUpUser("Outsider", "outsider@example.com");
+
+	const entry = (email: string): BatchEntry => ({
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 30,
+		description: "x",
+		user: email,
+	});
+
+	// No such account.
+	const unknown = await postBatch(admin, ws.id, [entry("ghost@example.com")]);
+	expect(unknown.status).toBe(400);
+	// Known account, but not a member of this workspace.
+	const nonMember = await postBatch(admin, ws.id, [
+		entry("outsider@example.com"),
+	]);
+	expect(nonMember.status).toBe(400);
+
+	expect(await listEntries(admin, ws.id)).toHaveLength(0);
+});
+
+it("keeps admin cross-user import idempotent, but blocks re-owning an id", async () => {
+	const { admin, member, memberId, ws, project } = await setup();
+	const adminId = (
+		(await (await apiGet("/api/v1/me", admin)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	const forMember = (description: string): BatchEntry => ({
+		projectId: project.id,
+		entryDate: "2026-06-01",
+		durationMinutes: 30,
+		description,
+		externalId: "legacy-1",
+		user: "member@example.com",
+	});
+
+	expect((await postBatch(admin, ws.id, [forMember("v1")])).status).toBe(201);
+	// Re-importing the same id for the same author updates in place.
+	expect((await postBatch(admin, ws.id, [forMember("v2")])).status).toBe(201);
+	const db = createDb(env.DB as D1Database);
+	const row = await getWorkEntryById(db, "legacy-1");
+	expect(row?.userId).toBe(memberId);
+	expect(row?.description).toBe("v2");
+	expect(await listEntries(admin, ws.id)).toHaveLength(1);
+
+	// Re-attributing the same externalId to a different author conflicts.
+	const reowned = await postBatch(admin, ws.id, [
+		{
+			projectId: project.id,
+			entryDate: "2026-06-01",
+			durationMinutes: 30,
+			description: "steal",
+			externalId: "legacy-1",
+		},
+	]);
+	expect(reowned.status).toBe(409);
+	// Unchanged: still the member's, still v2.
+	const after = await getWorkEntryById(db, "legacy-1");
+	expect(after?.userId).toBe(memberId);
+	expect(after?.description).toBe("v2");
+	expect(adminId).not.toBe(memberId);
 });
 
 it("rejects unassigning a live entry from its project", async () => {

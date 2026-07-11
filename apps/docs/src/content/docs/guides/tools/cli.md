@@ -77,7 +77,7 @@ spantail report send <report-id> --to teammate@example.com --message "FYI"
 | `spantail entries delete <id>` | Delete one of your entries (asks unless `--yes`). |
 | `spantail entries stats` | Aggregated totals with by-date/project/user breakdowns. |
 | `spantail entries tags` | List the distinct tags in scope, one per line. |
-| `spantail entries import <file.jsonl>` | Bulk-import work entries from a JSONL file (`--workspace`, `--project`, `--dry-run`). |
+| `spantail entries import <file.jsonl>` | Bulk-import work entries from a JSONL file (`--workspace`, `--project`, `--user`, `--dry-run`). |
 
 #### Bulk import (JSONL)
 
@@ -90,13 +90,19 @@ holds one JSON object per line:
 
 Fields per line: `entryDate` (required — dates are taken verbatim, no timezone
 conversion), `durationMinutes`, `description`, and optional `project` (slug;
-lines without one use `--project`), `note`, `tags`, `startedAt`, `endedAt`,
-`externalId`.
+lines without one use `--project`), `user` (author email; lines without one use
+`--user`), `note`, `tags`, `startedAt`, `endedAt`, `externalId`.
+
+By default every entry is authored by you. A `user` field (or `--user`)
+attributes an entry to another account by email — the way to import a whole
+team's history in one pass — but only an **instance admin** may name an author
+other than themselves, and the email must belong to a member of the target
+workspace. Non-admins can only import their own entries.
 
 The whole file is validated first — any bad line fails the run with its line
 number before anything is sent. Entries are then posted in atomic batches of
 100 (each request fully succeeds or fully fails). Use `--dry-run` to validate
-and resolve project slugs without importing.
+and resolve project slugs and author emails without importing.
 
 `externalId` is normally omitted. Set it to keep the source system's id: it
 becomes the entry's id (unique across the instance; charset `A-Za-z0-9._:-`;

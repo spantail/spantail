@@ -8,10 +8,12 @@ import { loadConfig } from "./schema";
  * `pnpm generate-import [name]` — the counterpart of `pnpm db:seed [name]`.
  *
  * Writes examples/<name>/import/work-entries.jsonl: three years of weekday
- * work entries for one member of the dataset's first workspace, in the
- * JSONL format `spantail entries import` consumes. The output is generated
- * (and gitignored) rather than committed: it is derived data, and dating it
- * relative to the run keeps the demo fresh.
+ * work entries spread across the members of the dataset's first workspace, in
+ * the JSONL format `spantail entries import` consumes. Each line carries its
+ * author's email in a `user` field, so the file exercises the instance-admin
+ * cross-user import path (run it signed in as an instance admin). The output is
+ * generated (and gitignored) rather than committed: it is derived data, and
+ * dating it relative to the run keeps the demo fresh.
  *
  * The entries deliberately carry no externalId — they exercise the plain
  * insert path, so re-importing the file duplicates entries (as documented).
@@ -60,6 +62,17 @@ function main(): void {
 	if (projects.length === 0) {
 		throw new Error(`workspace ${workspace.key} has no projects`);
 	}
+	const emailByUserKey = new Map(config.users.map((u) => [u.key, u.email]));
+	const memberEmails = config.members
+		.filter((m) => m.workspace === workspace.key)
+		.map((m) => {
+			const email = emailByUserKey.get(m.user);
+			if (!email) throw new Error(`member references unknown user ${m.user}`);
+			return email;
+		});
+	if (memberEmails.length === 0) {
+		throw new Error(`workspace ${workspace.key} has no members`);
+	}
 	const tags =
 		config.workPatterns.tags[workspace.language] ?? config.workPatterns.tags.en;
 
@@ -88,6 +101,7 @@ function main(): void {
 			const project = pick(projects);
 			const entry: Record<string, unknown> = {
 				project: project.slug,
+				user: pick(memberEmails),
 				entryDate: isoDate(day),
 				// 30 minutes to 4 hours, in quarter-hour units.
 				durationMinutes: (2 + Math.floor(random() * 15)) * 15,
@@ -104,10 +118,10 @@ function main(): void {
 	writeFileSync(outFile, `${lines.join("\n")}\n`, "utf8");
 
 	console.log(
-		`Wrote ${lines.length} entries (${YEARS} years of weekdays, workspace "${workspace.slug}") to ${outFile}`,
+		`Wrote ${lines.length} entries (${YEARS} years of weekdays, ${memberEmails.length} authors, workspace "${workspace.slug}") to ${outFile}`,
 	);
 	console.log(
-		`Import with: spantail entries import ${join("examples", name, "import/work-entries.jsonl")} --workspace ${workspace.slug}`,
+		`Import as an instance admin with: spantail entries import ${join("examples", name, "import/work-entries.jsonl")} --workspace ${workspace.slug}`,
 	);
 }
 

@@ -10,6 +10,7 @@ import {
 	createTestContext,
 	type FakeRoute,
 	fakeApi,
+	memberFixture,
 	projectFixture,
 	workspaceFixture,
 } from "../test-helpers";
@@ -17,6 +18,20 @@ import {
 const acme = workspaceFixture("acme", "owner");
 const apiProject = projectFixture("api", acme.id);
 const opsProject = projectFixture("ops", acme.id);
+const alice = memberFixture({
+	workspaceId: acme.id,
+	userId: "u-alice",
+	email: "alice@example.com",
+});
+const bob = memberFixture({
+	workspaceId: acme.id,
+	userId: "u-bob",
+	email: "bob@example.com",
+});
+const membersRoute: FakeRoute = {
+	path: `/workspaces/${acme.id}/members`,
+	body: [alice, bob],
+};
 
 function api(extra: FakeRoute[] = []) {
 	return fakeApi([
@@ -258,6 +273,60 @@ it("validates without posting on --dry-run", async () => {
 	expect(stdout.text()).toBe(
 		"Dry run: 2 entries across 2 project(s) would be imported into acme (1 request)\n",
 	);
+});
+
+it("attributes entries by per-line user and the --user default", async () => {
+	const stub = api([membersRoute]);
+	const { ctx, stdout, configDir } = createTestContext({ fetch: stub.fetch });
+	loggedIn(configDir);
+
+	const file = jsonlFile([
+		entryLine({ project: "api", user: "bob@example.com" }),
+		entryLine({ project: "api", description: "second" }),
+	]);
+	const code = await runCli(
+		["entries", "import", file, "--user", "alice@example.com"],
+		ctx,
+	);
+
+	expect(code).toBe(0);
+	const post = stub.calls.find((call) => call.method === "POST");
+	const entries = (post?.body as { entries: Array<{ user?: string }> }).entries;
+	// Per-line user wins; the line without one falls back to --user.
+	expect(entries[0]?.user).toBe("bob@example.com");
+	expect(entries[1]?.user).toBe("alice@example.com");
+	expect(stdout.text()).toBe("Imported 2 entries into acme (1 request)\n");
+});
+
+it("rejects a malformed --user before making any request", async () => {
+	const stub = api([membersRoute]);
+	const { ctx, stderr, configDir } = createTestContext({ fetch: stub.fetch });
+	loggedIn(configDir);
+
+	const file = jsonlFile([entryLine({ project: "api" })]);
+	expect(
+		await runCli(
+			["entries", "import", file, "--user", "not-an-email", "--dry-run"],
+			ctx,
+		),
+	).toBe(1);
+	expect(stderr.text()).toContain('--user "not-an-email" is not a valid email');
+	expect(stub.calls.some((call) => call.method === "POST")).toBe(false);
+});
+
+it("fails on --dry-run when an author email is not a workspace member", async () => {
+	const stub = api([membersRoute]);
+	const { ctx, stderr, configDir } = createTestContext({ fetch: stub.fetch });
+	loggedIn(configDir);
+
+	const file = jsonlFile([
+		entryLine({ project: "api", user: "ghost@example.com" }),
+	]);
+	expect(await runCli(["entries", "import", file, "--dry-run"], ctx)).toBe(1);
+	expect(stderr.text()).toContain(
+		'line 1: unknown user "ghost@example.com" in workspace "acme"',
+	);
+	expect(stub.calls.some((call) => call.method === "POST")).toBe(false);
 });
 
 it("reports an unreadable file and missing positional", async () => {

@@ -102,11 +102,15 @@ export const externalIdSchema = z
 // and agentEntryIds (linking is a web-create concern, not an import one), with
 // entryDate required — a migration must state dates explicitly — and an
 // optional externalId as the idempotency key (same id ⇒ upsert, not duplicate).
+// `user` is the author's email; only instance admins may name someone other
+// than themselves (an admin importing a whole team at once). Non-admins have it
+// rejected — see the batch route. Lowercased so matching is case-insensitive.
 export const batchWorkEntryItemSchema = createWorkEntryInputSchema
 	.omit({ workspaceId: true, agentEntryIds: true })
 	.extend({
 		entryDate: localDateSchema,
 		externalId: externalIdSchema.optional(),
+		user: z.email().toLowerCase().optional(),
 	});
 export type BatchWorkEntryItem = z.infer<typeof batchWorkEntryItemSchema>;
 export type BatchWorkEntryItemData = z.input<typeof batchWorkEntryItemSchema>;

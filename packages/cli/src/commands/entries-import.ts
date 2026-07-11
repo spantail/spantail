@@ -14,15 +14,19 @@ Bulk-imports work entries from a JSONL file (one JSON object per line):
   {"project":"platform","entryDate":"2024-07-15","durationMinutes":90,"description":"..."}
 
 Fields: entryDate (required), durationMinutes, description, and optional
-project (slug), note, tags, startedAt, endedAt, externalId. The whole file is
-validated before anything is sent; entries are then posted in atomic batches
-of 100. An externalId becomes the entry's id, so re-importing the same file
-updates those entries instead of duplicating them.
+project (slug), user (author email), note, tags, startedAt, endedAt,
+externalId. The whole file is validated before anything is sent; entries are
+then posted in atomic batches of 100. An externalId becomes the entry's id, so
+re-importing the same file updates those entries instead of duplicating them.
+
+A "user" field (or --user) attributes an entry to another account by email;
+only an instance admin may author entries as someone other than themselves.
 
 Options:
   --workspace <slug>   Workspace (default: the configured default workspace)
   --project <slug>     Default project for lines without a "project" field
-  --dry-run            Validate and resolve projects without importing
+  --user <email>       Default author for lines without a "user" field
+  --dry-run            Validate and resolve projects and authors without importing
   -h, --help           Show this help
 `;
 
@@ -35,6 +39,7 @@ export async function entriesImport(
 		options: {
 			workspace: { type: "string" },
 			project: { type: "string" },
+			user: { type: "string" },
 			"dry-run": { type: "boolean" },
 			help: { type: "boolean", short: "h" },
 		},
@@ -64,6 +69,7 @@ export async function entriesImport(
 	const summary = await importEntries(client, {
 		workspaceSlug: requireWorkspaceSlug(ctx, values.workspace),
 		defaultProjectSlug: values.project,
+		defaultUserEmail: values.user,
 		content,
 		dryRun: values["dry-run"],
 		onProgress: (p) => {
@@ -77,9 +83,11 @@ export async function entriesImport(
 
 	const requests = `${summary.requests} request${summary.requests === 1 ? "" : "s"}`;
 	const entriesCount = `${summary.imported} ${summary.imported === 1 ? "entry" : "entries"}`;
+	const authors =
+		summary.users.length > 0 ? ` for ${summary.users.length} author(s)` : "";
 	ctx.stdout.write(
 		summary.dryRun
-			? `Dry run: ${entriesCount} across ${summary.projects.length} project(s) would be imported into ${summary.workspace} (${requests})\n`
+			? `Dry run: ${entriesCount} across ${summary.projects.length} project(s)${authors} would be imported into ${summary.workspace} (${requests})\n`
 			: `Imported ${entriesCount} into ${summary.workspace} (${requests})\n`,
 	);
 	return 0;
