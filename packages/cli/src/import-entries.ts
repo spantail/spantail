@@ -27,6 +27,17 @@ interface ImportItem {
 
 const MAX_REPORTED_ERRORS = 20;
 
+// A workspace can have many members, so an "unknown user" error samples the
+// available emails rather than dumping the whole roster.
+const MAX_LISTED_MEMBERS = 10;
+
+function previewList(values: string[], cap: number): string {
+	if (values.length === 0) return "none";
+	const shown = values.slice(0, cap).join(", ");
+	const extra = values.length - cap;
+	return extra > 0 ? `${shown}, …and ${extra} more` : shown;
+}
+
 function fileError(errors: string[]): CliError {
 	const shown = errors.slice(0, MAX_REPORTED_ERRORS);
 	const more = errors.length - shown.length;
@@ -131,6 +142,17 @@ export async function importEntries(
 	},
 ): Promise<ImportSummary> {
 	const items = parseImportJsonl(opts.content);
+	// Validate the --user default the same way a per-line `user` is validated, so
+	// a malformed flag fails with a clear message instead of a later "unknown
+	// user" or server error.
+	if (
+		opts.defaultUserEmail !== undefined &&
+		!z.email().safeParse(opts.defaultUserEmail).success
+	) {
+		throw new CliError(
+			`--user "${opts.defaultUserEmail}" is not a valid email`,
+		);
+	}
 	const workspace = await resolveWorkspace(client, opts.workspaceSlug);
 	const defaultUserEmail = opts.defaultUserEmail?.toLowerCase();
 
@@ -167,7 +189,7 @@ export async function importEntries(
 		}
 		const user = item.entry.user ?? defaultUserEmail;
 		if (user !== undefined && memberEmails && !memberEmails.has(user)) {
-			const available = [...memberEmails].join(", ") || "none";
+			const available = previewList([...memberEmails], MAX_LISTED_MEMBERS);
 			errors.push(
 				`line ${item.line}: unknown user "${user}" in workspace "${workspace.slug}" (available: ${available})`,
 			);

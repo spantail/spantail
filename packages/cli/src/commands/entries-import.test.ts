@@ -298,6 +298,22 @@ it("attributes entries by per-line user and the --user default", async () => {
 	expect(stdout.text()).toBe("Imported 2 entries into acme (1 request)\n");
 });
 
+it("rejects a malformed --user before making any request", async () => {
+	const stub = api([membersRoute]);
+	const { ctx, stderr, configDir } = createTestContext({ fetch: stub.fetch });
+	loggedIn(configDir);
+
+	const file = jsonlFile([entryLine({ project: "api" })]);
+	expect(
+		await runCli(
+			["entries", "import", file, "--user", "not-an-email", "--dry-run"],
+			ctx,
+		),
+	).toBe(1);
+	expect(stderr.text()).toContain('--user "not-an-email" is not a valid email');
+	expect(stub.calls.some((call) => call.method === "POST")).toBe(false);
+});
+
 it("fails on --dry-run when an author email is not a workspace member", async () => {
 	const stub = api([membersRoute]);
 	const { ctx, stderr, configDir } = createTestContext({ fetch: stub.fetch });
