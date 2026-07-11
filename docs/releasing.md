@@ -80,4 +80,5 @@ A tag (a release) and a deploy are **independent** steps; the repository is inst
 - **Docs (`apps/docs`)** — a **separate lifecycle**: not part of `v*` version tags. Every change to
   `apps/docs/**` on `main` deploys automatically to docs.spantail.com via the
   [`Deploy docs` workflow](../.github/workflows/docs-deploy.yml) (needs the `CLOUDFLARE_API_TOKEN`
-  and `CLOUDFLARE_ACCOUNT_ID` repository secrets).
+  and `CLOUDFLARE_ACCOUNT_ID` repository secrets; the optional `CF_BEACON_TOKEN` secret enables
+  Cloudflare Web Analytics).
