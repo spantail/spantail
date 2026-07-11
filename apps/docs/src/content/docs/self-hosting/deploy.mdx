@@ -95,11 +95,6 @@ Cloudflare account (a database backup during an upgrade does use local Wrangler)
 
 </Steps>
 
-:::note[Screenshot placeholder]
-📸 _The Workers Builds setup form: root directory `apps/web`, deploy command `pnpm run deploy:ci`,
-build variable `D1_DATABASE_ID`._
-:::
-
 ### Upgrading
 
 On your fork's page, click **Sync fork** to pull the latest release from upstream. Workers Builds
@@ -164,9 +159,8 @@ By default the app derives its origin from each request, so links and OAuth call
 proxy that rewrites the host — set **`BETTER_AUTH_URL`**. This and the optional social-login and
 email secrets are covered on the [Configuration](/self-hosting/configuration/) page.
 
-:::note[Screenshot placeholder]
-📸 _The deployed instance loaded at its Workers URL, showing the sign-up screen._
-:::
+![The deployed instance loaded at its Workers URL, showing the sign-up
+screen.](../../../assets/getting-started/01-signup.png)
 
 With the Worker live, the first person to sign up becomes the instance administrator. Continue
 to the [Initial setup wizard](/self-hosting/setup-wizard/).
