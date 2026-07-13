@@ -40,19 +40,53 @@ jobs:
             };
             const deps = JSON.parse(process.env.UPDATED_DEPS || "[]");
 
+            // fetch-metadata's released parser leaves prev/new versions empty for grouped
+            // PRs, so recover each proposed version from the Dependabot commit trailer
+            // (`- dependency-name: X` / `  dependency-version: Y` pairs).
+            const missingVersions = deps.some((d) => !d.newVersion);
+            if (missingVersions) {
+              try {
+                const { data: commits } = await github.rest.pulls.listCommits({
+                  ...context.repo,
+                  pull_number: context.payload.pull_request.number,
+                  per_page: 1,
+                });
+                const message = commits[0]?.commit.message ?? "";
+                const trailer = new Map();
+                let name = null;
+                for (const line of message.split("\n")) {
+                  const nameMatch = line.match(/^- dependency-name: "?([^"\s]+)"?$/);
+                  if (nameMatch) { name = nameMatch[1]; continue; }
+                  const versionMatch = line.match(/^ {2}dependency-version: "?([^"\s]+)"?$/);
+                  if (versionMatch && name) { trailer.set(name, versionMatch[1]); name = null; }
+                }
+                for (const d of deps) {
+                  if (!d.newVersion) d.newVersion = trailer.get(d.dependencyName) ?? "";
+                }
+              } catch (error) {
+                // Versionless deps degrade to "Could not check" lines below.
+                core.warning(`trailer version recovery failed: ${error instanceof Error ? error.message : String(error)}`);
+              }
+            }
+
             // The same dependency appears once per manifest it occurs in; report it once.
             const unique = new Map();
             for (const d of deps) {
-              unique.set(`${d.packageEcosystem}:${d.dependencyName}@${d.newVersion}`, d);
+              unique.set(`${d.dependencyName}@${d.newVersion}`, d);
             }
 
-            const advisoryEcosystem = { npm_and_yarn: "npm", github_actions: "actions" };
+            // fetch-metadata derives packageEcosystem from the branch name, which for a
+            // multi-ecosystem group is the group slug (e.g. weekly_updates-<hash>), not an
+            // ecosystem. The name itself is unambiguous: an action ref is owner/repo while
+            // an npm name is either bare or @scope/name.
+            const isAction = (dep) =>
+              dep.dependencyName.includes("/") && !dep.dependencyName.startsWith("@");
 
             // Advisories affecting the *proposed* version: a held-back release that fixes
             // one is exactly the update a reviewer must not miss.
             async function advisoriesAffecting(dep) {
-              const ecosystem = advisoryEcosystem[dep.packageEcosystem];
-              if (!ecosystem || !dep.newVersion) return [];
+              const ecosystem = isAction(dep) ? "actions" : "npm";
+              if (!dep.newVersion) return [];
               const { data } = await github.request("GET /advisories", {
                 ecosystem,
                 affects: `${dep.dependencyName}@${dep.newVersion}`,
@@ -66,7 +100,7 @@ jobs:
             // at check time), oldest first.
             async function heldBackVersions(dep) {
               if (!SEMVER.test(dep.newVersion ?? "")) throw new Error("no parseable proposed version");
-              if (dep.packageEcosystem === "npm_and_yarn") {
+              if (!isAction(dep)) {
                 const res = await fetch(
                   `https://registry.npmjs.org/${encodeURIComponent(dep.dependencyName)}`,
                 );
@@ -82,25 +116,22 @@ jobs:
                     deprecated: Boolean(doc.versions?.[v]?.deprecated),
                   }));
               }
-              if (dep.packageEcosystem === "github_actions" && dep.dependencyName.includes("/")) {
-                const [owner, repo] = dep.dependencyName.split("/");
-                const { data: releases } = await github.rest.repos.listReleases({
-                  owner,
-                  repo,
-                  per_page: 50,
-                });
-                return releases
-                  .filter((r) => !r.prerelease && !r.draft)
-                  .map((r) => ({ release: r, version: r.tag_name.replace(/^v/, "") }))
-                  .filter(({ version }) => SEMVER.test(version) && semverGt(version, dep.newVersion))
-                  .sort((a, b) => (semverGt(a.version, b.version) ? 1 : -1))
-                  .map(({ release, version }) => ({
-                    version,
-                    publishedAt: release.published_at,
-                    deprecated: false,
-                  }));
-              }
-              throw new Error(`unsupported ecosystem: ${dep.packageEcosystem}`);
+              const [owner, repo] = dep.dependencyName.split("/");
+              const { data: releases } = await github.rest.repos.listReleases({
+                owner,
+                repo,
+                per_page: 50,
+              });
+              return releases
+                .filter((r) => !r.prerelease && !r.draft)
+                .map((r) => ({ release: r, version: r.tag_name.replace(/^v/, "") }))
+                .filter(({ version }) => SEMVER.test(version) && semverGt(version, dep.newVersion))
+                .sort((a, b) => (semverGt(a.version, b.version) ? 1 : -1))
+                .map(({ release, version }) => ({
+                  version,
+                  publishedAt: release.published_at,
+                  deprecated: false,
+                }));
             }
 
             const importantLines = [];
@@ -131,7 +162,7 @@ jobs:
                   rows.push(`| \`${dep.dependencyName}\` | | …and ${held.length - MAX_LISTED} more | |`);
                 }
               } catch (error) {
-                failures.push(`- ${label}: ${error.message}`);
+                failures.push(`- ${label}: ${error instanceof Error ? error.message : String(error)}`);
               }
             }
 
