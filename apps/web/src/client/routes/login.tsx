@@ -18,7 +18,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
 	const [mode, setMode] = useState<"login" | "signup">("login");
 	const [name, setName] = useState("");
@@ -55,7 +55,17 @@ function LoginPage() {
 		const result =
 			mode === "login"
 				? await authClient.signIn.email({ email, password })
-				: await authClient.signUp.email({ name, email, password });
+				: // Carry the UI language on sign-up so the bootstrap sign-up (the first
+					// user, who becomes the instance admin) seeds the starter templates in
+					// the language the admin is looking at, not the raw browser default.
+					await authClient.signUp.email(
+						{ name, email, password },
+						{
+							headers: {
+								"Accept-Language": i18n.resolvedLanguage ?? i18n.language,
+							},
+						},
+					);
 		setBusy(false);
 		if (result.error) {
 			setError(result.error.message ?? t("errors.generic"));
