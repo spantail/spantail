@@ -45,22 +45,27 @@ jobs:
             // (`- dependency-name: X` / `  dependency-version: Y` pairs).
             const missingVersions = deps.some((d) => !d.newVersion);
             if (missingVersions) {
-              const { data: commits } = await github.rest.pulls.listCommits({
-                ...context.repo,
-                pull_number: context.payload.pull_request.number,
-                per_page: 1,
-              });
-              const message = commits[0]?.commit.message ?? "";
-              const trailer = new Map();
-              let name = null;
-              for (const line of message.split("\n")) {
-                const nameMatch = line.match(/^- dependency-name: "?([^"\s]+)"?$/);
-                if (nameMatch) { name = nameMatch[1]; continue; }
-                const versionMatch = line.match(/^ {2}dependency-version: "?([^"\s]+)"?$/);
-                if (versionMatch && name) { trailer.set(name, versionMatch[1]); name = null; }
-              }
-              for (const d of deps) {
-                if (!d.newVersion) d.newVersion = trailer.get(d.dependencyName) ?? "";
+              try {
+                const { data: commits } = await github.rest.pulls.listCommits({
+                  ...context.repo,
+                  pull_number: context.payload.pull_request.number,
+                  per_page: 1,
+                });
+                const message = commits[0]?.commit.message ?? "";
+                const trailer = new Map();
+                let name = null;
+                for (const line of message.split("\n")) {
+                  const nameMatch = line.match(/^- dependency-name: "?([^"\s]+)"?$/);
+                  if (nameMatch) { name = nameMatch[1]; continue; }
+                  const versionMatch = line.match(/^ {2}dependency-version: "?([^"\s]+)"?$/);
+                  if (versionMatch && name) { trailer.set(name, versionMatch[1]); name = null; }
+                }
+                for (const d of deps) {
+                  if (!d.newVersion) d.newVersion = trailer.get(d.dependencyName) ?? "";
+                }
+              } catch (error) {
+                // Versionless deps degrade to "Could not check" lines below.
+                core.warning(`trailer version recovery failed: ${error.message}`);
               }
             }
 
