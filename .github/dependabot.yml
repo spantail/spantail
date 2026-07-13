@@ -1,21 +1,35 @@
-# Keeps the SHA-pinned actions and the npm dependencies current. Actions are pinned to
+# One combined dependency-update PR per week: npm and github-actions updates land together
+# in a single multi-ecosystem group every Monday morning JST. Actions stay pinned to
 # full-length commit SHAs (enforced by the repository's "require SHA pinning" setting);
 # Dependabot bumps the SHA and the trailing version comment together.
+#
+# The 3-day cooldown skips versions published less than 72h before a check, giving the
+# ecosystem time to catch compromised releases. It also stays clear of pnpm 11's default
+# minimumReleaseAge (24h), which rejects too-fresh lockfile entries at install time.
+# Security updates are exempt from both the schedule and the cooldown, so vulnerability
+# fixes still arrive immediately. The dependabot-cooldown-report workflow comments on each
+# Dependabot PR with whatever newer releases the cooldown is holding back.
 version: 2
+
+multi-ecosystem-groups:
+  weekly-updates:
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+
 updates:
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-    groups:
-      actions:
-        patterns: ["*"]
+    multi-ecosystem-group: weekly-updates
+    patterns: ["*"]
+    cooldown:
+      default-days: 3
 
   - package-ecosystem: npm
     directory: /
-    schedule:
-      interval: weekly
-    # One PR for all safe bumps; majors stay separate so breaking changes get their own review.
-    groups:
-      minor-and-patch:
-        update-types: ["minor", "patch"]
+    multi-ecosystem-group: weekly-updates
+    patterns: ["*"]
+    cooldown:
+      default-days: 3
