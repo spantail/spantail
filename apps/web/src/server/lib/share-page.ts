@@ -43,7 +43,10 @@ const MESSAGES: Record<
 	},
 };
 
-export function pickShareLocale(c: Context): ShareLocale {
+// Resolve the request's locale from its Accept-Language header (en/ja, default
+// en). Shared by the server-rendered share pages, report rendering, and the
+// one-time starter-template seeding at instance bootstrap.
+export function pickRequestLocale(c: Context): ShareLocale {
 	return accepts(c, {
 		header: "Accept-Language",
 		supports: ["en", "ja"],

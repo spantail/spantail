@@ -6,11 +6,10 @@ import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 
 /** admin is the bootstrap instance admin; member is a regular user. */
 async function setup() {
+	// The bootstrap sign-up seeds the starter catalog, so the instance already
+	// has its default before any custom template is created.
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const member = await signUpUser("Member", "member@example.com");
-	// Read once so the starter catalog is lazily seeded — the normal state in
-	// which templates are created (so a custom one isn't the sole default).
-	await apiGet("/api/v1/report-templates", admin);
 	return { admin, member };
 }
 
@@ -33,7 +32,7 @@ const templateInput = {
 	body: "# {{ report.name }}\n{% for e in entries %}- {{ e.description }}\n{% endfor %}",
 };
 
-it("seeds the starter templates for the first admin and lists custom ones", async () => {
+it("seeds the starter templates at bootstrap signup and lists custom ones", async () => {
 	const { admin } = await setup();
 
 	// The bootstrap admin's instance is seeded with the three starter templates.
@@ -61,7 +60,7 @@ it("seeds the starter templates for the first admin and lists custom ones", asyn
 it("round-trips the optional default date range", async () => {
 	const { admin } = await setup();
 
-	// The lazily-seeded starter templates each carry their type's default range.
+	// The seeded starter templates each carry their type's default range.
 	const seeded = (await (
 		await apiGet("/api/v1/report-templates", admin)
 	).json()) as Array<{ defaultDateRange: string | null }>;
@@ -104,14 +103,26 @@ it("round-trips the optional default date range", async () => {
 	expect(cleared.defaultDateRange).toBeNull();
 });
 
-it("lazily seeds the starter templates in the request locale", async () => {
-	const admin = await signUpUser("Admin", "admin@example.com");
-
-	const res = await appFetch("/api/v1/report-templates", {
-		headers: { cookie: admin, "accept-language": "ja,en;q=0.8" },
+it("seeds the starter templates in the admin's language at bootstrap signup", async () => {
+	// The bootstrap sign-up's Accept-Language selects the catalog locale.
+	const res = await appFetch("/api/auth/sign-up/email", {
+		method: "POST",
+		headers: {
+			"content-type": "application/json",
+			"accept-language": "ja,en;q=0.8",
+		},
+		body: JSON.stringify({
+			name: "Admin",
+			email: "admin@example.com",
+			password: "password1234",
+		}),
 	});
 	expect(res.status).toBe(200);
-	const list = (await res.json()) as Array<{ name: string }>;
+	const cookie = res.headers.get("set-cookie")?.split(";")[0] as string;
+
+	const list = (await (
+		await apiGet("/api/v1/report-templates", cookie)
+	).json()) as Array<{ name: string }>;
 	// Names come from the ja catalog (order is not guaranteed — the rows share a
 	// createdAt), so compare as sets.
 	expect(list.map((t) => t.name).sort()).toEqual(
@@ -121,10 +132,10 @@ it("lazily seeds the starter templates in the request locale", async () => {
 	);
 });
 
-it("re-seeds the starter catalog when an instance is left with no templates", async () => {
-	// Covers upgraded instances (builtins removed → empty table) and confirms
-	// the lazy seed is idempotent rather than one-shot. The default is delete-
-	// protected via the API, so emptying the table is simulated out-of-band.
+it("does not re-seed the starter catalog once an instance is emptied", async () => {
+	// Seeding happens once, at bootstrap signup — not on list reads. An instance
+	// later emptied of templates (its default is delete-protected via the API, so
+	// this is simulated out-of-band) stays empty until a template is created.
 	const admin = await signUpUser("Admin", "admin@example.com");
 
 	const seeded = (await (
@@ -134,13 +145,11 @@ it("re-seeds the starter catalog when an instance is left with no templates", as
 
 	await env.DB.prepare("DELETE FROM report_templates").run();
 
-	// A later read finds the table empty again and re-seeds the whole catalog,
-	// with exactly one row flagged default.
+	// A later read finds the table empty and does not re-seed.
 	const again = (await (
 		await apiGet("/api/v1/report-templates", admin)
-	).json()) as Array<{ id: string; isDefault: boolean }>;
-	expect(again.length).toBe(3);
-	expect(again.filter((t) => t.isDefault)).toHaveLength(1);
+	).json()) as unknown[];
+	expect(again).toEqual([]);
 });
 
 it("lets any authenticated user read templates but not anonymous callers", async () => {
@@ -148,8 +157,8 @@ it("lets any authenticated user read templates but not anonymous callers", async
 	await apiJson("POST", "/api/v1/report-templates", templateInput, admin);
 
 	// Templates are instance-wide formats: every member can read the list. The
-	// admin already created a custom template, so the default isn't lazily added
-	// (the table was non-empty); the member still sees the custom one.
+	// instance already has the bootstrap-seeded catalog plus the admin's custom
+	// template; the member sees them all.
 	const memberList = await apiGet("/api/v1/report-templates", member);
 	expect(memberList.status).toBe(200);
 	expect(
@@ -277,9 +286,11 @@ it("fetches a template by id and 404s for unknown ids", async () => {
 });
 
 it("makes the first created template the default when none exists yet", async () => {
-	// A POST before anyone lists templates (so the lazy seed never ran): the
-	// instance has no default, so the created template must become it.
+	// The no-default state the POST fallback covers: an instance predating
+	// bootstrap seeding, or one later emptied of templates. Bootstrap seeds the
+	// catalog, so empty it out-of-band to reach that state.
 	const admin = await signUpUser("Admin", "admin@example.com");
+	await env.DB.prepare("DELETE FROM report_templates").run();
 
 	const created = (await (
 		await apiJson("POST", "/api/v1/report-templates", templateInput, admin)

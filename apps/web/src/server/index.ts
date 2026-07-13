@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { createAuth } from "./auth";
 import { errorResponse } from "./lib/errors";
 import { resolveSocialConfig } from "./lib/oauth";
+import { pickRequestLocale } from "./lib/share-page";
 import { registerMcpRoute } from "./mcp";
 import { loadAuth } from "./middleware/auth";
 import { requestContext } from "./middleware/context";
@@ -81,7 +82,15 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
 		);
 	}
 	const social = await resolveSocialConfig(c.env, c.var.db);
-	return createAuth(c.env, c.var.db, c.executionCtx, social).handler(c.req.raw);
+	// Pass the request locale so a bootstrap sign-up seeds the starter catalog in
+	// the first admin's language.
+	return createAuth(
+		c.env,
+		c.var.db,
+		c.executionCtx,
+		social,
+		pickRequestLocale(c),
+	).handler(c.req.raw);
 });
 
 const v1 = new Hono<AppEnv>();

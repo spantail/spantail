@@ -331,9 +331,9 @@ export async function generateDataset(
 
 	// --- Templates (starter catalog: Daily, Weekly, Monthly) ---------------
 	// The instance-scoped starter templates, seeded from @spantail/templates in
-	// the dataset's `locale`. (In production a fresh instance lazily seeds the
-	// same catalog in the first admin's locale.) Only Daily carries isDefault,
-	// keeping the one-default invariant.
+	// the dataset's `locale`. (In production the same catalog is seeded at
+	// instance bootstrap in the first admin's locale.) Only Daily carries
+	// isDefault, keeping the one-default invariant.
 	const seedLocale = locale;
 	const author =
 		[...usersByKey.values()].find((u) => {

@@ -1,5 +1,5 @@
 import { env, exports } from "cloudflare:workers";
-import { createDb, findUserByEmail } from "@spantail/db";
+import { createDb, findUserByEmail, listReportTemplates } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { assertAuthSecret, backfillAvatarUrl, socialProviderOf } from "./auth";
@@ -69,6 +69,12 @@ it("makes the first user an instance admin and closes public sign-up", async () 
 	// Google account to this credential account.
 	const firstRow = await findUserByEmail(createDb(env.DB), "first@example.com");
 	expect(firstRow?.emailVerified).toBe(true);
+
+	// The same bootstrap seeds the starter catalog (Daily/Weekly/Monthly) in the
+	// admin's language, with exactly one default.
+	const templates = await listReportTemplates(createDb(env.DB));
+	expect(templates).toHaveLength(3);
+	expect(templates.filter((t) => t.isDefault)).toHaveLength(1);
 
 	// Onboarding becomes admin-driven once the bootstrap admin exists, so
 	// public sign-up is rejected for everyone after the first user.

@@ -60,7 +60,7 @@ import {
 	resolveEntryAccessForWorkspaces,
 } from "../lib/permissions";
 import { shareAttributesFromInput, toApiShare } from "../lib/share-api";
-import { pickShareLocale } from "../lib/share-page";
+import { pickRequestLocale } from "../lib/share-page";
 import { validate } from "../lib/validate";
 import { requireAuth, requireScope } from "../middleware/auth";
 import { publishToUsers } from "../realtime/publish";
@@ -323,7 +323,7 @@ async function renderReportDocument(
 		user: { name: user.name },
 		period: { ...range, preset },
 		timezone,
-		locale: pickShareLocale(c),
+		locale: pickRequestLocale(c),
 		generatedAt,
 		workspaces: scoped.map((w) => ({
 			id: w.id,

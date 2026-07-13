@@ -10,12 +10,14 @@ import {
 	schema,
 	updateUser,
 } from "@spantail/db";
+import type { CatalogLocale } from "@spantail/templates";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { renderPasswordResetEmail } from "./emails/password-reset-email";
 import { appBaseUrl } from "./lib/app-base-url";
 import { getMailer } from "./lib/mail/mailer";
+import { seedStarterTemplates } from "./lib/starter-templates";
 
 /**
  * Minimum length for the session-signing secret. `openssl rand -base64 32`
@@ -65,6 +67,11 @@ export interface SocialConfig {
  *
  * `social` enables Google/GitHub providers for this request. Session-only
  * callers (e.g. `getSession`) can omit it.
+ *
+ * `locale` is the request's language, used only for the one-time starter-
+ * template seeding when the first user (the instance admin) signs up. Only the
+ * public sign-up handler passes a real value; callers that can never create the
+ * first user (session validation, admin/invite account creation) may omit it.
  */
 export function createAuth(
 	env: Env,
@@ -72,6 +79,7 @@ export function createAuth(
 	// Structurally typed so both the Workers and Hono ExecutionContext fit.
 	ctx?: { waitUntil(promise: Promise<unknown>): void },
 	social?: SocialConfig,
+	locale: CatalogLocale = "en",
 ) {
 	// Fail closed before constructing the auth instance: a missing or weak
 	// session secret must stop the request, not silently sign forgeable sessions.
@@ -174,6 +182,12 @@ export function createAuth(
 						// here (social providers can't be enabled before an admin exists);
 						// mark them verified so they can later link a Google account.
 						if ((await countUsers(db)) === 0) {
+							// Seed the starter catalog in the admin's language as part of the
+							// same bootstrap. A failure here aborts the sign-up (the user row
+							// is not yet committed and countUsers stays 0), so the bootstrap
+							// stays retryable; the seed is idempotent, so a retry is a no-op
+							// for rows that already landed.
+							await seedStarterTemplates(db, locale);
 							return {
 								data: { ...user, isAdmin: true, emailVerified: true },
 							};

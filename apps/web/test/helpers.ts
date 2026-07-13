@@ -120,11 +120,10 @@ export async function apiGet(path: string, cookie?: string): Promise<Response> {
 }
 
 /**
- * The id of the lazily-seeded instance default report template. Reports need a
- * real template id now that builtins are gone; reading the list seeds the
- * starter catalog when the instance has none. Selects the row flagged
- * isDefault (Daily) — the one-default unique index guarantees it is unique — so
- * a pre-existing custom template can't shadow it.
+ * The id of the instance default report template, seeded at bootstrap signup.
+ * Reports need a real template id now that builtins are gone. Selects the row
+ * flagged isDefault (Daily) — the one-default unique index guarantees it is
+ * unique — so a pre-existing custom template can't shadow it.
  */
 export async function defaultTemplateId(cookie: string): Promise<string> {
 	const res = await apiGet("/api/v1/report-templates", cookie);
