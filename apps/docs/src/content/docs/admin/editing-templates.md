@@ -153,7 +153,7 @@ report about the current year stays uncluttered. An argument overrides this:
 - `{{ date | format_date: 'year' }}` — always show the year (`Mon, Jun 1, 2026`).
 - `{{ date | format_date: 'no-year' }}` — never show the year.
 
-The starter template passes `'year'`, so its period and generation lines always carry the year.
+The starter templates pass `'year'`, so their period and generation lines always carry the year.
 Clock times are never shown by `format_date`.
 
 ### `format_duration`

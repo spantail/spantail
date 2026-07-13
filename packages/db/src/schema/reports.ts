@@ -19,7 +19,8 @@ const updatedAtMs = () =>
 
 // Templates are instance-scoped presentation formats: a report picks one
 // freely, independent of which workspaces/projects/period it covers. A fresh
-// instance is seeded with a default template from @spantail/templates.
+// instance is seeded with the starter catalog (Daily, Weekly, Monthly) from
+// @spantail/templates; Daily is the instance default.
 export const reportTemplates = sqliteTable(
 	"report_templates",
 	{

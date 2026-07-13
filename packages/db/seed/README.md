@@ -29,8 +29,8 @@ which dataset's YAML supplies the data, so you can add your own by creating a ne
 | `demo` (default) | English | [`examples/demo`](../../../examples/demo/README.md) |
 | `demo-ja` | Japanese | [`examples/demo-ja`](../../../examples/demo-ja/README.md) |
 
-A dataset whose name ends with `-ja` is treated as Japanese (its single default
-report template is seeded in Japanese); all others are English. The two shipped
+A dataset whose name ends with `-ja` is treated as Japanese (its starter report
+templates are seeded in Japanese); all others are English. The two shipped
 datasets use **distinct users**, so they never share a login identity. Each is
 sized so at least one instance of every busy screen overflows a page (the SPA
 paginates at 50 rows): **Home**, **Project detail**, **Reports**, **Messages**,
@@ -50,8 +50,8 @@ their task `activities`, work patterns, cross-workspace report routes, instance
 settings), validated against [`schema.ts`](./schema.ts) on load. The activity
 (work entries, reports, deliveries, shares, agent telemetry) is derived at run
 time by [`generate.ts`](./generate.ts), relative to the current date, so reruns
-are reproducible. One default report template is seeded from `@spantail/templates`
-in the dataset's locale.
+are reproducible. The starter report templates (Daily, Weekly, Monthly) are seeded
+from `@spantail/templates` in the dataset's locale, with Daily as the instance default.
 
 A cross-workspace route in `report-routes.yaml` names only the sender and the
 workspaces the report spans; its recipients are *derived* from membership

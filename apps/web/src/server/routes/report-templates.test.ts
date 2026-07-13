@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { defaultTemplateForLocale } from "@spantail/templates";
+import { catalogTemplatesForLocale } from "@spantail/templates";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -8,7 +8,7 @@ import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
 async function setup() {
 	const admin = await signUpUser("Admin", "admin@example.com");
 	const member = await signUpUser("Member", "member@example.com");
-	// Read once so the instance default is lazily seeded — the normal state in
+	// Read once so the starter catalog is lazily seeded — the normal state in
 	// which templates are created (so a custom one isn't the sole default).
 	await apiGet("/api/v1/report-templates", admin);
 	return { admin, member };
@@ -33,15 +33,15 @@ const templateInput = {
 	body: "# {{ report.name }}\n{% for e in entries %}- {{ e.description }}\n{% endfor %}",
 };
 
-it("seeds a default template for the first admin and lists custom ones", async () => {
+it("seeds the starter templates for the first admin and lists custom ones", async () => {
 	const { admin } = await setup();
 
-	// The bootstrap admin's instance is seeded with exactly one default template.
+	// The bootstrap admin's instance is seeded with the three starter templates.
 	const seeded = (await (
 		await apiGet("/api/v1/report-templates", admin)
 	).json()) as Array<{ id: string; name: string; enabled: boolean }>;
-	expect(seeded.length).toBe(1);
-	expect(seeded[0]?.enabled).toBe(true);
+	expect(seeded.length).toBe(3);
+	expect(seeded.every((t) => t.enabled)).toBe(true);
 
 	const created = await apiJson(
 		"POST",
@@ -55,17 +55,19 @@ it("seeds a default template for the first admin and lists custom ones", async (
 	expect(res.status).toBe(200);
 	const list = (await res.json()) as Array<{ id: string; name: string }>;
 	expect(list.map((t) => t.name)).toContain("Standup");
-	expect(list.length).toBe(2);
+	expect(list.length).toBe(4);
 });
 
 it("round-trips the optional default date range", async () => {
 	const { admin } = await setup();
 
-	// The lazily-seeded default carries no preset (null = compose falls back to today).
+	// The lazily-seeded starter templates each carry their type's default range.
 	const seeded = (await (
 		await apiGet("/api/v1/report-templates", admin)
 	).json()) as Array<{ defaultDateRange: string | null }>;
-	expect(seeded[0]?.defaultDateRange).toBeNull();
+	expect(new Set(seeded.map((t) => t.defaultDateRange))).toEqual(
+		new Set(["today", "this_week", "this_month"]),
+	);
 
 	// A preset set on create round-trips on read.
 	const created = (await (
@@ -102,7 +104,7 @@ it("round-trips the optional default date range", async () => {
 	expect(cleared.defaultDateRange).toBeNull();
 });
 
-it("lazily seeds the default template in the request locale", async () => {
+it("lazily seeds the starter templates in the request locale", async () => {
 	const admin = await signUpUser("Admin", "admin@example.com");
 
 	const res = await appFetch("/api/v1/report-templates", {
@@ -110,12 +112,16 @@ it("lazily seeds the default template in the request locale", async () => {
 	});
 	expect(res.status).toBe(200);
 	const list = (await res.json()) as Array<{ name: string }>;
-	expect(list.map((t) => t.name)).toEqual([
-		defaultTemplateForLocale("ja").name,
-	]);
+	// Names come from the ja catalog (order is not guaranteed — the rows share a
+	// createdAt), so compare as sets.
+	expect(list.map((t) => t.name).sort()).toEqual(
+		catalogTemplatesForLocale("ja")
+			.map((t) => t.name)
+			.sort(),
+	);
 });
 
-it("re-seeds the default when an instance is left with no templates", async () => {
+it("re-seeds the starter catalog when an instance is left with no templates", async () => {
 	// Covers upgraded instances (builtins removed → empty table) and confirms
 	// the lazy seed is idempotent rather than one-shot. The default is delete-
 	// protected via the API, so emptying the table is simulated out-of-band.
@@ -124,16 +130,17 @@ it("re-seeds the default when an instance is left with no templates", async () =
 	const seeded = (await (
 		await apiGet("/api/v1/report-templates", admin)
 	).json()) as Array<{ id: string }>;
-	expect(seeded.length).toBe(1);
+	expect(seeded.length).toBe(3);
 
 	await env.DB.prepare("DELETE FROM report_templates").run();
 
-	// A later read finds the table empty again and re-seeds the default.
+	// A later read finds the table empty again and re-seeds the whole catalog,
+	// with exactly one row flagged default.
 	const again = (await (
 		await apiGet("/api/v1/report-templates", admin)
 	).json()) as Array<{ id: string; isDefault: boolean }>;
-	expect(again.length).toBe(1);
-	expect(again[0]?.isDefault).toBe(true);
+	expect(again.length).toBe(3);
+	expect(again.filter((t) => t.isDefault)).toHaveLength(1);
 });
 
 it("lets any authenticated user read templates but not anonymous callers", async () => {
@@ -297,9 +304,9 @@ it("flags the seeded template as default and protects it", async () => {
 	const seeded = (await (
 		await apiGet("/api/v1/report-templates", admin)
 	).json()) as Array<{ id: string; isDefault: boolean }>;
-	expect(seeded.length).toBe(1);
-	expect(seeded[0]?.isDefault).toBe(true);
-	const id = seeded[0]?.id as string;
+	expect(seeded.length).toBe(3);
+	expect(seeded.filter((t) => t.isDefault)).toHaveLength(1);
+	const id = seeded.find((t) => t.isDefault)?.id as string;
 
 	// The default cannot be deleted...
 	const del = await apiJson(
@@ -325,8 +332,8 @@ it("moves the default to another template, keeping exactly one", async () => {
 
 	const seeded = (await (
 		await apiGet("/api/v1/report-templates", admin)
-	).json()) as Array<{ id: string }>;
-	const original = seeded[0]?.id as string;
+	).json()) as Array<{ id: string; isDefault: boolean }>;
+	const original = seeded.find((t) => t.isDefault)?.id as string;
 	const created = (await (
 		await apiJson("POST", "/api/v1/report-templates", templateInput, admin)
 	).json()) as { id: string };

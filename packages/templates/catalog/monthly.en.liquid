@@ -1,0 +1,38 @@
+# {{ report.name }}
+
+**Period:** {{ period.from | format_date: 'year' }}{% if period.to != period.from %} – {{ period.to | format_date: 'year' }}{% endif %} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
+
+{% if totals.entries == 0 -%}
+_No work entries in this period._
+
+{% else -%}
+## Summary
+
+{% for group in groups.by_project -%}
+- {{ group.name }} — {{ group.total_minutes | format_duration }}
+{% endfor %}
+## Work log
+
+{% for group in groups.by_project -%}
+### {{ group.name }}
+
+{% for entry in group.entries -%}
+- {{ entry.entry_date | format_date: 'no-year' }} — {{ entry.description }} ({{ entry.duration_minutes | format_duration }})
+{% endfor %}
+{% endfor -%}
+{% endif -%}
+{% if totals.agents.sessions > 0 -%}
+## Agent activity
+
+{{ totals.agents.sessions }} sessions · {{ totals.agents.minutes | format_duration }} · {{ totals.agents.tokens }} tokens
+
+{% endif -%}
+{% if report.note -%}
+## Notes
+
+{{ report.note }}
+
+{% endif -%}
+---
+
+_Generated {{ generated_date | format_date: 'year' }}_

@@ -34,24 +34,22 @@ export async function createReportTemplate(
 	return row;
 }
 
-/** Reserved id for the seeded default template (see seedDefaultReportTemplate). */
-export const DEFAULT_REPORT_TEMPLATE_ID = "default";
-
 /**
- * Seeds the instance default template idempotently. Triggered lazily when the
- * templates list is read and the instance has none. The fixed id plus
- * onConflictDoNothing makes the insert itself race-safe: two concurrent first
- * reads converge on a single default row instead of inserting duplicates.
- * A no-op once the row exists.
+ * Seeds the instance's starter templates idempotently. Triggered lazily when the
+ * templates list is read and the instance has none. Callers pass fixed ids (the
+ * catalog keys), so onConflictDoNothing makes the insert race-safe: two
+ * concurrent first reads converge on one row per key instead of inserting
+ * duplicates. Only one row carries isDefault, so the batch never trips the
+ * one-default unique index by itself; a concurrent create that already promoted
+ * a different default just makes that row's insert a no-op (the non-default rows
+ * still land). A no-op once the rows exist.
  */
-export async function seedDefaultReportTemplate(
+export async function seedCatalogReportTemplates(
 	db: Database,
-	values: ReportTemplateInsert,
+	rows: Array<ReportTemplateInsert & { id: string }>,
 ): Promise<void> {
-	await db
-		.insert(reportTemplates)
-		.values({ id: DEFAULT_REPORT_TEMPLATE_ID, ...values })
-		.onConflictDoNothing();
+	if (rows.length === 0) return;
+	await db.insert(reportTemplates).values(rows).onConflictDoNothing();
 }
 
 export async function getReportTemplateById(

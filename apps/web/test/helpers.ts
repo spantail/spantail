@@ -1,5 +1,4 @@
 import { exports } from "cloudflare:workers";
-import { DEFAULT_REPORT_TEMPLATE_ID } from "@spantail/db";
 
 export const BASE = "https://example.com";
 
@@ -121,10 +120,11 @@ export async function apiGet(path: string, cookie?: string): Promise<Response> {
 }
 
 /**
- * The id of the lazily-seeded default report template. Reports need a real
- * template id now that builtins are gone; reading the list seeds the default
- * when the instance has none. Selects the deterministic seeded id explicitly
- * (not list[0]) so a pre-existing custom template can't shadow it.
+ * The id of the lazily-seeded instance default report template. Reports need a
+ * real template id now that builtins are gone; reading the list seeds the
+ * starter catalog when the instance has none. Selects the row flagged
+ * isDefault (Daily) — the one-default unique index guarantees it is unique — so
+ * a pre-existing custom template can't shadow it.
  */
 export async function defaultTemplateId(cookie: string): Promise<string> {
 	const res = await apiGet("/api/v1/report-templates", cookie);
@@ -133,8 +133,8 @@ export async function defaultTemplateId(cookie: string): Promise<string> {
 			`report-templates list failed: ${res.status} ${await res.text()}`,
 		);
 	}
-	const list = (await res.json()) as Array<{ id: string }>;
-	const found = list.find((t) => t.id === DEFAULT_REPORT_TEMPLATE_ID);
+	const list = (await res.json()) as Array<{ id: string; isDefault: boolean }>;
+	const found = list.find((t) => t.isDefault);
 	if (!found) throw new Error("no default report template was seeded");
 	return found.id;
 }

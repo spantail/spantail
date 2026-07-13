@@ -1,0 +1,38 @@
+# {{ report.name }}
+
+**期間:** {{ period.from | format_date: 'year' }}{% if period.to != period.from %} – {{ period.to | format_date: 'year' }}{% endif %} · **合計:** {{ totals.minutes | format_duration }}（{{ totals.entries }}件）
+
+{% if totals.entries == 0 -%}
+_この期間の稼働記録はありません。_
+
+{% else -%}
+## 概要
+
+{% for group in groups.by_project -%}
+- {{ group.name }} — {{ group.total_minutes | format_duration }}
+{% endfor %}
+## 作業明細
+
+{% for group in groups.by_project -%}
+### {{ group.name }}
+
+{% for entry in group.entries -%}
+- {{ entry.entry_date | format_date: 'no-year' }} — {{ entry.description }}（{{ entry.duration_minutes | format_duration }}）
+{% endfor %}
+{% endfor -%}
+{% endif -%}
+{% if totals.agents.sessions > 0 -%}
+## エージェント稼働
+
+{{ totals.agents.sessions }}セッション · {{ totals.agents.minutes | format_duration }} · {{ totals.agents.tokens }}トークン
+
+{% endif -%}
+{% if report.note -%}
+## 備考
+
+{{ report.note }}
+
+{% endif -%}
+---
+
+_生成日時 {{ generated_date | format_date: 'year' }}_

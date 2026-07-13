@@ -25,6 +25,7 @@ These are the words Spantail uses, in the app and throughout this documentation.
 | **Agent** | An AI coding agent you registered, acting for you. |
 | **Agent session** | One run of an agent, captured automatically and shown on the timeline alongside human work. **Agent activity** is the collective term. |
 | **Report** | A snapshot built from a template, filters, and a date range — readable, shareable, and discussable. |
+| **Starter templates** | The seeded catalog every instance begins with: **Daily report**, **Weekly report**, and **Monthly report**. Daily report is the initial default. |
 | **Share link** | A read-only link to a report, for people outside Spantail. Creating one is **sharing** the report. |
 | **Message** | Something delivered to you inside Spantail — today, a report someone **sent** you. Messages sit in **folders**: Inbox, Starred, Sent, Archive, Trash. |
 
