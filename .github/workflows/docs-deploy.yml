@@ -2,6 +2,8 @@
 # separate from product releases: every change to apps/docs/** on main ships immediately,
 # independent of `v*` version tags. Requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
 # repository secrets (a Cloudflare account dedicated to the project, not any self-hoster's).
+# CF_BEACON_TOKEN (optional) enables Cloudflare Web Analytics; without it the site builds
+# with no beacon.
 name: Deploy docs
 
 on:
@@ -29,4 +31,5 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_BEACON_TOKEN: ${{ secrets.CF_BEACON_TOKEN }}
         run: pnpm --filter docs run deploy

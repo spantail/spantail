@@ -4,6 +4,12 @@ import { defineConfig } from "astro/config";
 import starlightSidebarTopics from "starlight-sidebar-topics";
 import starlightThemeNova from "starlight-theme-nova";
 
+// Cloudflare Web Analytics is opt-in via CF_BEACON_TOKEN at build time (set as a
+// repository secret in the Deploy docs workflow) so the token — a public value in
+// the served HTML, but still account-linked — never lives in this public repo.
+// Without it (local dev/build, forks) no beacon is emitted.
+const beaconToken = process.env.CF_BEACON_TOKEN;
+
 // The top bar switches audience: User Guide, Admin Guide, Setup Guide, and the
 // API Reference (the logo/home also lands on User Guide). Content types (CLI,
 // MCP, Claude Plugin, reports, …) are sidebar items under the relevant audience.
@@ -13,6 +19,18 @@ export default defineConfig({
 		starlight({
 			title: "Spantail docs",
 			logo: { src: "./src/assets/spantail-mark.svg", alt: "Spantail" },
+			head: beaconToken
+				? [
+						{
+							tag: "script",
+							attrs: {
+								defer: true,
+								src: "https://static.cloudflareinsights.com/beacon.min.js",
+								"data-cf-beacon": JSON.stringify({ token: beaconToken }),
+							},
+						},
+					]
+				: [],
 			// Geist (sans + mono) — self-hosted via fontsource, wired into the Nova
 			// theme through --font-sans / --font-mono in custom.css. The font CSS is
 			// listed before custom.css so the @font-face rules load first.

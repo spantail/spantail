@@ -51,3 +51,7 @@ pnpm docs:build && pnpm docs:preview
 
 Static build deployed as Cloudflare Workers assets (`pnpm docs:deploy`, see `wrangler.jsonc`).
 Binding the `docs.spantail.com` custom domain is a one-time dashboard step.
+
+Cloudflare Web Analytics is opt-in: when the `CF_BEACON_TOKEN` environment variable is set at
+build time (a repository secret in the `Deploy docs` workflow), the beacon script is injected
+into every page; without it the build carries no analytics. The token stays out of the repo.
