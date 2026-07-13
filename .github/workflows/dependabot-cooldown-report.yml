@@ -65,7 +65,7 @@ jobs:
                 }
               } catch (error) {
                 // Versionless deps degrade to "Could not check" lines below.
-                core.warning(`trailer version recovery failed: ${error.message}`);
+                core.warning(`trailer version recovery failed: ${error instanceof Error ? error.message : String(error)}`);
               }
             }
 
@@ -162,7 +162,7 @@ jobs:
                   rows.push(`| \`${dep.dependencyName}\` | | …and ${held.length - MAX_LISTED} more | |`);
                 }
               } catch (error) {
-                failures.push(`- ${label}: ${error.message}`);
+                failures.push(`- ${label}: ${error instanceof Error ? error.message : String(error)}`);
               }
             }
 
