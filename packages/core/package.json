@@ -10,11 +10,11 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"liquidjs": "^10.27.0",
+		"liquidjs": "^10.27.2",
 		"yaml": "^2.9.0",
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"vitest": "^4.1.8"
+		"vitest": "^4.1.10"
 	}
 }

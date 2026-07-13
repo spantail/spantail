@@ -16,10 +16,10 @@
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260611.1",
+		"@cloudflare/workers-types": "^5.20260710.1",
 		"@spantail/templates": "workspace:*",
-		"@types/node": "^25.9.3",
-		"better-auth": "^1.6.16",
+		"@types/node": "^26.1.1",
+		"better-auth": "^1.6.23",
 		"drizzle-kit": "^0.31.10",
 		"yaml": "^2.9.0"
 	}
