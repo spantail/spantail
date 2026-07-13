@@ -80,7 +80,7 @@ Cloudflare account (a database backup during an upgrade does use local Wrangler)
    Wrangler once the Worker exists:
 
    ```bash
-   wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
+   wrangler secret put BETTER_AUTH_SECRET --name spantail   # paste e.g. `openssl rand -base64 32`
    ```
 
    :::caution
@@ -133,7 +133,7 @@ needs the local [requirements](/self-hosting/) (Node, pnpm, Wrangler).
 3. **Set the session-signing secret.** Generate a value of at least 32 characters.
 
    ```bash
-   wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
+   pnpm --filter web exec wrangler secret put BETTER_AUTH_SECRET   # paste e.g. `openssl rand -base64 32`
    ```
 
    :::caution
