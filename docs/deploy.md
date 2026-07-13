@@ -64,7 +64,7 @@ narrative version of these steps.
 3. **Set the session secret.**
 
    ```bash
-   wrangler secret put BETTER_AUTH_SECRET    # >= 32 chars, e.g. openssl rand -base64 32
+   pnpm --filter web exec wrangler secret put BETTER_AUTH_SECRET    # >= 32 chars, e.g. openssl rand -base64 32
    ```
 
 4. **Apply migrations, then deploy.**

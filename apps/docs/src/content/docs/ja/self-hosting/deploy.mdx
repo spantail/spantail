@@ -79,7 +79,7 @@ pnpm dev                # SPA + Worker を http://localhost:5173 で起動
    Wrangler で設定します。
 
    ```bash
-   wrangler secret put BETTER_AUTH_SECRET   # 例: `openssl rand -base64 32` を貼り付け
+   wrangler secret put BETTER_AUTH_SECRET --name spantail   # 例: `openssl rand -base64 32` を貼り付け
    ```
 
    :::caution
@@ -133,7 +133,7 @@ Cloudflare の [D1 Time Travel](https://developers.cloudflare.com/d1/reference/t
 3. **セッション署名用シークレットを設定**します。32 文字以上の値を生成してください。
 
    ```bash
-   wrangler secret put BETTER_AUTH_SECRET   # 例: `openssl rand -base64 32` を貼り付け
+   pnpm --filter web exec wrangler secret put BETTER_AUTH_SECRET   # 例: `openssl rand -base64 32` を貼り付け
    ```
 
    :::caution
