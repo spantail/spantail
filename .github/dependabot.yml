@@ -39,3 +39,9 @@ updates:
       # supports TS 7 so the major can land through the weekly group again.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
+      # react-resizable-panels v4 is a full API rewrite (PanelGroup→Group,
+      # PanelResizeHandle→Separator, direction→orientation, new data
+      # attributes), so the shadcn resizable component and its callers need a
+      # deliberate migration. Remove once that migration lands.
+      - dependency-name: react-resizable-panels
+        update-types: ["version-update:semver-major"]
