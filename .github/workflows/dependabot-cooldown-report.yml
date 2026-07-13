@@ -1,0 +1,171 @@
+# Comments on every Dependabot PR with the releases its cooldown (dependabot.yml) is
+# holding back: for each bumped package, any version published after the proposed one,
+# and a warning when the proposed version itself has a known advisory that a held-back
+# release fixes. That keeps the deliberate 72h delay from silently hiding an update a
+# reviewer would want to pull in early (via a security update or a manual bump).
+#
+# Safe by construction: the job never checks out or runs PR code — it reads Dependabot's
+# PR metadata and queries the public npm registry and the GitHub Advisory Database.
+name: Dependabot cooldown report
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  report:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
+
+      - name: Comment held-back updates
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          UPDATED_DEPS: ${{ steps.metadata.outputs.updated-dependencies-json }}
+        with:
+          script: |
+            const MARKER = "<!-- dependabot-cooldown-report -->";
+            const MAX_LISTED = 10;
+            const SEMVER = /^\d+\.\d+\.\d+$/; // stable releases only
+            const semverGt = (a, b) => {
+              const [x, y] = [a, b].map((v) => v.split(".").map(Number));
+              for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i];
+              return false;
+            };
+            const deps = JSON.parse(process.env.UPDATED_DEPS || "[]");
+
+            // The same dependency appears once per manifest it occurs in; report it once.
+            const unique = new Map();
+            for (const d of deps) {
+              unique.set(`${d.packageEcosystem}:${d.dependencyName}@${d.newVersion}`, d);
+            }
+
+            const advisoryEcosystem = { npm_and_yarn: "npm", github_actions: "actions" };
+
+            // Advisories affecting the *proposed* version: a held-back release that fixes
+            // one is exactly the update a reviewer must not miss.
+            async function advisoriesAffecting(dep) {
+              const ecosystem = advisoryEcosystem[dep.packageEcosystem];
+              if (!ecosystem || !dep.newVersion) return [];
+              const { data } = await github.request("GET /advisories", {
+                ecosystem,
+                affects: `${dep.dependencyName}@${dep.newVersion}`,
+                per_page: 10,
+              });
+              return data.map((a) => `[${a.ghsa_id}](${a.html_url}) (${a.severity})`);
+            }
+
+            // Stable versions greater than the proposed one (the set the cooldown is
+            // holding back — anything newer than Dependabot's pick was still too fresh
+            // at check time), oldest first.
+            async function heldBackVersions(dep) {
+              if (!SEMVER.test(dep.newVersion ?? "")) throw new Error("no parseable proposed version");
+              if (dep.packageEcosystem === "npm_and_yarn") {
+                const res = await fetch(
+                  `https://registry.npmjs.org/${encodeURIComponent(dep.dependencyName)}`,
+                );
+                if (!res.ok) throw new Error(`npm registry ${res.status}`);
+                const doc = await res.json();
+                const times = doc.time ?? {};
+                return Object.keys(times)
+                  .filter((v) => SEMVER.test(v) && semverGt(v, dep.newVersion))
+                  .sort((a, b) => (semverGt(a, b) ? 1 : -1))
+                  .map((v) => ({
+                    version: v,
+                    publishedAt: times[v],
+                    deprecated: Boolean(doc.versions?.[v]?.deprecated),
+                  }));
+              }
+              if (dep.packageEcosystem === "github_actions" && dep.dependencyName.includes("/")) {
+                const [owner, repo] = dep.dependencyName.split("/");
+                const { data: releases } = await github.rest.repos.listReleases({
+                  owner,
+                  repo,
+                  per_page: 50,
+                });
+                return releases
+                  .filter((r) => !r.prerelease && !r.draft)
+                  .map((r) => ({ release: r, version: r.tag_name.replace(/^v/, "") }))
+                  .filter(({ version }) => SEMVER.test(version) && semverGt(version, dep.newVersion))
+                  .sort((a, b) => (semverGt(a.version, b.version) ? 1 : -1))
+                  .map(({ release, version }) => ({
+                    version,
+                    publishedAt: release.published_at,
+                    deprecated: false,
+                  }));
+              }
+              throw new Error(`unsupported ecosystem: ${dep.packageEcosystem}`);
+            }
+
+            const importantLines = [];
+            const rows = [];
+            const failures = [];
+            for (const dep of unique.values()) {
+              const label = `\`${dep.dependencyName}@${dep.newVersion}\``;
+              try {
+                const [held, advisories] = await Promise.all([
+                  heldBackVersions(dep),
+                  advisoriesAffecting(dep).catch(() => []),
+                ]);
+                if (advisories.length > 0) {
+                  importantLines.push(
+                    `- ⚠️ ${label} is affected by ${advisories.join(", ")}` +
+                      (held.length > 0
+                        ? ` — a newer release below may fix it; consider bumping past the cooldown.`
+                        : `.`),
+                  );
+                }
+                for (const h of held.slice(0, MAX_LISTED)) {
+                  rows.push(
+                    `| \`${dep.dependencyName}\` | ${dep.newVersion} | ${h.version}` +
+                      `${h.deprecated ? " (deprecated)" : ""} | ${h.publishedAt.slice(0, 16)}Z |`,
+                  );
+                }
+                if (held.length > MAX_LISTED) {
+                  rows.push(`| \`${dep.dependencyName}\` | | …and ${held.length - MAX_LISTED} more | |`);
+                }
+              } catch (error) {
+                failures.push(`- ${label}: ${error.message}`);
+              }
+            }
+
+            const body = [
+              MARKER,
+              "### Cooldown report",
+              "",
+              "Releases newer than this PR's proposed versions, currently held back by the",
+              `[cooldown](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/.github/dependabot.yml).`,
+              "Security updates bypass the cooldown, so an advisory-driven fix will still arrive on its own.",
+              "",
+              ...(importantLines.length > 0 ? [...importantLines, ""] : []),
+              ...(rows.length > 0
+                ? ["| Package | Proposed | Held back | Published |", "| --- | --- | --- | --- |", ...rows]
+                : ["No newer releases are being held back — the proposed versions are the latest."]),
+              ...(failures.length > 0 ? ["", "Could not check:", ...failures] : []),
+            ].join("\n");
+
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            const existing = comments.find((c) => c.body?.includes(MARKER));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.payload.pull_request.number,
+                body,
+              });
+            }
