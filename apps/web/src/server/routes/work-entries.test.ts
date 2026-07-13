@@ -1082,7 +1082,7 @@ it("fails up front when an author email is unknown or not a workspace member", a
 });
 
 it("keeps admin cross-user import idempotent, but blocks re-owning an id", async () => {
-	const { admin, member, memberId, ws, project } = await setup();
+	const { admin, memberId, ws, project } = await setup();
 	const adminId = (
 		(await (await apiGet("/api/v1/me", admin)).json()) as {
 			user: { id: string };

@@ -71,7 +71,8 @@ it("imports a JSONL file through the REST client and returns a summary", async (
 		workspace: "acme",
 	});
 	const post = stub.calls.find((call) => call.method === "POST");
-	expect((post?.body as { entries: unknown[] }).entries).toHaveLength(2);
+	if (!post) throw new Error("expected a POST call");
+	expect((post.body as { entries: unknown[] }).entries).toHaveLength(2);
 });
 
 it("surfaces filesystem errors as tool errors", async () => {

@@ -34,7 +34,8 @@ it("builds urls, query strings, and auth headers", async () => {
 	expect(call.url).toBe(
 		"https://spantail.example.com/api/v1/work-entries?workspaceId=ws1&from=2026-06-01&limit=10",
 	);
-	expect((call.init?.headers as Record<string, string>).authorization).toBe(
+	if (!call.init) throw new Error("expected fetch init options");
+	expect((call.init.headers as Record<string, string>).authorization).toBe(
 		"Bearer spantail_pat_test",
 	);
 });
@@ -51,11 +52,12 @@ it("posts json bodies with content type", async () => {
 
 	const call = calls[0];
 	if (!call) throw new Error("expected a fetch call");
-	expect(call.init?.method).toBe("POST");
-	expect((call.init?.headers as Record<string, string>)["content-type"]).toBe(
+	if (!call.init) throw new Error("expected fetch init options");
+	expect(call.init.method).toBe("POST");
+	expect((call.init.headers as Record<string, string>)["content-type"]).toBe(
 		"application/json",
 	);
-	expect(JSON.parse(String(call.init?.body))).toMatchObject({
+	expect(JSON.parse(String(call.init.body))).toMatchObject({
 		workspaceId: "ws1",
 	});
 });

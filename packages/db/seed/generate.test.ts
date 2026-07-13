@@ -259,7 +259,8 @@ describe("generateDataset", () => {
 
 		for (const d of crossDeliveries) {
 			const report = reportById.get(reportIdOf(d) as string);
-			const workspaceIds = (report?.filters as { workspaceIds: string[] })
+			if (!report) throw new Error("expected a report for the delivery");
+			const workspaceIds = (report.filters as { workspaceIds: string[] })
 				.workspaceIds;
 			for (const wsId of workspaceIds) {
 				expect(membersByWs.get(wsId)?.has(d.recipientUserId as string)).toBe(

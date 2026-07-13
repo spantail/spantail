@@ -30,9 +30,13 @@ export default defineConfig({
 				// Shrink the ingest rate limit so a test can exhaust it in a few
 				// requests; production uses the higher limit from wrangler.jsonc.
 				// Keys are per-credential with fresh ids each test, so no existing
-				// test posts enough to one key to trip this.
+				// test posts enough to one key to trip this. The namespace_id
+				// matches the production binding in wrangler.jsonc.
 				ratelimits: {
-					INGEST_RATE_LIMITER: { simple: { limit: 10, period: 60 } },
+					INGEST_RATE_LIMITER: {
+						namespace_id: "1001",
+						simple: { limit: 10, period: 60 },
+					},
 				},
 				bindings: {
 					TEST_MIGRATIONS: await readD1Migrations(migrationsDir),

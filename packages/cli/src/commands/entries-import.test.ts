@@ -164,8 +164,10 @@ it("splits large files into batches of 100 preserving order", async () => {
 		(post) => (post.body as { entries: unknown[] }).entries.length,
 	);
 	expect(sizes).toEqual([100, 100, 50]);
+	const secondPost = posts[1];
+	if (!secondPost) throw new Error("expected a second POST call");
 	const firstOfSecond = (
-		posts[1]?.body as { entries: Array<{ description: string }> }
+		secondPost.body as { entries: Array<{ description: string }> }
 	).entries[0];
 	expect(firstOfSecond?.description).toBe("entry 100");
 	expect(stdout.text()).toContain("imported 100/250 (request 1/3)");
@@ -291,7 +293,8 @@ it("attributes entries by per-line user and the --user default", async () => {
 
 	expect(code).toBe(0);
 	const post = stub.calls.find((call) => call.method === "POST");
-	const entries = (post?.body as { entries: Array<{ user?: string }> }).entries;
+	if (!post) throw new Error("expected a POST call");
+	const entries = (post.body as { entries: Array<{ user?: string }> }).entries;
 	// Per-line user wins; the line without one falls back to --user.
 	expect(entries[0]?.user).toBe("bob@example.com");
 	expect(entries[1]?.user).toBe("alice@example.com");
