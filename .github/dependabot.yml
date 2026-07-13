@@ -1,0 +1,21 @@
+# Keeps the SHA-pinned actions and the npm dependencies current. Actions are pinned to
+# full-length commit SHAs (enforced by the repository's "require SHA pinning" setting);
+# Dependabot bumps the SHA and the trailing version comment together.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # One PR for all safe bumps; majors stay separate so breaking changes get their own review.
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
