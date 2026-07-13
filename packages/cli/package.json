@@ -44,7 +44,7 @@
 		"@spantail/core": "workspace:*",
 		"@spantail/sdk": "workspace:*",
 		"@types/node": "^25.9.3",
-		"tsdown": "^0.22.2",
-		"vitest": "^4.1.8"
+		"tsdown": "^0.22.7",
+		"vitest": "^4.1.10"
 	}
 }
