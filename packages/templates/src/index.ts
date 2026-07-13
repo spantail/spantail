@@ -1,6 +1,10 @@
 /// <reference path="./liquid-raw.d.ts" />
-import defaultEn from "../catalog/default.en.liquid?raw";
-import defaultJa from "../catalog/default.ja.liquid?raw";
+import dailyEn from "../catalog/daily.en.liquid?raw";
+import dailyJa from "../catalog/daily.ja.liquid?raw";
+import monthlyEn from "../catalog/monthly.en.liquid?raw";
+import monthlyJa from "../catalog/monthly.ja.liquid?raw";
+import weeklyEn from "../catalog/weekly.en.liquid?raw";
+import weeklyJa from "../catalog/weekly.ja.liquid?raw";
 import {
 	type CatalogEntry,
 	type CatalogLocale,
@@ -17,8 +21,12 @@ export interface CatalogTemplate extends CatalogEntry {
 // Bodies are bundled into the Worker by Vite (`?raw`); there is no filesystem at
 // runtime. The Node seed reads the same files via `@spantail/templates/node`.
 const BODIES: Record<string, string> = {
-	"default:en": defaultEn,
-	"default:ja": defaultJa,
+	"daily:en": dailyEn,
+	"daily:ja": dailyJa,
+	"weekly:en": weeklyEn,
+	"weekly:ja": weeklyJa,
+	"monthly:en": monthlyEn,
+	"monthly:ja": monthlyJa,
 };
 
 export const defaultTemplates: CatalogTemplate[] = templateCatalog.map(
@@ -31,13 +39,12 @@ export const defaultTemplates: CatalogTemplate[] = templateCatalog.map(
 	},
 );
 
-/** The default template for a locale, falling back to English. */
-export function defaultTemplateForLocale(
+/** The catalog templates for a locale, falling back to English. */
+export function catalogTemplatesForLocale(
 	locale: CatalogLocale,
-): CatalogTemplate {
-	const match =
-		defaultTemplates.find((t) => t.key === "default" && t.locale === locale) ??
-		defaultTemplates.find((t) => t.key === "default" && t.locale === "en");
-	if (!match) throw new Error("default template catalog is empty");
-	return match;
+): CatalogTemplate[] {
+	const match = defaultTemplates.filter((t) => t.locale === locale);
+	return match.length > 0
+		? match
+		: defaultTemplates.filter((t) => t.locale === "en");
 }

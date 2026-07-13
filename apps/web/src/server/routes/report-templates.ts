@@ -11,11 +11,11 @@ import {
 	getReportTemplateById,
 	listReportTemplates,
 	type ReportTemplateRow,
-	seedDefaultReportTemplate,
+	seedCatalogReportTemplates,
 	setDefaultReportTemplate,
 	updateReportTemplate,
 } from "@spantail/db";
-import { defaultTemplateForLocale } from "@spantail/templates";
+import { catalogTemplatesForLocale } from "@spantail/templates";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
@@ -33,28 +33,33 @@ function toApi(row: ReportTemplateRow) {
  * Instance-scoped report templates. Templates are presentation formats with no
  * workspace binding: any authenticated user can read them to build a report,
  * while creating/editing/disabling is gated by requireTemplateManager. Listing
- * lazily seeds the default template when the instance has none (a fresh or an
- * upgraded instance that previously relied on the removed builtins), so reports
- * are always composable.
+ * lazily seeds the starter catalog (Daily, Weekly, Monthly; Daily is the
+ * default) when the instance has none (a fresh or an upgraded instance that
+ * previously relied on the removed builtins), so reports are always composable.
  */
 export const reportTemplateRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		requireScope(c, "read");
 		let rows = await listReportTemplates(c.var.db);
 		if (rows.length === 0) {
-			// Seed the default in the request's locale. Idempotent (fixed id +
-			// onConflictDoNothing), so concurrent first reads converge on one row.
-			const template = defaultTemplateForLocale(pickShareLocale(c));
-			await seedDefaultReportTemplate(c.var.db, {
-				name: template.name,
-				description: template.description,
-				body: template.body,
-				// The lazily-seeded template is the instance default.
-				isDefault: true,
-				nameTemplate: template.nameTemplate,
-				noteTemplate: template.noteTemplate,
-				createdBy: null,
-			});
+			// Seed the starter catalog in the request's locale. Idempotent (fixed
+			// ids + onConflictDoNothing), so concurrent first reads converge on one
+			// row per template; only Daily carries isDefault.
+			const catalog = catalogTemplatesForLocale(pickShareLocale(c));
+			await seedCatalogReportTemplates(
+				c.var.db,
+				catalog.map((template) => ({
+					id: template.key,
+					name: template.name,
+					description: template.description,
+					body: template.body,
+					isDefault: template.isDefault,
+					nameTemplate: template.nameTemplate,
+					noteTemplate: template.noteTemplate,
+					defaultDateRange: template.defaultDateRange,
+					createdBy: null,
+				})),
+			);
 			rows = await listReportTemplates(c.var.db);
 		}
 		return c.json(rows.map(toApi));

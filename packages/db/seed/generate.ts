@@ -329,10 +329,11 @@ export async function generateDataset(
 		}
 	}
 
-	// --- Templates (one default catalog template) --------------------------
-	// A single instance-scoped default template, seeded from @spantail/templates
-	// in the dataset's `locale`. (In production a fresh instance lazily seeds the
-	// default in the first admin's locale.)
+	// --- Templates (starter catalog: Daily, Weekly, Monthly) ---------------
+	// The instance-scoped starter templates, seeded from @spantail/templates in
+	// the dataset's `locale`. (In production a fresh instance lazily seeds the
+	// same catalog in the first admin's locale.) Only Daily carries isDefault,
+	// keeping the one-default invariant.
 	const seedLocale = locale;
 	const author =
 		[...usersByKey.values()].find((u) => {
@@ -340,7 +341,7 @@ export async function generateDataset(
 			return cfg?.canManageTemplates || cfg?.isAdmin;
 		}) ?? [...usersByKey.values()][0];
 	const templateRows: Row[] = [];
-	let seededTemplate: { id: string; body: string } | undefined;
+	const templatesByKey = new Map<string, { id: string; body: string }>();
 	for (const t of defaultTemplates) {
 		if (t.locale !== seedLocale) continue;
 		const id = randomUUID();
@@ -350,21 +351,26 @@ export async function generateDataset(
 			description: t.description,
 			body: t.body,
 			enabled: true,
-			// The dataset seeds a single template, so it is the instance default.
-			isDefault: true,
+			isDefault: t.isDefault,
 			nameTemplate: t.nameTemplate,
 			noteTemplate: t.noteTemplate,
+			defaultDateRange: t.defaultDateRange,
 			createdBy: author?.id ?? null,
 			createdAt: baseCreatedAt,
 			updatedAt: baseCreatedAt,
 		});
-		seededTemplate = { id, body: t.body };
+		templatesByKey.set(t.key, { id, body: t.body });
 	}
-	if (!seededTemplate)
-		throw new Error(`no ${seedLocale} default template in @spantail/templates`);
-	// One template for the whole dataset (mono-locale), used by every report.
-	const template = seededTemplate;
-	const templateFor = (_language: Language) => template;
+	// Pick a seeded template by catalog key; each report renders through the one
+	// whose type matches its period (daily reports → Daily, etc.).
+	const templateFor = (key: "daily" | "weekly" | "monthly") => {
+		const template = templatesByKey.get(key);
+		if (!template)
+			throw new Error(
+				`no ${seedLocale} "${key}" template in @spantail/templates`,
+			);
+		return template;
+	};
 
 	// --- Work entries (last 45 days, weekdays, 8h/day) ---------------------
 	// entry_date is the workspace-local date, so a member's work in a client
@@ -546,7 +552,7 @@ export async function generateDataset(
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
 			// Covered by a cross-workspace route → reported there, not here.
 			if (routeWsByUser.get(user.key)?.has(ws.key)) continue;
-			const tmpl = templateFor(ws.language);
+			const tmpl = templateFor("daily");
 			const manager = managerByWs.get(ws.key);
 			const byDate = new Map<string, EntryRecord[]>();
 			for (const entry of byWs.get(ws.key) ?? [])
@@ -643,7 +649,7 @@ export async function generateDataset(
 			return ws;
 		});
 		const anchor = routeWs[0] as ResolvedWorkspace;
-		const tmpl = templateFor(anchor.language);
+		const tmpl = templateFor("daily");
 		const recipients = [...usersByKey.values()].filter(
 			(u) =>
 				u.key !== sender.key &&
@@ -768,7 +774,7 @@ export async function generateDataset(
 		const byWs =
 			entriesByUserWs.get(user.key) ?? new Map<string, EntryRecord[]>();
 		for (const ws of workspacesByUser.get(user.key) ?? []) {
-			const tmpl = templateFor(ws.language);
+			const tmpl = templateFor("monthly");
 			for (const month of completedMonthsFor(ws.timezone)) {
 				const entries = (byWs.get(ws.key) ?? []).filter(
 					(e) => e.date >= month.first && e.date <= month.last,

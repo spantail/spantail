@@ -10,7 +10,7 @@ _この期間の稼働記録はありません。_
 ## {{ group.name }} — {{ group.total_minutes | format_duration }}
 
 {% for entry in group.entries -%}
-- {{ entry.description }}（{{ entry.duration_minutes | format_duration }}、{{ entry.user_name }}{% if entry.tags.size > 0 %}、タグ: {{ entry.tags | join: ", " }}{% endif %}）
+- {{ entry.entry_date | format_date: 'no-year' }} — {{ entry.description }}（{{ entry.duration_minutes | format_duration }}、{{ entry.user_name }}）
 {% endfor %}
 {% endfor -%}
 {% endif -%}

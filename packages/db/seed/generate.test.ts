@@ -55,8 +55,8 @@ describe("generateDataset", () => {
 		// 5 internal + Acme 3 + Globex 3 + Meridian 2 + Initech 1.
 		expect(rows("workspaceMembers")).toHaveLength(14);
 		expect(rows("projects")).toHaveLength(14);
-		// One default template, in the dataset's locale (demo → English).
-		expect(rows("reportTemplates")).toHaveLength(1);
+		// Three starter templates (Daily/Weekly/Monthly), in the dataset's locale.
+		expect(rows("reportTemplates")).toHaveLength(3);
 		expect(rows("instanceSettings")).toHaveLength(1);
 		expect(dataset.credentials).toHaveLength(6);
 	});
@@ -168,12 +168,14 @@ describe("generateDataset", () => {
 		expect(maxByTz.get("America/Los_Angeles")).toBe("2026-06-18");
 	});
 
-	it("seeds the default templates and references them from every report", async () => {
+	it("seeds the starter templates and references them from every report", async () => {
 		const { rows } = await build();
 		const templateRows = rows("reportTemplates");
-		// One default template, in the dataset's locale (demo → English), enabled.
-		expect(templateRows.length).toBe(1);
+		// Three starter templates, in the dataset's locale (demo → English),
+		// enabled, with exactly one flagged default (Daily).
+		expect(templateRows.length).toBe(3);
 		expect(templateRows.every((t) => t.enabled === true)).toBe(true);
+		expect(templateRows.filter((t) => t.isDefault === true)).toHaveLength(1);
 		const templateIds = new Set(templateRows.map((t) => t.id));
 		for (const report of rows("reports")) {
 			expect(templateIds.has(report.templateId)).toBe(true);
@@ -391,15 +393,15 @@ describe("generateDataset", () => {
 		}
 	});
 
-	it("seeds the Japanese default template for a -ja dataset", async () => {
+	it("seeds the Japanese starter templates for a -ja dataset", async () => {
 		const demoJaDir = fileURLToPath(
 			new URL("../../../examples/demo-ja/db/seed/", import.meta.url),
 		);
 		const dataset = await generateDataset(NOW, demoJaDir, "ja");
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
-		// One template, and the rendered Japanese monthly report uses it ("合計").
-		expect(rows("reportTemplates")).toHaveLength(1);
+		// Three templates, and the rendered Japanese monthly report uses one ("合計").
+		expect(rows("reportTemplates")).toHaveLength(3);
 		const contentByReport = new Map(
 			rows("reportContent").map((c) => [
 				c.reportId as string,

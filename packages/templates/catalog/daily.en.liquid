@@ -1,0 +1,31 @@
+# {{ report.name }}
+
+**Date:** {{ period.from | format_date: 'year' }}{% if period.to != period.from %} – {{ period.to | format_date: 'year' }}{% endif %} · **Total:** {{ totals.minutes | format_duration }} ({{ totals.entries }} entries)
+
+{% if totals.entries == 0 -%}
+_No work entries in this period._
+
+{% else -%}
+{% for entry in entries -%}
+- **{{ entry.workspace_name }} / {{ entry.project_name }}** — {{ entry.description }} ({{ entry.duration_minutes | format_duration }}, {{ entry.user_name }}){% if entry.note %}
+  - {{ entry.note }}{% endif %}
+{% endfor %}
+{% endif -%}
+{% if totals.agents.sessions > 0 -%}
+## Agent activity
+
+{{ totals.agents.sessions }} sessions · {{ totals.agents.minutes | format_duration }} · {{ totals.agents.tokens }} tokens
+
+{% for group in agent_groups.by_agent -%}
+- {{ group.name }} — {{ group.session_count }} sessions, {{ group.total_minutes | format_duration }}, {{ group.total_tokens }} tokens
+{% endfor %}
+{% endif -%}
+{% if report.note -%}
+## Notes
+
+{{ report.note }}
+
+{% endif -%}
+---
+
+_Generated {{ generated_date | format_date: 'year' }}_
