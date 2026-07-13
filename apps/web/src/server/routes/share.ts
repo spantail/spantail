@@ -11,7 +11,7 @@ import { Hono } from "hono";
 
 import { renderMarkdownToHtml } from "../lib/markdown";
 import {
-	pickShareLocale,
+	pickRequestLocale,
 	renderNotFoundPage,
 	renderPasscodePage,
 	renderSharePage,
@@ -54,7 +54,7 @@ async function respondWithContent(c: Context<AppEnv>, share: UsableShare) {
 	// generated, immune to later report-header edits) feeds only the tab title.
 	return c.html(
 		renderSharePage({
-			locale: pickShareLocale(c),
+			locale: pickRequestLocale(c),
 			title: parseReportFrontMatter(share.content)?.name ?? null,
 			// Hide the system YAML front-matter header on the public page.
 			contentHtml: await renderMarkdownToHtml(
@@ -81,21 +81,21 @@ export const shareRoutes = new Hono<AppEnv>()
 	})
 	.get("/:token", async (c) => {
 		const share = await loadUsableShare(c);
-		if (!share) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
+		if (!share) return c.html(renderNotFoundPage(pickRequestLocale(c)), 404);
 		if (share.passcodeHash) {
-			return c.html(renderPasscodePage({ locale: pickShareLocale(c) }));
+			return c.html(renderPasscodePage({ locale: pickRequestLocale(c) }));
 		}
 		return respondWithContent(c, share);
 	})
 	.post("/:token", async (c) => {
 		const share = await loadUsableShare(c);
-		if (!share) return c.html(renderNotFoundPage(pickShareLocale(c)), 404);
+		if (!share) return c.html(renderNotFoundPage(pickRequestLocale(c)), 404);
 		if (share.passcodeHash) {
 			const form = await c.req.parseBody();
 			const passcode = typeof form.passcode === "string" ? form.passcode : "";
 			if (!(await verifySharePasscode(passcode, share.passcodeHash))) {
 				return c.html(
-					renderPasscodePage({ locale: pickShareLocale(c), error: true }),
+					renderPasscodePage({ locale: pickRequestLocale(c), error: true }),
 					401,
 				);
 			}
@@ -105,4 +105,4 @@ export const shareRoutes = new Hono<AppEnv>()
 	// A sub-app's notFound handler is ignored when mounted via app.route, so
 	// stray paths and methods get the HTML 404 (not the API's JSON envelope)
 	// through this explicit catch-all.
-	.all("*", (c) => c.html(renderNotFoundPage(pickShareLocale(c)), 404));
+	.all("*", (c) => c.html(renderNotFoundPage(pickRequestLocale(c)), 404));

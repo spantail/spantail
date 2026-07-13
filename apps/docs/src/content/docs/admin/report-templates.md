@@ -13,12 +13,12 @@ scope and date range. Templates are instance-wide, so every workspace draws from
 ![The Report templates list: each template's name, its default badge, and its default date
 range.](../../../assets/admin/templates-list.png)
 
-## Starter templates are always available
+## Starter templates
 
-A fresh instance starts with no templates. The first time the list is read, Spantail lazily
-seeds the **starter catalog** (in the request's language) so reports are always composable.
-The seed is idempotent — each template is added once and never duplicated — and you can edit,
-disable, or replace them like any other template.
+When the first user signs up and becomes the instance admin, Spantail seeds the **starter
+catalog** in that admin's language, so reports are always composable from the start. You can edit,
+disable, or replace them like any other template. An instance later emptied of every template is
+not re-seeded — the next template you create becomes the default.
 
 | Template | Purpose | Default date range |
 |---|---|---|

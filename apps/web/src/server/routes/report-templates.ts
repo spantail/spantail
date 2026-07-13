@@ -11,16 +11,13 @@ import {
 	getReportTemplateById,
 	listReportTemplates,
 	type ReportTemplateRow,
-	seedCatalogReportTemplates,
 	setDefaultReportTemplate,
 	updateReportTemplate,
 } from "@spantail/db";
-import { catalogTemplatesForLocale } from "@spantail/templates";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
 import { requireTemplateManager } from "../lib/permissions";
-import { pickShareLocale } from "../lib/share-page";
 import { validate } from "../lib/validate";
 import { requireScope } from "../middleware/auth";
 import type { AppEnv } from "../types";
@@ -32,36 +29,15 @@ function toApi(row: ReportTemplateRow) {
 /**
  * Instance-scoped report templates. Templates are presentation formats with no
  * workspace binding: any authenticated user can read them to build a report,
- * while creating/editing/disabling is gated by requireTemplateManager. Listing
- * lazily seeds the starter catalog (Daily, Weekly, Monthly; Daily is the
- * default) when the instance has none (a fresh or an upgraded instance that
- * previously relied on the removed builtins), so reports are always composable.
+ * while creating/editing/disabling is gated by requireTemplateManager. The
+ * starter catalog (Daily, Weekly, Monthly; Daily is the default) is seeded once
+ * at instance bootstrap, when the first user (the instance admin) signs up, in
+ * that admin's language — see seedStarterTemplates. Listing does not seed.
  */
 export const reportTemplateRoutes = new Hono<AppEnv>()
 	.get("/", async (c) => {
 		requireScope(c, "read");
-		let rows = await listReportTemplates(c.var.db);
-		if (rows.length === 0) {
-			// Seed the starter catalog in the request's locale. Idempotent (fixed
-			// ids + onConflictDoNothing), so concurrent first reads converge on one
-			// row per template; only Daily carries isDefault.
-			const catalog = catalogTemplatesForLocale(pickShareLocale(c));
-			await seedCatalogReportTemplates(
-				c.var.db,
-				catalog.map((template) => ({
-					id: template.key,
-					name: template.name,
-					description: template.description,
-					body: template.body,
-					isDefault: template.isDefault,
-					nameTemplate: template.nameTemplate,
-					noteTemplate: template.noteTemplate,
-					defaultDateRange: template.defaultDateRange,
-					createdBy: null,
-				})),
-			);
-			rows = await listReportTemplates(c.var.db);
-		}
+		const rows = await listReportTemplates(c.var.db);
 		return c.json(rows.map(toApi));
 	})
 	.post("/", async (c) => {
@@ -77,10 +53,10 @@ export const reportTemplateRoutes = new Hono<AppEnv>()
 			createdBy: user.id,
 		});
 		// Keep the "exactly one default" invariant when a template is created on an
-		// instance that has none yet (e.g. a POST before anyone lists templates, so
-		// the lazy seed never ran): promote this row. setDefault clears any existing
-		// default first, so it never trips the one-default unique index even under a
-		// concurrent create that promoted a different row.
+		// instance that has none yet (an instance that predates bootstrap seeding,
+		// or one later emptied of templates): promote this row. setDefault clears
+		// any existing default first, so it never trips the one-default unique index
+		// even under a concurrent create that promoted a different row.
 		const hasDefault = (await listReportTemplates(c.var.db)).some(
 			(t) => t.isDefault,
 		);

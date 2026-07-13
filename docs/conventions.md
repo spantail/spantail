@@ -119,12 +119,14 @@ pnpm run deploy         # wrangler deploy (apps/web); `run` is required — see 
 - **Report templates are instance-scoped formats.** A template is a presentation format,
   independent of any workspace, project, user, or period — a report freely combines any template
   with any scope and date range at run time. Templates are ordinary `report_templates` rows; there
-  are no code-defined builtins. When the templates list is read and the instance has none — a fresh
-  or an upgraded instance — the starter catalog (Daily, Weekly, Monthly, from `@spantail/templates`,
-  in the request's `Accept-Language`) is lazily seeded so reports are always composable; Daily is the
-  instance default, and each starter carries a `defaultDateRange` that only pre-fills the compose
-  dialog. The insert is idempotent (fixed ids + `onConflictDoNothing`). Managing templates requires
-  instance admin or the template-author capability (`user.canManageTemplates`), not a workspace role.
+  are no code-defined builtins. The starter catalog (Daily, Weekly, Monthly, from `@spantail/templates`)
+  is seeded once at instance bootstrap — when the first user, the instance admin, signs up — in that
+  request's `Accept-Language`, so reports are always composable; Daily is the instance default, and
+  each starter carries a `defaultDateRange` that only pre-fills the compose dialog. The insert is
+  idempotent (fixed ids + `onConflictDoNothing`). An instance later emptied of templates is not
+  re-seeded; the first template created on it is promoted to default instead. Managing templates
+  requires instance admin or the template-author capability (`user.canManageTemplates`), not a
+  workspace role.
 - **Report templates are user input.** LiquidJS rendering must keep the safety settings
   (own-property access only, strict filters, parse/render/memory limits, file tags disabled).
   Rendered Markdown must be displayed without raw-HTML passthrough.

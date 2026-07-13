@@ -35,7 +35,7 @@ template-author capability (`user.canManageTemplates`), not a workspace role.
 | `nameTemplate` | string \| null | Liquid that generates a new report's initial name (`suggestedName` in the preview). |
 | `noteTemplate` | string \| null | Liquid that generates a new report's initial note (`suggestedNote`). |
 | `defaultDateRange` | string \| null | The date range a new report starts with (`today`, `yesterday`, `this_week`, `last_week`, `this_month`, `last_month`), or `null` to fall back to Today. |
-| `createdBy` | string \| null | The user who created it, or `null` for the lazily-seeded starter templates. |
+| `createdBy` | string \| null | The user who created it, or `null` for the seeded starter templates. |
 | `createdAt` | string \| null | ISO 8601 creation instant. |
 | `updatedAt` | string \| null | ISO 8601 last-update instant. |
 
@@ -43,11 +43,10 @@ template-author capability (`user.canManageTemplates`), not a workspace role.
 
 `GET /api/v1/report-templates` <Badge text="scope: read" variant="note" />
 
-Returns all templates. When the instance has none — a fresh or an upgraded instance — the starter
-catalog (Daily, Weekly, Monthly, from `@spantail/templates`, in the request's `Accept-Language`) is
-lazily seeded so reports are always composable; Daily is the instance default. The seed is
-idempotent (fixed ids + insert-if-absent), so concurrent first reads converge on one row per
-template.
+Returns all templates. The starter catalog (Daily, Weekly, Monthly, from `@spantail/templates`) is
+seeded once at instance bootstrap — when the first user, the instance admin, signs up — in that
+request's `Accept-Language`, so reports are always composable; Daily is the instance default.
+Listing does not seed.
 
 <Tabs>
 <TabItem label="curl">

@@ -18,9 +18,9 @@ const updatedAtMs = () =>
 		.notNull();
 
 // Templates are instance-scoped presentation formats: a report picks one
-// freely, independent of which workspaces/projects/period it covers. A fresh
-// instance is seeded with the starter catalog (Daily, Weekly, Monthly) from
-// @spantail/templates; Daily is the instance default.
+// freely, independent of which workspaces/projects/period it covers. At
+// instance bootstrap the starter catalog (Daily, Weekly, Monthly) from
+// @spantail/templates is seeded; Daily is the instance default.
 export const reportTemplates = sqliteTable(
 	"report_templates",
 	{
@@ -32,9 +32,9 @@ export const reportTemplates = sqliteTable(
 		// Admin-controlled: disabled templates are hidden from the report tabs.
 		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 		// Exactly one template is the instance default: at most one at the DB level
-		// (the partial unique index below), at least one in the app layer (the lazy
-		// seed and the first-create fallback). It is the compose dialog's fallback
-		// pick and cannot be deleted or disabled.
+		// (the partial unique index below), at least one in the app layer (the
+		// bootstrap seed and the first-create fallback). It is the compose dialog's
+		// fallback pick and cannot be deleted or disabled.
 		isDefault: integer("is_default", { mode: "boolean" })
 			.notNull()
 			.default(false),

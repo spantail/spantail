@@ -35,14 +35,14 @@ export async function createReportTemplate(
 }
 
 /**
- * Seeds the instance's starter templates idempotently. Triggered lazily when the
- * templates list is read and the instance has none. Callers pass fixed ids (the
- * catalog keys), so onConflictDoNothing makes the insert race-safe: two
- * concurrent first reads converge on one row per key instead of inserting
- * duplicates. Only one row carries isDefault, so the batch never trips the
- * one-default unique index by itself; a concurrent create that already promoted
- * a different default just makes that row's insert a no-op (the non-default rows
- * still land). A no-op once the rows exist.
+ * Seeds the instance's starter templates idempotently. Run once at instance
+ * bootstrap, when the first user (the instance admin) signs up. Callers pass
+ * fixed ids (the catalog keys), so onConflictDoNothing makes the insert
+ * race-safe: two concurrent first sign-ups converge on one row per key instead
+ * of inserting duplicates. Only one row carries isDefault, so the batch never
+ * trips the one-default unique index by itself; a concurrent create that already
+ * promoted a different default just makes that row's insert a no-op (the
+ * non-default rows still land). A no-op once the rows exist.
  */
 export async function seedCatalogReportTemplates(
 	db: Database,
