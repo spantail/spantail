@@ -72,16 +72,21 @@ jobs:
             // The same dependency appears once per manifest it occurs in; report it once.
             const unique = new Map();
             for (const d of deps) {
-              unique.set(`${d.packageEcosystem}:${d.dependencyName}@${d.newVersion}`, d);
+              unique.set(`${d.dependencyName}@${d.newVersion}`, d);
             }
 
-            const advisoryEcosystem = { npm_and_yarn: "npm", github_actions: "actions" };
+            // fetch-metadata derives packageEcosystem from the branch name, which for a
+            // multi-ecosystem group is the group slug (e.g. weekly_updates-<hash>), not an
+            // ecosystem. The name itself is unambiguous: an action ref is owner/repo while
+            // an npm name is either bare or @scope/name.
+            const isAction = (dep) =>
+              dep.dependencyName.includes("/") && !dep.dependencyName.startsWith("@");
 
             // Advisories affecting the *proposed* version: a held-back release that fixes
             // one is exactly the update a reviewer must not miss.
             async function advisoriesAffecting(dep) {
-              const ecosystem = advisoryEcosystem[dep.packageEcosystem];
-              if (!ecosystem || !dep.newVersion) return [];
+              const ecosystem = isAction(dep) ? "actions" : "npm";
+              if (!dep.newVersion) return [];
               const { data } = await github.request("GET /advisories", {
                 ecosystem,
                 affects: `${dep.dependencyName}@${dep.newVersion}`,
@@ -95,7 +100,7 @@ jobs:
             // at check time), oldest first.
             async function heldBackVersions(dep) {
               if (!SEMVER.test(dep.newVersion ?? "")) throw new Error("no parseable proposed version");
-              if (dep.packageEcosystem === "npm_and_yarn") {
+              if (!isAction(dep)) {
                 const res = await fetch(
                   `https://registry.npmjs.org/${encodeURIComponent(dep.dependencyName)}`,
                 );
@@ -111,25 +116,22 @@ jobs:
                     deprecated: Boolean(doc.versions?.[v]?.deprecated),
                   }));
               }
-              if (dep.packageEcosystem === "github_actions" && dep.dependencyName.includes("/")) {
-                const [owner, repo] = dep.dependencyName.split("/");
-                const { data: releases } = await github.rest.repos.listReleases({
-                  owner,
-                  repo,
-                  per_page: 50,
-                });
-                return releases
-                  .filter((r) => !r.prerelease && !r.draft)
-                  .map((r) => ({ release: r, version: r.tag_name.replace(/^v/, "") }))
-                  .filter(({ version }) => SEMVER.test(version) && semverGt(version, dep.newVersion))
-                  .sort((a, b) => (semverGt(a.version, b.version) ? 1 : -1))
-                  .map(({ release, version }) => ({
-                    version,
-                    publishedAt: release.published_at,
-                    deprecated: false,
-                  }));
-              }
-              throw new Error(`unsupported ecosystem: ${dep.packageEcosystem}`);
+              const [owner, repo] = dep.dependencyName.split("/");
+              const { data: releases } = await github.rest.repos.listReleases({
+                owner,
+                repo,
+                per_page: 50,
+              });
+              return releases
+                .filter((r) => !r.prerelease && !r.draft)
+                .map((r) => ({ release: r, version: r.tag_name.replace(/^v/, "") }))
+                .filter(({ version }) => SEMVER.test(version) && semverGt(version, dep.newVersion))
+                .sort((a, b) => (semverGt(a.version, b.version) ? 1 : -1))
+                .map(({ release, version }) => ({
+                  version,
+                  publishedAt: release.published_at,
+                  deprecated: false,
+                }));
             }
 
             const importantLines = [];
