@@ -40,6 +40,30 @@ jobs:
             };
             const deps = JSON.parse(process.env.UPDATED_DEPS || "[]");
 
+            // fetch-metadata's released parser leaves prev/new versions empty for grouped
+            // PRs, so recover each proposed version from the Dependabot commit trailer
+            // (`- dependency-name: X` / `  dependency-version: Y` pairs).
+            const missingVersions = deps.some((d) => !d.newVersion);
+            if (missingVersions) {
+              const { data: commits } = await github.rest.pulls.listCommits({
+                ...context.repo,
+                pull_number: context.payload.pull_request.number,
+                per_page: 1,
+              });
+              const message = commits[0]?.commit.message ?? "";
+              const trailer = new Map();
+              let name = null;
+              for (const line of message.split("\n")) {
+                const nameMatch = line.match(/^- dependency-name: "?([^"\s]+)"?$/);
+                if (nameMatch) { name = nameMatch[1]; continue; }
+                const versionMatch = line.match(/^ {2}dependency-version: "?([^"\s]+)"?$/);
+                if (versionMatch && name) { trailer.set(name, versionMatch[1]); name = null; }
+              }
+              for (const d of deps) {
+                if (!d.newVersion) d.newVersion = trailer.get(d.dependencyName) ?? "";
+              }
+            }
+
             // The same dependency appears once per manifest it occurs in; report it once.
             const unique = new Map();
             for (const d of deps) {
