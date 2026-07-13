@@ -356,9 +356,9 @@ it("creates a github-sourced entry with title, labels, ref, and reply", async ()
 	const reply = recorded.find(
 		(call) => call.method === "POST" && call.url.endsWith("/issues/5/comments"),
 	);
-	expect(reply).toBeDefined();
-	expect((reply?.body as { body: string }).body).toContain("Logged 1h 30m");
-	expect((reply?.body as { body: string }).body).toContain("1.5h");
+	if (!reply) throw new Error("expected a reply comment call");
+	expect((reply.body as { body: string }).body).toContain("Logged 1h 30m");
+	expect((reply.body as { body: string }).body).toContain("1.5h");
 	expect(recorded.some((call) => call.url.includes("/reactions"))).toBe(true);
 });
 
@@ -389,7 +389,8 @@ it("replies with the parse error for malformed commands", async () => {
 	const reply = recorded.find((call) =>
 		call.url.endsWith("/issues/5/comments"),
 	);
-	expect((reply?.body as { body: string }).body).toContain(
+	if (!reply) throw new Error("expected a reply comment call");
+	expect((reply.body as { body: string }).body).toContain(
 		"Could not read a duration",
 	);
 });
@@ -416,7 +417,8 @@ it("ignores mentions of other accounts sharing the prefix", async () => {
 	const reply = recorded.find((call) =>
 		call.url.endsWith("/issues/5/comments"),
 	);
-	expect((reply?.body as { body: string }).body).toContain("Usage");
+	if (!reply) throw new Error("expected a reply comment call");
+	expect((reply.body as { body: string }).body).toContain("Usage");
 });
 
 it("rejects oversized webhook bodies before verification", async () => {
@@ -470,7 +472,8 @@ it("onboards unlinked insiders with a connect link", async () => {
 	const reply = recorded.find((call) =>
 		call.url.endsWith("/issues/5/comments"),
 	);
-	expect((reply?.body as { body: string }).body).toContain(
+	if (!reply) throw new Error("expected a reply comment call");
+	expect((reply.body as { body: string }).body).toContain(
 		"https://example.com/api/github/connect",
 	);
 });
@@ -497,7 +500,8 @@ it("does not resolve a reused repo name whose immutable id differs", async () =>
 	const reply = recorded.find((call) =>
 		call.url.endsWith("/issues/5/comments"),
 	);
-	expect((reply?.body as { body: string }).body).toContain("not mapped");
+	if (!reply) throw new Error("expected a reply comment call");
+	expect((reply.body as { body: string }).body).toContain("not mapped");
 });
 
 it("enforces the project ACL for workspace members outside the project", async () => {
@@ -527,7 +531,8 @@ it("enforces the project ACL for workspace members outside the project", async (
 	const reply = recorded.find((call) =>
 		call.url.endsWith("/issues/5/comments"),
 	);
-	expect((reply?.body as { body: string }).body).toContain(
+	if (!reply) throw new Error("expected a reply comment call");
+	expect((reply.body as { body: string }).body).toContain(
 		"not a member of the project",
 	);
 });
@@ -568,7 +573,8 @@ it("rejects linked users outside the mapped workspace with a reply", async () =>
 	const reply = recorded.find((call) =>
 		call.url.endsWith("/issues/5/comments"),
 	);
-	expect((reply?.body as { body: string }).body).toContain("not a member");
+	if (!reply) throw new Error("expected a reply comment call");
+	expect((reply.body as { body: string }).body).toContain("not a member");
 	void ctx;
 });
 
