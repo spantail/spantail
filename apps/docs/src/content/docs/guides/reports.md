@@ -27,8 +27,8 @@ Markdown preview on the right.](../../../assets/reports/01-new-report.png)
 Set:
 
 - **Template** — the presentation format. If your instance has a **default
-  template**, the form opens with it preselected; if your instance has none yet, a
-  template is provided automatically so you can always compose a report.
+  template**, the form opens with it preselected; if your instance has none yet, the
+  starter templates are provided automatically so you can always compose a report.
 - **Scope** — a single choice: one **workspace**, or **all your workspaces**
   (*instance scope*). Projects can be narrowed only when a single workspace is
   selected.

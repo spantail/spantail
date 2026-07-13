@@ -1,6 +1,6 @@
 ---
 title: Managing templates
-description: Manage the instance-wide report templates — the list, the starter, and the default.
+description: Manage the instance-wide report templates — the list, the starter catalog, and the default.
 ---
 
 **Settings → Report → Report templates.** Open to **instance admins** and users with the
@@ -13,12 +13,21 @@ scope and date range. Templates are instance-wide, so every workspace draws from
 ![The Report templates list: each template's name, its default badge, and its default date
 range.](../../../assets/admin/templates-list.png)
 
-## A starter template is always available
+## Starter templates are always available
 
 A fresh instance starts with no templates. The first time the list is read, Spantail lazily
-seeds a single **starter template** (in the request's language) so reports are always composable.
-The seed is idempotent — it is added once and never duplicated — and you can edit, disable, or
-replace it like any other template.
+seeds the **starter catalog** (in the request's language) so reports are always composable.
+The seed is idempotent — each template is added once and never duplicated — and you can edit,
+disable, or replace them like any other template.
+
+| Template | Purpose | Default date range |
+|---|---|---|
+| **Daily report** | One day's work across your workspaces, entry by entry — for a daily meeting. | Today |
+| **Weekly report** | The week's activity grouped by project — for an iteration meeting. | This week |
+| **Monthly report** | A monthly work report to submit to a client — summary first, then the work log. | This month |
+
+Each starter carries a default date range that pre-fills the composer; the template itself stays
+period-agnostic, so any template still renders any date range.
 
 ## The default template
 
@@ -26,7 +35,7 @@ One template can be marked the **default** — the one the report composer prese
 report. Use **Set as default** on a template to move the flag to it; at most one template holds
 it at a time, and it shows a **Default** badge in the list. The default template cannot be
 deleted or disabled while it holds the flag — set another template as default first to release
-it. The seeded starter template starts out as the default, so a fresh instance always has one.
+it. The seeded **Daily report** starts out as the default, so a fresh instance always has one.
 
 ## Managing templates
 

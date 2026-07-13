@@ -151,7 +151,7 @@ Spantail はテンプレートを [LiquidJS](https://liquidjs.com/) でレンダ
 - `{{ date | format_date: 'year' }}` — 常に年を表示（`2026年6月1日(月)`）。
 - `{{ date | format_date: 'no-year' }}` — 年を表示しない。
 
-スターターテンプレートは `'year'` を渡すため、期間行と生成日には常に年が付きます。`format_date` は
+スターターテンプレートはいずれも `'year'` を渡すため、期間行と生成日には常に年が付きます。`format_date` は
 時刻を一切表示しません。
 
 ### `format_duration`
