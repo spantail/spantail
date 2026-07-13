@@ -107,7 +107,7 @@ jobs:
             const rows = [];
             const failures = [];
             for (const dep of unique.values()) {
-              const label = `\`${dep.dependencyName}@${dep.newVersion}\``;
+              const label = `\`${dep.dependencyName}${dep.newVersion ? `@${dep.newVersion}` : ""}\``;
               try {
                 const [held, advisories] = await Promise.all([
                   heldBackVersions(dep),
@@ -150,7 +150,7 @@ jobs:
               ...(failures.length > 0 ? ["", "Could not check:", ...failures] : []),
             ].join("\n");
 
-            const { data: comments } = await github.rest.issues.listComments({
+            const comments = await github.paginate(github.rest.issues.listComments, {
               ...context.repo,
               issue_number: context.payload.pull_request.number,
               per_page: 100,
