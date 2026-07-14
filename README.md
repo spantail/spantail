@@ -36,6 +36,7 @@ Spantail runs entirely on Cloudflare:
 
 - **Workers** — a single Worker serves the REST API (`/api/v1`), the MCP endpoint (`/mcp`), shared report views, and the SPA static assets
 - **D1** — primary database
+- **R2** — uploaded images (user avatars, workspace logos)
 
 Backend is [Hono](https://hono.dev) with [Drizzle](https://orm.drizzle.team) and [Better Auth](https://better-auth.com). Frontend is a React SPA built with Vite, TanStack Router/Query, and shadcn/ui.
 
