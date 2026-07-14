@@ -18,7 +18,7 @@ see the Agents settings described below, ask your instance admin.
 
 Open **Settings → Agents** (under Account) and create an agent. Each agent has:
 
-- A **type** — Claude Code, Codex, Cursor, or Other.
+- A **type** — currently Claude Code.
 - A **default workspace** — where its sessions land.
 - **Associated projects** *(optional)* — for grouping its activity.
 
