@@ -60,15 +60,15 @@ pnpm dev                # SPA + Worker を http://localhost:5173 で起動
    :::
 
 3. **フォークから Worker を作成**します。ダッシュボードで **Workers & Pages → 作成 →
-   リポジトリをインポート**を開き、フォークに Cloudflare の GitHub アプリをインストールして選択し、
+   Connect GitHub** を開き、フォークに Cloudflare の GitHub アプリをインストールして選択し、
    次を設定します。
 
    - **プロジェクト名:** `spantail` — `apps/web/wrangler.jsonc` の `name` と一致させます。異なると
      Cloudflare が名前を揃えるための Pull Request をフォークに作成し、Sync fork と衝突します。
-   - **ルートディレクトリ:** `apps/web`
-   - **ビルドコマンド:** _空のまま_
-   - **デプロイコマンド:** `pnpm run deploy:ci`
-   - **ビルド変数:** `D1_DATABASE_ID` = 手順 2 の `database_id`
+   - **ビルド コマンド:** 値が入っていたら空にします。
+   - **デプロイ コマンド:** 初期値を `pnpm run deploy:ci` に書き換えます。
+   - **詳細設定 → パス:** `apps/web`
+   - **詳細設定 → 変数を追加する:** `D1_DATABASE_ID` = 手順 2 の `database_id`
 
    `deploy:ci` はビルド・リモートデータベースへのマイグレーション適用・デプロイを 1 コマンドで行います。
    `D1_DATABASE_ID` はビルド時に注入されるため、インスタンス固有の値をフォークにコミットする必要は

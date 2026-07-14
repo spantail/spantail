@@ -53,18 +53,20 @@ Cloudflare requires a payment method to enable it.
    (enable R2 first if prompted), click **Create bucket**, name it
    `spantail-uploads`, and click **Create bucket**.
 
-   **d. Import your fork as a Worker.** Open **Workers & Pages**, click
-   **Create**, then the **Import a repository** tab. The first time, click
-   **GitHub → Install & Authorize** (or **+ Add account**), pick your account,
-   choose **Only select repositories → `spantail`**, and install. Back on the
-   import screen, select `your-account/spantail` and set:
+   **d. Import your fork as a Worker.** Open **Workers & Pages** and click
+   **Create**. On the **Ship something new** screen, click **Connect GitHub**.
+   The first time, GitHub asks where to install the **Cloudflare Workers and
+   Pages** app: pick your account, choose **Only select repositories →
+   `spantail`**, and install. Back in the dashboard, the **Select a repository**
+   step lists your repositories: select `spantail`, click **Next**, and set:
 
    - **Project name:** `spantail` — must match `name` in `apps/web/wrangler.jsonc`.
-   - **Root directory:** `apps/web`
-   - **Build command:** *leave empty*
-   - **Deploy command:** `pnpm run deploy:ci`
-   - Expand **Build variables and secrets** and add a **variable**:
-     `D1_DATABASE_ID` = the Database ID you copied in step **b**.
+   - **Build command:** clear it if a value is pre-filled — it must be empty.
+   - **Deploy command:** replace the pre-filled default with `pnpm run deploy:ci`.
+   - Expand **Advanced settings**:
+     - **Path:** `apps/web`
+     - **Add variable:** `D1_DATABASE_ID` = the Database ID you copied in
+       step **b**.
 
    Click **Create and deploy**. The first build applies the migrations and
    deploys the Worker. When it finishes, the Worker's page shows its public

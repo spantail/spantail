@@ -53,17 +53,20 @@ Cloudflare アカウントで R2 を有効化**しておく必要があります
    **Create bucket** をクリックします。
 
    **d. fork を Worker としてインポートする。** **Workers & Pages** を開き、**Create**
-   をクリックして **Import a repository** タブを選びます。初回は
-   **GitHub → Install & Authorize**（または **+ Add account**）をクリックし、自分の
-   アカウントを選び、**Only select repositories → `spantail`** を選んでインストール
-   します。インポート画面に戻ったら `自分のアカウント/spantail` を選び、次を設定します。
+   をクリックします。**Ship something new** 画面で **Connect GitHub** をクリックします。
+   初回は GitHub 側で **Cloudflare Workers and Pages** アプリのインストール先を
+   聞かれるので、自分のアカウントを選び、**Only select repositories → `spantail`**
+   を選んでインストールします。ダッシュボードに戻ると **Select a repository**
+   ステップにリポジトリ一覧が表示されるので、`spantail` を選んで **次へ** を
+   クリックし、次を設定します。
 
-   - **Project name:** `spantail` — `apps/web/wrangler.jsonc` の `name` と一致させます。
-   - **Root directory:** `apps/web`
-   - **Build command:** 空のまま
-   - **Deploy command:** `pnpm run deploy:ci`
-   - **Build variables and secrets** を開き、**variable** を追加:
-     `D1_DATABASE_ID` = 手順 **b** で控えた Database ID。
+   - **プロジェクト名:** `spantail` — `apps/web/wrangler.jsonc` の `name` と一致させます。
+   - **ビルド コマンド:** 値が入っていたら空にします。
+   - **デプロイ コマンド:** 初期値を `pnpm run deploy:ci` に書き換えます。
+   - **詳細設定** を開き:
+     - **パス:** `apps/web`
+     - **変数を追加する:** 変数名 `D1_DATABASE_ID`、変数値 = 手順 **b** で控えた
+       Database ID。
 
    **Create and deploy** をクリックします。最初のビルドがマイグレーションを適用して
    Worker をデプロイします。完了すると Worker のページに公開アドレス

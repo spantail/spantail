@@ -61,15 +61,15 @@ Cloudflare account (a database backup during an upgrade does use local Wrangler)
    :::
 
 3. **Create the Worker from your fork.** In the dashboard, go to **Workers & Pages → Create →
-   Import a repository**, install the Cloudflare GitHub app for your fork, and select it. Then set:
+   Connect GitHub**, install the Cloudflare GitHub app for your fork, and select it. Then set:
 
    - **Project name:** `spantail` — match `name` in `apps/web/wrangler.jsonc`. If they differ,
      Cloudflare opens a pull request against your fork to reconcile the name, which would conflict
      with Sync fork.
-   - **Root directory:** `apps/web`
-   - **Build command:** _leave empty_
-   - **Deploy command:** `pnpm run deploy:ci`
-   - **Build variable:** `D1_DATABASE_ID` = the `database_id` from step 2
+   - **Build command:** clear it if a value is pre-filled — it must be empty.
+   - **Deploy command:** replace the pre-filled default with `pnpm run deploy:ci`.
+   - **Advanced settings → Path:** `apps/web`
+   - **Advanced settings → Add variable:** `D1_DATABASE_ID` = the `database_id` from step 2
 
    `deploy:ci` builds, applies migrations to your remote database, and deploys — all in one command.
    The `D1_DATABASE_ID` build variable is injected into the build, so nothing per-instance is ever
