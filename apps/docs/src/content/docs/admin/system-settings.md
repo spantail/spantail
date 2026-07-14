@@ -52,6 +52,13 @@ already-open tabs keep their stream until they reload.
 Controls whether Spantail sends mail (invitations, password resets, report delivery). It uses
 Cloudflare Email Service and needs a Workers Paid plan; it is off by default.
 
+Delivery only works after **Email Sending** is set up on the Cloudflare account that runs the
+Worker. The From address's domain must be a zone on that account; onboard it under
+**Compute & AI → Email Service → Email Sending → Onboard Domain** (this adds the required SPF
+and DKIM DNS records) or with `npx wrangler email sending enable <domain>`. The From address
+below must use the onboarded domain. See the
+[Email Service getting-started guide](https://developers.cloudflare.com/email-service/get-started/).
+
 - **Enable email delivery** — turn delivery on or off.
 - **From address** — the sender address (required to enable delivery).
 - **From name** — an optional friendly sender name.

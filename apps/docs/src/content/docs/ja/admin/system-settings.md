@@ -51,6 +51,14 @@ Free プランでも利用者がごく少数のときに有効にしてくださ
 Spantail がメール（招待・パスワードリセット・レポート配信）を送るかどうかを制御します。
 Cloudflare Email Service を使い、Workers Paid プランが必要です。既定はオフです。
 
+配信には、Worker を動かしている Cloudflare アカウント側で **Email Sending** の事前設定が
+必要です。送信元アドレスのドメインがそのアカウントのゾーンである必要があり、
+**Compute & AI → Email Service → Email Sending → Onboard Domain**（必要な SPF・DKIM の
+DNS レコードが自動追加されます）または `npx wrangler email sending enable <domain>` で
+オンボードします。下の送信元アドレスには、オンボードしたドメインのアドレスを指定します。
+[Email Service のはじめ方](https://developers.cloudflare.com/email-service/get-started/)を
+参照してください。
+
 - **メール配信を有効化** — 配信をオン/オフします。
 - **送信元アドレス** — 送信者アドレス（配信を有効にするには必須）。
 - **送信元名** — 任意の分かりやすい送信者名。
