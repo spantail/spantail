@@ -53,16 +53,19 @@ log work and build a report without leaving your editor.
    in, and optionally a project and an expiry.
 
    Saving shows the **agent access token** (`spantail_aat_…`) once, alongside the
-   **Workspace ID** and **Project ID** you will paste into the plugin. Copy all
-   three now — the token is never shown again.
+   **Workspace ID** and **Project ID** you will paste into the plugin. Copy the
+   token now — it is never shown again. The two IDs you can also copy later,
+   from the sidebar.
 
    ![The dialog shown after creating an agent: the one-time access token and the
    workspace and project ids for the plugin.](../../../assets/claude-code/02-agent-token.png)
 
-   The agent token is **write-only and ingest-only**: it can send agent activity
-   and nothing else. The plugin's skills act *as you*, so they need a second
-   credential — a **personal API token** (`spantail_pat_…`) from
-   **Settings → API tokens**. Create one now if you plan to do step 5.
+   That was the first of the two tokens. It is **write-only and ingest-only**:
+   it can send agent activity and nothing else. The plugin's skills act *as
+   you*, so they need a second credential.
+
+   The second token is a **personal API token** (`spantail_pat_…`): issue one
+   under **Settings → API tokens**. Create it now if you plan to do step 5.
 
    The full model — what an agent is, which token does what — is in
    [Capturing agent activity](/guides/capturing-agents/).
@@ -76,10 +79,28 @@ log work and build a report without leaving your editor.
    /plugin install spantail@spantail
    ```
 
-   Enabling the plugin prompts for its settings. Fill in your instance URL
-   (`apiUrl`) and the agent token (`agentToken`); add the personal API token
-   (`apiToken`) to enable the skills, and the workspace and project ids if you
-   copied them.
+   When the install asks for a scope, pick **local**: it enables the plugin
+   for this repository only, just for you (`.claude/settings.local.json`,
+   gitignored) — the right fit here, since the configuration carries your
+   personal tokens.
+
+   Enabling the plugin prompts for its **Plugin options**:
+
+   - **Spantail instance URL** — the instance URL from the quickstart,
+     **without a trailing slash**
+     (`https://spantail.<your-subdomain>.workers.dev`). A trailing slash
+     doubles the slash in the hooks' request URLs (`…//api/v1/…`), and the
+     Stop and SessionEnd hooks stop working.
+   - **Agent access token** — the `spantail_aat_…` token from step 2.
+   - **Personal API token** — the `spantail_pat_…` token from step 2; the
+     skills need it. Leave blank to use only the telemetry hooks.
+   - **Workspace id** — the workspace you created in the quickstart; copy its
+     ID from the workspace switcher.
+   - **Project id** — the project you created in the quickstart; copy its ID
+     from the sidebar.
+   - **Send plan title as session summary** — when **ON**, a session that used
+     plan mode sends its plan file's title to Spantail as the entry
+     description when it ends.
 
    The plugin registers three hooks, two of which send anything. On every
    **Stop** — the end of a turn — it posts that turn's token usage, timestamp,
