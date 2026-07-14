@@ -80,9 +80,10 @@ log work and build a report without leaving your editor.
    ```
 
    When the install asks for a scope, pick **local**: it enables the plugin
-   for this repository only, just for you (`.claude/settings.local.json`,
-   gitignored) — the right fit here, since the configuration carries your
-   personal tokens.
+   for this repository only, just for you, in `.claude/settings.local.json` —
+   the right fit here, since the configuration carries your personal tokens.
+   Make sure that file is ignored in the repository you install into (this
+   repository's `.gitignore` covers it).
 
    Enabling the plugin prompts for its **Plugin options**:
 

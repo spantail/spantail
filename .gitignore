@@ -29,6 +29,9 @@ PROGRESS.md
 # Playwright MCP scratch output
 .playwright-mcp/
 
+# Claude Code per-user local settings (plugin enablement, personal permissions)
+.claude/settings.local.json
+
 # Editor / OS
 .DS_Store
 *.log
