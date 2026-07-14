@@ -77,7 +77,8 @@ Lets users sign in with **Google** or **GitHub** in addition to email and passwo
 
 - **Per-provider toggle** — enable Google and GitHub independently. A provider can only be enabled
   once its OAuth credentials are present in the environment; until then it stays disabled with a
-  hint.
+  hint. Registering the OAuth app with the provider and setting the client ID and secret on the
+  Worker is covered in [Configuration → Social login](/self-hosting/configuration/#social-login).
 - **Google self-join domains** — one domain per line. Google users in these domains can join
   **without an invitation**. Leave it empty to require an invitation for everyone; out-of-domain
   users can still be invited.
