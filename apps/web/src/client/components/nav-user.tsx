@@ -1,6 +1,6 @@
 import type { AuthUser } from "@spantail/core";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { LogOutIcon, UserIcon } from "lucide-react";
+import { BookOpenIcon, LogOutIcon, UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { PersonAvatar } from "@/components/person-avatar";
@@ -20,8 +20,12 @@ import { queryClient } from "@/lib/query";
 // User-scoped menu in the header's top-right corner — deliberately outside
 // the workspace-scoped sidebar.
 export function NavUser({ user }: { user: AuthUser }) {
-	const { t } = useTranslation();
+	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
+
+	const guideUrl = i18n.language.startsWith("ja")
+		? "https://docs.spantail.com/ja/guides/"
+		: "https://docs.spantail.com/guides/";
 
 	return (
 		<DropdownMenu>
@@ -56,6 +60,12 @@ export function NavUser({ user }: { user: AuthUser }) {
 							<UserIcon />
 							{t("nav.account")}
 						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
+						<a href={guideUrl} target="_blank" rel="noopener noreferrer">
+							<BookOpenIcon />
+							{t("nav.userGuide")}
+						</a>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
