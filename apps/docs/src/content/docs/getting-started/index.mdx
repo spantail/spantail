@@ -53,18 +53,20 @@ Cloudflare requires a payment method to enable it.
    (enable R2 first if prompted), click **Create bucket**, name it
    `spantail-uploads`, and click **Create bucket**.
 
-   **d. Import your fork as a Worker.** Open **Workers & Pages**, click
-   **Create**, then the **Import a repository** tab. The first time, click
-   **GitHub → Install & Authorize** (or **+ Add account**), pick your account,
-   choose **Only select repositories → `spantail`**, and install. Back on the
-   import screen, select `your-account/spantail` and set:
+   **d. Import your fork as a Worker.** Open **Workers & Pages** and click
+   **Create**. On the **Ship something new** screen, click **Connect GitHub**.
+   The first time, GitHub asks where to install the **Cloudflare Workers and
+   Pages** app: pick your account, choose **Only select repositories →
+   `spantail`**, and install. Back in the dashboard, the **Select a repository**
+   step lists your repositories: select `spantail`, click **Next**, and set:
 
    - **Project name:** `spantail` — must match `name` in `apps/web/wrangler.jsonc`.
-   - **Root directory:** `apps/web`
-   - **Build command:** *leave empty*
-   - **Deploy command:** `pnpm run deploy:ci`
-   - Expand **Build variables and secrets** and add a **variable**:
-     `D1_DATABASE_ID` = the Database ID you copied in step **b**.
+   - **Build command:** clear it if a value is pre-filled — it must be empty.
+   - **Deploy command:** replace the pre-filled default with `pnpm run deploy:ci`.
+   - Expand **Advanced settings**:
+     - **Path:** `apps/web`
+     - **Add variable:** `D1_DATABASE_ID` = the Database ID you copied in
+       step **b**.
 
    Click **Create and deploy**. The first build applies the migrations and
    deploys the Worker. When it finishes, the Worker's page shows its public
@@ -92,8 +94,9 @@ Cloudflare requires a payment method to enable it.
 
 2. **Become the instance administrator.**
 
-   Open your instance's `*.workers.dev` URL from step 1. On a fresh instance,
-   public sign-up is open until the first
+   Open your instance's `*.workers.dev` URL from step 1. The login screen
+   appears; switch to the sign-up form with the **No account? Sign up** link at
+   the bottom. On a fresh instance, public sign-up is open until the first
    account exists: **the first person to sign up with an email and a password
    becomes the instance administrator**, and sign-up then closes. Everyone else
    joins by invitation.
@@ -126,10 +129,10 @@ Cloudflare requires a payment method to enable it.
    The dashboard shows your workspace's timeline. Click the **+** button (or
    press <kbd>C</kbd>) to open the entry dialog, and fill in:
 
-   - **Date** — today, in your timezone, by default.
-   - **Duration** — `90`, `90m`, `1.5h`, and `1h30m` all mean the same thing.
-   - **Description** — what you worked on.
    - **Project** — the one you just created.
+   - **Date** — today, in your timezone, by default.
+   - **Description** — what you worked on.
+   - **Duration** — `90`, `90m`, `1.5h`, and `1h30m` all mean the same thing.
 
    Save, and the entry appears on the timeline. Log two or three so the report
    in the next step has something to say; the **Keep entering** toggle keeps the
@@ -151,7 +154,7 @@ Cloudflare requires a payment method to enable it.
    - **Template** — the presentation format. Your instance has none yet, so the
      starter templates are seeded automatically and **Daily report** is
      preselected.
-   - **Scope** — the workspace you created.
+   - **Workspace** — the one you created.
    - **Date range** — the **Today** preset, already pre-filled by the Daily
      template. That is what makes this a daily report.
 
@@ -168,7 +171,7 @@ Cloudflare requires a payment method to enable it.
 
 5. **Send it to yourself.**
 
-   Click **Send** in the report's toolbar. Leave the recipient list empty, tick
+   Click **Send** in the report's toolbar. Leave **Recipients** empty, tick
    **Also send to my inbox**, and send. Spantail confirms with _"Saved to your
    inbox."_
 

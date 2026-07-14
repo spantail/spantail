@@ -32,18 +32,43 @@ Start from `apps/web/.dev.vars.example` for local development.
 Leaving a provider's credentials blank keeps it unavailable — there is no half-configured login
 surface.
 
-## OAuth callback URLs
+## Social login
 
-When you set a provider's credentials, register its callback URL with the provider. Use your
-instance's origin — the value of `BETTER_AUTH_URL` if you set one, otherwise the origin the app is
-served from (its `*.workers.dev` URL or custom domain):
+Google and GitHub sign-in each take three steps: register an OAuth app with the provider, set
+its client ID and secret on the Worker, then enable the provider in the app. You can configure
+either provider or both.
 
-- Google — `<your-origin>/api/auth/callback/google`
-- GitHub — `<your-origin>/api/auth/callback/github`
+**1. Register an OAuth app with the provider.** Use your instance's origin — the value of
+`BETTER_AUTH_URL` if you set one, otherwise the origin the app is served from (its
+`*.workers.dev` URL or custom domain) — in the callback URL:
 
-Enabling a configured provider is an in-app admin action — during the
+- **Google** — in the Google Cloud console, create an **OAuth 2.0 client ID** of type
+  **Web application**, with `<your-origin>/api/auth/callback/google` as an **Authorized
+  redirect URI**. Official guide:
+  [Setting up OAuth 2.0](https://support.google.com/cloud/answer/6158849).
+- **GitHub** — under **Settings → Developer settings → OAuth Apps**, create a **New OAuth App**
+  with `<your-origin>/api/auth/callback/github` as the **Authorization callback URL**. Official
+  guide:
+  [Creating an OAuth app](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app).
+
+Both providers give you a **client ID** and a **client secret** on creation.
+
+**2. Set the credentials on the Worker.** Store them as Worker secrets (each `put` prompts for
+the value):
+
+```bash
+wrangler secret put GOOGLE_OAUTH_CLIENT_ID --name spantail
+wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET --name spantail
+wrangler secret put GITHUB_OAUTH_CLIENT_ID --name spantail
+wrangler secret put GITHUB_OAUTH_CLIENT_SECRET --name spantail
+```
+
+For local development, set the same names in `apps/web/.dev.vars` instead.
+
+**3. Enable the provider in the app.** This is an in-app admin action — during the
 [setup wizard](/self-hosting/setup-wizard/) or later from
-[System settings](/admin/system-settings/) in the Admin guide.
+[System settings](/admin/system-settings/#social-login) in the Admin guide. A provider's toggle
+unlocks only once its credentials are present.
 
 ## Bindings
 

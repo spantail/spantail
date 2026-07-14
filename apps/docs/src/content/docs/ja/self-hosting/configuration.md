@@ -32,17 +32,43 @@ description: 環境変数・シークレット・バインディング。
 プロバイダの資格情報を空のままにすると、そのプロバイダは利用不可のままになります。中途半端に設定
 されたログイン経路は存在しません。
 
-## OAuth コールバック URL
+## ソーシャルログイン
 
-プロバイダの資格情報を設定したら、そのコールバック URL をプロバイダに登録してください。インスタンスの
-オリジン — `BETTER_AUTH_URL` を設定していればその値、未設定なら配信元のオリジン(`*.workers.dev` の URL
+Google・GitHub でのサインインは、それぞれ 3 ステップで設定します。プロバイダに OAuth アプリを
+登録し、クライアント ID とクライアントシークレットを Worker に設定し、アプリ内でプロバイダを
+有効化します。どちらか一方だけでも、両方でも構いません。
+
+**1. プロバイダに OAuth アプリを登録する。** コールバック URL にはインスタンスのオリジン —
+`BETTER_AUTH_URL` を設定していればその値、未設定なら配信元のオリジン(`*.workers.dev` の URL
 またはカスタムドメイン) — を使います。
 
-- Google — `<your-origin>/api/auth/callback/google`
-- GitHub — `<your-origin>/api/auth/callback/github`
+- **Google** — Google Cloud コンソールで、種類 **ウェブ アプリケーション** の
+  **OAuth 2.0 クライアント ID** を作成し、**承認済みのリダイレクト URI** に
+  `<your-origin>/api/auth/callback/google` を登録します。公式ガイド:
+  [OAuth 2.0 の設定](https://support.google.com/cloud/answer/6158849?hl=ja)。
+- **GitHub** — **Settings → Developer settings → OAuth Apps** で **New OAuth App** を作成し、
+  **Authorization callback URL** に `<your-origin>/api/auth/callback/github` を登録します。
+  公式ガイド:
+  [OAuth アプリの作成](https://docs.github.com/ja/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app)。
 
-設定済みプロバイダの有効化はアプリ内の管理者操作です。[セットアップウィザード](/ja/self-hosting/setup-wizard/)
-の途中、または後から管理者ガイドの[システム設定](/ja/admin/system-settings/)で行います。
+作成すると、どちらのプロバイダも**クライアント ID** と**クライアントシークレット**を発行します。
+
+**2. 資格情報を Worker に設定する。** Worker のシークレットとして保存します（各 `put` で値の
+入力を求められます）。
+
+```bash
+wrangler secret put GOOGLE_OAUTH_CLIENT_ID --name spantail
+wrangler secret put GOOGLE_OAUTH_CLIENT_SECRET --name spantail
+wrangler secret put GITHUB_OAUTH_CLIENT_ID --name spantail
+wrangler secret put GITHUB_OAUTH_CLIENT_SECRET --name spantail
+```
+
+ローカル開発では、同じ名前を `apps/web/.dev.vars` に設定します。
+
+**3. アプリ内でプロバイダを有効化する。** これはアプリ内の管理者操作です。
+[セットアップウィザード](/ja/self-hosting/setup-wizard/)の途中、または後から管理者ガイドの
+[システム設定](/ja/admin/system-settings/#ソーシャルログイン)で行います。プロバイダのトグルは、
+資格情報が設定されて初めて有効化できるようになります。
 
 ## バインディング
 
