@@ -17,8 +17,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { api } from "@/lib/api";
 import { invalidateMail } from "@/lib/query";
+import { useMailActions } from "@/lib/use-mail";
 
 const PAGE_SIZE = 50;
+
+/**
+ * Whether toggling `flag` moves the selected item out of `folder`, so the
+ * keyboard shortcut should advance the selection to the next message. Mirrors
+ * `flagPredicate` in packages/db/src/queries/report-deliveries.ts: every folder
+ * keys on `trashed`, only `starred` keys on `starred`, and archive membership
+ * (present or absent) is what `inbox`/`sent`/`archive` key on.
+ */
+function leavesFolder(
+	folder: MailFolder,
+	flag: "star" | "archive" | "trash",
+): boolean {
+	if (flag === "trash") return true;
+	if (flag === "star") return folder === "starred";
+	return folder === "inbox" || folder === "sent" || folder === "archive";
+}
 
 export function MessageList({
 	folder,
@@ -30,6 +47,7 @@ export function MessageList({
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const actions = useMailActions();
 	// Paginated folder listing. Keyed apart from the toolbar's full-folder query
 	// (["mail", folder]) so the infinite-data cache shape doesn't collide.
 	const query = useInfiniteQuery({
@@ -47,11 +65,52 @@ export function MessageList({
 		() => new Map(items.map((item, i) => [item.id, i])),
 		[items],
 	);
+	// s/e/d act on the *open* message, which the toolbar's prev/next can move
+	// beyond the loaded pages (it navigates the full, unpaginated folder query).
+	// Resolve and advance the shortcuts against that same complete list — shared
+	// query key, so one fetch with the toolbar — only while a message is open, so
+	// the keys never silently drop on a message below the infinite list's fold.
+	const fullList = useQuery({
+		queryKey: ["mail", folder],
+		queryFn: () => api.listInbox(folder),
+		enabled: Boolean(selectedId),
+	});
+	const fullItems = fullList.data ?? [];
 
 	// j/k move the selection straight to the message's route, so the reading pane
 	// updates as you go. Selection is derived from the URL (selectedId).
 	const containerRef = useRef<HTMLDivElement>(null);
 	const activeIndex = selectedId ? (indexById.get(selectedId) ?? -1) : -1;
+	const openMessage = (messageId: string) =>
+		navigate({
+			to: "/messages/$folder/$messageId",
+			params: { folder, messageId },
+			replace: true,
+		});
+	const closeToList = () =>
+		navigate({ to: "/messages/$folder", params: { folder }, replace: true });
+
+	// s/e/d toggle a flag on the open message. When the toggle removes it from the
+	// current folder the selection advances to the next message (opening it), so a
+	// run of e/e/e triages without the mouse; at the end of the folder the reading
+	// pane closes to the list. Prefer the full folder list — it reaches a message
+	// opened past the loaded pages and names every next — but fall back to the
+	// paginated list so a key pressed before the full query settles still acts on
+	// a row already on screen (e.g. the j-then-e flow on a cold folder).
+	const applyFlag = (flag: "star" | "archive" | "trash") => {
+		if (actions.pending || !selectedId) return;
+		const list = fullItems.some((i) => i.id === selectedId) ? fullItems : items;
+		const idx = list.findIndex((i) => i.id === selectedId);
+		const item = list[idx];
+		if (!item) return;
+		if (flag === "star") actions.setStar(item, !item.starred);
+		else if (flag === "archive") actions.setArchive(item, !item.archived);
+		else actions.setTrash(item, !item.trashed);
+		if (!leavesFolder(folder, flag)) return;
+		const next = list[idx + 1];
+		if (next) openMessage(next.id);
+		else closeToList();
+	};
 	useListKeyboardNav({
 		length: items.length,
 		index: activeIndex,
@@ -65,6 +124,11 @@ export function MessageList({
 					params: { folder, messageId: target.id },
 					replace: true,
 				});
+		},
+		actionKeys: {
+			s: () => applyFlag("star"),
+			e: () => applyFlag("archive"),
+			d: () => applyFlag("trash"),
 		},
 		onReachEnd: () => {
 			if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();

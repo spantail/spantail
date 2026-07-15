@@ -13,11 +13,20 @@ you're **not** typing in a text field and **no** dialog or menu is open.
 | <kbd>K</kbd> | Move the selection **up** in a list. |
 | <kbd>O</kbd> | Open the highlighted item. |
 | <kbd>X</kbd> | Check or uncheck the highlighted row, in lists with bulk selection. |
-| <kbd>D</kbd> | Delete the checked items (opens a confirmation first). |
+| <kbd>S</kbd> | Star or unstar the open message, in Messages. |
+| <kbd>E</kbd> | Archive the open message, or move it back to the Inbox. |
+| <kbd>D</kbd> | Move the open message to Trash (or restore it) in Messages; on an agent's sessions list, delete the checked sessions (asks first). |
 
 The list shortcuts (<kbd>J</kbd> / <kbd>K</kbd> / <kbd>O</kbd>) apply to the
 lists that support selection, such as the timeline, the reports list, your
 inbox, and an agent's sessions list.
+
+In Messages, <kbd>S</kbd>, <kbd>E</kbd>, and <kbd>D</kbd> act on the open
+message — star, archive, and move to Trash. Each one toggles, so in the
+Starred, Archive, or Trash folder the same key reverses it. Archiving or
+trashing advances the selection to the next message and opens it, so you can
+clear a run of messages from the keyboard; at the end of the folder the reading
+pane closes.
 
 While a detail panel is open — a work entry on the timeline, or a session on an
 agent's activity page — <kbd>↑</kbd> / <kbd>↓</kbd> move through the list live,

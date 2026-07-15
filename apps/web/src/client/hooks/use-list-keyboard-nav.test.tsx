@@ -12,10 +12,12 @@ function Harness({
 	onOpen,
 	onReachEnd,
 	arrowKeys,
+	actionKeys,
 }: {
 	onOpen?: () => void;
 	onReachEnd?: () => void;
 	arrowKeys?: boolean;
+	actionKeys?: Record<string, () => void>;
 }) {
 	const containerRef = useRef<HTMLUListElement>(null);
 	const [active, setActive] = useState(-1);
@@ -27,6 +29,7 @@ function Harness({
 		onReachEnd,
 		containerRef,
 		arrowKeys,
+		actionKeys,
 	});
 	return (
 		<ul ref={containerRef} data-testid="active" data-active={active}>
@@ -115,5 +118,59 @@ it("ignores keys with modifiers and while a dialog is open", () => {
 	document.body.appendChild(dialog);
 	fireEvent.keyDown(window, { key: "j" });
 	expect(activeIndex(container)).toBe("-1");
+	document.body.removeChild(dialog);
+});
+
+it("fires an actionKeys handler regardless of the active index", () => {
+	const s = vi.fn();
+	render(<Harness actionKeys={{ s }} />);
+	// Unlike o/x, action keys don't require a list selection — the handler acts
+	// on the caller's own target (e.g. a message the list hasn't loaded).
+	fireEvent.keyDown(window, { key: "s" });
+	expect(s).toHaveBeenCalledTimes(1);
+});
+
+it("routes each action key to its own handler and ignores unmapped keys", () => {
+	const s = vi.fn();
+	const e = vi.fn();
+	render(<Harness actionKeys={{ s, e }} />);
+	fireEvent.keyDown(window, { key: "e" });
+	expect(e).toHaveBeenCalledTimes(1);
+	expect(s).not.toHaveBeenCalled();
+	// A key with no handler is left alone.
+	fireEvent.keyDown(window, { key: "d" });
+	expect(s).not.toHaveBeenCalled();
+	expect(e).toHaveBeenCalledTimes(1);
+});
+
+it("fires an action key once, ignoring auto-repeat", () => {
+	const s = vi.fn();
+	render(<Harness actionKeys={{ s }} />);
+	fireEvent.keyDown(window, { key: "s", repeat: true });
+	expect(s).not.toHaveBeenCalled();
+	fireEvent.keyDown(window, { key: "s" });
+	expect(s).toHaveBeenCalledTimes(1);
+});
+
+it("suppresses action keys while typing, with a modifier, or a dialog open", () => {
+	const s = vi.fn();
+	const { container } = render(
+		<>
+			<input data-testid="field" />
+			<Harness actionKeys={{ s }} />
+		</>,
+	);
+	const input = container.querySelector(
+		"[data-testid=field]",
+	) as HTMLInputElement;
+	fireEvent.keyDown(input, { key: "s" });
+	fireEvent.keyDown(window, { key: "s", metaKey: true });
+	expect(s).not.toHaveBeenCalled();
+
+	const dialog = document.createElement("div");
+	dialog.setAttribute("role", "dialog");
+	document.body.appendChild(dialog);
+	fireEvent.keyDown(window, { key: "s" });
+	expect(s).not.toHaveBeenCalled();
 	document.body.removeChild(dialog);
 });

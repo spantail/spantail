@@ -13,6 +13,14 @@ interface UseListKeyboardNavOptions<E extends HTMLElement> {
 	onOpen?: () => void;
 	/** `x` pressed on the active item — toggle its selection. */
 	onToggle?: () => void;
+	/**
+	 * Single-key actions keyed by `KeyboardEvent.key`, fired once per press
+	 * (respects `e.repeat`) under the same guards as the nav keys. Independent of
+	 * the active index — the handler decides what to act on — so a caller can act
+	 * on a selection the list itself has not loaded. Kept generic: the caller
+	 * supplies the keys and their meaning.
+	 */
+	actionKeys?: Record<string, () => void>;
 	/** `j` pressed at the last item — a chance to load the next page. */
 	onReachEnd?: () => void;
 	/** Wraps the rows; each carries `data-nav-index={i}` for scroll-into-view. */
@@ -40,6 +48,7 @@ export function useListKeyboardNav<E extends HTMLElement>({
 	onMove,
 	onOpen,
 	onToggle,
+	actionKeys,
 	onReachEnd,
 	containerRef,
 	enabled = true,
@@ -54,6 +63,7 @@ export function useListKeyboardNav<E extends HTMLElement>({
 		onMove,
 		onOpen,
 		onToggle,
+		actionKeys,
 		onReachEnd,
 		arrowKeys,
 	});
@@ -64,6 +74,7 @@ export function useListKeyboardNav<E extends HTMLElement>({
 			onMove,
 			onOpen,
 			onToggle,
+			actionKeys,
 			onReachEnd,
 			arrowKeys,
 		};
@@ -84,8 +95,16 @@ export function useListKeyboardNav<E extends HTMLElement>({
 			) {
 				return;
 			}
-			const { length, index, onMove, onOpen, onToggle, onReachEnd, arrowKeys } =
-				latest.current;
+			const {
+				length,
+				index,
+				onMove,
+				onOpen,
+				onToggle,
+				actionKeys,
+				onReachEnd,
+				arrowKeys,
+			} = latest.current;
 			const isDown = e.key === "j" || (arrowKeys && e.key === "ArrowDown");
 			const isUp = e.key === "k" || (arrowKeys && e.key === "ArrowUp");
 			if (isDown || isUp) {
@@ -103,6 +122,9 @@ export function useListKeyboardNav<E extends HTMLElement>({
 				if (index < 0) return;
 				e.preventDefault();
 				onToggle();
+			} else if (!e.repeat && actionKeys && Object.hasOwn(actionKeys, e.key)) {
+				e.preventDefault();
+				actionKeys[e.key]?.();
 			}
 		}
 		window.addEventListener("keydown", onKeyDown);
