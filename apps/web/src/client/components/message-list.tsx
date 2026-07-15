@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
@@ -70,6 +70,41 @@ export function MessageList({
 	// updates as you go. Selection is derived from the URL (selectedId).
 	const containerRef = useRef<HTMLDivElement>(null);
 	const activeIndex = selectedId ? (indexById.get(selectedId) ?? -1) : -1;
+	const openMessage = (messageId: string) =>
+		navigate({
+			to: "/messages/$folder/$messageId",
+			params: { folder, messageId },
+			replace: true,
+		});
+	const closeToList = () =>
+		navigate({ to: "/messages/$folder", params: { folder }, replace: true });
+
+	// When s/e/d removes the selected message at the last loaded row but more
+	// pages exist, we can't name the next message yet: fetch it, then let the
+	// effect below advance once the acted row has left the folder and whatever
+	// shifted into its slot is loaded. index is the acted row's position.
+	const pendingAdvance = useRef<{ index: number; actedId: string } | null>(
+		null,
+	);
+	useEffect(() => {
+		const p = pendingAdvance.current;
+		// Wait for the next-page fetch and the mutation's refetch to both settle
+		// and for the acted row to actually leave the folder before landing.
+		if (!p || query.isFetching) return;
+		if (items.some((i) => i.id === p.actedId)) return;
+		pendingAdvance.current = null;
+		const target = items[p.index];
+		navigate(
+			target
+				? {
+						to: "/messages/$folder/$messageId",
+						params: { folder, messageId: target.id },
+						replace: true,
+					}
+				: { to: "/messages/$folder", params: { folder }, replace: true },
+		);
+	}, [items, query.isFetching, navigate, folder]);
+
 	// s/e/d act on the selected message. Actions that remove it from the folder
 	// advance the selection to the next message (opening it), so a run of e/e/e
 	// triages without the mouse; at the end the reading pane closes to the list.
@@ -80,18 +115,14 @@ export function MessageList({
 		if (flag === "star") actions.setStar(item, !item.starred);
 		else if (flag === "archive") actions.setArchive(item, !item.archived);
 		else actions.setTrash(item, !item.trashed);
-		if (leavesFolder(folder, flag)) {
-			const next = items[activeIndex + 1];
-			navigate(
-				next
-					? {
-							to: "/messages/$folder/$messageId",
-							params: { folder, messageId: next.id },
-							replace: true,
-						}
-					: { to: "/messages/$folder", params: { folder }, replace: true },
-			);
-		}
+		if (!leavesFolder(folder, flag)) return;
+		const next = items[activeIndex + 1];
+		if (next) openMessage(next.id);
+		else if (query.hasNextPage) {
+			// At the loaded-page boundary — pull the next page, then advance.
+			pendingAdvance.current = { index: activeIndex, actedId: item.id };
+			query.fetchNextPage();
+		} else closeToList();
 	};
 	useListKeyboardNav({
 		length: items.length,
