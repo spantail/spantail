@@ -11,17 +11,12 @@ projects, templates) stays in the web app.
 
 ## Install
 
-:::caution[Not published yet]
-The `spantail` CLI isn't on npm yet. The command below will work once it's
-released; until then, build it from `packages/cli` in the
-[monorepo](https://github.com/spantail/spantail).
-:::
-
 ```bash
 npm install -g spantail
 ```
 
-Requires Node.js 24 or later.
+Requires Node.js 24 or later. To run it once without installing, use
+`npx spantail` in place of `spantail`.
 
 The CLI is versioned and released independently of the Spantail server, so its
 version number has nothing to do with your instance's. The two meet only at the

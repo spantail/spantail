@@ -11,7 +11,8 @@ one (or its URL) before the CLI is useful.
 npm install -g spantail
 ```
 
-Requires Node.js 24 or later.
+Requires Node.js 24 or later. To run it once without installing, use
+`npx spantail` in place of `spantail`.
 
 ## Quick start
 
