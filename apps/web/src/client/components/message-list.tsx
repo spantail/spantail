@@ -93,17 +93,21 @@ export function MessageList({
 	// s/e/d toggle a flag on the open message. When the toggle removes it from the
 	// current folder the selection advances to the next message (opening it), so a
 	// run of e/e/e triages without the mouse; at the end of the folder the reading
-	// pane closes to the list. Both the item and the next are read from the full
-	// folder list, so the shortcuts work on a message past the loaded pages.
+	// pane closes to the list. Prefer the full folder list — it reaches a message
+	// opened past the loaded pages and names every next — but fall back to the
+	// paginated list so a key pressed before the full query settles still acts on
+	// a row already on screen (e.g. the j-then-e flow on a cold folder).
 	const applyFlag = (flag: "star" | "archive" | "trash") => {
 		if (actions.pending || !selectedId) return;
-		const item = fullItems.find((i) => i.id === selectedId);
+		const list = fullItems.some((i) => i.id === selectedId) ? fullItems : items;
+		const idx = list.findIndex((i) => i.id === selectedId);
+		const item = list[idx];
 		if (!item) return;
 		if (flag === "star") actions.setStar(item, !item.starred);
 		else if (flag === "archive") actions.setArchive(item, !item.archived);
 		else actions.setTrash(item, !item.trashed);
 		if (!leavesFolder(folder, flag)) return;
-		const next = fullItems[fullItems.indexOf(item) + 1];
+		const next = list[idx + 1];
 		if (next) openMessage(next.id);
 		else closeToList();
 	};
