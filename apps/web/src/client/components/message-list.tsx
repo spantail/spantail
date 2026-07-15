@@ -88,9 +88,18 @@ export function MessageList({
 	);
 	useEffect(() => {
 		const p = pendingAdvance.current;
+		if (!p) return;
+		// The move is still pending only while the selection sits on the acted row.
+		// If the user opened another message or switched folders during the fetch,
+		// selectedId has moved off it — drop the stale advance instead of yanking
+		// them back to whatever now sits at p.index.
+		if (selectedId !== p.actedId) {
+			pendingAdvance.current = null;
+			return;
+		}
 		// Wait for the next-page fetch and the mutation's refetch to both settle
 		// and for the acted row to actually leave the folder before landing.
-		if (!p || query.isFetching) return;
+		if (query.isFetching) return;
 		if (items.some((i) => i.id === p.actedId)) return;
 		pendingAdvance.current = null;
 		const target = items[p.index];
@@ -103,7 +112,7 @@ export function MessageList({
 					}
 				: { to: "/messages/$folder", params: { folder }, replace: true },
 		);
-	}, [items, query.isFetching, navigate, folder]);
+	}, [items, query.isFetching, navigate, folder, selectedId]);
 
 	// s/e/d act on the selected message. Actions that remove it from the folder
 	// advance the selection to the next message (opening it), so a run of e/e/e
