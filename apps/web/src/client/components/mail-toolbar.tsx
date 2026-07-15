@@ -77,11 +77,11 @@ export function MailToolbar({
 						? t("messages.toolbar.unstar")
 						: t("messages.toolbar.star")
 				}
-				title={
+				title={`${
 					item.starred
 						? t("messages.toolbar.unstar")
 						: t("messages.toolbar.star")
-				}
+				} (s)`}
 				disabled={actions.pending}
 				onClick={() => actions.setStar(item, !item.starred)}
 			>
@@ -95,7 +95,7 @@ export function MailToolbar({
 					size="icon"
 					className="size-9"
 					aria-label={t("messages.toolbar.unarchive")}
-					title={t("messages.toolbar.unarchive")}
+					title={`${t("messages.toolbar.unarchive")} (e)`}
 					disabled={actions.pending}
 					onClick={() => actions.setArchive(item, false)}
 				>
@@ -107,7 +107,7 @@ export function MailToolbar({
 					size="icon"
 					className="size-9"
 					aria-label={t("messages.toolbar.archive")}
-					title={t("messages.toolbar.archive")}
+					title={`${t("messages.toolbar.archive")} (e)`}
 					disabled={actions.pending}
 					onClick={archiveAndClose}
 				>
@@ -120,7 +120,7 @@ export function MailToolbar({
 					size="icon"
 					className="size-9"
 					aria-label={t("messages.toolbar.restore")}
-					title={t("messages.toolbar.restore")}
+					title={`${t("messages.toolbar.restore")} (d)`}
 					disabled={actions.pending}
 					onClick={() => actions.setTrash(item, false)}
 				>
@@ -132,7 +132,7 @@ export function MailToolbar({
 					size="icon"
 					className="size-9"
 					aria-label={t("messages.toolbar.trash")}
-					title={t("messages.toolbar.trash")}
+					title={`${t("messages.toolbar.trash")} (d)`}
 					disabled={actions.pending}
 					onClick={trashAndClose}
 				>

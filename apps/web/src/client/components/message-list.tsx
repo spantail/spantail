@@ -17,8 +17,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useListKeyboardNav } from "@/hooks/use-list-keyboard-nav";
 import { api } from "@/lib/api";
 import { invalidateMail } from "@/lib/query";
+import { useMailActions } from "@/lib/use-mail";
 
 const PAGE_SIZE = 50;
+
+/**
+ * Whether toggling `flag` moves the selected item out of `folder`, so the
+ * keyboard shortcut should advance the selection to the next message. Mirrors
+ * `flagPredicate` in packages/db/src/queries/report-deliveries.ts: every folder
+ * keys on `trashed`, only `starred` keys on `starred`, and archive membership
+ * (present or absent) is what `inbox`/`sent`/`archive` key on.
+ */
+function leavesFolder(
+	folder: MailFolder,
+	flag: "star" | "archive" | "trash",
+): boolean {
+	if (flag === "trash") return true;
+	if (flag === "star") return folder === "starred";
+	return folder === "inbox" || folder === "sent" || folder === "archive";
+}
 
 export function MessageList({
 	folder,
@@ -30,6 +47,7 @@ export function MessageList({
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
+	const actions = useMailActions();
 	// Paginated folder listing. Keyed apart from the toolbar's full-folder query
 	// (["mail", folder]) so the infinite-data cache shape doesn't collide.
 	const query = useInfiniteQuery({
@@ -52,6 +70,29 @@ export function MessageList({
 	// updates as you go. Selection is derived from the URL (selectedId).
 	const containerRef = useRef<HTMLDivElement>(null);
 	const activeIndex = selectedId ? (indexById.get(selectedId) ?? -1) : -1;
+	// s/e/d act on the selected message. Actions that remove it from the folder
+	// advance the selection to the next message (opening it), so a run of e/e/e
+	// triages without the mouse; at the end the reading pane closes to the list.
+	const applyFlag = (flag: "star" | "archive" | "trash") => {
+		if (actions.pending) return;
+		const item = items[activeIndex];
+		if (!item) return;
+		if (flag === "star") actions.setStar(item, !item.starred);
+		else if (flag === "archive") actions.setArchive(item, !item.archived);
+		else actions.setTrash(item, !item.trashed);
+		if (leavesFolder(folder, flag)) {
+			const next = items[activeIndex + 1];
+			navigate(
+				next
+					? {
+							to: "/messages/$folder/$messageId",
+							params: { folder, messageId: next.id },
+							replace: true,
+						}
+					: { to: "/messages/$folder", params: { folder }, replace: true },
+			);
+		}
+	};
 	useListKeyboardNav({
 		length: items.length,
 		index: activeIndex,
@@ -65,6 +106,11 @@ export function MessageList({
 					params: { folder, messageId: target.id },
 					replace: true,
 				});
+		},
+		actionKeys: {
+			s: () => applyFlag("star"),
+			e: () => applyFlag("archive"),
+			d: () => applyFlag("trash"),
 		},
 		onReachEnd: () => {
 			if (query.hasNextPage && !query.isFetchingNextPage) query.fetchNextPage();
