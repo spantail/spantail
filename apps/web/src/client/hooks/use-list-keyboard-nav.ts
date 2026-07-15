@@ -14,9 +14,11 @@ interface UseListKeyboardNavOptions<E extends HTMLElement> {
 	/** `x` pressed on the active item — toggle its selection. */
 	onToggle?: () => void;
 	/**
-	 * Single-key actions on the active item, keyed by `KeyboardEvent.key`. Each
-	 * fires once per press (respects `e.repeat`) and only with an active row.
-	 * Kept generic — the caller supplies the keys and their meaning.
+	 * Single-key actions keyed by `KeyboardEvent.key`, fired once per press
+	 * (respects `e.repeat`) under the same guards as the nav keys. Independent of
+	 * the active index — the handler decides what to act on — so a caller can act
+	 * on a selection the list itself has not loaded. Kept generic: the caller
+	 * supplies the keys and their meaning.
 	 */
 	actionKeys?: Record<string, () => void>;
 	/** `j` pressed at the last item — a chance to load the next page. */
@@ -121,7 +123,6 @@ export function useListKeyboardNav<E extends HTMLElement>({
 				e.preventDefault();
 				onToggle();
 			} else if (!e.repeat && actionKeys && Object.hasOwn(actionKeys, e.key)) {
-				if (index < 0) return;
 				e.preventDefault();
 				actionKeys[e.key]?.();
 			}

@@ -121,13 +121,11 @@ it("ignores keys with modifiers and while a dialog is open", () => {
 	document.body.removeChild(dialog);
 });
 
-it("fires an actionKeys handler on the active item, not before selection", () => {
+it("fires an actionKeys handler regardless of the active index", () => {
 	const s = vi.fn();
 	render(<Harness actionKeys={{ s }} />);
-	// No selection yet: the action key is a no-op.
-	fireEvent.keyDown(window, { key: "s" });
-	expect(s).not.toHaveBeenCalled();
-	fireEvent.keyDown(window, { key: "j" });
+	// Unlike o/x, action keys don't require a list selection — the handler acts
+	// on the caller's own target (e.g. a message the list hasn't loaded).
 	fireEvent.keyDown(window, { key: "s" });
 	expect(s).toHaveBeenCalledTimes(1);
 });
@@ -136,7 +134,6 @@ it("routes each action key to its own handler and ignores unmapped keys", () => 
 	const s = vi.fn();
 	const e = vi.fn();
 	render(<Harness actionKeys={{ s, e }} />);
-	fireEvent.keyDown(window, { key: "j" });
 	fireEvent.keyDown(window, { key: "e" });
 	expect(e).toHaveBeenCalledTimes(1);
 	expect(s).not.toHaveBeenCalled();
@@ -149,7 +146,6 @@ it("routes each action key to its own handler and ignores unmapped keys", () => 
 it("fires an action key once, ignoring auto-repeat", () => {
 	const s = vi.fn();
 	render(<Harness actionKeys={{ s }} />);
-	fireEvent.keyDown(window, { key: "j" });
 	fireEvent.keyDown(window, { key: "s", repeat: true });
 	expect(s).not.toHaveBeenCalled();
 	fireEvent.keyDown(window, { key: "s" });
@@ -164,7 +160,6 @@ it("suppresses action keys while typing, with a modifier, or a dialog open", () 
 			<Harness actionKeys={{ s }} />
 		</>,
 	);
-	fireEvent.keyDown(window, { key: "j" }); // select row 0
 	const input = container.querySelector(
 		"[data-testid=field]",
 	) as HTMLInputElement;

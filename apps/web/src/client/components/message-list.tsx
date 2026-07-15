@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CheckCheckIcon, InboxIcon } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InfiniteSentinel } from "@/components/infinite-sentinel";
@@ -65,6 +65,17 @@ export function MessageList({
 		() => new Map(items.map((item, i) => [item.id, i])),
 		[items],
 	);
+	// s/e/d act on the *open* message, which the toolbar's prev/next can move
+	// beyond the loaded pages (it navigates the full, unpaginated folder query).
+	// Resolve and advance the shortcuts against that same complete list — shared
+	// query key, so one fetch with the toolbar — only while a message is open, so
+	// the keys never silently drop on a message below the infinite list's fold.
+	const fullList = useQuery({
+		queryKey: ["mail", folder],
+		queryFn: () => api.listInbox(folder),
+		enabled: Boolean(selectedId),
+	});
+	const fullItems = fullList.data ?? [];
 
 	// j/k move the selection straight to the message's route, so the reading pane
 	// updates as you go. Selection is derived from the URL (selectedId).
@@ -79,59 +90,22 @@ export function MessageList({
 	const closeToList = () =>
 		navigate({ to: "/messages/$folder", params: { folder }, replace: true });
 
-	// When s/e/d removes the selected message at the last loaded row but more
-	// pages exist, we can't name the next message yet: fetch it, then let the
-	// effect below advance once the acted row has left the folder and whatever
-	// shifted into its slot is loaded. index is the acted row's position.
-	const pendingAdvance = useRef<{ index: number; actedId: string } | null>(
-		null,
-	);
-	useEffect(() => {
-		const p = pendingAdvance.current;
-		if (!p) return;
-		// The move is still pending only while the selection sits on the acted row.
-		// If the user opened another message or switched folders during the fetch,
-		// selectedId has moved off it — drop the stale advance instead of yanking
-		// them back to whatever now sits at p.index.
-		if (selectedId !== p.actedId) {
-			pendingAdvance.current = null;
-			return;
-		}
-		// Wait for the next-page fetch and the mutation's refetch to both settle
-		// and for the acted row to actually leave the folder before landing.
-		if (query.isFetching) return;
-		if (items.some((i) => i.id === p.actedId)) return;
-		pendingAdvance.current = null;
-		const target = items[p.index];
-		navigate(
-			target
-				? {
-						to: "/messages/$folder/$messageId",
-						params: { folder, messageId: target.id },
-						replace: true,
-					}
-				: { to: "/messages/$folder", params: { folder }, replace: true },
-		);
-	}, [items, query.isFetching, navigate, folder, selectedId]);
-
-	// s/e/d act on the selected message. Actions that remove it from the folder
-	// advance the selection to the next message (opening it), so a run of e/e/e
-	// triages without the mouse; at the end the reading pane closes to the list.
+	// s/e/d toggle a flag on the open message. When the toggle removes it from the
+	// current folder the selection advances to the next message (opening it), so a
+	// run of e/e/e triages without the mouse; at the end of the folder the reading
+	// pane closes to the list. Both the item and the next are read from the full
+	// folder list, so the shortcuts work on a message past the loaded pages.
 	const applyFlag = (flag: "star" | "archive" | "trash") => {
-		if (actions.pending) return;
-		const item = items[activeIndex];
+		if (actions.pending || !selectedId) return;
+		const item = fullItems.find((i) => i.id === selectedId);
 		if (!item) return;
 		if (flag === "star") actions.setStar(item, !item.starred);
 		else if (flag === "archive") actions.setArchive(item, !item.archived);
 		else actions.setTrash(item, !item.trashed);
 		if (!leavesFolder(folder, flag)) return;
-		const next = items[activeIndex + 1];
+		const next = fullItems[fullItems.indexOf(item) + 1];
 		if (next) openMessage(next.id);
-		else if (query.hasNextPage) {
-			// At the loaded-page boundary — pull the next page, then advance.
-			pendingAdvance.current = { index: activeIndex, actedId: item.id };
-			query.fetchNextPage();
-		} else closeToList();
+		else closeToList();
 	};
 	useListKeyboardNav({
 		length: items.length,
