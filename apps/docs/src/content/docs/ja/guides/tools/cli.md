@@ -10,17 +10,12 @@ description: spantail コマンドラインクライアント。
 
 ## インストール
 
-:::caution[まだ未公開]
-`spantail` CLI はまだ npm に公開されていません。下のコマンドは公開後に使えるように
-なります。それまでは[モノレポ](https://github.com/spantail/spantail)の `packages/cli`
-からビルドしてください。
-:::
-
 ```bash
 npm install -g spantail
 ```
 
-Node.js 24 以降が必要です。
+Node.js 24 以降が必要です。インストールせずに一度だけ実行するには、`spantail` の代わりに
+`npx spantail` を使います。
 
 CLI は Spantail サーバとは独立にバージョニング・リリースされるため、CLI のバージョン番号は
 インスタンスのバージョンとは無関係です。両者が接するのは REST API だけで、API は追加のみで
