@@ -1,10 +1,18 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema.json",
-	"ignoreDependencies": ["cloudflare"],
-	"ignore": ["**/env.d.ts", "**/worker-configuration.d.ts"],
+	"ignoreDependencies": [
+		"cloudflare"
+	],
+	"ignore": [
+		"**/env.d.ts",
+		"**/worker-configuration.d.ts",
+		"examples/*/scenarios/**"
+	],
 	"workspaces": {
 		"apps/web": {
-			"entry": ["src/client/components/ui/**"]
+			"entry": [
+				"src/client/components/ui/**"
+			]
 		},
 		"apps/docs": {
 			"ignoreDependencies": [
@@ -13,7 +21,9 @@
 			]
 		},
 		"packages/db": {
-			"entry": ["scripts/auth-cli-config.ts"]
+			"entry": [
+				"scripts/auth-cli-config.ts"
+			]
 		}
 	},
 	"rules": {
