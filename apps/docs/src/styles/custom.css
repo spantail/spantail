@@ -179,11 +179,13 @@ ul.starlight-sidebar-topics {
 		max-width: 100%;
 	}
 }
-/* Hero YouTube embed */
+/* Hero embed: the Arcade interactive product tour */
 .video-embed {
 	position: relative;
 	width: 100%;
-	aspect-ratio: 16 / 9;
+	height: 0;
+	/* 16:9 recording plus the Arcade player chrome (its recommended sizing) */
+	padding-bottom: calc(56.25% + 41px);
 	overflow: hidden;
 	border: 1px solid var(--sp-border-strong);
 	border-radius: 14px;
@@ -195,6 +197,8 @@ ul.starlight-sidebar-topics {
 	width: 100%;
 	height: 100%;
 	border: 0;
+	/* the embedded player is light-themed; keep UA widgets consistent inside it */
+	color-scheme: light;
 }
 /* CTA buttons: match the mockup's 50px height / 11px radius / 15px·600 */
 .hero .actions a {
