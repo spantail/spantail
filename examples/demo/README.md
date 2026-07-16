@@ -110,6 +110,14 @@ The generated lines carry no `externalId`, so re-importing the file duplicates
 entries — that is the documented plain-insert behavior. Add `externalId` fields
 to a hand-made file to see idempotent re-imports instead.
 
+## Scenarios
+
+[`scenarios/product-tour.js`](./scenarios/product-tour.js) is a Playwright
+function that walks this dataset end to end as Alice — entries, agent sessions,
+log-work-from-sessions, a daily report, share, send, and inbox review — paced
+for recording product demos. Its header documents the prerequisites and the
+date-relative literals to adjust before a run.
+
 ## Files
 
 `db/seed/` holds one YAML per concern: `users`, `workspaces`, `members`,

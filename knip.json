@@ -1,7 +1,11 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema.json",
 	"ignoreDependencies": ["cloudflare"],
-	"ignore": ["**/env.d.ts", "**/worker-configuration.d.ts"],
+	"ignore": [
+		"**/env.d.ts",
+		"**/worker-configuration.d.ts",
+		"examples/*/scenarios/**"
+	],
 	"workspaces": {
 		"apps/web": {
 			"entry": ["src/client/components/ui/**"]
