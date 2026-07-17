@@ -91,7 +91,10 @@ Both may contain only `workspaceId` and `projectId`:
 ```
 
 Resolution order per value: `SPANTAIL_*` environment → local file → shared
-file → plugin config → Claude Code's global `pluginConfigs`. The repo files
+file → plugin config → Claude Code's global `pluginConfigs`. A linked
+repository (any parseable `.spantail` file) **owns attribution**: the two
+user-global layers are skipped for both keys, so a workspace-only link never
+inherits a stale global project id. The repo files
 are deliberately capped at those two keys — a cloned repository is untrusted
 input, so `apiUrl` and tokens never resolve from it (a committed config could
 otherwise redirect your telemetry, agent token included, to an arbitrary
@@ -114,8 +117,8 @@ files, missing credentials).
 
 Installs configured before v0.3.0, when the plugin dialog still asked for a
 workspace and project id, keep working: those user-global values remain the
-final fallback, and any repo-level file or environment variable overrides
-them.
+final fallback in repositories without a `.spantail` file, and environment
+variables override everything.
 
 The skills and agents use the Spantail MCP connection, which the plugin
 bundles. With `apiToken` set, the plugin registers an HTTP MCP server

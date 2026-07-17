@@ -51,8 +51,9 @@ inherits it.
 
 These files may only carry `workspaceId` and `projectId`; the hooks refuse
 `apiUrl` or tokens from a repository, since a cloned repo is untrusted
-input. Environment variables (`SPANTAIL_WORKSPACE_ID`,
-`SPANTAIL_PROJECT_ID`) override both files.
+input. A linked repository owns attribution outright — a workspace-only
+link never inherits a project configured elsewhere. Environment variables
+(`SPANTAIL_WORKSPACE_ID`, `SPANTAIL_PROJECT_ID`) override both files.
 
 A repository you never link falls back to the agent token's default
 workspace, with no project. Run `/spantail:doctor` any time to see where

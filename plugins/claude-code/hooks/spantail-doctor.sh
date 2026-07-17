@@ -66,6 +66,14 @@ report() {
 	val="$(spantail_config "$env_name" "$key")"
 	src="$(source_of "$env_name" "$key")"
 	if [ -z "$val" ]; then
+		case "$key" in
+		workspaceId | projectId)
+			if [ -n "${_spantail_repo_linked:-}" ]; then
+				say "$key: unset (repository-owned link; user-global values ignored)"
+				return 0
+			fi
+			;;
+		esac
 		say "$key: unset"
 		return 0
 	fi

@@ -89,6 +89,14 @@ mkdir -p "$broken/.spantail"
 printf 'not json\n' >"$broken/.spantail/config.local.json"
 printf '["ws-array"]\n' >"$broken/.spantail/config.json"
 
+ws_only="$tmp/ws-only"
+mkdir -p "$ws_only/.spantail"
+printf '{ "workspaceId": "ws-only" }\n' >"$ws_only/.spantail/config.local.json"
+
+unlinked_marker="$tmp/unlinked-marker"
+mkdir -p "$unlinked_marker/.spantail"
+printf '{}\n' >"$unlinked_marker/.spantail/config.local.json"
+
 empty="$tmp/empty"
 mkdir -p "$empty"
 
@@ -117,6 +125,20 @@ check "global settings are the final fallback" ws-global \
 check "no CLAUDE_PROJECT_DIR degrades to global settings" ws-global \
 	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId CLAUDE_CONFIG_DIR="$cfg")"
 
+# --- a linked repository owns attribution (no user-global fallback) ---
+check "workspace-only link does not inherit a global projectId" "" \
+	"$(resolve SPANTAIL_PROJECT_ID projectId \
+		CLAUDE_PROJECT_DIR="$ws_only" CLAUDE_CONFIG_DIR="$cfg")"
+check "workspace-only link does not inherit a plugin-option projectId" "" \
+	"$(resolve SPANTAIL_PROJECT_ID projectId CLAUDE_PLUGIN_OPTION_projectId=pj-opt \
+		CLAUDE_PROJECT_DIR="$ws_only" CLAUDE_CONFIG_DIR="$cfg")"
+check "env projectId still wins over a workspace-only link" pj-env \
+	"$(resolve SPANTAIL_PROJECT_ID projectId SPANTAIL_PROJECT_ID=pj-env \
+		CLAUDE_PROJECT_DIR="$ws_only" CLAUDE_CONFIG_DIR="$cfg")"
+check "an empty link file blocks the global workspaceId too" "" \
+	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
+		CLAUDE_PROJECT_DIR="$unlinked_marker" CLAUDE_CONFIG_DIR="$cfg")"
+
 # --- repo-file allowlist ---
 check "apiUrl never resolves from a repo file" https://global.example \
 	"$(resolve SPANTAIL_API_URL apiUrl \
@@ -129,7 +151,7 @@ check "agentToken never resolves from a repo file" "" \
 check "value outside the id charset is ignored" ws-shared \
 	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
 		CLAUDE_PROJECT_DIR="$invalid" CLAUDE_CONFIG_DIR="$cfg")"
-check "non-string value is ignored" pj-global \
+check "non-string value is ignored, not inherited from global" "" \
 	"$(resolve SPANTAIL_PROJECT_ID projectId \
 		CLAUDE_PROJECT_DIR="$invalid" CLAUDE_CONFIG_DIR="$cfg")"
 check "invalid JSON and non-object files degrade to global" ws-global \

@@ -19,6 +19,13 @@
 # telemetry is sent (apiUrl) or credentials must never come from it. Values
 # are charset-checked like session ids; anything else is ignored.
 #
+# A repository with a parseable .spantail file OWNS attribution: for
+# workspaceId/projectId, layers 3 and 4 are then skipped entirely, so a
+# workspace-only link cannot pair with a stale user-global projectId (which
+# would misattribute sessions, or drop them when the server rejects a
+# project outside the workspace). An unparseable file does not claim
+# ownership — it degrades like every other error, and the doctor reports it.
+#
 # Everything degrades to empty — callers decide whether a missing value means
 # skipping (exit 0), so a misconfigured plugin never fails a turn or a
 # session. Requires jq (callers check for it before sourcing).
@@ -26,6 +33,7 @@
 _spantail_plugin_options_json=""
 _spantail_repo_local_json=""
 _spantail_repo_shared_json=""
+_spantail_repo_linked=""
 
 spantail_load_user_config() {
 	local settings="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
@@ -46,15 +54,22 @@ spantail_load_user_config() {
 
 	_spantail_repo_local_json="{}"
 	_spantail_repo_shared_json="{}"
-	local repo="${CLAUDE_PROJECT_DIR:-}"
+	_spantail_repo_linked=""
+	local repo="${CLAUDE_PROJECT_DIR:-}" parsed
 	[ -n "$repo" ] || return 0
 	if [ -f "$repo/.spantail/config.local.json" ]; then
-		_spantail_repo_local_json="$(jq -c 'if type == "object" then . else {} end' \
-			"$repo/.spantail/config.local.json" 2>/dev/null || printf '{}')"
+		if parsed="$(jq -c 'if type == "object" then . else error("not an object") end' \
+			"$repo/.spantail/config.local.json" 2>/dev/null)"; then
+			_spantail_repo_local_json="$parsed"
+			_spantail_repo_linked=1
+		fi
 	fi
 	if [ -f "$repo/.spantail/config.json" ]; then
-		_spantail_repo_shared_json="$(jq -c 'if type == "object" then . else {} end' \
-			"$repo/.spantail/config.json" 2>/dev/null || printf '{}')"
+		if parsed="$(jq -c 'if type == "object" then . else error("not an object") end' \
+			"$repo/.spantail/config.json" 2>/dev/null)"; then
+			_spantail_repo_shared_json="$parsed"
+			_spantail_repo_linked=1
+		fi
 	fi
 }
 
@@ -91,9 +106,11 @@ spantail_config() {
 	local key="$2" upper snake opt_val
 	case "$key" in
 	workspaceId | projectId)
-		opt_val="$(_spantail_repo_value "$key")"
-		if [ -n "$opt_val" ]; then
-			printf '%s' "$opt_val"
+		# A linked repository owns attribution: return its value — possibly
+		# empty for a deliberately workspace-only (or empty) link — and never
+		# fall through to the user-global layers below.
+		if [ -n "${_spantail_repo_linked:-}" ]; then
+			printf '%s' "$(_spantail_repo_value "$key")"
 			return 0
 		fi
 		;;
