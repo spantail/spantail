@@ -158,8 +158,15 @@ else
 	say "telemetry: unknown — the agent token lives in the keychain, which only hooks can read, and the plugin's SessionStart has not run in this session; start a new session and re-run /spantail:doctor"
 fi
 
-if [ -n "$workspace" ] || [ -n "$project" ]; then
+# The linked verdict comes from the repo state, not from the effective ids:
+# a user-global fallback still resolving values is exactly the unlinked
+# condition this doctor exists to surface.
+if [ -n "${SPANTAIL_WORKSPACE_ID:-}" ] || [ -n "${SPANTAIL_PROJECT_ID:-}" ]; then
+	say "attribution: from the SPANTAIL_* environment (workspace: ${workspace:-token default}, project: ${project:-none})"
+elif [ -n "${_spantail_repo_linked:-}" ]; then
 	say "attribution: linked (workspace: ${workspace:-token default}, project: ${project:-none})"
+elif [ -n "$workspace" ] || [ -n "$project" ]; then
+	say "attribution: NOT LINKED — falling back to the user-global plugin config (workspace: ${workspace:-token default}, project: ${project:-none}). Run /spantail:link to give this repository its own attribution."
 else
 	say "attribution: NOT LINKED — sessions fall back to the agent token's default workspace; if the token has none, ingest is rejected and telemetry is dropped. Run /spantail:link to link this repository."
 fi
