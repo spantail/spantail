@@ -10,7 +10,7 @@ import { ensureTmpDir, seedR2Dir, wranglerLocal } from "./exec";
 import { generateDataset } from "./generate";
 import { datasetToSql } from "./to-sql";
 
-// All committed R2 seed assets are WebP (see examples/<name>/r2/README.md).
+// All committed R2 seed assets are WebP (see each dataset's README.md).
 const R2_BUCKET = "spantail-uploads";
 
 /** Absolute paths of every file under `dir`, recursively. */

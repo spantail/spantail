@@ -47,7 +47,7 @@ async function main(): Promise<void> {
 		process.stdout.write(sql);
 	}
 	console.error(
-		`\nApply with: wrangler d1 execute <DB> --file <sql>. ` +
+		`\nApply with: wrangler d1 execute <DB> --remote --file <sql>. ` +
 			`For avatars/logos, also sync examples/${name}/r2/ to the uploads bucket.`,
 	);
 
