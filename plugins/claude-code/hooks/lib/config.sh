@@ -58,20 +58,26 @@ spantail_load_user_config() {
 	_spantail_repo_linked=""
 	local repo="${CLAUDE_PROJECT_DIR:-}" parsed
 	[ -n "$repo" ] || return 0
-	if [ -f "$repo/.spantail/config.local.json" ]; then
-		if parsed="$(jq -c 'if type == "object" then . else error("not an object") end' \
-			"$repo/.spantail/config.local.json" 2>/dev/null)"; then
-			_spantail_repo_local_json="$parsed"
-			_spantail_repo_linked=1
-		fi
+	if parsed="$(_spantail_repo_parse_file "$repo/.spantail/config.local.json")"; then
+		_spantail_repo_local_json="$parsed"
+		_spantail_repo_linked=1
 	fi
-	if [ -f "$repo/.spantail/config.json" ]; then
-		if parsed="$(jq -c 'if type == "object" then . else error("not an object") end' \
-			"$repo/.spantail/config.json" 2>/dev/null)"; then
-			_spantail_repo_shared_json="$parsed"
-			_spantail_repo_linked=1
-		fi
+	if parsed="$(_spantail_repo_parse_file "$repo/.spantail/config.json")"; then
+		_spantail_repo_shared_json="$parsed"
+		_spantail_repo_linked=1
 	fi
+}
+
+# _spantail_repo_parse_file path — echoes the file's parsed JSON object, or
+# fails. The size cap runs before jq: the file is repo-controlled and parsed
+# on every Stop/SessionEnd, so an oversized config must not cost a jq run
+# per turn — a real one holds two short ids and stays far under 4 KB.
+_spantail_repo_parse_file() {
+	local f="$1" size
+	[ -f "$f" ] || return 1
+	size="$(wc -c <"$f" 2>/dev/null)" || return 1
+	[ "${size:-0}" -le 4096 ] || return 1
+	jq -c 'if type == "object" then . else error("not an object") end' "$f" 2>/dev/null
 }
 
 # _spantail_repo_value_from json key — echoes one repo layer's value for an
