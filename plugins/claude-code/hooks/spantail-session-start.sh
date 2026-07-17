@@ -42,8 +42,11 @@ token_state() {
 	esac
 }
 
-printf 'SPANTAIL_PLUGIN_AGENT_TOKEN_STATE=%s\n' "$(token_state agentToken spantail_aat)" >>"$CLAUDE_ENV_FILE"
-printf 'SPANTAIL_PLUGIN_API_TOKEN_STATE=%s\n' "$(token_state apiToken spantail_pat)" >>"$CLAUDE_ENV_FILE"
+# The documented persistence form is an `export` statement; a bare
+# assignment stays shell-local and would not reach child processes like
+# the doctor script.
+printf 'export SPANTAIL_PLUGIN_AGENT_TOKEN_STATE="%s"\n' "$(token_state agentToken spantail_aat)" >>"$CLAUDE_ENV_FILE"
+printf 'export SPANTAIL_PLUGIN_API_TOKEN_STATE="%s"\n' "$(token_state apiToken spantail_pat)" >>"$CLAUDE_ENV_FILE"
 
 session="$(jq -r '.session_id // empty')"
 [ -n "$session" ] || skip "no session_id in hook payload; skipping"
@@ -51,7 +54,7 @@ case "$session" in
 *[!A-Za-z0-9._-]*) skip "unexpected session_id format; skipping" ;;
 esac
 
-printf 'SPANTAIL_SESSION_ID=%s\n' "$session" >>"$CLAUDE_ENV_FILE"
+printf 'export SPANTAIL_SESSION_ID="%s"\n' "$session" >>"$CLAUDE_ENV_FILE"
 if [ -n "${CLAUDE_PLUGIN_DATA:-}" ]; then
-	printf 'SPANTAIL_PLUGIN_DATA=%s\n' "$CLAUDE_PLUGIN_DATA" >>"$CLAUDE_ENV_FILE"
+	printf 'export SPANTAIL_PLUGIN_DATA="%s"\n' "$CLAUDE_PLUGIN_DATA" >>"$CLAUDE_ENV_FILE"
 fi
