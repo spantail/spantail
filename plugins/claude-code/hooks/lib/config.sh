@@ -17,7 +17,8 @@
 # Only workspaceId and projectId may resolve from the repo files: a cloned
 # repository is untrusted input (docs/security.md), so keys that steer where
 # telemetry is sent (apiUrl) or credentials must never come from it. Values
-# are charset-checked like session ids; anything else is ignored.
+# are charset-checked like session ids and length-capped; anything else is
+# ignored.
 #
 # A repository with a parseable .spantail file OWNS attribution: for
 # workspaceId/projectId, layers 3 and 4 are then skipped entirely, so a
@@ -74,13 +75,16 @@ spantail_load_user_config() {
 }
 
 # _spantail_repo_value_from json key — echoes one repo layer's value for an
-# attribution key. Non-string values and values outside the id charset are
-# ignored (the repo is untrusted input). Also used by the doctor script to
-# report which layer a value comes from.
+# attribution key. Non-string values, values outside the id charset, and
+# values longer than 64 characters (ids are 36-char UUIDs; the cap keeps an
+# adversarial megabyte "id" out of jq/curl argv) are ignored — the repo is
+# untrusted input. Also used by the doctor script to report which layer a
+# value comes from.
 _spantail_repo_value_from() {
 	local val
 	val="$(jq -r --arg k "$2" '.[$k] // empty | strings' <<<"${1:-{}}" 2>/dev/null)"
 	[ -n "$val" ] || return 0
+	[ "${#val}" -le 64 ] || return 0
 	case "$val" in *[!A-Za-z0-9._-]*) return 0 ;; esac
 	printf '%s' "$val"
 }

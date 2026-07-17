@@ -84,6 +84,11 @@ mkdir -p "$invalid/.spantail"
 printf '{ "workspaceId": "ws bad!" }\n' >"$invalid/.spantail/config.local.json"
 printf '{ "workspaceId": "ws-shared", "projectId": 42 }\n' >"$invalid/.spantail/config.json"
 
+long="$tmp/long"
+mkdir -p "$long/.spantail"
+printf '{ "workspaceId": "%s" }\n' "$(printf 'a%.0s' $(seq 1 65))" >"$long/.spantail/config.local.json"
+printf '{ "workspaceId": "ws-shared" }\n' >"$long/.spantail/config.json"
+
 broken="$tmp/broken"
 mkdir -p "$broken/.spantail"
 printf 'not json\n' >"$broken/.spantail/config.local.json"
@@ -154,6 +159,9 @@ check "value outside the id charset is ignored" ws-shared \
 check "non-string value is ignored, not inherited from global" "" \
 	"$(resolve SPANTAIL_PROJECT_ID projectId \
 		CLAUDE_PROJECT_DIR="$invalid" CLAUDE_CONFIG_DIR="$cfg")"
+check "value longer than 64 chars is ignored" ws-shared \
+	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
+		CLAUDE_PROJECT_DIR="$long" CLAUDE_CONFIG_DIR="$cfg")"
 check "invalid JSON and non-object files degrade to global" ws-global \
 	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
 		CLAUDE_PROJECT_DIR="$broken" CLAUDE_CONFIG_DIR="$cfg")"

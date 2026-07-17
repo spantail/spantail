@@ -126,8 +126,14 @@ else
 	say "attribution: NOT LINKED — sessions fall back to the agent token's default workspace; if the token has none, ingest is rejected and telemetry is dropped. Run /spantail:link to link this repository."
 fi
 
-if [ -z "$api_token" ]; then
-	say "mcp: apiToken unset — the bundled MCP server (skills/agents) is unavailable; telemetry hooks are unaffected"
+# The bundled MCP server authenticates from ${user_config.apiToken} in
+# .mcp.json — env overrides never reach it, so judge MCP availability from
+# the plugin user config alone (an unset env var name skips the env layer).
+mcp_token="$(spantail_config _SPANTAIL_DOCTOR_UNSET_ apiToken)"
+if [ -n "$mcp_token" ]; then
+	say "mcp: apiToken set — the bundled MCP server (skills/agents) is available"
+elif [ -n "$api_token" ]; then
+	say "mcp: apiToken set only via SPANTAIL_API_TOKEN — the bundled MCP server reads the plugin config, not the environment, so skills/agents remain unavailable; set apiToken in the plugin config"
 else
-	say "mcp: apiToken set (note: the MCP server reads the plugin dialog value only; SPANTAIL_* env overrides do not apply to it)"
+	say "mcp: apiToken unset — the bundled MCP server (skills/agents) is unavailable; telemetry hooks are unaffected"
 fi
