@@ -16,7 +16,10 @@ work and building reports.
     `context.refs`). The title of the session's plan file is sent as the
     entry description **only if you opt in**.
   - `SessionStart` exports `SPANTAIL_SESSION_ID` and `SPANTAIL_PLUGIN_DATA`
-    so the `/spantail:summary` toggle can target the current session.
+    so the `/spantail:summary` toggle can target the current session, plus
+    presence markers (never values) for the keychain-stored tokens so
+    `/spantail:doctor` — a Bash tool call that cannot read the keychain —
+    can report them accurately.
 - **Skills** (use the bundled Spantail MCP server, which acts as *you* via a
   personal API token — a separate credential from the hooks' agent token; set
   `apiToken` to enable it):
@@ -166,7 +169,7 @@ whatever you put into descriptions via `/spantail:log-work`.
 | `hooks/hooks.json` | Wires SessionStart / Stop / SessionEnd. |
 | `hooks/spantail-agent-stop.sh` | Stop hook: transcript → per-turn events ingest. |
 | `hooks/spantail-session-end.sh` | SessionEnd hook: final reconcile + finalize. |
-| `hooks/spantail-session-start.sh` | Exports the session id for the summary toggle. |
+| `hooks/spantail-session-start.sh` | Exports the session id for the summary toggle and token-presence markers for the doctor. |
 | `hooks/spantail-doctor.sh` | Resolution report for `/spantail:doctor` (values, sources, warnings; credentials masked). |
 | `hooks/lib/config.sh` | Env → repo `.spantail/` files → plugin user-config resolution. |
 | `hooks/transcript-to-events.jq` | Transcript → compact events (deduped by `message.id`). |

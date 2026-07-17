@@ -6,6 +6,13 @@
 # plugin option / global settings), masking credentials, then a verdict on
 # telemetry, MCP, and this repository's attribution. Read-only; exits 0.
 #
+# This script runs as a Bash tool call, which — unlike hook subprocesses —
+# receives no CLAUDE_PLUGIN_OPTION_* variables, and keychain-stored tokens
+# never appear in settings.json. Token presence therefore comes from the
+# SPANTAIL_PLUGIN_*_STATE markers the SessionStart hook exports (presence
+# and prefix class only, never values); without them it is reported as
+# unknown, not unset.
+#
 # Requirements: bash, jq.
 set -u
 
@@ -60,11 +67,11 @@ source_of() {
 	fi
 }
 
-# report ENV_VAR_NAME userConfigKey secret — one "key: value (source)" line.
+# report ENV_VAR_NAME userConfigKey — one "key: value (source)" line for a
+# non-sensitive key.
 report() {
-	local env_name="$1" key="$2" secret="$3" val src shown
+	local env_name="$1" key="$2" val src
 	val="$(spantail_config "$env_name" "$key")"
-	src="$(source_of "$env_name" "$key")"
 	if [ -z "$val" ]; then
 		case "$key" in
 		workspaceId | projectId)
@@ -77,26 +84,42 @@ report() {
 		say "$key: unset"
 		return 0
 	fi
-	shown="$val"
-	if [ "$secret" = secret ]; then
-		# Never print credentials; the expected prefix is enough to spot a
-		# token pasted into the wrong field.
-		case "$val" in
-		spantail_aat_*) shown="set (spantail_aat_…)" ;;
-		spantail_pat_*) shown="set (spantail_pat_…)" ;;
-		*) shown="set (unexpected format)" ;;
-		esac
-	fi
-	say "$key: $shown ($src)"
+	src="$(source_of "$env_name" "$key")"
+	say "$key: $val ($src)"
 }
 
+# report_secret ENV_VAR_NAME userConfigKey markerValue expectedPrefix — like
+# report, but never prints the value (prefix class only), and falls back to
+# the SessionStart marker for keychain-stored tokens this process can't see.
+report_secret() {
+	local env_name="$1" key="$2" marker="$3" prefix="$4" val src
+	val="$(spantail_config "$env_name" "$key")"
+	if [ -n "$val" ]; then
+		src="$(source_of "$env_name" "$key")"
+		case "$val" in
+		"$prefix"_*) say "$key: set (${prefix}_…) ($src)" ;;
+		*) say "$key: set (unexpected format) ($src)" ;;
+		esac
+		return 0
+	fi
+	case "$marker" in
+	"$prefix") say "$key: set (${prefix}_…) (plugin config, keychain; reported by SessionStart)" ;;
+	unexpected) say "$key: set (unexpected format) (plugin config, keychain; reported by SessionStart)" ;;
+	unset) say "$key: unset" ;;
+	*) say "$key: unknown — keychain tokens are visible to hooks only, and the plugin's SessionStart has not run in this session" ;;
+	esac
+}
+
+agent_marker="${SPANTAIL_PLUGIN_AGENT_TOKEN_STATE:-}"
+api_marker="${SPANTAIL_PLUGIN_API_TOKEN_STATE:-}"
+
 say "repository: $repo"
-report SPANTAIL_API_URL apiUrl plain
-report SPANTAIL_AGENT_TOKEN agentToken secret
-report SPANTAIL_API_TOKEN apiToken secret
-report SPANTAIL_WORKSPACE_ID workspaceId plain
-report SPANTAIL_PROJECT_ID projectId plain
-report SPANTAIL_SEND_SESSION_SUMMARY sendSessionSummary plain
+report SPANTAIL_API_URL apiUrl
+report_secret SPANTAIL_AGENT_TOKEN agentToken "$agent_marker" spantail_aat
+report_secret SPANTAIL_API_TOKEN apiToken "$api_marker" spantail_pat
+report SPANTAIL_WORKSPACE_ID workspaceId
+report SPANTAIL_PROJECT_ID projectId
+report SPANTAIL_SEND_SESSION_SUMMARY sendSessionSummary
 say ""
 
 # Repo files may only set workspaceId/projectId; surface anything else so a
@@ -114,10 +137,25 @@ api_token="$(spantail_config SPANTAIL_API_TOKEN apiToken)"
 workspace="$(spantail_config SPANTAIL_WORKSPACE_ID workspaceId)"
 project="$(spantail_config SPANTAIL_PROJECT_ID projectId)"
 
-if [ -z "$api_url" ] || [ -z "$agent_token" ]; then
-	say "telemetry: DISABLED — apiUrl and agentToken are required; reinstall the plugin or set SPANTAIL_API_URL / SPANTAIL_AGENT_TOKEN"
+# agent_present: yes / no / unknown — resolved value, else SessionStart marker.
+agent_present=unknown
+if [ -n "$agent_token" ]; then
+	agent_present=yes
 else
+	case "$agent_marker" in
+	spantail_aat | unexpected) agent_present=yes ;;
+	unset) agent_present=no ;;
+	esac
+fi
+
+if [ -z "$api_url" ]; then
+	say "telemetry: DISABLED — apiUrl is not configured; reinstall the plugin or set SPANTAIL_API_URL"
+elif [ "$agent_present" = yes ]; then
 	say "telemetry: enabled ($api_url)"
+elif [ "$agent_present" = no ]; then
+	say "telemetry: DISABLED — agentToken is not configured; reinstall the plugin or set SPANTAIL_AGENT_TOKEN"
+else
+	say "telemetry: unknown — the agent token lives in the keychain, which only hooks can read, and the plugin's SessionStart has not run in this session; start a new session and re-run /spantail:doctor"
 fi
 
 if [ -n "$workspace" ] || [ -n "$project" ]; then
@@ -128,12 +166,15 @@ fi
 
 # The bundled MCP server authenticates from ${user_config.apiToken} in
 # .mcp.json — env overrides never reach it, so judge MCP availability from
-# the plugin user config alone (an unset env var name skips the env layer).
-mcp_token="$(spantail_config _SPANTAIL_DOCTOR_UNSET_ apiToken)"
-if [ -n "$mcp_token" ]; then
+# the plugin user config alone (an unset env-var name skips the env layer,
+# and the SessionStart marker stands in for the keychain).
+mcp_cfg_token="$(spantail_config _SPANTAIL_DOCTOR_UNSET_ apiToken)"
+if [ -n "$mcp_cfg_token" ] || [ "$api_marker" = spantail_pat ] || [ "$api_marker" = unexpected ]; then
 	say "mcp: apiToken set — the bundled MCP server (skills/agents) is available"
 elif [ -n "$api_token" ]; then
 	say "mcp: apiToken set only via SPANTAIL_API_TOKEN — the bundled MCP server reads the plugin config, not the environment, so skills/agents remain unavailable; set apiToken in the plugin config"
-else
+elif [ "$api_marker" = unset ]; then
 	say "mcp: apiToken unset — the bundled MCP server (skills/agents) is unavailable; telemetry hooks are unaffected"
+else
+	say "mcp: unknown — the personal API token lives in the keychain, which only hooks can read, and the plugin's SessionStart has not run in this session"
 fi
