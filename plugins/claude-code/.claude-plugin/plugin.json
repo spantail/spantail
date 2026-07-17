@@ -1,6 +1,6 @@
 {
 	"name": "spantail",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Spantail integration: per-turn agent telemetry hooks, work-logging and reporting skills, and analysis agents.",
 	"author": { "name": "Spantail" },
 	"homepage": "https://spantail.com",
@@ -23,18 +23,6 @@
 			"title": "Personal API token",
 			"description": "Optional; personal API token (spantail_pat_...) for the bundled MCP server the skills and agents use. Acts as you (read/write per your permissions), separate from the agent access token above. Leave blank if you only use the telemetry hooks.",
 			"sensitive": true,
-			"required": false
-		},
-		"workspaceId": {
-			"type": "string",
-			"title": "Workspace id",
-			"description": "Optional; defaults to the workspace the agent token is bound to",
-			"required": false
-		},
-		"projectId": {
-			"type": "string",
-			"title": "Project id",
-			"description": "Optional; records sessions against this project",
 			"required": false
 		},
 		"sendSessionSummary": {
