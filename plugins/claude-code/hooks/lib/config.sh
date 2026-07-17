@@ -24,8 +24,11 @@
 # workspaceId/projectId, layers 3 and 4 are then skipped entirely, so a
 # workspace-only link cannot pair with a stale user-global projectId (which
 # would misattribute sessions, or drop them when the server rejects a
-# project outside the workspace). An unparseable file does not claim
-# ownership — it degrades like every other error, and the doctor reports it.
+# project outside the workspace). The same rule holds between the two repo
+# files: a parseable local file replaces the shared one entirely — never a
+# per-key merge — so a personal workspace-only link cannot inherit the
+# team's project. An unparseable file does not claim ownership — it
+# degrades like every other error, and the doctor reports it.
 #
 # Everything degrades to empty — callers decide whether a missing value means
 # skipping (exit 0), so a misconfigured plugin never fails a turn or a
@@ -34,6 +37,8 @@
 _spantail_plugin_options_json=""
 _spantail_repo_local_json=""
 _spantail_repo_shared_json=""
+_spantail_repo_local_ok=""
+_spantail_repo_shared_ok=""
 _spantail_repo_linked=""
 
 spantail_load_user_config() {
@@ -55,15 +60,19 @@ spantail_load_user_config() {
 
 	_spantail_repo_local_json="{}"
 	_spantail_repo_shared_json="{}"
+	_spantail_repo_local_ok=""
+	_spantail_repo_shared_ok=""
 	_spantail_repo_linked=""
 	local repo="${CLAUDE_PROJECT_DIR:-}" parsed
 	[ -n "$repo" ] || return 0
 	if parsed="$(_spantail_repo_parse_file "$repo/.spantail/config.local.json")"; then
 		_spantail_repo_local_json="$parsed"
+		_spantail_repo_local_ok=1
 		_spantail_repo_linked=1
 	fi
 	if parsed="$(_spantail_repo_parse_file "$repo/.spantail/config.json")"; then
 		_spantail_repo_shared_json="$parsed"
+		_spantail_repo_shared_ok=1
 		_spantail_repo_linked=1
 	fi
 }
@@ -95,14 +104,14 @@ _spantail_repo_value_from() {
 	printf '%s' "$val"
 }
 
-# _spantail_repo_value key — the personal file first, then the shared one.
+# _spantail_repo_value key — the owning file's value: a parseable personal
+# file replaces the shared one entirely (no per-key merge across the two).
 _spantail_repo_value() {
-	local val
-	val="$(_spantail_repo_value_from "$_spantail_repo_local_json" "$1")"
-	if [ -z "$val" ]; then
-		val="$(_spantail_repo_value_from "$_spantail_repo_shared_json" "$1")"
+	if [ -n "$_spantail_repo_local_ok" ]; then
+		_spantail_repo_value_from "$_spantail_repo_local_json" "$1"
+	elif [ -n "$_spantail_repo_shared_ok" ]; then
+		_spantail_repo_value_from "$_spantail_repo_shared_json" "$1"
 	fi
-	printf '%s' "$val"
 }
 
 # spantail_config ENV_VAR_NAME userConfigKey — echoes the resolved value.

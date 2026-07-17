@@ -81,8 +81,12 @@ printf '{ "workspaceId": "ws-shared" }\n' >"$shared_only/.spantail/config.json"
 
 invalid="$tmp/invalid"
 mkdir -p "$invalid/.spantail"
-printf '{ "workspaceId": "ws bad!" }\n' >"$invalid/.spantail/config.local.json"
-printf '{ "workspaceId": "ws-shared", "projectId": 42 }\n' >"$invalid/.spantail/config.json"
+printf '{ "workspaceId": "ws bad!", "projectId": 42 }\n' >"$invalid/.spantail/config.local.json"
+printf '{ "workspaceId": "ws-shared", "projectId": "pj-shared2" }\n' >"$invalid/.spantail/config.json"
+
+mixed="$tmp/mixed"
+mkdir -p "$mixed/.spantail"
+printf '{ "workspaceId": "ws bad!", "projectId": "pj-local2" }\n' >"$mixed/.spantail/config.local.json"
 
 oversized="$tmp/oversized"
 mkdir -p "$oversized/.spantail"
@@ -117,7 +121,7 @@ check "env always wins" ws-env \
 check "local file beats shared and global" ws-local \
 	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
 		CLAUDE_PROJECT_DIR="$repo" CLAUDE_CONFIG_DIR="$cfg")"
-check "shared file fills keys the local file lacks" pj-shared \
+check "local file owns attribution; shared projectId is not inherited" "" \
 	"$(resolve SPANTAIL_PROJECT_ID projectId \
 		CLAUDE_PROJECT_DIR="$repo" CLAUDE_CONFIG_DIR="$cfg")"
 check "shared file used without a local file" ws-shared \
@@ -158,13 +162,16 @@ check "agentToken never resolves from a repo file" "" \
 		CLAUDE_PROJECT_DIR="$repo" CLAUDE_CONFIG_DIR="$tmp/no-cfg")"
 
 # --- validation and degradation ---
-check "value outside the id charset is ignored" ws-shared \
+check "invalid charset in the owning file resolves empty, not shared/global" "" \
 	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
 		CLAUDE_PROJECT_DIR="$invalid" CLAUDE_CONFIG_DIR="$cfg")"
-check "non-string value is ignored, not inherited from global" "" \
+check "non-string value in the owning file resolves empty" "" \
 	"$(resolve SPANTAIL_PROJECT_ID projectId \
 		CLAUDE_PROJECT_DIR="$invalid" CLAUDE_CONFIG_DIR="$cfg")"
-check "value longer than 64 chars is ignored" ws-shared \
+check "a valid key beside an invalid one still resolves" pj-local2 \
+	"$(resolve SPANTAIL_PROJECT_ID projectId \
+		CLAUDE_PROJECT_DIR="$mixed" CLAUDE_CONFIG_DIR="$cfg")"
+check "value longer than 64 chars resolves empty in the owning file" "" \
 	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
 		CLAUDE_PROJECT_DIR="$long" CLAUDE_CONFIG_DIR="$cfg")"
 check "file over the 4KB cap is skipped before parsing" ws-global \

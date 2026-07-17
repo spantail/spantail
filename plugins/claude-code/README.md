@@ -84,7 +84,7 @@ read two files at the repository root (`$CLAUDE_PROJECT_DIR`):
 
 | File | Tracked | For |
 |---|---|---|
-| `.spantail/config.local.json` | gitignored | You only — `/spantail:link` writes it and adds the `.gitignore` entry. |
+| `.spantail/config.local.json` | gitignored | You only — `/spantail:link` writes it and adds the `.gitignore` entry. When present it replaces the shared file entirely (delete it to return to the team link). |
 | `.spantail/config.json` | committed | The whole team — `/spantail:link --shared` writes it; commit it once and every collaborator who installs the plugin inherits it. |
 
 Both may contain only `workspaceId` and `projectId`:
@@ -93,11 +93,13 @@ Both may contain only `workspaceId` and `projectId`:
 { "workspaceId": "<id>", "projectId": "<id>" }
 ```
 
-Resolution order per value: `SPANTAIL_*` environment → local file → shared
-file → plugin config → Claude Code's global `pluginConfigs`. A linked
-repository (any parseable `.spantail` file) **owns attribution**: the two
-user-global layers are skipped for both keys, so a workspace-only link never
-inherits a stale global project id. The repo files
+Resolution order per value: `SPANTAIL_*` environment → the local file (or
+the shared file when no local file exists) → plugin config → Claude Code's
+global `pluginConfigs`. Ownership is file-level, never a per-key merge: a
+linked repository (any parseable `.spantail` file) skips the two
+user-global layers for both keys, and a local file replaces the shared one
+entirely — so a workspace-only link never inherits a project id from the
+shared file or from a stale global config. The repo files
 are deliberately capped at those two keys — a cloned repository is untrusted
 input, so `apiUrl` and tokens never resolve from it (a committed config could
 otherwise redirect your telemetry, agent token included, to an arbitrary

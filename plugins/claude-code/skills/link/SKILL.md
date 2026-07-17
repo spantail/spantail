@@ -41,6 +41,7 @@ other key there (`apiUrl` and tokens never resolve from a repo file).
    `.gitignore` if missing; skip when already covered). For the shared file:
    remind the user to commit it.
 5. Confirm the result: file written, workspace/project (name and id), and
-   that precedence is env `SPANTAIL_*` > local file > shared file > the
+   that precedence is env `SPANTAIL_*` > the local file (which replaces the
+   shared file entirely while it exists) > the shared file > the
    user-global plugin config. Suggest `/spantail:doctor` to verify the
    effective resolution.

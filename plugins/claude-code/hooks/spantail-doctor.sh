@@ -43,13 +43,17 @@ source_of() {
 	fi
 	case "$key" in
 	workspaceId | projectId)
-		if [ -n "$(_spantail_repo_value_from "$_spantail_repo_local_json" "$key")" ]; then
-			printf '.spantail/config.local.json'
-			return 0
-		fi
-		if [ -n "$(_spantail_repo_value_from "$_spantail_repo_shared_json" "$key")" ]; then
-			printf '.spantail/config.json'
-			return 0
+		# Mirror the ownership rule: only the owning file is consulted.
+		if [ -n "${_spantail_repo_local_ok:-}" ]; then
+			if [ -n "$(_spantail_repo_value_from "$_spantail_repo_local_json" "$key")" ]; then
+				printf '.spantail/config.local.json'
+				return 0
+			fi
+		elif [ -n "${_spantail_repo_shared_ok:-}" ]; then
+			if [ -n "$(_spantail_repo_value_from "$_spantail_repo_shared_json" "$key")" ]; then
+				printf '.spantail/config.json'
+				return 0
+			fi
 		fi
 		;;
 	esac
