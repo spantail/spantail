@@ -14,6 +14,15 @@ export function seedDataDir(name: string): string {
 	return join(examplesRoot, name, "db/seed");
 }
 
+/**
+ * Directory holding a dataset's R2 assets, laid out to mirror the bucket's key
+ * structure 1:1 (`avatars/<userId>`, `workspaces/<id>/logo`) so a single
+ * S3-compatible `sync` reproduces the bucket. May not exist.
+ */
+export function seedR2Dir(name: string): string {
+	return join(examplesRoot, name, "r2");
+}
+
 /** Dataset names: examples/<name> directories that hold seed YAML. */
 export function availableDatasets(): string[] {
 	if (!existsSync(examplesRoot)) return [];

@@ -32,8 +32,10 @@ pnpm quality            # dead code / unused deps (Knip) + architecture-boundary
 pnpm db:generate        # drizzle-kit generate (after editing packages/db/src/schema)
 pnpm db:migrate:local   # apply migrations to local D1
 pnpm db:migrate:remote  # apply migrations to remote D1
-pnpm db:seed [name]     # seed local D1 from examples/<name>/db/seed (default: demo; see packages/db/seed)
+pnpm db:seed [name]     # seed local D1 from examples/<name>/db/seed + upload examples/<name>/r2 to local R2 (default: demo)
+pnpm db:seed:sql [name] # print a dataset's seed SQL to stdout/--out for a remote D1 (pure; touches no DB or R2)
 pnpm generate-import [name] # write examples/<name>/import/work-entries.jsonl (gitignored) for `spantail entries import`
+pnpm generate-avatars [name] # (re)generate examples/<name>/r2 avatar/logo assets (WebP)
 pnpm db:drop            # wipe local D1 state
 pnpm db:reset           # db:drop → db:migrate:local (schema only, no seed; local only)
 pnpm run deploy         # wrangler deploy (apps/web); `run` is required — see docs/deploy.md

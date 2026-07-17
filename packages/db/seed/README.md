@@ -9,12 +9,16 @@ pnpm db:seed           # insert the default dataset (demo) into the local DB
 pnpm db:seed demo      # insert the English demo dataset
 pnpm db:seed demo-ja   # insert the Japanese demo dataset
 pnpm db:drop           # wipe local D1 state (schema and data)
+pnpm db:seed:sql demo  # print the dataset's seed SQL (for a remote DB; see below)
 ```
 
 `db:reset` drops local state and recreates the schema from migrations; it does
 **not** seed, so you get an empty database. Run `pnpm db:seed <name>` afterwards
-to load a dataset. All commands are **local-only** (they never touch a remote
-database).
+to load a dataset. `db:seed` is **local-only** (it never touches a remote
+database); `db:seed:sql` writes SQL and touches nothing at all.
+
+`pnpm db:seed` also uploads the dataset's R2 assets (avatars, logos) into the
+local Miniflare bucket so they render in `pnpm dev` — see [R2 assets](#r2-assets).
 
 ## Datasets
 
@@ -59,3 +63,38 @@ workspaces the report spans; its recipients are *derived* from membership
 declare a delivery the app's permission rule would reject. Loading fails if a
 route's sender isn't a member of every listed workspace, or if no eligible
 recipient exists.
+
+Seeded user and workspace ids are **deterministic** (a v5 UUID derived from the
+dataset name + key, see [`ids.ts`](./ids.ts)), so a rerun — or `db:seed` vs
+`db:seed:sql` — produces the same ids. That is what lets the R2 assets below be
+committed as files whose names match the ids. Other rows (accounts, projects,
+reports) keep random ids, as before.
+
+## R2 assets
+
+Each dataset can carry avatars and workspace logos under
+[`examples/<name>/r2/`](../../../examples), laid out to mirror the R2 bucket's
+key structure 1:1 (`avatars/<userId>`, `workspaces/<workspaceId>/logo`, extension
+less, all WebP). A file's **presence** is the single source of truth: `generate.ts`
+sets a user's `image` / a workspace's `logoUrl` only when the matching file
+exists, so nothing in the YAML declares them.
+
+```bash
+pnpm generate-avatars demo     # (re)generate examples/demo/r2/ from the cast
+pnpm generate-avatars demo-ja
+```
+
+The shipped assets are placeholder artwork ([`generate-avatars.ts`](./generate-avatars.ts)):
+a stylized silhouette per user and a monogram per workspace, license-free and
+visually distinct from the app's initials fallback. **Swap the files for real
+photos without any code change** — only their presence and object key matter.
+
+`pnpm db:seed` uploads them to the local bucket automatically. To seed a
+**remote** instance, apply the SQL and sync the assets:
+
+```bash
+pnpm db:seed:sql demo --out seed.sql
+wrangler d1 execute <DB> --remote --file seed.sql
+# The files are extensionless, so a plain sync can't infer the type — set it:
+aws s3 sync examples/demo/r2 s3://<bucket> --content-type image/webp
+```

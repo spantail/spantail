@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
 	buildReportFrontMatter,
 	generateShareToken,
@@ -15,6 +17,8 @@ import {
 import { defaultTemplates } from "@spantail/templates/node";
 import { hashPassword } from "better-auth/crypto";
 
+import { seedR2Dir } from "./exec";
+import { deterministicId } from "./ids";
 import {
 	type Cadence,
 	type Language,
@@ -174,8 +178,17 @@ export async function generateDataset(
 	now: Date,
 	dataDir: string,
 	locale: Language,
+	datasetName: string,
 ): Promise<Dataset> {
 	const config = loadConfig(dataDir);
+
+	// Committed R2 assets mirror the bucket 1:1; a file's presence is the single
+	// source of truth for whether a seeded user/workspace has an avatar/logo.
+	const r2Dir = seedR2Dir(datasetName);
+	const hasAvatar = (userId: string) =>
+		existsSync(join(r2Dir, "avatars", userId));
+	const hasLogo = (workspaceId: string) =>
+		existsSync(join(r2Dir, "workspaces", workspaceId, "logo"));
 
 	// Anchor account/workspace creation comfortably before the activity window.
 	const baseCreatedAt = new Date(now.getTime() - 90 * 86_400_000);
@@ -185,7 +198,7 @@ export async function generateDataset(
 	const workspaceRows: Row[] = [];
 	for (const w of config.workspaces) {
 		const ws: ResolvedWorkspace = {
-			id: randomUUID(),
+			id: deterministicId(`${datasetName}:workspace:${w.key}`),
 			key: w.key,
 			slug: w.slug,
 			name: w.name,
@@ -198,6 +211,11 @@ export async function generateDataset(
 			id: ws.id,
 			slug: ws.slug,
 			name: ws.name,
+			// The full app-relative URL the client uses as the logo <img> src; the
+			// "?v=" cache-buster is a stable slice of the (deterministic) id.
+			logoUrl: hasLogo(ws.id)
+				? `/api/v1/workspaces/${ws.id}/logo?v=${ws.id.slice(0, 8)}`
+				: null,
 			settings: {},
 			createdAt: baseCreatedAt,
 			archivedAt: null,
@@ -211,7 +229,7 @@ export async function generateDataset(
 	const credentials: Array<{ name: string; email: string; password: string }> =
 		[];
 	for (const u of config.users) {
-		const id = randomUUID();
+		const id = deterministicId(`${datasetName}:user:${u.key}`);
 		const user: ResolvedUser = {
 			id,
 			key: u.key,
@@ -224,7 +242,9 @@ export async function generateDataset(
 			name: u.name,
 			email: u.email,
 			emailVerified: true,
-			image: null,
+			// A non-URL cache-buster token means "has an R2 avatar"; the app then
+			// serves it from `avatars/<id>`. Derived from the id so it stays stable.
+			image: hasAvatar(id) ? id.replace(/-/g, "").slice(0, 16) : null,
 			isAdmin: u.isAdmin,
 			canManageTemplates: u.canManageTemplates,
 			createdAt: baseCreatedAt,
