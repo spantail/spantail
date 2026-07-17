@@ -50,6 +50,15 @@ async function main(): Promise<void> {
 		`\nApply with: wrangler d1 execute <DB> --file <sql>. ` +
 			`For avatars/logos, also sync examples/${name}/r2/ to the uploads bucket.`,
 	);
+
+	// The seeded accounts are password-only, so an operator applying this SQL to a
+	// remote DB needs the sign-in pairs (as `pnpm db:seed` prints them). On stderr,
+	// so stdout stays pure SQL.
+	console.error("\nSign in with any email + password below:");
+	const pad = Math.max(...dataset.credentials.map((c) => c.email.length));
+	for (const { name: userName, email, password } of dataset.credentials) {
+		console.error(`  ${email.padEnd(pad)}  ${password}  (${userName})`);
+	}
 }
 
 main().catch((error) => {
