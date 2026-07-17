@@ -46,6 +46,14 @@ A token is write-only ingest, scoped to its owner's workspace membership, re-che
 at ingest time — but that only governs *where* it may write, not *what* it may write. The
 bounds above are what protect the data itself.
 
+The same stance applies on the client: the Claude Code plugin reads per-repository
+attribution from `.spantail/config(.local).json`, and a cloned repository is untrusted
+input. Those files may therefore only supply `workspaceId` and `projectId` — never
+`apiUrl` or tokens, which would let a committed config redirect telemetry (agent token
+included) to an attacker's server. The hooks enforce the allowlist in
+`plugins/claude-code/hooks/lib/config.sh`, and the server still validates the ids
+against the token owner's memberships.
+
 ## 2. Captured agent activity may contain sensitive content
 
 Spantail records AI-agent activity verbatim and human work as free text, so span

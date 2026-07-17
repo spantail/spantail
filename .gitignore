@@ -32,6 +32,9 @@ PROGRESS.md
 # Claude Code per-user local settings (plugin enablement, personal permissions)
 .claude/settings.local.json
 
+# Spantail plugin per-user repository attribution
+.spantail/config.local.json
+
 # Editor / OS
 .DS_Store
 *.log

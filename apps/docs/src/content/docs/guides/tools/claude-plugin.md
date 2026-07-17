@@ -17,17 +17,49 @@ Requires Claude Code v2.1.143 or later.
 ```
 
 Enabling the plugin prompts for your instance URL and an **agent access
-token** ([register an agent](/guides/capturing-agents/) first), plus optional
-workspace and project ids and a personal API token for the skills' MCP server
-(see [Skills and agents](#skills-and-agents)). Each setting can be overridden with an environment
-variable (`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_WORKSPACE_ID`,
-`SPANTAIL_PROJECT_ID`, `SPANTAIL_SEND_SESSION_SUMMARY`) — the environment wins.
-These overrides apply to the **hooks** only; the bundled MCP server reads the
-plugin's `apiUrl` and `apiToken` config, so keep them in sync if you override
-the instance via `SPANTAIL_API_URL`.
+token** ([register an agent](/guides/capturing-agents/) first), plus an
+optional personal API token for the skills' MCP server (see
+[Skills and agents](#skills-and-agents)). Claude Code stores this config
+per plugin and shares it across all your repositories, whatever install
+scope you pick — which is why the workspace and project are *not* part of
+it. Pick **user scope** when the installer asks: one install covers every
+repository, and attribution is per repository (below).
+
+Each setting can be overridden with an environment variable
+(`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_SEND_SESSION_SUMMARY`)
+— the environment wins. These overrides apply to the **hooks** only; the
+bundled MCP server reads the plugin's `apiUrl` and `apiToken` config, so keep
+them in sync if you override the instance via `SPANTAIL_API_URL`.
 
 The hooks need `bash`, `jq`, and `curl` on `PATH`. They never fail a turn or
 block a session from ending: on any problem they log to stderr and skip.
+
+## Link a repository
+
+Which workspace and project a repository's sessions land in is configured
+in the repository itself. In each repository you want attributed, run:
+
+```
+/spantail:link
+```
+
+It picks a workspace and project (via the MCP server when available) and
+writes `.spantail/config.local.json` — personal and gitignored. For a
+team-shared link, `/spantail:link --shared` writes `.spantail/config.json`
+instead; commit it once and every collaborator who installs the plugin
+inherits it.
+
+These files may only carry `workspaceId` and `projectId`; the hooks refuse
+`apiUrl` or tokens from a repository, since a cloned repo is untrusted
+input. A linked repository owns attribution outright, and a personal local
+file replaces a committed shared one entirely — a workspace-only link
+never inherits a project configured elsewhere. Environment variables
+(`SPANTAIL_WORKSPACE_ID`, `SPANTAIL_PROJECT_ID`) override both files.
+
+A repository you never link falls back to the agent token's default
+workspace, with no project. Run `/spantail:doctor` any time to see where
+each setting resolves from, whether the current repository is linked, and
+what to fix.
 
 ## What gets sent
 
@@ -59,6 +91,8 @@ unless you turn it on.
 | `/spantail:log-work #N <duration> [date]` | Log against a GitHub issue: the server resolves the project from its repo mapping (see [GitHub integration](/admin/github-integration/)), fills in the issue title and labels, and links matching agent sessions. |
 | `/spantail:create-report` | Compose a report; always previews before saving. |
 | `/spantail:summary on\|off` | Per-session toggle for sending the plan title as the description. |
+| `/spantail:link [--shared]` | Link the current repository to a workspace and project (see [Link a repository](#link-a-repository)). |
+| `/spantail:doctor` | Show where every plugin setting resolves from and what to fix. |
 | `spantail-work-analyst` (agent) | Retrospectives over your work entries. |
 | `spantail-agent-activity-analyst` (agent) | Analysis of your agents' session telemetry. |
 
@@ -67,7 +101,8 @@ The skills and analysis agents act **as you**, so they use the
 separate credential from the hooks' write-only agent token. The plugin bundles
 this MCP server: set the optional `apiToken` and it connects to your instance's
 `/mcp` over HTTP as you. Hook-only users can leave `apiToken` blank; no CLI is
-needed.
+needed. Two exceptions: `/spantail:doctor` works without the MCP, and
+`/spantail:link` falls back to asking for ids when it is unavailable.
 
 To use the MCP from another client, or without the plugin, register it
 manually — see [MCP](/guides/tools/mcp/).

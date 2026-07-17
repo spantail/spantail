@@ -52,13 +52,13 @@ log work and build a report without leaving your editor.
    name, pick the type **Claude Code**, choose the workspace its sessions land
    in, and optionally a project and an expiry.
 
-   Saving shows the **agent access token** (`spantail_aat_…`) once, alongside the
-   **Workspace ID** and **Project ID** you will paste into the plugin. Copy the
-   token now — it is never shown again. The two IDs you can also copy later,
-   from the sidebar.
+   Saving shows the **agent access token** (`spantail_aat_…`) once, alongside
+   the **Workspace ID** and **Project ID**. Copy the token now — it is never
+   shown again. The two IDs you won't need to paste anywhere in this
+   walkthrough: the `/spantail:link` skill in step 3 picks them for you.
 
-   ![The dialog shown after creating an agent: the one-time access token and the
-   workspace and project ids for the plugin.](../../../assets/claude-code/02-agent-token.png)
+   ![The dialog shown after creating an agent: the one-time access token and
+   the workspace and project ids.](../../../assets/claude-code/02-agent-token.png)
 
    That was the first of the two tokens. It is **write-only and ingest-only**:
    it can send agent activity and nothing else. The plugin's skills act *as
@@ -79,11 +79,13 @@ log work and build a report without leaving your editor.
    /plugin install spantail@spantail
    ```
 
-   When the install asks for a scope, pick **local**: it enables the plugin
-   for this repository only, just for you, in `.claude/settings.local.json` —
-   the right fit here, since the configuration carries your personal tokens.
-   Make sure that file is ignored in the repository you install into (this
-   repository's `.gitignore` covers it).
+   When the install asks for a scope, pick **user**: one install covers every
+   repository you work in. The plugin's configuration is stored per user
+   anyway — Claude Code shares it across all your repositories whatever scope
+   you pick — and it carries your personal tokens, so it never belongs in a
+   committed file. Which workspace and project a repository's sessions land
+   in is *not* part of this config; you set that per repository in the next
+   step.
 
    Enabling the plugin prompts for its **Plugin options**:
 
@@ -95,13 +97,24 @@ log work and build a report without leaving your editor.
    - **Agent access token** — the `spantail_aat_…` token from step 2.
    - **Personal API token** — the `spantail_pat_…` token from step 2; the
      skills need it. Leave blank to use only the telemetry hooks.
-   - **Workspace id** — the workspace you created in the quickstart; copy its
-     ID from the workspace switcher.
-   - **Project id** — the project you created in the quickstart; copy its ID
-     from the sidebar.
    - **Send plan title as session summary** — when **ON**, a session that used
      plan mode sends its plan file's title to Spantail as the entry
      description when it ends.
+
+   Next, in the repository you are working in, link its sessions to the
+   workspace and project from the quickstart:
+
+   ```
+   /spantail:link
+   ```
+
+   The skill lists your workspaces and projects (over the plugin's MCP server
+   when the personal API token is set; otherwise it asks for the ids from
+   step 2) and writes your choice to `.spantail/config.local.json` — personal
+   and gitignored. Repeat this in every repository you want attributed; an
+   unlinked repository falls back to the agent token's workspace, with no
+   project. `/spantail:doctor` shows the effective configuration and flags an
+   unlinked repository.
 
    The plugin registers three hooks, two of which send anything. On every
    **Stop** — the end of a turn — it posts that turn's token usage, timestamp,

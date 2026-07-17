@@ -15,8 +15,11 @@ work and building reports.
     wall-clock end and the PRs the session touched (`pr-link` records →
     `context.refs`). The title of the session's plan file is sent as the
     entry description **only if you opt in**.
-  - `SessionStart` exports `SPANTAIL_SESSION_ID` so the `/spantail:summary`
-    toggle can target the current session.
+  - `SessionStart` exports `SPANTAIL_SESSION_ID` and `SPANTAIL_PLUGIN_DATA`
+    so the `/spantail:summary` toggle can target the current session, plus
+    presence markers (never values) for the keychain-stored tokens so
+    `/spantail:doctor` — a Bash tool call that cannot read the keychain —
+    can report them accurately.
 - **Skills** (use the bundled Spantail MCP server, which acts as *you* via a
   personal API token — a separate credential from the hooks' agent token; set
   `apiToken` to enable it):
@@ -30,6 +33,12 @@ work and building reports.
     saving.
   - `/spantail:summary on|off` — per-session toggle for sending the plan
     title as the entry description.
+- **Attribution skills** (no MCP needed for `doctor`; `link` uses the MCP
+  when available):
+  - `/spantail:link` — link the current repository to a workspace and
+    project (see [Per-repository attribution](#per-repository-attribution)).
+  - `/spantail:doctor` — show where every config value resolves from and
+    what to fix.
 - **Agents**: `spantail-work-analyst` (work-entry retrospectives) and
   `spantail-agent-activity-analyst` (agent telemetry analysis).
 
@@ -49,19 +58,72 @@ Enabling the plugin prompts for:
 | `apiUrl` | yes | Your instance's base URL, e.g. `https://spantail.example.com`. |
 | `agentToken` | yes | The **agent access token** from Settings → Agents (`spantail_aat_…`), a write-only ingest credential. |
 | `apiToken` | no | A **personal API token** (`spantail_pat_…`) for the bundled MCP server the skills and agents use — acts as you, separate from the agent token. Leave blank if you only use the hooks. |
-| `workspaceId` | no | Defaults to the token's bound workspace. |
-| `projectId` | no | Record sessions against a project. |
 | `sendSessionSummary` | no | Send the plan-file title as the entry description when a plan-mode session ends (default off — see Privacy). |
 
+Claude Code stores this config **per plugin, user-globally** — every
+repository shares it, whatever install scope you pick, and the dialog only
+appears while no config exists yet. That is why the workspace and project
+are *not* part of it: which workspace/project a session belongs to is a
+per-repository question, answered by `/spantail:link` below.
+
 Every setting can be overridden with an environment variable
-(`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_WORKSPACE_ID`,
-`SPANTAIL_PROJECT_ID`, `SPANTAIL_SEND_SESSION_SUMMARY`), e.g. in a
-`settings.json` `env` block; the environment wins over the plugin config.
+(`SPANTAIL_API_URL`, `SPANTAIL_AGENT_TOKEN`, `SPANTAIL_SEND_SESSION_SUMMARY`,
+and for attribution `SPANTAIL_WORKSPACE_ID` / `SPANTAIL_PROJECT_ID`), e.g. in
+a `settings.json` `env` block; the environment wins over everything else.
 These overrides feed the **hooks** only — the bundled MCP server always reads
 the plugin's `apiUrl` and `apiToken` config, so if you point the hooks at a
 different instance via `SPANTAIL_API_URL`, set the matching `apiUrl` (and
 `apiToken`) in the plugin config too, or the skills and agents will act
 against the plugin-configured instance instead.
+
+## Per-repository attribution
+
+Which workspace and project a repository's sessions are recorded against
+lives in the repository, not in the user-global plugin config. The hooks
+read two files at the repository root (`$CLAUDE_PROJECT_DIR`):
+
+| File | Tracked | For |
+|---|---|---|
+| `.spantail/config.local.json` | gitignored | You only — `/spantail:link` writes it and adds the `.gitignore` entry. When present it replaces the shared file entirely (delete it to return to the team link). |
+| `.spantail/config.json` | committed | The whole team — `/spantail:link --shared` writes it; commit it once and every collaborator who installs the plugin inherits it. |
+
+Both may contain only `workspaceId` and `projectId`:
+
+```json
+{ "workspaceId": "<id>", "projectId": "<id>" }
+```
+
+Resolution order per value: `SPANTAIL_*` environment → the local file (or
+the shared file when no local file exists) → plugin config → Claude Code's
+global `pluginConfigs`. Ownership is file-level, never a per-key merge: a
+linked repository (any parseable `.spantail` file) skips the two
+user-global layers for both keys, and a local file replaces the shared one
+entirely — so a workspace-only link never inherits a project id from the
+shared file or from a stale global config. The repo files
+are deliberately capped at those two keys — a cloned repository is untrusted
+input, so `apiUrl` and tokens never resolve from it (a committed config could
+otherwise redirect your telemetry, agent token included, to an arbitrary
+server; see [`docs/security.md`](../../docs/security.md) §1).
+
+How this maps to the plugin install scopes:
+
+- **User scope** (install once, all repos): run `/spantail:link` in each
+  repository you want attributed. An unlinked repository falls back to the
+  agent token's default workspace, with no project — `/spantail:doctor`
+  shows any repo you forgot to link.
+- **Project scope** (team install): one member runs `/spantail:link --shared`
+  and commits `.spantail/config.json`; everyone else just installs.
+- **Local scope** (this repo, you only): run `/spantail:link` right after
+  installing.
+
+`/spantail:doctor` prints the effective value and source layer for every
+setting, plus warnings (unlinked repository, ignored keys in `.spantail/`
+files, missing credentials).
+
+Installs configured before v0.3.0, when the plugin dialog still asked for a
+workspace and project id, keep working: those user-global values remain the
+final fallback in repositories without a `.spantail` file, and environment
+variables override everything.
 
 The skills and agents use the Spantail MCP connection, which the plugin
 bundles. With `apiToken` set, the plugin registers an HTTP MCP server
@@ -109,8 +171,9 @@ whatever you put into descriptions via `/spantail:log-work`.
 | `hooks/hooks.json` | Wires SessionStart / Stop / SessionEnd. |
 | `hooks/spantail-agent-stop.sh` | Stop hook: transcript → per-turn events ingest. |
 | `hooks/spantail-session-end.sh` | SessionEnd hook: final reconcile + finalize. |
-| `hooks/spantail-session-start.sh` | Exports the session id for the summary toggle. |
-| `hooks/lib/config.sh` | Env → plugin user-config resolution. |
+| `hooks/spantail-session-start.sh` | Exports the session id for the summary toggle and token-presence markers for the doctor. |
+| `hooks/spantail-doctor.sh` | Resolution report for `/spantail:doctor` (values, sources, warnings; credentials masked). |
+| `hooks/lib/config.sh` | Env → repo `.spantail/` files → plugin user-config resolution. |
 | `hooks/transcript-to-events.jq` | Transcript → compact events (deduped by `message.id`). |
 | `hooks/transcript-to-finalize.jq` | Transcript → finalize body (endedAt, refs, opt-in plan title). |
 | `hooks/transcript-to-plan-path.jq` | Transcript → the session's plan-file path (structured records only). |
@@ -149,8 +212,9 @@ variables and register the scripts directly in your Claude Code
 ```bash
 bash hooks/transcript-to-events.test.sh
 bash hooks/transcript-to-finalize.test.sh
+bash hooks/config.test.sh
 ```
 
-Fixture-driven jq tests; they run in CI and skip cleanly where `jq` is
+Fixture-driven shell tests; they run in CI and skip cleanly where `jq` is
 missing. The server-side integration tests remain the authoritative
 correctness net for ingest semantics.
