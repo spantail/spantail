@@ -4,26 +4,31 @@
   name: Northwind Software
   timezone: Asia/Tokyo
   language: en
+  accentColor: blue
 - key: ws-acme
   slug: acme
   name: Acme Robotics
   timezone: America/Los_Angeles
   language: en
+  accentColor: green
   client: true
 - key: ws-globex
   slug: globex
   name: Globex Media
   timezone: America/Los_Angeles
   language: en
+  accentColor: violet
   client: true
 - key: ws-meridian
   slug: meridian
   name: Meridian Logistics
   timezone: Asia/Tokyo
   language: en
+  accentColor: amber
   client: true
 - key: ws-initech
   slug: initech
   name: Initech
   timezone: America/New_York
   language: en
+  accentColor: pink

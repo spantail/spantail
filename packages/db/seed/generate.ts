@@ -211,6 +211,7 @@ export async function generateDataset(
 			id: ws.id,
 			slug: ws.slug,
 			name: ws.name,
+			accentColor: w.accentColor,
 			// The full app-relative URL the client uses as the logo <img> src; the
 			// "?v=" cache-buster is a stable slice of the (deterministic) id.
 			logoUrl: hasLogo(ws.id)
