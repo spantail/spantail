@@ -22,19 +22,18 @@ it("routes a path with a doubled slash", async () => {
 	expect(await res.json()).toEqual({ status: "ok" });
 });
 
-// The reported failure is the POST telemetry hooks; assert method and body
-// survive the request reconstruction by reaching the (auth-guarded) ingest
-// route rather than 404ing on the doubled slash.
-it("routes a doubled-slash POST to the matching route", async () => {
-	const res = await exports.default.fetch(
-		new Request("https://example.com//api/v1/agent-events", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ sessionId: "s", events: [] }),
-		}),
-	);
+// The reported failure is the POST telemetry hooks. A doubled-slash POST must
+// route to the same place as the single-slash form (method and path preserved
+// across the reconstruction) — same status, and not a routing 404.
+it("routes a doubled-slash POST like the single-slash form", async () => {
+	const post = (path: string) =>
+		exports.default.fetch(
+			new Request(`https://example.com${path}`, { method: "POST" }),
+		);
 
-	// Unauthenticated, so this is rejected — but it must reach the route (not a
-	// routing 404), which proves the POST and its body were preserved.
-	expect(res.status).not.toBe(404);
+	const doubled = await post("//api/v1/agent-events");
+	const single = await post("/api/v1/agent-events");
+
+	expect(doubled.status).not.toBe(404);
+	expect(doubled.status).toBe(single.status);
 });
