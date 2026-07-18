@@ -132,9 +132,8 @@ you. It uses your personal API token (PAT) — a different credential from the
 hooks' agent token (AAT) — so it is a separate, optional setting: hook-only
 users can leave `apiToken` blank, in which case the MCP server simply doesn't
 authenticate (it lists as unavailable in `/mcp`) and the hooks are unaffected.
-No CLI is required. `apiUrl` is joined to `/mcp` directly, so set it without a
-trailing slash. Both tokens are stored as sensitive plugin config (the system
-keychain).
+No CLI is required. `apiUrl` is joined to `/mcp` directly. Both tokens are
+stored as sensitive plugin config (the system keychain).
 
 To use the MCP outside this plugin instead — for example from another client —
 register it manually:
