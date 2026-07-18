@@ -46,13 +46,12 @@ async function setup() {
 
 async function createAgentToken(
 	cookie: string,
-	binding: { defaultWorkspaceId: string; projectIds?: string[] },
 ): Promise<{ agentId: string; token: string }> {
 	const created = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC", ...binding },
+			{ type: "claude_code", name: "CC" },
 			cookie,
 		)
 	).json()) as { id: string; secret: string };
@@ -82,12 +81,11 @@ function turn(
 
 it("materializes a session rollup from per-turn events", async () => {
 	const { admin, ws, project } = await setup();
-	const { agentId, token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { agentId, token } = await createAgentToken(admin);
 
-	// workspaceId omitted → resolved from the token binding.
+	// The payload names its workspace explicitly (tokens carry no binding).
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		projectId: project.id,
 		events: [
@@ -146,11 +144,10 @@ it("materializes a session rollup from per-turn events", async () => {
 
 it("is idempotent on (agent, sourceId): re-sends never double-count", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	const batch = {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		events: [
 			turn("m1", "2026-06-20T01:00:00.000Z", {
@@ -183,6 +180,7 @@ it("is idempotent on (agent, sourceId): re-sends never double-count", async () =
 	expect(
 		(
 			await ingest(token, {
+				workspaceId: ws.id,
 				sessionId: "s1",
 				events: [
 					...batch.events,
@@ -208,13 +206,12 @@ it("is idempotent on (agent, sourceId): re-sends never double-count", async () =
 
 it("collapses duplicate sourceIds in one payload to a single event", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	// The same message.id repeated (as raw transcript lines would) must count
 	// once — the unique index is the server-side safety net behind the jq dedup.
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		events: [
 			turn("dup", "2026-06-20T01:00:00.000Z", {
@@ -237,9 +234,7 @@ it("collapses duplicate sourceIds in one payload to a single event", async () =>
 
 it("ingests a session spanning multiple insert chunks", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	// More events than one insert chunk (8), to exercise chunking under D1's
 	// 100-bound-parameter cap. Every turn must be counted exactly once.
@@ -252,7 +247,10 @@ it("ingests a session spanning multiple insert chunks", async () => {
 			"claude-opus-4-8",
 		),
 	);
-	expect((await ingest(token, { sessionId: "s1", events })).status).toBe(200);
+	expect(
+		(await ingest(token, { workspaceId: ws.id, sessionId: "s1", events }))
+			.status,
+	).toBe(200);
 
 	const list = (await (
 		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
@@ -267,9 +265,7 @@ it("ingests a session spanning multiple insert chunks", async () => {
 
 it("keeps the materialized rollup monotonic against a stale write", async () => {
 	const { admin, ws } = await setup();
-	const { agentId } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { agentId } = await createAgentToken(admin);
 	const me = (await (await apiGet("/api/v1/me", admin)).json()) as {
 		user: { id: string };
 	};
@@ -352,19 +348,20 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 
 it("rejects an empty events array at validation", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
+	const { token } = await createAgentToken(admin);
+	const res = await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		events: [],
 	});
-	const res = await ingest(token, { sessionId: "s1", events: [] });
 	expect(res.status).toBe(400);
 });
 
 it("rejects an empty projectId with a 400 rather than a 500", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		projectId: "",
 		events: [turn("m1", "2026-06-20T01:00:00.000Z", { output_tokens: 1 })],
@@ -374,11 +371,10 @@ it("rejects an empty projectId with a 400 rather than a 500", async () => {
 
 it("rejects ingest once the agent's owner loses workspace membership", async () => {
 	const { admin, member, ws, memberId } = await setup();
-	const { token } = await createAgentToken(member, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(member);
 
 	const allowed = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "m1",
 		events: [turn("a", "2026-06-20T01:00:00.000Z", { output_tokens: 1 })],
 	});
@@ -393,6 +389,7 @@ it("rejects ingest once the agent's owner loses workspace membership", async () 
 	expect(removed.status).toBe(204);
 
 	const denied = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "m2",
 		events: [turn("b", "2026-06-20T01:00:00.000Z", { output_tokens: 1 })],
 	});
@@ -401,11 +398,10 @@ it("rejects ingest once the agent's owner loses workspace membership", async () 
 
 it("rolls up costUsd and context facets from event metadata", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		events: [
 			{
@@ -469,10 +465,9 @@ it("rolls up costUsd and context facets from event metadata", async () => {
 
 it("omits costUsd from the rollup when no event carries one", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 	await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		events: [turn("m1", "2026-06-20T01:00:00.000Z", { output_tokens: 1 })],
 	});
@@ -495,9 +490,7 @@ function finalize(token: string, body: unknown): Promise<Response> {
 
 it("finalizes a session and preserves the closing facts across late ingests", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	// Finalize timestamps run through isTimestampInRange, so the session must
 	// sit near the test-time clock. Anchor once so every t(n) is stable across
@@ -509,10 +502,14 @@ it("finalizes a session and preserves the closing facts across late ingests", as
 		turn("m1", t(0), { input_tokens: 10, output_tokens: 20 }),
 		turn("m2", t(5), { input_tokens: 1, output_tokens: 2 }),
 	];
-	expect((await ingest(token, { sessionId: "s1", events })).status).toBe(200);
+	expect(
+		(await ingest(token, { workspaceId: ws.id, sessionId: "s1", events }))
+			.status,
+	).toBe(200);
 
 	// SessionEnd: wall-clock end 3 minutes past the last event, a summary, refs.
 	const fin = await finalize(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		endedAt: t(8),
 		description: "Refactored the login flow",
@@ -540,7 +537,10 @@ it("finalizes a session and preserves the closing facts across late ingests", as
 
 	// A late Stop re-post (retry) must not erase the closing facts nor shrink
 	// endedAt back to the last event's timestamp.
-	expect((await ingest(token, { sessionId: "s1", events })).status).toBe(200);
+	expect(
+		(await ingest(token, { workspaceId: ws.id, sessionId: "s1", events }))
+			.status,
+	).toBe(200);
 	const afterLate = await read();
 	expect(afterLate[0]?.description).toBe("Refactored the login flow");
 	expect(afterLate[0]?.context?.refs).toEqual(["github:acme/app#12"]);
@@ -551,6 +551,7 @@ it("finalizes a session and preserves the closing facts across late ingests", as
 	expect(
 		(
 			await ingest(token, {
+				workspaceId: ws.id,
 				sessionId: "s1",
 				events: [
 					...events,
@@ -571,6 +572,7 @@ it("finalizes a session and preserves the closing facts across late ingests", as
 	expect(
 		(
 			await ingest(token, {
+				workspaceId: ws.id,
 				sessionId: "s1",
 				events: [turn("m0", t(-2), { input_tokens: 1, output_tokens: 1 })],
 			})
@@ -583,21 +585,24 @@ it("finalizes a session and preserves the closing facts across late ingests", as
 
 it("clamps a finalize endedAt that lands before the session start", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	const anchor = Date.now() - 60 * 60_000;
 	const t = (minutes: number) =>
 		new Date(anchor + minutes * 60_000).toISOString();
 	await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		events: [turn("m1", t(0), { output_tokens: 1 })],
 	});
 
 	// In-range but before the session started (a bad client clock): the stored
 	// end must never precede startedAt, and the duration must not go negative.
-	const res = await finalize(token, { sessionId: "s1", endedAt: t(-30) });
+	const res = await finalize(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		endedAt: t(-30),
+	});
 	expect(res.status).toBe(200);
 	const entry = (await res.json()) as {
 		startedAt: string;
@@ -610,10 +615,9 @@ it("clamps a finalize endedAt that lands before the session start", async () => 
 
 it("returns 404 when finalizing a session with no entry yet", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 	const res = await finalize(token, {
+		workspaceId: ws.id,
 		sessionId: "never-seen",
 		description: "irrelevant",
 	});
@@ -624,11 +628,10 @@ it("returns 404 when finalizing a session with no entry yet", async () => {
 // flat buckets with json_extract, so the nested ones ride along untouched.
 it("ingests the real nested usage shape and rolls up the flat buckets", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		events: [
 			{
@@ -656,10 +659,9 @@ it("ingests the real nested usage shape and rolls up the flat buckets", async ()
 
 it("rejects an unbounded usage object", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		events: [
 			{
@@ -674,10 +676,9 @@ it("rejects an unbounded usage object", async () => {
 
 it("rejects an oversized ingest body before parsing it", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		pad: "x".repeat(8 * 1024 * 1024),
 		events: [turn("m1", "2026-06-20T01:00:00.000Z", { input_tokens: 1 })],
@@ -689,10 +690,8 @@ it("rejects an oversized ingest body before parsing it", async () => {
 });
 
 it("treats agent tokens as write-only ingest credentials", async () => {
-	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { admin } = await setup();
+	const { token } = await createAgentToken(admin);
 	// Cannot read entries with an AAT (ingest only).
 	const read = await appFetch("/api/v1/agent-entries?workspaceId=anything", {
 		headers: { authorization: `Bearer ${token}` },

@@ -1165,7 +1165,7 @@ it("includes agent activity, own-scoped and ignoring the tag filter", async () =
 			await apiJson(
 				"POST",
 				"/api/v1/agents",
-				{ type: "claude_code", name: "CC", defaultWorkspaceId: ws.id },
+				{ type: "claude_code", name: "CC" },
 				cookie,
 			)
 		).json()) as { secret: string };
@@ -1184,6 +1184,7 @@ it("includes agent activity, own-scoped and ignoring the tag filter", async () =
 	expect(
 		(
 			await ingest(adminAgent.secret, {
+				workspaceId: ws.id,
 				sessionId: "admin-s1",
 				projectId: project.id,
 				durationMinutes: 42,
@@ -1198,6 +1199,7 @@ it("includes agent activity, own-scoped and ignoring the tag filter", async () =
 	expect(
 		(
 			await ingest(otherAgent.secret, {
+				workspaceId: ws.id,
 				sessionId: "other-s1",
 				durationMinutes: 15,
 				usage: { totalTokens: 9999 },

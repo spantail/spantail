@@ -24,7 +24,7 @@ MCP are not constrained by the UI and follow this spec directly.**
 | Workspace member | `workspace_members.role = "member"` | Belongs to a workspace. |
 | Project member | `project_members` (`packages/db/src/schema/domain.ts`) | Belongs to a specific project. Binary membership (no per-project role), managed by workspace admins. |
 | Self | the resource's owner (`userId` / `ownerUserId`) | The user who owns a user-scoped resource. |
-| Agent (AAT) | an Agent Access Token (`requireAgentAuth`) | A non-human principal: an AI agent that **ingests** its own activity (agent entries/events) on behalf of its owner. Write-only ingest, scoped to the owner's workspace membership. |
+| Agent (AAT) | an Agent Access Token (`requireAgentAuth`) | A non-human principal: an AI agent that **ingests** its own activity (agent entries/events) on behalf of its owner. Write-only ingest; every payload names its target workspace (there is no default binding), checked against the owner's live membership. |
 
 Workspace roles are ranked `member < admin < owner` (`apps/web/src/server/lib/permissions.ts`).
 "Workspace admin" in this document means **owner or admin** unless stated otherwise.
@@ -76,7 +76,7 @@ full. Every resource belongs to exactly one scope:
    except a token's value shown once at creation. The resource that *holds* a secret (e.g. the
    token list) is readable as metadata; the secret value itself is never returned.
 8. **An archived workspace is read-only.** Every write into it — work entries, agent ingest,
-   projects, members, settings, logo, agent-token bindings — is rejected with `409 conflict`
+   projects, members, settings, logo — is rejected with `409 conflict`
    until it is unarchived, for every role including admins. Exactly two operations stay allowed:
    unarchiving (`PATCH` with `archived: false`, the only field the route accepts while archived)
    and deleting the workspace. Reads are unaffected. Enforced centrally in
@@ -121,7 +121,7 @@ of the project in question (always also a workspace member) · **Self** = the re
 | Reports (user) | R | R* | – | – | – | RW (own) |
 | Inbox / deliveries (user) | R | R* | – | – | – | RW (own) |
 | API tokens (user, secret hidden) | R (metadata) | – | – | – | – | RW (own, secret hidden) |
-| Agents (user) | R | R* | – | – | – | RW (own) |
+| Agents (user) | R | – | – | – | – | RW (own) |
 | Account / profile / avatar (user) | R | R | – | R | R | RW (own) |
 | Password (secret) | – | – | – | – | – | W (own, value never visible) |
 | Report shares (content version) | R | R* | – | – | – | RW (own report) |

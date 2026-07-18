@@ -161,8 +161,8 @@ export const agentEntryRoutes = new Hono<AppEnv>()
 			}),
 		);
 	})
-	// The caller's own agents, shown under a workspace in the sidebar: those with
-	// activity here plus the ones registered to this workspace.
+	// The caller's own agents, shown under a workspace in the sidebar: those
+	// with at least one entry here (agents carry no workspace binding).
 	.get("/agents", async (c) => {
 		const auth = requireScope(c, "read");
 		const workspaceId = c.req.query("workspaceId");

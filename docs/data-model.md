@@ -61,7 +61,7 @@ flowchart TB
 |---|---|
 | **Instance** | `user`, `verification`, `instance_settings`, `user_invitations`, `report_templates`, `github_app_config`, `github_installations` |
 | **Workspace** | `workspaces`, `workspace_members`, `projects`, unassigned `work_entries`, workspace-level `agent_entries` / `agent_events`, `github_repo_mappings`, `work_entry_agent_entries` / `work_entry_github_refs` (both follow their parents) |
-| **Project** | `project_members`, `agent_projects`, project-assigned `work_entries` / `agent_entries` |
+| **Project** | `project_members`, project-assigned `work_entries` / `agent_entries` |
 | **User** | `session`, `account`, `api_tokens`, `agents`, `agent_tokens`, `github_identities`, `reports`, `report_content`, inbox (`report_deliveries`, `delivery_flags`), profile |
 | **Report** | `report_shares`, `report_comments`, `report_reactions` |
 
@@ -167,8 +167,6 @@ Core types: [`packages/core/src/agent.ts`](../packages/core/src/agent.ts), [`age
 erDiagram
     user ||--o{ agents : "owns"
     agents ||--o{ agent_tokens : "authenticated by (AAT)"
-    agents ||--o{ agent_projects : "associated with"
-    projects ||--o{ agent_projects : "links"
     agents ||--o{ agent_entries : "produces"
     workspaces ||--o{ agent_entries : "scopes"
     user ||--o{ agent_entries : "ownerUser"
@@ -183,8 +181,7 @@ erDiagram
 | Entity | Scope | Purpose | Key relationships |
 |---|---|---|---|
 | `agents` | User | A registered AI coding agent — a delegated identity of one user, not an independent principal. Type `claude_code` (v1 targets Claude Code only). `disabledAt` (reversible) vs `archivedAt`. | belongs to `user` (cascade) |
-| `agent_tokens` | User | Agent Access Token (AAT): a write-only **ingest** credential bound to one agent; optional `defaultWorkspaceId`. Hashed; one active token per agent in practice. | belongs to `agents` (cascade) |
-| `agent_projects` | Project | Presentation grouping of an agent to projects — no rows means "all projects". Does **not** gate or default ingest. | joins `agents` and `projects` |
+| `agent_tokens` | User | Agent Access Token (AAT): a write-only **ingest** credential bound to one agent. Carries no workspace — every ingest payload names its own. Hashed; one active token per agent in practice. | belongs to `agents` (cascade) |
 | `agent_entries` | Project / Workspace | One agent **session** rollup: duration, token usage (plus summed `costUsd` when events carry one), `context` — distinct non-usage facets (`models`, `branches`, `repositories`, client-supplied `refs`) — and `eventCount` (SQL `rollup_event_count`), the number of events the rollup was computed from (null on summary-path sessions, which carry no events). Idempotent by (agentId, sessionId). Sits on the timeline beside human work. Stores only timestamps (`startedAt`/`endedAt`), no `entryDate` — the calendar day is derived at read time in the viewer's timezone. | `agentId`; owner `user`; denormalized `workspaceId`; optional `projectId` |
 | `agent_events` | Workspace | Raw **per-turn** telemetry — one row per assistant message: `operation` (what the turn is, `chat` by default), native usage stored verbatim (bounded at ingest: capped key/value sizes, one nesting level), optional client-provided `costUsd`, and `attributes` (bounded key/value metadata, OTel attribute names where one exists — see the mapping below). Append-only, **write-only (no read route)**. Idempotent by (agentId, sourceId). | `agentId`; denormalized `workspaceId`; tied to a session by `sessionId` (not a FK) |
 | `work_entry_agent_entries` | Workspace (via parents) | Provenance link (m:n): which agent sessions a human work entry was logged from. Written when a work entry is created from selected sessions; read back by `GET /api/v1/work-entries/:id/agent-entries` (the entry dialog's session summary), ACL-filtered so a link never widens visibility. PK (workEntryId, agentEntryId). | joins `work_entries` and `agent_entries` (cascade on both sides) |
@@ -368,7 +365,8 @@ summarized here for the data model.
   [`permissions.md`](./permissions.md#principles) states which writes it rejects and what stays
   allowed. Deleting a project does **not** cascade to its entries — `projectId` is set to null,
   leaving them as unassigned history. Deleting a **workspace** does cascade: members, projects,
-  work entries, agent entries/events, and agent tokens bound to the workspace are all removed.
+  work entries, and agent entries/events are all removed (agents and their tokens are user-scoped
+  and survive).
   Report snapshots survive (they are user-scoped), but the deleted workspace drops out of scope
   validation, the same as losing membership.
 - **Frozen snapshots.** Deliveries freeze their rendered Markdown (and identifying metadata) at

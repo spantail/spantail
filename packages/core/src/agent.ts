@@ -30,36 +30,29 @@ export type Agent = z.infer<typeof agentSchema>;
  * is shown only once at creation/rotation and never included here.
  */
 export const agentTokenSummarySchema = z.object({
-	defaultWorkspaceId: z.string().nullable(),
 	lastUsedAt: z.string().nullable(),
 	expiresAt: z.string().nullable(),
 });
 export type AgentTokenSummary = z.infer<typeof agentTokenSummarySchema>;
 
 /**
- * An agent with its single bound access token and the projects it is associated
- * with. Agent and token are 1:1: the token is created with the agent and its
- * binding (default workspace) is fixed for the agent's life — changing it means
- * re-creating the agent. `projectIds` is the association set chosen at
- * registration; an empty array means "all projects" in the bound workspace.
+ * An agent with its single access token. Agent and token are 1:1: the token is
+ * created with the agent. The agent carries no workspace or project binding —
+ * every ingested session names its workspace explicitly (resolved from the
+ * repository link on the client).
  */
 export const agentWithTokenSchema = agentSchema.extend({
 	token: agentTokenSummarySchema.nullable(),
-	projectIds: z.array(z.string()),
 });
 export type AgentWithToken = z.infer<typeof agentWithTokenSchema>;
 
 /**
- * Creating an agent also issues its access token. A default workspace is
- * required (the token must know where to log). `projectIds` associates the
- * agent with a subset of that workspace's projects; omit or pass an empty array
- * for "all projects".
+ * Creating an agent also issues its access token. Where a session lands is not
+ * part of the agent: each ingest payload carries its own workspaceId.
  */
 export const createAgentInputSchema = z.object({
 	type: agentTypeSchema,
 	name: z.string().min(1).max(100),
-	defaultWorkspaceId: z.string(),
-	projectIds: z.array(z.string()).optional(),
 	expiresInDays: z.number().int().min(1).max(3650).optional(),
 });
 export type CreateAgentInput = z.infer<typeof createAgentInputSchema>;
@@ -171,8 +164,10 @@ export function summarizeAgentSessions(
 /**
  * Ingest payload for one session. Idempotent on (agent, sessionId): re-sending
  * the same session updates the row rather than inserting a duplicate, so retries
- * and daily batch reconciliation never double-count. workspaceId/projectId
- * default to the token's binding when omitted.
+ * and daily batch reconciliation never double-count. workspaceId is required in
+ * practice — the client resolves it from the repository link — and a payload
+ * without one is rejected at the route (kept optional here so the route can
+ * answer with a targeted error instead of a generic validation failure).
  */
 export const ingestAgentEntryInputSchema = z
 	.object({

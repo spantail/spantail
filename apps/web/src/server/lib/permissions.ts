@@ -103,23 +103,24 @@ export async function requireWorkspaceAccess(
 }
 
 /**
- * Resolves and authorizes the workspace an agent ingest targets: the explicit
- * input workspace, or the token's default binding when omitted. Live
- * delegation check — the agent may only write where its owner is currently a
- * member, even if the token was bound earlier. No instance-admin bypass:
- * ingest always acts as the owner, never as an admin. Ingest is always a
- * write, so an archived workspace rejects it.
+ * Authorizes the workspace an agent ingest targets. There is no fallback: the
+ * payload must name its workspace (the client resolves it from the repository
+ * link), so an unlinked repository is rejected loudly instead of landing
+ * anywhere by default. Live delegation check — the agent may only write where
+ * its owner is currently a member. No instance-admin bypass: ingest always
+ * acts as the owner, never as an admin. Ingest is always a write, so an
+ * archived workspace rejects it.
  */
 export async function requireAgentIngestWorkspace(
 	c: Context<AppEnv>,
 	auth: AgentAuthContext,
 	inputWorkspaceId: string | undefined,
 ): Promise<{ workspaceId: string; membership: MembershipRow }> {
-	const workspaceId = inputWorkspaceId ?? auth.defaultWorkspaceId;
+	const workspaceId = inputWorkspaceId;
 	if (!workspaceId) {
 		throw new AppError(
 			"bad_request",
-			"No workspace: provide workspaceId or bind a default to the token",
+			"No workspace: provide workspaceId (link the repository with /spantail:link)",
 		);
 	}
 	const workspace = await getWorkspaceById(c.var.db, workspaceId);

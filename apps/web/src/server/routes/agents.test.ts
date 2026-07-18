@@ -19,14 +19,18 @@ async function createWorkspace(cookie: string, slug: string): Promise<string> {
 	return ws.id;
 }
 
-function ingest(token: string, sessionId: string): Promise<Response> {
+function ingest(
+	token: string,
+	sessionId: string,
+	workspaceId?: string,
+): Promise<Response> {
 	return appFetch("/api/v1/agent-entries", {
 		method: "POST",
 		headers: {
 			authorization: `Bearer ${token}`,
 			"content-type": "application/json",
 		},
-		body: JSON.stringify({ sessionId, durationMinutes: 1 }),
+		body: JSON.stringify({ sessionId, durationMinutes: 1, workspaceId }),
 	});
 }
 
@@ -39,18 +43,18 @@ it("registers an agent with its access token in one step", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "My CC", defaultWorkspaceId: wsId },
+			{ type: "claude_code", name: "My CC" },
 			cookie,
 		)
 	).json()) as {
 		id: string;
 		userId?: string;
 		secret: string;
-		token: { defaultWorkspaceId: string; tokenHash?: string };
+		token: { lastUsedAt: string | null; tokenHash?: string };
 	};
 	expect(created.userId).toBeUndefined();
 	expect(created.secret).toMatch(/^spantail_aat_/);
-	expect(created.token.defaultWorkspaceId).toBe(wsId);
+	expect(created.token.lastUsedAt).toBeNull();
 	expect(created.token.tokenHash).toBeUndefined();
 
 	// The list embeds the token summary and never leaks the hash/secret.
@@ -59,16 +63,16 @@ it("registers an agent with its access token in one step", async () => {
 	).json()) as Array<{
 		id: string;
 		disabledAt: string | null;
-		token: { defaultWorkspaceId: string };
+		token: { lastUsedAt: string | null };
 		secret?: string;
 	}>;
 	expect(list).toHaveLength(1);
 	expect(list[0]?.disabledAt).toBeNull();
-	expect(list[0]?.token.defaultWorkspaceId).toBe(wsId);
 	expect(list[0]?.secret).toBeUndefined();
 
-	// The issued secret can ingest immediately (workspace from the binding).
-	expect((await ingest(created.secret, "s1")).status).toBe(200);
+	// The issued secret can ingest immediately into any workspace the owner
+	// belongs to (named per payload — agents carry no binding).
+	expect((await ingest(created.secret, "s1", wsId)).status).toBe(200);
 
 	// Archiving the agent kills its token and drops it from the registry.
 	const archived = await apiJson(
@@ -78,37 +82,37 @@ it("registers an agent with its access token in one step", async () => {
 		cookie,
 	);
 	expect(archived.status).toBe(204);
-	expect((await ingest(created.secret, "s2")).status).toBe(401);
+	expect((await ingest(created.secret, "s2", wsId)).status).toBe(401);
 	expect(
 		((await (await apiGet("/api/v1/agents", cookie)).json()) as unknown[])
 			.length,
 	).toBe(0);
 });
 
-it("requires a default workspace the issuer belongs to", async () => {
-	const alice = await signUpUser("Alice", "alice@example.com");
-	await enableAgents(alice);
-	const wsId = await createWorkspace(alice, "acme");
+it("rejects ingest that names no workspace", async () => {
+	const cookie = await signUpUser("Alice", "alice@example.com");
+	await enableAgents(cookie);
+	const wsId = await createWorkspace(cookie, "acme");
+	const agent = (await (
+		await apiJson(
+			"POST",
+			"/api/v1/agents",
+			{ type: "claude_code", name: "CC" },
+			cookie,
+		)
+	).json()) as { secret: string };
 
-	// No workspace at all → validation error.
-	const missing = await apiJson(
-		"POST",
-		"/api/v1/agents",
-		{ type: "claude_code", name: "CC" },
-		alice,
-	);
+	// No fallback exists: a payload without a workspaceId (an unlinked
+	// repository) is rejected instead of landing anywhere by default.
+	const missing = await ingest(agent.secret, "s1");
 	expect(missing.status).toBe(400);
 
-	// A non-member binding the workspace can't see it (404, not 403, so its
-	// existence does not leak).
-	const bob = await signUpUser("Bob", "bob@example.com");
-	const denied = await apiJson(
-		"POST",
-		"/api/v1/agents",
-		{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
-		bob,
-	);
-	expect(denied.status).toBe(404);
+	// A workspace the owner cannot address is rejected without leaking whether
+	// it exists. (Losing membership mid-life is covered in agent-entries tests.)
+	expect((await ingest(agent.secret, "s2", "no-such-ws")).status).toBe(403);
+
+	// An explicit workspace the owner belongs to works.
+	expect((await ingest(agent.secret, "s3", wsId)).status).toBe(200);
 });
 
 it("disables and re-enables an agent, gating ingest", async () => {
@@ -119,7 +123,7 @@ it("disables and re-enables an agent, gating ingest", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
+			{ type: "claude_code", name: "CC" },
 			cookie,
 		)
 	).json()) as { id: string; secret: string };
@@ -134,7 +138,7 @@ it("disables and re-enables an agent, gating ingest", async () => {
 	expect(
 		((await disabled.json()) as { disabledAt: string }).disabledAt,
 	).not.toBeNull();
-	expect((await ingest(agent.secret, "s1")).status).toBe(401);
+	expect((await ingest(agent.secret, "s1", wsId)).status).toBe(401);
 
 	const enabled = await apiJson(
 		"PATCH",
@@ -145,7 +149,7 @@ it("disables and re-enables an agent, gating ingest", async () => {
 	expect(
 		((await enabled.json()) as { disabledAt: null }).disabledAt,
 	).toBeNull();
-	expect((await ingest(agent.secret, "s2")).status).toBe(200);
+	expect((await ingest(agent.secret, "s2", wsId)).status).toBe(200);
 });
 
 it("rotates the token secret in place, killing the old one", async () => {
@@ -156,11 +160,11 @@ it("rotates the token secret in place, killing the old one", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
+			{ type: "claude_code", name: "CC" },
 			cookie,
 		)
 	).json()) as { id: string; secret: string };
-	expect((await ingest(agent.secret, "s1")).status).toBe(200);
+	expect((await ingest(agent.secret, "s1", wsId)).status).toBe(200);
 
 	const rotated = (await (
 		await apiJson(
@@ -173,67 +177,9 @@ it("rotates the token secret in place, killing the old one", async () => {
 	expect(rotated.secret).toMatch(/^spantail_aat_/);
 	expect(rotated.secret).not.toBe(agent.secret);
 
-	// The old secret stops working; the new one keeps the same binding.
-	expect((await ingest(agent.secret, "s2")).status).toBe(401);
-	expect((await ingest(rotated.secret, "s3")).status).toBe(200);
-});
-
-it("associates an agent with projects, rejecting ones outside its workspace", async () => {
-	const cookie = await signUpUser("Alice", "alice@example.com");
-	await enableAgents(cookie);
-	const wsId = await createWorkspace(cookie, "acme");
-	const otherWsId = await createWorkspace(cookie, "beta");
-	const projectId = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/workspaces/${wsId}/projects`,
-			{ slug: "spantail", name: "Spantail" },
-			cookie,
-		)
-	).json()) as { id: string };
-	const foreign = (await (
-		await apiJson(
-			"POST",
-			`/api/v1/workspaces/${otherWsId}/projects`,
-			{ slug: "other", name: "Other" },
-			cookie,
-		)
-	).json()) as { id: string };
-
-	// A project from another workspace can't be associated.
-	const denied = await apiJson(
-		"POST",
-		"/api/v1/agents",
-		{
-			type: "claude_code",
-			name: "CC",
-			defaultWorkspaceId: wsId,
-			projectIds: [foreign.id],
-		},
-		cookie,
-	);
-	expect(denied.status).toBe(400);
-
-	// In-workspace projects are accepted and echoed back on the registry.
-	const created = (await (
-		await apiJson(
-			"POST",
-			"/api/v1/agents",
-			{
-				type: "claude_code",
-				name: "CC",
-				defaultWorkspaceId: wsId,
-				projectIds: [projectId.id],
-			},
-			cookie,
-		)
-	).json()) as { projectIds: string[] };
-	expect(created.projectIds).toEqual([projectId.id]);
-
-	const list = (await (
-		await apiGet("/api/v1/agents", cookie)
-	).json()) as Array<{ projectIds: string[] }>;
-	expect(list[0]?.projectIds).toEqual([projectId.id]);
+	// The old secret stops working; the new one ingests as before.
+	expect((await ingest(agent.secret, "s2", wsId)).status).toBe(401);
+	expect((await ingest(rotated.secret, "s3", wsId)).status).toBe(200);
 });
 
 it("shows a member only their own agents in the sidebar", async () => {
@@ -251,7 +197,7 @@ it("shows a member only their own agents in the sidebar", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
+			{ type: "claude_code", name: "CC" },
 			owner,
 		)
 	).json()) as { id: string; secret: string };
@@ -263,24 +209,13 @@ it("shows a member only their own agents in the sidebar", async () => {
 		return rows.map((r) => r.id);
 	};
 
-	// Registered but inactive: the owner sees it, another member does not.
-	expect(await sidebar(owner)).toContain(agent.id);
-	expect(await sidebar(member)).not.toContain(agent.id);
+	// Purely activity-based: with no binding, a freshly registered agent is
+	// listed nowhere until it logs work.
+	expect(await sidebar(owner)).not.toContain(agent.id);
 
-	// Agents are private to their owner: logging work does NOT expose it to
-	// other members — the sidebar shows each member only their own agents.
-	expect(
-		(
-			await appFetch("/api/v1/agent-entries", {
-				method: "POST",
-				headers: {
-					authorization: `Bearer ${agent.secret}`,
-					"content-type": "application/json",
-				},
-				body: JSON.stringify({ sessionId: "s1", durationMinutes: 1 }),
-			})
-		).status,
-	).toBe(200);
+	// Agents are private to their owner: logging work exposes it to the owner
+	// in that workspace only — never to other members.
+	expect((await ingest(agent.secret, "s1", wsId)).status).toBe(200);
 	expect(await sidebar(owner)).toContain(agent.id);
 	expect(await sidebar(member)).not.toContain(agent.id);
 });
@@ -289,12 +224,11 @@ it("cannot manage another user's agent", async () => {
 	const alice = await signUpUser("Alice", "alice@example.com");
 	const bob = await signUpUser("Bob", "bob@example.com");
 	await enableAgents(alice);
-	const wsId = await createWorkspace(alice, "acme");
 	const agent = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC", defaultWorkspaceId: wsId },
+			{ type: "claude_code", name: "CC" },
 			alice,
 		)
 	).json()) as { id: string };

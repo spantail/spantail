@@ -166,13 +166,13 @@ fi
 # a user-global fallback still resolving values is exactly the unlinked
 # condition this doctor exists to surface.
 if [ -n "${SPANTAIL_WORKSPACE_ID:-}" ] || [ -n "${SPANTAIL_PROJECT_ID:-}" ]; then
-	say "attribution: from the SPANTAIL_* environment (workspace: ${workspace:-token default}, project: ${project:-none})"
+	say "attribution: from the SPANTAIL_* environment (workspace: ${workspace:-none}, project: ${project:-none})"
 elif [ -n "${_spantail_repo_linked:-}" ]; then
-	say "attribution: linked (workspace: ${workspace:-token default}, project: ${project:-none})"
+	say "attribution: linked (workspace: ${workspace:-none}, project: ${project:-none})"
 elif [ -n "$workspace" ] || [ -n "$project" ]; then
-	say "attribution: NOT LINKED — falling back to the user-global plugin config (workspace: ${workspace:-token default}, project: ${project:-none}). Run /spantail:link to give this repository its own attribution."
+	say "attribution: NOT LINKED — falling back to the user-global plugin config (workspace: ${workspace:-none}, project: ${project:-none}). Run /spantail:link to give this repository its own attribution."
 else
-	say "attribution: NOT LINKED — sessions fall back to the agent token's default workspace; if the token has none, ingest is rejected and telemetry is dropped. Run /spantail:link to link this repository."
+	say "attribution: NOT LINKED — sessions carry no workspace, so ingest is rejected and telemetry is dropped. Run /spantail:link to link this repository."
 fi
 
 # The bundled MCP server authenticates from ${user_config.apiToken} in

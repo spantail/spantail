@@ -13,7 +13,6 @@ export type AuthContext =
 			via: "agent";
 			agentId: string;
 			ownerUserId: string;
-			defaultWorkspaceId: string | null;
 			// Token row id; see the pat note above.
 			tokenId: string;
 	  };

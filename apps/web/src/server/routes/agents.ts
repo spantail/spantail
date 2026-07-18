@@ -9,9 +9,7 @@ import {
 	archiveAgent,
 	createAgentWithToken,
 	getAgentById,
-	listAgentsByWorkspace,
 	listAgentsWithTokenForUser,
-	listProjectsByIds,
 	rotateAgentToken,
 	setAgentDisabled,
 } from "@spantail/db";
@@ -19,13 +17,10 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 
 import { AppError } from "../lib/errors";
-import {
-	requireInstanceAdmin,
-	requireWorkspaceAccess,
-} from "../lib/permissions";
+import { requireInstanceAdmin } from "../lib/permissions";
 import { validate } from "../lib/validate";
 import { requireAgentsFeature } from "../middleware/agents-feature";
-import { requireScope, requireSession } from "../middleware/auth";
+import { requireSession } from "../middleware/auth";
 import type { AppEnv } from "../types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -45,63 +40,28 @@ async function requireOwnedAgent(
 
 export const agentRoutes = new Hono<AppEnv>()
 	.use(requireAgentsFeature)
-	// Own list is session-only (agent management is an interactive surface). Admin
-	// reads are addressed by ?ownerUserId (instance admin reads a user's agents, R)
-	// or ?workspaceId (workspace admin reads agents bound to the workspace, R*);
-	// both go through the scope guards so they are PAT/MCP-reachable.
+	// Own list is session-only (agent management is an interactive surface). The
+	// admin read is addressed by ?ownerUserId (instance admin reads a user's
+	// agents, R) and goes through the scope guard so it is PAT/MCP-reachable.
 	// userId/tokenHash are never returned (token summary only).
 	.get("/", async (c) => {
 		const ownerUserId = c.req.query("ownerUserId");
-		const workspaceId = c.req.query("workspaceId");
 		if (ownerUserId) {
 			requireInstanceAdmin(c);
 			const rows = await listAgentsWithTokenForUser(c.var.db, ownerUserId);
-			return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
-		}
-		if (workspaceId) {
-			// PAT callers need the "read" scope, like every other workspace read;
-			// requireWorkspaceAccess only checks membership/role, not token scope.
-			requireScope(c, "read");
-			await requireWorkspaceAccess(c, workspaceId, "admin");
-			const rows = await listAgentsByWorkspace(c.var.db, workspaceId);
 			return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
 		}
 		const { user } = requireSession(c);
 		const rows = await listAgentsWithTokenForUser(c.var.db, user.id);
 		return c.json(rows.map(({ userId: _userId, ...rest }) => rest));
 	})
-	// Registering an agent also issues its single access token (1:1). The default
-	// workspace is required so the token always knows where to log; the optional
-	// project set associates the agent with a subset of that workspace's projects
-	// (empty = all). The plaintext secret is returned exactly once.
+	// Registering an agent also issues its single access token (1:1). No
+	// workspace is involved: where a session lands is named by each ingest
+	// payload, and membership is checked there. The plaintext secret is
+	// returned exactly once.
 	.post("/", async (c) => {
 		const { user } = requireSession(c);
 		const input = validate(createAgentInputSchema, await c.req.json());
-
-		// A binding can never exceed its owner's live membership. (Re-checked at
-		// ingest.) The workspace must be one the issuer belongs to; every
-		// associated project must live in that workspace. Write mode: the binding
-		// only exists to ingest later, which an archived workspace rejects.
-		await requireWorkspaceAccess(c, input.defaultWorkspaceId, "member", {
-			write: true,
-		});
-		// Sort (and de-dupe) so the create response matches the order GET /agents
-		// returns (agent_projects is read back ordered by project_id).
-		const projectIds = [...new Set(input.projectIds ?? [])].sort();
-		if (projectIds.length > 0) {
-			const projects = await listProjectsByIds(c.var.db, projectIds);
-			const inWorkspace = new Set(
-				projects
-					.filter((p) => p.workspaceId === input.defaultWorkspaceId)
-					.map((p) => p.id),
-			);
-			if (projectIds.some((id) => !inWorkspace.has(id))) {
-				throw new AppError(
-					"bad_request",
-					"A selected project does not exist or does not belong to the default workspace",
-				);
-			}
-		}
 
 		const secret = generateAat();
 		const { agent, token } = await createAgentWithToken(c.var.db, {
@@ -110,8 +70,6 @@ export const agentRoutes = new Hono<AppEnv>()
 			name: input.name,
 			tokenName: input.name,
 			tokenHash: await hashToken(secret),
-			defaultWorkspaceId: input.defaultWorkspaceId,
-			projectIds,
 			expiresAt: input.expiresInDays
 				? new Date(Date.now() + input.expiresInDays * DAY_MS)
 				: null,
@@ -121,11 +79,9 @@ export const agentRoutes = new Hono<AppEnv>()
 			{
 				...agentView,
 				token: {
-					defaultWorkspaceId: token.defaultWorkspaceId,
 					lastUsedAt: token.lastUsedAt,
 					expiresAt: token.expiresAt,
 				},
-				projectIds,
 				secret,
 			},
 			201,
@@ -150,8 +106,8 @@ export const agentRoutes = new Hono<AppEnv>()
 		if (!archived) throw new AppError("not_found", "Agent not found");
 		return c.body(null, 204);
 	})
-	// Regenerates the agent's token secret in place, keeping its binding and
-	// expiry; the old secret stops working immediately. Returned once.
+	// Regenerates the agent's token secret in place, keeping its expiry; the
+	// old secret stops working immediately. Returned once.
 	.post("/:id/token/rotate", async (c) => {
 		const agent = await requireOwnedAgent(c, c.req.param("id"));
 		const secret = generateAat();

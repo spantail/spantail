@@ -83,22 +83,13 @@ function createEntryWithToken(token: string, ws: string, project: string) {
 	});
 }
 
-/** Registers an agent (and its single ingest token) bound to a workspace. */
-async function createAgentToken(
-	cookie: string,
-	ws: string,
-	project: string,
-): Promise<string> {
+/** Registers an agent (and its single ingest token). */
+async function createAgentToken(cookie: string): Promise<string> {
 	const { secret } = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{
-				type: "claude_code",
-				name: "CC",
-				defaultWorkspaceId: ws,
-				projectIds: [project],
-			},
+			{ type: "claude_code", name: "CC" },
 			cookie,
 		)
 	).json()) as { secret: string };
@@ -106,14 +97,18 @@ async function createAgentToken(
 }
 
 /** Ingests one agent session entry with a bearer agent access token. */
-function ingestAgentEntry(token: string, sessionId: string) {
+function ingestAgentEntry(
+	token: string,
+	workspaceId: string,
+	sessionId: string,
+) {
 	return appFetch("/api/v1/agent-entries", {
 		method: "POST",
 		headers: {
 			authorization: `Bearer ${token}`,
 			"content-type": "application/json",
 		},
-		body: JSON.stringify({ sessionId, durationMinutes: 5 }),
+		body: JSON.stringify({ workspaceId, sessionId, durationMinutes: 5 }),
 	});
 }
 
@@ -165,7 +160,7 @@ it("buckets PAT credentials per token, not per user", async () => {
 });
 
 it("buckets agent access tokens per token", async () => {
-	const { admin, ws, project } = await setup();
+	const { admin, ws } = await setup();
 	// Agent ingest is gated behind the instance agents feature.
 	await apiJson(
 		"PATCH",
@@ -173,16 +168,16 @@ it("buckets agent access tokens per token", async () => {
 		{ agentsEnabled: true },
 		admin,
 	);
-	const tokenA = await createAgentToken(admin, ws.id, project.id);
-	const tokenB = await createAgentToken(admin, ws.id, project.id);
+	const tokenA = await createAgentToken(admin);
+	const tokenB = await createAgentToken(admin);
 
 	// Exhaust one agent token's bucket (distinct sessionIds, but the request is
 	// rate-limited before the idempotent upsert regardless).
 	for (let i = 0; i < TEST_LIMIT; i++) {
-		expect((await ingestAgentEntry(tokenA, `a${i}`)).status).toBe(200);
+		expect((await ingestAgentEntry(tokenA, ws.id, `a${i}`)).status).toBe(200);
 	}
-	expect((await ingestAgentEntry(tokenA, "a-over")).status).toBe(429);
+	expect((await ingestAgentEntry(tokenA, ws.id, "a-over")).status).toBe(429);
 
 	// A second agent token (same owner) keeps its own quota.
-	expect((await ingestAgentEntry(tokenB, "b0")).status).toBe(200);
+	expect((await ingestAgentEntry(tokenB, ws.id, "b0")).status).toBe(200);
 });

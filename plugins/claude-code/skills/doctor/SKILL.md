@@ -24,8 +24,9 @@ and what to fix.
      re-run the install dialog (reinstall the plugin) or wire
      `SPANTAIL_API_URL` / `SPANTAIL_AGENT_TOKEN` manually.
    - `attribution: NOT LINKED` — run `/spantail:link` to link this
-     repository to a workspace and project; until then sessions depend on
-     the agent token's default workspace and may be dropped entirely.
+     repository to a workspace and project; until then sessions carry no
+     workspace and the server rejects them (unless a user-global
+     `SPANTAIL_WORKSPACE_ID` or pre-v0.3.0 plugin config supplies one).
    - `warning: … ignored` — the repo file sets keys the hooks refuse to
      read; move `apiUrl`/tokens back to the plugin config.
    - `mcp: apiToken unset` — only relevant if the user wants the Spantail

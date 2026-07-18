@@ -47,15 +47,15 @@ async function setup() {
 
 async function createAgentToken(
 	cookie: string,
-	binding: { defaultWorkspaceId: string; projectIds?: string[] },
 ): Promise<{ agentId: string; token: string }> {
 	// Registering an agent issues its single token in one step; the plaintext
-	// secret is returned once.
+	// secret is returned once. No workspace is involved — each ingest payload
+	// names its own.
 	const created = (await (
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC", ...binding },
+			{ type: "claude_code", name: "CC" },
 			cookie,
 		)
 	).json()) as { id: string; secret: string };
@@ -75,13 +75,12 @@ function ingest(token: string, body: unknown): Promise<Response> {
 
 it("ingests a session idempotently on (agent, sessionId)", async () => {
 	const { admin, ws, project } = await setup();
-	const { agentId, token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { agentId, token } = await createAgentToken(admin);
 
-	// workspaceId omitted: resolved from the token binding. The project is named
-	// explicitly (there is no token-level default project).
+	// The payload names its workspace explicitly (tokens carry no binding); the
+	// project is named the same way.
 	const first = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		projectId: project.id,
 		durationMinutes: 10,
@@ -92,6 +91,7 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 
 	// Re-sending the same session updates the row rather than duplicating it.
 	const second = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		projectId: project.id,
 		durationMinutes: 25,
@@ -144,13 +144,12 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 
 it("derives an agent session's day in the viewer's timezone", async () => {
 	const { admin, ws, project } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 	// 2026-06-01T15:30Z is still 2026-06-01 in UTC but already 2026-06-02 00:30
 	// in Asia/Tokyo — agent entries store only the instant, so the calendar day
 	// is a read-time projection in the viewer's timezone.
 	await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s1",
 		projectId: project.id,
 		durationMinutes: 30,
@@ -172,15 +171,12 @@ it("derives an agent session's day in the viewer's timezone", async () => {
 });
 
 it("records no project when the ingest omits one", async () => {
-	const { admin, ws, project } = await setup();
-	// Associating projects with the agent is a presentation grouping only — it
-	// must not act as an ingest default, so an unprojected ingest stays null.
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-		projectIds: [project.id],
-	});
+	const { admin, ws } = await setup();
+	// There is no project default anywhere: an unprojected ingest stays null.
+	const { token } = await createAgentToken(admin);
 
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "x1",
 		durationMinutes: 5,
 	});
@@ -191,13 +187,12 @@ it("records no project when the ingest omits one", async () => {
 
 it("rejects an empty projectId with a 400 rather than a 500", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 
 	// An empty string is falsy but present; it must be rejected at validation,
 	// not slip past the FK check and fail on insert.
 	const res = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "e1",
 		projectId: "",
 		durationMinutes: 5,
@@ -207,11 +202,13 @@ it("rejects an empty projectId with a 400 rather than a 500", async () => {
 
 it("rejects ingest once the agent's owner loses workspace membership", async () => {
 	const { admin, member, ws, memberId } = await setup();
-	const { token } = await createAgentToken(member, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(member);
 
-	const allowed = await ingest(token, { sessionId: "m1", durationMinutes: 5 });
+	const allowed = await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "m1",
+		durationMinutes: 5,
+	});
 	expect(allowed.status).toBe(200);
 
 	// Removing the owner from the workspace cuts the delegated credential too:
@@ -224,15 +221,17 @@ it("rejects ingest once the agent's owner loses workspace membership", async () 
 	);
 	expect(removed.status).toBe(204);
 
-	const denied = await ingest(token, { sessionId: "m2", durationMinutes: 5 });
+	const denied = await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "m2",
+		durationMinutes: 5,
+	});
 	expect(denied.status).toBe(403);
 });
 
 it("treats agent tokens as write-only ingest credentials", async () => {
-	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { admin } = await setup();
+	const { token } = await createAgentToken(admin);
 	expect(token).toMatch(/^spantail_aat_/);
 
 	// Cannot act as a user on session/PAT routes.
@@ -250,10 +249,12 @@ it("treats agent tokens as write-only ingest credentials", async () => {
 
 it("does not leak agent entries across workspaces", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
+	const { token } = await createAgentToken(admin);
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		durationMinutes: 10,
 	});
-	await ingest(token, { sessionId: "s1", durationMinutes: 10 });
 
 	// The member belongs to ws, but a non-member must get 404 for it. Create a
 	// second workspace owned by member and confirm ws stays invisible to outsiders.
@@ -268,14 +269,16 @@ it("does not leak agent entries across workspaces", async () => {
 it("does not show a member another member's agents or activity", async () => {
 	const { admin, member, ws } = await setup();
 	// Both members work in the same workspace, each with their own agent.
-	const a = await createAgentToken(admin, { defaultWorkspaceId: ws.id });
-	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
+	const a = await createAgentToken(admin);
+	const b = await createAgentToken(member);
 	await ingest(a.token, {
+		workspaceId: ws.id,
 		sessionId: "sa",
 		durationMinutes: 10,
 		usage: { totalTokens: 1000 },
 	});
 	await ingest(b.token, {
+		workspaceId: ws.id,
 		sessionId: "sb",
 		durationMinutes: 5,
 		usage: { totalTokens: 500 },
@@ -344,16 +347,18 @@ it("lets project members see co-members' agent activity in that project", async 
 		admin,
 	);
 
-	const a = await createAgentToken(admin, { defaultWorkspaceId: ws.id });
-	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
+	const a = await createAgentToken(admin);
+	const b = await createAgentToken(member);
 	// Both agents log into the shared project.
 	await ingest(a.token, {
+		workspaceId: ws.id,
 		sessionId: "pa",
 		projectId: project.id,
 		durationMinutes: 10,
 		usage: { totalTokens: 1000 },
 	});
 	await ingest(b.token, {
+		workspaceId: ws.id,
 		sessionId: "pb",
 		projectId: project.id,
 		durationMinutes: 5,
@@ -361,6 +366,7 @@ it("lets project members see co-members' agent activity in that project", async 
 	});
 	// Admin's agent also logs unassigned (no project) activity.
 	await ingest(a.token, {
+		workspaceId: ws.id,
 		sessionId: "pn",
 		durationMinutes: 7,
 		usage: { totalTokens: 700 },
@@ -388,8 +394,16 @@ it("lets project members see co-members' agent activity in that project", async 
 
 // --- bulk delete (owner-only, all-or-nothing) ---
 
-async function ingestId(token: string, sessionId: string): Promise<string> {
-	const res = await ingest(token, { sessionId, durationMinutes: 5 });
+async function ingestId(
+	token: string,
+	workspaceId: string,
+	sessionId: string,
+): Promise<string> {
+	const res = await ingest(token, {
+		workspaceId,
+		sessionId,
+		durationMinutes: 5,
+	});
 	expect(res.status).toBe(200);
 	return ((await res.json()) as { id: string }).id;
 }
@@ -416,12 +430,10 @@ async function listIds(cookie: string, workspaceId: string): Promise<string[]> {
 
 it("bulk-deletes the caller's own agent entries, deduping ids", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
-	const a = await ingestId(token, "del-a");
-	const b = await ingestId(token, "del-b");
-	const keep = await ingestId(token, "del-keep");
+	const { token } = await createAgentToken(admin);
+	const a = await ingestId(token, ws.id, "del-a");
+	const b = await ingestId(token, ws.id, "del-b");
+	const keep = await ingestId(token, ws.id, "del-keep");
 
 	// A duplicated id counts once — the response reflects unique rows deleted.
 	const res = await deleteEntries(admin, ws.id, [a, b, a]);
@@ -432,10 +444,10 @@ it("bulk-deletes the caller's own agent entries, deduping ids", async () => {
 
 it("deletes nothing when any id is foreign (all-or-nothing)", async () => {
 	const { admin, member, ws } = await setup();
-	const a = await createAgentToken(admin, { defaultWorkspaceId: ws.id });
-	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
-	const adminEntry = await ingestId(a.token, "mine-admin");
-	const memberEntry = await ingestId(b.token, "mine-member");
+	const a = await createAgentToken(admin);
+	const b = await createAgentToken(member);
+	const adminEntry = await ingestId(a.token, ws.id, "mine-admin");
+	const memberEntry = await ingestId(b.token, ws.id, "mine-member");
 
 	// The member's own id is valid, but the batch includes the admin's entry:
 	// 404 (existence hidden) and the member's own entry survives too.
@@ -447,8 +459,8 @@ it("deletes nothing when any id is foreign (all-or-nothing)", async () => {
 
 it("does not let a workspace admin delete a member's agent entries", async () => {
 	const { admin, member, ws } = await setup();
-	const b = await createAgentToken(member, { defaultWorkspaceId: ws.id });
-	const memberEntry = await ingestId(b.token, "member-owned");
+	const b = await createAgentToken(member);
+	const memberEntry = await ingestId(b.token, ws.id, "member-owned");
 
 	// Admins read all workspace agent activity but never write user data.
 	const res = await deleteEntries(admin, ws.id, [memberEntry]);
@@ -458,10 +470,8 @@ it("does not let a workspace admin delete a member's agent entries", async () =>
 
 it("scopes deletion to the named workspace", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
-	const entry = await ingestId(token, "ws-scoped");
+	const { token } = await createAgentToken(admin);
+	const entry = await ingestId(token, ws.id, "ws-scoped");
 
 	// Same owner, wrong workspace: the entry is not addressable through ws2.
 	const ws2 = (await (
@@ -483,10 +493,8 @@ it("scopes deletion to the named workspace", async () => {
 
 it("requires the write scope to delete", async () => {
 	const { admin, ws } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
-	const entry = await ingestId(token, "scope-guard");
+	const { token } = await createAgentToken(admin);
+	const entry = await ingestId(token, ws.id, "scope-guard");
 
 	const pat = (await (
 		await apiJson(
@@ -509,9 +517,7 @@ it("requires the write scope to delete", async () => {
 
 it("deletes a session's raw events along with its entry", async () => {
 	const { admin, ws } = await setup();
-	const { agentId, token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { agentId, token } = await createAgentToken(admin);
 	// An events-fed session: the rollup is recomputed from raw events on every
 	// ingest, so a delete that left them behind could be resurrected by a
 	// late event retry.
@@ -522,6 +528,7 @@ it("deletes a session's raw events along with its entry", async () => {
 			"content-type": "application/json",
 		},
 		body: JSON.stringify({
+			workspaceId: ws.id,
 			sessionId: "evt-session",
 			events: [
 				{
@@ -536,7 +543,7 @@ it("deletes a session's raw events along with its entry", async () => {
 	const entry = (await eventIngest.json()) as { id: string };
 	// A second summary-path session for the same agent must keep its events…
 	// (none exist) …and one for another session must survive the delete.
-	const keep = await ingestId(token, "keep-session");
+	const keep = await ingestId(token, ws.id, "keep-session");
 
 	const res = await deleteEntries(admin, ws.id, [entry.id]);
 	expect(res.status).toBe(200);
@@ -555,10 +562,9 @@ it("deletes a session's raw events along with its entry", async () => {
 
 it("rejects ingest and bulk delete in an archived workspace, reads still work", async () => {
 	const { admin, ws, project } = await setup();
-	const { token } = await createAgentToken(admin, {
-		defaultWorkspaceId: ws.id,
-	});
+	const { token } = await createAgentToken(admin);
 	const before = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s-archived",
 		projectId: project.id,
 		durationMinutes: 5,
@@ -576,6 +582,7 @@ it("rejects ingest and bulk delete in an archived workspace, reads still work", 
 	);
 
 	const denied = await ingest(token, {
+		workspaceId: ws.id,
 		sessionId: "s-archived-2",
 		projectId: project.id,
 		durationMinutes: 5,

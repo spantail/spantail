@@ -13,7 +13,7 @@
 # plugin's user config (see lib/config.sh):
 #   SPANTAIL_API_URL        / apiUrl        Base URL, e.g. https://spantail.example.com
 #   SPANTAIL_AGENT_TOKEN    / agentToken    Agent access token (write-only ingest credential)
-#   SPANTAIL_WORKSPACE_ID   / workspaceId   Optional; defaults to the token's bound workspace
+#   SPANTAIL_WORKSPACE_ID   / workspaceId   Required by the server; resolved from the repo link
 #   SPANTAIL_PROJECT_ID     / projectId     Optional; records the work against a project
 set -u
 

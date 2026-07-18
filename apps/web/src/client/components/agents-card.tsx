@@ -8,7 +8,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	BanIcon,
 	CheckIcon,
-	ChevronsUpDownIcon,
 	CirclePlayIcon,
 	CopyIcon,
 	KeyRoundIcon,
@@ -20,7 +19,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { CopyButton } from "@/components/copy-button";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -41,7 +39,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -60,11 +57,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -82,16 +74,11 @@ import {
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { api } from "@/lib/api";
 import { formatInstantDate, formatTimestamp } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 /** A freshly issued secret to surface once, with the agent it belongs to. */
 type IssuedSecret = {
 	agentName: string;
 	secret: string;
-	/** The workspace the token is bound to; surfaced for the plugin config. */
-	workspaceId: string | null;
-	/** Projects the token is scoped to; surfaced for the plugin config. */
-	projectIds: string[];
 };
 
 export function AgentsCard() {
@@ -107,14 +94,6 @@ export function AgentsCard() {
 		queryKey: ["agents"],
 		queryFn: () => api.listAgents(),
 	});
-	const workspaces = useQuery({
-		queryKey: ["workspaces"],
-		queryFn: () => api.listWorkspaces(),
-	});
-
-	const workspaceNames = new Map(
-		(workspaces.data ?? []).map((ws) => [ws.id, ws.name]),
-	);
 
 	const invalidateAgents = () =>
 		queryClient.invalidateQueries({ queryKey: ["agents"] });
@@ -138,8 +117,6 @@ export function AgentsCard() {
 			api.rotateAgentToken(agent.id).then((res) => ({
 				agentName: agent.name,
 				secret: res.secret,
-				workspaceId: agent.token?.defaultWorkspaceId ?? null,
-				projectIds: agent.projectIds,
 			})),
 		onSuccess: async (result) => {
 			await invalidateAgents();
@@ -187,8 +164,6 @@ export function AgentsCard() {
 							<TableRow>
 								<TableHead>{t("settings.agents.name")}</TableHead>
 								<TableHead>{t("settings.agents.type")}</TableHead>
-								<TableHead>{t("settings.agents.workspace")}</TableHead>
-								<TableHead>{t("settings.agents.project")}</TableHead>
 								<TableHead>{t("settings.agents.status")}</TableHead>
 								<TableHead>{t("settings.agents.lastUsed")}</TableHead>
 								<TableHead>{t("settings.agents.expires")}</TableHead>
@@ -198,7 +173,6 @@ export function AgentsCard() {
 						<TableBody>
 							{(agents.data ?? []).map((agent) => {
 								const disabled = agent.disabledAt !== null;
-								const wsId = agent.token?.defaultWorkspaceId;
 								return (
 									<TableRow key={agent.id}>
 										<TableCell>{agent.name}</TableCell>
@@ -206,43 +180,6 @@ export function AgentsCard() {
 											<Badge variant="secondary">
 												{t(`settings.agents.types.${agent.type}`)}
 											</Badge>
-										</TableCell>
-										<TableCell className="text-muted-foreground">
-											{wsId ? (workspaceNames.get(wsId) ?? "—") : "—"}
-										</TableCell>
-										<TableCell className="text-muted-foreground">
-											{agent.projectIds.length === 0 ? (
-												t("settings.agents.projectAll")
-											) : (
-												<Popover>
-													<PopoverTrigger asChild>
-														<Button
-															variant="ghost"
-															size="sm"
-															className="text-muted-foreground h-auto px-1 py-0.5 font-normal"
-														>
-															{t("settings.agents.projectsSelected", {
-																count: agent.projectIds.length,
-															})}
-														</Button>
-													</PopoverTrigger>
-													<PopoverContent align="start" className="w-80">
-														<p className="mb-2 text-sm font-medium">
-															{t("settings.agents.projectIdsTitle")}
-														</p>
-														<div className="flex flex-col gap-2">
-															{agent.projectIds.map((id) => (
-																<code
-																	key={id}
-																	className="bg-muted overflow-x-auto rounded-md p-2 text-xs"
-																>
-																	{id}
-																</code>
-															))}
-														</div>
-													</PopoverContent>
-												</Popover>
-											)}
 										</TableCell>
 										<TableCell>
 											<Badge variant={disabled ? "outline" : "default"}>
@@ -324,9 +261,6 @@ export function AgentsCard() {
 
 			{formOpen && (
 				<AgentFormDialog
-					// Archived workspaces are read-only: a token bound to one could
-					// never ingest, and the server rejects the binding anyway.
-					workspaces={(workspaces.data ?? []).filter((ws) => !ws.archivedAt)}
 					onOpenChange={(open) => {
 						if (!open) setFormOpen(false);
 					}}
@@ -373,45 +307,29 @@ export function AgentsCard() {
 
 /** The mockup's registration dialog: one token is issued on creation. */
 function AgentFormDialog({
-	workspaces,
 	onOpenChange,
 	onCreated,
 }: {
-	workspaces: Array<{ id: string; name: string }>;
 	onOpenChange: (open: boolean) => void;
 	onCreated: (issued: IssuedSecret) => void;
 }) {
 	const { t } = useTranslation();
 	const [name, setName] = useState("");
 	const [type, setType] = useState<AgentType>("claude_code");
-	const [workspaceId, setWorkspaceId] = useState("");
-	const [projectIds, setProjectIds] = useState<string[]>([]);
 	const [expiresInDays, setExpiresInDays] = useState("");
 	const [error, setError] = useState<string | null>(null);
-
-	const projects = useQuery({
-		queryKey: ["projects", workspaceId],
-		queryFn: () => api.listProjects(workspaceId),
-		enabled: workspaceId !== "",
-	});
 
 	const createMutation = useMutation({
 		mutationFn: () =>
 			api.createAgent({
 				type,
 				name,
-				defaultWorkspaceId: workspaceId,
-				projectIds,
 				expiresInDays: expiresInDays === "" ? undefined : Number(expiresInDays),
 			}),
 		onSuccess: (created) => {
-			// Use the persisted scope from the response, not form state, so the
-			// dialog can't show ids from an edit made while the request was in flight.
 			onCreated({
 				agentName: created.name,
 				secret: created.secret,
-				workspaceId: created.token?.defaultWorkspaceId ?? null,
-				projectIds: created.projectIds,
 			});
 		},
 		onError: (err: Error) => setError(err.message),
@@ -419,10 +337,6 @@ function AgentFormDialog({
 
 	const onCreate = (e: React.FormEvent) => {
 		e.preventDefault();
-		if (workspaceId === "") {
-			setError(t("settings.agents.workspaceRequired"));
-			return;
-		}
 		createMutation.mutate();
 	};
 
@@ -460,85 +374,6 @@ function AgentFormDialog({
 								))}
 							</SelectContent>
 						</Select>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("settings.agents.workspace")}</Label>
-						<Select
-							value={workspaceId}
-							onValueChange={(v) => {
-								setWorkspaceId(v);
-								setProjectIds([]);
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue
-									placeholder={t("settings.agents.workspacePlaceholder")}
-								/>
-							</SelectTrigger>
-							<SelectContent>
-								{workspaces.map((ws) => (
-									<SelectItem key={ws.id} value={ws.id}>
-										{ws.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div className="flex flex-col gap-2">
-						<Label>{t("settings.agents.project")}</Label>
-						<Popover>
-							<PopoverTrigger asChild>
-								<Button
-									type="button"
-									variant="outline"
-									disabled={workspaceId === ""}
-									className="w-full justify-between font-normal"
-								>
-									<span
-										className={cn(
-											projectIds.length === 0 && "text-muted-foreground",
-										)}
-									>
-										{projectIds.length === 0
-											? t("settings.agents.projectAll")
-											: t("settings.agents.projectsSelected", {
-													count: projectIds.length,
-												})}
-									</span>
-									<ChevronsUpDownIcon className="size-4 opacity-50" />
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent align="start" className="w-72 p-2">
-								{(projects.data ?? []).length === 0 ? (
-									<p className="text-muted-foreground px-2 py-1.5 text-sm">
-										{t("settings.agents.projectsEmpty")}
-									</p>
-								) : (
-									<div className="flex max-h-60 flex-col gap-0.5 overflow-y-auto">
-										{(projects.data ?? []).map((project) => (
-											<label
-												key={project.id}
-												htmlFor={`agent-project-${project.id}`}
-												className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm"
-											>
-												<Checkbox
-													id={`agent-project-${project.id}`}
-													checked={projectIds.includes(project.id)}
-													onCheckedChange={(value) =>
-														setProjectIds((prev) =>
-															value === true
-																? [...prev, project.id]
-																: prev.filter((id) => id !== project.id),
-														)
-													}
-												/>
-												<span>{project.name}</span>
-											</label>
-										))}
-									</div>
-								)}
-							</PopoverContent>
-						</Popover>
 					</div>
 					<div className="flex flex-col gap-2">
 						<Label htmlFor="agent-expiry">
@@ -623,33 +458,6 @@ function SecretDialog({
 						{copied ? <CheckIcon /> : <CopyIcon />}
 					</Button>
 				</div>
-				{issued && (issued.workspaceId || issued.projectIds.length > 0) && (
-					<div className="flex flex-col gap-2">
-						<div>
-							<p className="text-sm font-medium">
-								{t("settings.agents.pluginConfig")}
-							</p>
-							<p className="text-muted-foreground text-xs">
-								{t("settings.agents.pluginConfigHint")}
-							</p>
-						</div>
-						{issued.workspaceId && (
-							<IdRow
-								label={t("settings.agents.workspaceId")}
-								value={issued.workspaceId}
-								copyLabel={t("settings.agents.copyWorkspaceId")}
-							/>
-						)}
-						{issued.projectIds.map((id) => (
-							<IdRow
-								key={id}
-								label={t("settings.agents.projectId")}
-								value={id}
-								copyLabel={t("settings.agents.copyProjectId")}
-							/>
-						))}
-					</div>
-				)}
 				<DialogFooter>
 					<Button
 						onClick={() => {
@@ -662,28 +470,5 @@ function SecretDialog({
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
-	);
-}
-
-/** A labelled, read-only id with a copy affordance. */
-function IdRow({
-	label,
-	value,
-	copyLabel,
-}: {
-	label: string;
-	value: string;
-	copyLabel: string;
-}) {
-	return (
-		<div className="flex items-center gap-2">
-			<span className="text-muted-foreground w-28 shrink-0 text-xs">
-				{label}
-			</span>
-			<code className="bg-muted flex-1 overflow-x-auto rounded-md p-2 text-xs">
-				{value}
-			</code>
-			<CopyButton value={value} label={copyLabel} />
-		</div>
 	);
 }

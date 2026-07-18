@@ -16,15 +16,14 @@ see the Agents settings described below, ask your instance admin.
 
 ## Register an agent
 
-Open **Settings → Agents** (under Account) and create an agent. Each agent has:
-
-- A **type** — currently Claude Code.
-- A **default workspace** — where its sessions land.
-- **Associated projects** *(optional)* — for grouping its activity.
+Open **Settings → Agents** (under Account) and create an agent. Each agent has
+a **type** (currently Claude Code), a name, and an optional token expiry —
+nothing more. Which workspace and project a session lands in is decided per
+repository at ingest time, not on the agent.
 
 You can enable or disable an agent at any time.
 
-![The Agents settings page: the agent list with type, workspace, and
+![The Agents settings page: the agent list with type and
 status.](../../../assets/capturing-agents/01-agents-settings.png)
 
 ## Get the agent token
