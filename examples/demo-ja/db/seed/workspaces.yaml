@@ -4,26 +4,31 @@
   name: あづみ野ソフトウェア
   timezone: Asia/Tokyo
   language: ja
+  accentColor: blue
 - key: ws-acme
   slug: sakura
   name: 桜トレーディング
   timezone: Asia/Tokyo
   language: ja
+  accentColor: green
   client: true
 - key: ws-globex
   slug: fuji
   name: 富士メディア
   timezone: Asia/Tokyo
   language: ja
+  accentColor: violet
   client: true
 - key: ws-meridian
   slug: tsubaki
   name: 椿物流
   timezone: Asia/Tokyo
   language: ja
+  accentColor: amber
   client: true
 - key: ws-initech
   slug: kanda
   name: 神田システムズ
   timezone: Asia/Tokyo
   language: ja
+  accentColor: pink

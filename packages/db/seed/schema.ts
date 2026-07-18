@@ -5,6 +5,7 @@ import {
 	slugSchema,
 	tagSchema,
 	timezoneSchema,
+	workspaceAccentColorSchema,
 	workspaceRoleSchema,
 } from "@spantail/core";
 import { parse } from "yaml";
@@ -28,6 +29,8 @@ const workspaceConfigSchema = z.object({
 	name: z.string().min(1).max(100),
 	timezone: timezoneSchema,
 	language: languageSchema,
+	// At-a-glance accent theme; defaults to neutral for datasets that omit it.
+	accentColor: workspaceAccentColorSchema.default("neutral"),
 	// Client workspaces get their monthly reports published as share links.
 	client: z.boolean().default(false),
 });

@@ -40,7 +40,7 @@ const DEMO_LOCALE = "en" as const;
 const NOW = new Date("2026-06-18T09:00:00Z");
 
 async function build() {
-	const dataset = await generateDataset(NOW, DEMO_DIR, DEMO_LOCALE);
+	const dataset = await generateDataset(NOW, DEMO_DIR, DEMO_LOCALE, "demo");
 	const rows = (name: string): Row[] =>
 		dataset.tables.find((t) => t.table === name)?.rows ?? [];
 	return { dataset, rows };
@@ -124,6 +124,7 @@ describe("generateDataset", () => {
 			new Date("2026-07-01T00:00:00Z"),
 			DEMO_DIR,
 			DEMO_LOCALE,
+			"demo",
 		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
@@ -152,6 +153,7 @@ describe("generateDataset", () => {
 			new Date("2026-06-19T06:00:00Z"),
 			DEMO_DIR,
 			DEMO_LOCALE,
+			"demo",
 		);
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
@@ -398,7 +400,7 @@ describe("generateDataset", () => {
 		const demoJaDir = fileURLToPath(
 			new URL("../../../examples/demo-ja/db/seed/", import.meta.url),
 		);
-		const dataset = await generateDataset(NOW, demoJaDir, "ja");
+		const dataset = await generateDataset(NOW, demoJaDir, "ja", "demo-ja");
 		const rows = (name: string): Row[] =>
 			dataset.tables.find((t) => t.table === name)?.rows ?? [];
 		// Three templates, and the rendered Japanese monthly report uses one ("合計").
@@ -423,5 +425,50 @@ describe("generateDataset", () => {
 		expect(sql).toContain('INSERT INTO "work_entries"');
 		expect(sql).toContain('INSERT INTO "report_deliveries"');
 		expect(sql).toContain('INSERT INTO "agent_events"');
+	});
+
+	it("keeps every statement within D1's per-statement size limit", async () => {
+		const { dataset } = await build();
+		const sql = datasetToSql(dataset.tables);
+		// Statements are `…;`-terminated and joined by a newline; a trailing "" is
+		// dropped by the filter. D1 rejects any single statement over ~100 KB.
+		const statements = sql.split(/;\n/).filter((s) => s.trim().length > 0);
+		expect(statements.length).toBeGreaterThan(0);
+		for (const stmt of statements) {
+			expect(Buffer.byteLength(stmt, "utf8")).toBeLessThan(100_000);
+		}
+	});
+
+	it("derives stable user/workspace ids across runs", async () => {
+		const ids = (d: Awaited<ReturnType<typeof build>>["dataset"]) => {
+			const find = (t: string) =>
+				d.tables.find((x) => x.table === t)?.rows ?? [];
+			return {
+				users: find("user").map((r) => r.id),
+				workspaces: find("workspaces").map((r) => r.id),
+			};
+		};
+		const a = ids((await build()).dataset);
+		const b = ids((await build()).dataset);
+		expect(a).toEqual(b);
+		// v5 UUID shape, and distinct per entity.
+		expect(a.users[0]).toMatch(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+		);
+		expect(new Set(a.users).size).toBe(a.users.length);
+	});
+
+	it("marks users/workspaces with a committed R2 asset", async () => {
+		// The shipped demo dataset ships an avatar per user and a logo per
+		// workspace under examples/demo/r2/, so every row is flagged.
+		const { rows } = await build();
+		for (const u of rows("user")) {
+			expect(u.image).toMatch(/^[0-9a-f]{16}$/);
+		}
+		for (const w of rows("workspaces")) {
+			expect(w.logoUrl).toMatch(
+				/^\/api\/v1\/workspaces\/[0-9a-f-]+\/logo\?v=[0-9a-f]{8}$/,
+			);
+		}
 	});
 });

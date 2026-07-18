@@ -66,6 +66,27 @@ spantail entries import examples/demo-ja/import/work-entries.jsonl --workspace a
 するとエントリは重複します（素の insert 経路の仕様どおり）。冪等な再インポート
 を試す場合は、手作りのファイルに `externalId` を付けてください。
 
+## R2 アセット
+
+[`r2/`](./r2) はアップロードバケットを 1:1 で写します — ユーザーごとのアバター
+(`avatars/<userId>`) とワークスペースごとのロゴ (`workspaces/<id>/logo`)。拡張子
+なし・WebP で、シードの決定論的 id を名前に持ちます。バケットオブジェクトだけを
+置く（ドキュメントは含めない）ので、単一の sync でバケットを再現できます:
+
+```sh
+aws s3 sync examples/demo-ja/r2 s3://<bucket> --content-type image/webp
+```
+
+`pnpm db:seed` がローカルバケットへ自動でアップロードします。同梱の画像は
+`pnpm generate-avatars demo-ja`
+([`generate-avatars.ts`](../../packages/db/seed/generate-avatars.ts)) が生成する
+ライセンスフリーのプレースホルダで、ユーザーごとのシルエットとワークスペース
+ごとのモノグラムです（アプリのイニシャルフォールバックとは別物）。実写への
+差し替えはファイルを置き換えるだけでコード変更は不要です。リモートシードの
+全手順は
+[`packages/db/seed/README.md`](../../packages/db/seed/README.md#r2-assets)
+を参照してください。
+
 ## ファイル
 
 `db/seed/` には関心ごとに 1 つずつ YAML があります: `users` / `workspaces` /

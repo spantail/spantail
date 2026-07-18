@@ -1,48 +1,68 @@
-import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
 
 import {
-	availableDatasets,
-	ensureTmpDir,
-	seedDataDir,
-	wranglerLocal,
-} from "./exec";
+	DEFAULT_DATASET,
+	localeForDataset,
+	resolveSeedDataDir,
+} from "./dataset";
+import { ensureTmpDir, seedR2Dir, wranglerLocal } from "./exec";
 import { generateDataset } from "./generate";
-import type { Language } from "./schema";
 import { datasetToSql } from "./to-sql";
 
-const DEFAULT_DATASET = "demo";
+// All committed R2 seed assets are WebP (see each dataset's README.md).
+const R2_BUCKET = "spantail-uploads";
 
-/** A dataset whose name ends with "-ja" is Japanese; all others English. */
-function localeForDataset(name: string): Language {
-	return name.endsWith("-ja") ? "ja" : "en";
+/** Absolute paths of every file under `dir`, recursively. */
+function listFilesRecursive(dir: string): string[] {
+	const out: string[] = [];
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const full = join(dir, entry.name);
+		if (entry.isDirectory()) out.push(...listFilesRecursive(full));
+		else if (entry.isFile()) out.push(full);
+	}
+	return out;
+}
+
+/**
+ * Uploads a dataset's committed R2 assets into the local Miniflare bucket so
+ * seeded avatars/logos render in local dev, keyed by their path under r2/ (which
+ * mirrors the bucket 1:1). No-op for datasets without an r2/ directory.
+ */
+function seedR2Objects(name: string): void {
+	const r2Dir = seedR2Dir(name);
+	if (!existsSync(r2Dir)) return;
+	const files = listFilesRecursive(r2Dir);
+	if (files.length === 0) return;
+	console.log(
+		`\nUploading ${files.length} R2 object(s) to local bucket "${R2_BUCKET}"…`,
+	);
+	for (const file of files) {
+		const key = relative(r2Dir, file).split(/[\\/]/).join("/");
+		wranglerLocal([
+			"r2",
+			"object",
+			"put",
+			`${R2_BUCKET}/${key}`,
+			"--local",
+			"--file",
+			file,
+			"--content-type",
+			"image/webp",
+		]);
+	}
 }
 
 async function main(): Promise<void> {
 	// `pnpm db:seed <name>` forwards the name here; default to the demo dataset.
 	const name = process.argv[2] ?? DEFAULT_DATASET;
-	// A dataset name is a single directory under examples/ — reject path
-	// separators / traversal / absolute paths so it can't load YAML elsewhere.
-	// Lowercase-only: on case-insensitive filesystems an uppercased name could
-	// resolve to a directory yet bypass the `-ja` locale check below.
-	if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-		throw new Error(
-			`Invalid seed dataset name "${name}": use lowercase letters, digits and hyphens only.`,
-		);
-	}
-	const dataDir = seedDataDir(name);
-	if (!existsSync(dataDir)) {
-		const choices = availableDatasets();
-		const hint = choices.length
-			? `Available datasets: ${choices.join(", ")}`
-			: "No datasets found under examples/.";
-		throw new Error(`Unknown seed dataset "${name}" (${dataDir}).\n${hint}`);
-	}
+	const dataDir = resolveSeedDataDir(name);
 
 	const dataset = await generateDataset(
 		new Date(),
 		dataDir,
 		localeForDataset(name),
+		name,
 	);
 	const tmp = ensureTmpDir();
 
@@ -54,6 +74,8 @@ async function main(): Promise<void> {
 		console.log(`  ${table}: ${count}`);
 	}
 	wranglerLocal(["d1", "execute", "DB", "--local", "--file", sqlPath]);
+
+	seedR2Objects(name);
 
 	console.log("\nSeed complete. Sign in with any email + password below:");
 	const pad = Math.max(...dataset.credentials.map((c) => c.email.length));
