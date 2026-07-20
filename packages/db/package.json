@@ -16,7 +16,7 @@
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20260710.1",
+		"@cloudflare/workers-types": "^5.20260717.1",
 		"@spantail/templates": "workspace:*",
 		"@types/node": "^26.1.1",
 		"better-auth": "^1.6.23",
