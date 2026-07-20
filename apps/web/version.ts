@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 // The running instance's product version, resolved from git at build time. The
 // `vX.Y.Z` tag is the source of truth (see docs/releasing.md); on a clean tag
@@ -7,28 +7,38 @@ import { execSync } from "node:child_process";
 // test build so `__APP_VERSION__` resolves the same way in both.
 //
 // Two deploy-path accommodations (issue #254):
-// - Workers Builds clones carry no tags, so when describe yields a bare SHA the
-//   tags are fetched once and describe retried; any failure keeps the SHA.
+// - Deploy clones may carry no release tags — Workers Builds clones none at
+//   all, and a self-hosted fork's origin never receives tags created upstream
+//   after the fork (Sync fork moves only the branch). When describe yields a
+//   bare SHA the tags are fetched once from the canonical repository and
+//   describe retried; any failure keeps the SHA.
 // - Dirtiness is computed excluding apps/web/wrangler.jsonc, which the
 //   sanctioned deploy-config injection (scripts/inject-deploy-config.mjs)
 //   rewrites before every build; a per-instance D1 id must not mark an
 //   otherwise pristine release build "-dirty".
 const TAGGED = /^v\d+\.\d+\.\d+/;
+const UPSTREAM_REPO = "https://github.com/spantail/spantail.git";
+
+function git(args: string[]): string {
+	return execFileSync("git", args, { encoding: "utf8" }).trim();
+}
 
 function describe(): string {
-	return execSync("git describe --tags --always", {
-		encoding: "utf8",
-	}).trim();
+	return git(["describe", "--tags", "--always"]);
 }
 
 function isDirty(): boolean {
 	// -uno matches `git describe --dirty` semantics (tracked files only); the
 	// `top` magic makes the pathspecs repo-root-relative regardless of cwd.
 	return (
-		execSync(
-			"git status --porcelain -uno -- ':(top)' ':(top,exclude)apps/web/wrangler.jsonc'",
-			{ encoding: "utf8" },
-		).trim() !== ""
+		git([
+			"status",
+			"--porcelain",
+			"-uno",
+			"--",
+			":(top)",
+			":(top,exclude)apps/web/wrangler.jsonc",
+		]) !== ""
 	);
 }
 
@@ -37,14 +47,18 @@ export function resolveAppVersion(): string {
 		let version = describe();
 		if (!TAGGED.test(version)) {
 			try {
-				execSync("git fetch --tags --force --quiet origin", {
-					timeout: 15_000,
-					// Keep a failed fetch's "fatal: ..." out of the build log.
-					stdio: ["ignore", "pipe", "ignore"],
-				});
+				execFileSync(
+					"git",
+					["fetch", "--tags", "--force", "--quiet", UPSTREAM_REPO],
+					{
+						timeout: 15_000,
+						// Keep a failed fetch's "fatal: ..." out of the build log.
+						stdio: ["ignore", "pipe", "ignore"],
+					},
+				);
 				version = describe();
 			} catch {
-				// Offline or no remote: keep the bare-SHA fallback.
+				// Offline or unreachable upstream: keep the bare-SHA fallback.
 			}
 		}
 		return isDirty() ? `${version}-dirty` : version;
