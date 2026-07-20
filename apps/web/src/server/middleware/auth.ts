@@ -152,7 +152,6 @@ async function resolveAat(
 		via: "agent",
 		agentId: agent.id,
 		ownerUserId: owner.id,
-		defaultWorkspaceId: row.defaultWorkspaceId,
 		tokenId: row.id,
 	};
 }

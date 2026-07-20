@@ -56,10 +56,11 @@ file replaces a committed shared one entirely — a workspace-only link
 never inherits a project configured elsewhere. Environment variables
 (`SPANTAIL_WORKSPACE_ID`, `SPANTAIL_PROJECT_ID`) override both files.
 
-A repository you never link falls back to the agent token's default
-workspace, with no project. Run `/spantail:doctor` any time to see where
-each setting resolves from, whether the current repository is linked, and
-what to fix.
+A repository you never link has no attribution target: its sessions are
+rejected at ingest rather than silently landing somewhere. (To route every
+unlinked repository to one workspace anyway, set `SPANTAIL_WORKSPACE_ID`
+user-globally.) Run `/spantail:doctor` any time to see where each setting
+resolves from, whether the current repository is linked, and what to fix.
 
 ## What gets sent
 

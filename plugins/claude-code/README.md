@@ -108,9 +108,11 @@ server; see [`docs/security.md`](../../docs/security.md) §1).
 How this maps to the plugin install scopes:
 
 - **User scope** (install once, all repos): run `/spantail:link` in each
-  repository you want attributed. An unlinked repository falls back to the
-  agent token's default workspace, with no project — `/spantail:doctor`
-  shows any repo you forgot to link.
+  repository you want attributed. An unlinked repository sends no workspace,
+  so the server rejects its sessions instead of misattributing them —
+  `/spantail:doctor` shows any repo you forgot to link. (To route every
+  unlinked repository to one workspace anyway, set `SPANTAIL_WORKSPACE_ID`
+  user-globally.)
 - **Project scope** (team install): one member runs `/spantail:link --shared`
   and commits `.spantail/config.json`; everyone else just installs.
 - **Local scope** (this repo, you only): run `/spantail:link` right after
@@ -123,7 +125,9 @@ files, missing credentials).
 Installs configured before v0.3.0, when the plugin dialog still asked for a
 workspace and project id, keep working: those user-global values remain the
 final fallback in repositories without a `.spantail` file, and environment
-variables override everything.
+variables override everything. The server itself has no fallback — the agent
+token carries no default workspace — so a session that reaches it without a
+workspace id is rejected.
 
 The skills and agents use the Spantail MCP connection, which the plugin
 bundles. With `apiToken` set, the plugin registers an HTTP MCP server

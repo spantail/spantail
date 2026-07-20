@@ -962,7 +962,6 @@ export async function generateDataset(
 			// Hash of a throwaway value: the token exists for display but no
 			// plaintext is known, so nothing usable is committed.
 			tokenHash: await hashToken(randomUUID()),
-			defaultWorkspaceId: ws.id,
 			lastUsedAt: null,
 			expiresAt: null,
 			createdAt: baseCreatedAt,

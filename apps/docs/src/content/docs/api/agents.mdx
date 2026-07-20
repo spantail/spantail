@@ -26,14 +26,12 @@ retrievable afterwards.
 | `createdAt` | string | ISO 8601 creation instant. |
 | `disabledAt` | string \| null | When set, the agent is paused and its token is rejected at ingest. |
 | `archivedAt` | string \| null | When set, the agent is archived (irreversible). |
-| `token` | object \| null | Summary of the bound access token (see below). |
-| `projectIds` | string[] | Projects the agent is associated with. Empty means all projects in the bound workspace. |
+| `token` | object \| null | Summary of the access token (see below). |
 
 The token summary never exposes the secret or its hash:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `defaultWorkspaceId` | string \| null | Workspace the token logs to when an ingest omits `workspaceId`. Fixed at registration. |
 | `lastUsedAt` | string \| null | ISO 8601 instant the token was last used to ingest. |
 | `expiresAt` | string \| null | ISO 8601 expiry, or `null` if the token never expires. |
 
@@ -47,8 +45,6 @@ The required auth depends on the query:
   agents (newest first). An interactive session is required.
 - `?ownerUserId=<id>` <Badge text="scope: admin" variant="danger" /> — an **instance admin**
   reads another user's agents.
-- `?workspaceId=<id>` <Badge text="scope: read" variant="note" /> — a **workspace admin**
-  reads the agents bound to that workspace.
 
 The owning `userId` and the token hash are never returned.
 
@@ -57,7 +53,6 @@ The owning `userId` and the token hash are never returned.
 | Name | Type | Required | Description |
 | --- | --- | --- | --- |
 | `ownerUserId` | string | no | Instance admin only: list a specific user's agents. |
-| `workspaceId` | string | no | Workspace admin only: list agents bound to this workspace. |
 
 <Tabs>
 <TabItem label="curl">
@@ -77,11 +72,9 @@ curl "https://<your-instance>/api/v1/agents" \
     "disabledAt": null,
     "archivedAt": null,
     "token": {
-      "defaultWorkspaceId": "wrk_demo",
       "lastUsedAt": "2026-06-28T10:15:00.000Z",
       "expiresAt": null
-    },
-    "projectIds": ["prj_site"]
+    }
   }
 ]
 ```
@@ -93,9 +86,9 @@ curl "https://<your-instance>/api/v1/agents" \
 `POST /api/v1/agents` <Badge text="session only" variant="default" />
 
 Registers an agent owned by the caller and issues its single access token (agent and token
-are 1:1). The `defaultWorkspaceId` must be a workspace the caller belongs to; every
-`projectIds` entry must live in that workspace. The plaintext `secret` is returned **once**
-in this response.
+are 1:1). No workspace is involved: where a session lands is named by each ingest payload
+(see [Agent ingest](/api/agent-ingest/)). The plaintext `secret` is returned **once** in
+this response.
 
 **Request body**
 
@@ -103,8 +96,6 @@ in this response.
 | --- | --- | --- | --- |
 | `type` | string | yes | Agent kind: `claude_code`, `codex`, `cursor`, or `other`. |
 | `name` | string | yes | Display name (1–100 chars). |
-| `defaultWorkspaceId` | string | yes | Workspace the token logs to by default. The caller must be a member. |
-| `projectIds` | string[] | no | Projects to associate, all in the default workspace. Omit or `[]` for all projects. |
 | `expiresInDays` | integer | no | Token lifetime in days (1–3650). Omit for a token that never expires. |
 
 <Tabs>
@@ -115,9 +106,7 @@ curl -X POST "https://<your-instance>/api/v1/agents" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "claude_code",
-    "name": "Build bot",
-    "defaultWorkspaceId": "wrk_demo",
-    "projectIds": ["prj_site"]
+    "name": "Build bot"
   }'
 ```
 </TabItem>
@@ -131,11 +120,9 @@ curl -X POST "https://<your-instance>/api/v1/agents" \
   "disabledAt": null,
   "archivedAt": null,
   "token": {
-    "defaultWorkspaceId": "wrk_demo",
     "lastUsedAt": null,
     "expiresAt": null
   },
-  "projectIds": ["prj_site"],
   "secret": "spantail_aat_9f8c2b1a4d6e0f3c5a7b9d1e2f4a6c8e"
 }
 ```
@@ -186,8 +173,8 @@ for good. The activity it already captured is retained. To pause an agent tempor
 
 `POST /api/v1/agents/:id/token/rotate` <Badge text="session only" variant="default" />
 
-Regenerates the agent's token secret in place, keeping its workspace binding and expiry. The
-old secret stops working immediately. The new plaintext `secret` is returned once.
+Regenerates the agent's token secret in place, keeping its expiry. The old secret stops
+working immediately. The new plaintext `secret` is returned once.
 
 <Tabs>
 <TabItem label="curl">

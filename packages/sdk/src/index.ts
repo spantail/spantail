@@ -527,8 +527,10 @@ export class SpantailClient {
 
 	// --- AI agents: registry, access tokens, and work entries ---
 
-	/** Own agents; admins pass ownerUserId (R) or workspaceId (R*) to read others'. */
-	listAgents(params: AdminListParams = {}): Promise<AgentWithToken[]> {
+	/** Own agents; an instance admin passes ownerUserId (R) to read a user's. */
+	listAgents(
+		params: Pick<AdminListParams, "ownerUserId"> = {},
+	): Promise<AgentWithToken[]> {
 		return this.request("GET", "/agents", { query: params });
 	}
 

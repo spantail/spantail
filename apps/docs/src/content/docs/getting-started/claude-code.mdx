@@ -49,16 +49,15 @@ log work and build a report without leaving your editor.
 2. **Register an agent and collect two tokens.**
 
    Open **Settings → Agents** (under Account) and click **New agent**. Give it a
-   name, pick the type **Claude Code**, choose the workspace its sessions land
-   in, and optionally a project and an expiry.
+   name, pick the type **Claude Code**, and optionally an expiry. No workspace
+   or project is chosen here — where a session lands is decided per repository
+   by the `/spantail:link` skill in step 3.
 
-   Saving shows the **agent access token** (`spantail_aat_…`) once, alongside
-   the **Workspace ID** and **Project ID**. Copy the token now — it is never
-   shown again. The two IDs you won't need to paste anywhere in this
-   walkthrough: the `/spantail:link` skill in step 3 picks them for you.
+   Saving shows the **agent access token** (`spantail_aat_…`) once. Copy it
+   now — it is never shown again.
 
-   ![The dialog shown after creating an agent: the one-time access token and
-   the workspace and project ids.](../../../assets/claude-code/02-agent-token.png)
+   ![The dialog shown after creating an agent: the one-time access
+   token.](../../../assets/claude-code/02-agent-token.png)
 
    That was the first of the two tokens. It is **write-only and ingest-only**:
    it can send agent activity and nothing else. The plugin's skills act *as
@@ -109,12 +108,12 @@ log work and build a report without leaving your editor.
    ```
 
    The skill lists your workspaces and projects (over the plugin's MCP server
-   when the personal API token is set; otherwise it asks for the ids from
-   step 2) and writes your choice to `.spantail/config.local.json` — personal
+   when the personal API token is set; otherwise it asks you for the ids
+   directly) and writes your choice to `.spantail/config.local.json` — personal
    and gitignored. Repeat this in every repository you want attributed; an
-   unlinked repository falls back to the agent token's workspace, with no
-   project. `/spantail:doctor` shows the effective configuration and flags an
-   unlinked repository.
+   unlinked repository has nowhere to land, so its sessions are rejected
+   rather than silently misattributed. `/spantail:doctor` shows the effective
+   configuration and flags an unlinked repository.
 
    The plugin registers three hooks, two of which send anything. On every
    **Stop** — the end of a turn — it posts that turn's token usage, timestamp,

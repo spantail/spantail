@@ -258,7 +258,7 @@ it("lets admins read inbox deliveries by user and by workspace", async () => {
 });
 
 it("lets admins read agents without leaking token secrets", async () => {
-	const { iAdmin, wsAdmin, member, outsider, ws1 } = await setup();
+	const { iAdmin, member } = await setup();
 	const memberId = await userId(member);
 	await apiJson(
 		"PATCH",
@@ -270,29 +270,20 @@ it("lets admins read agents without leaking token secrets", async () => {
 		await apiJson(
 			"POST",
 			"/api/v1/agents",
-			{ type: "claude_code", name: "CC", defaultWorkspaceId: ws1.id },
+			{ type: "claude_code", name: "CC" },
 			member,
 		)
 	).json()) as { id: string };
 
-	// Instance admin reads the user's agents (R); workspace admin reads agents
-	// bound to / active in the workspace (R*). No token hash is ever returned.
+	// Instance admin reads the user's agents (R). No token hash is ever
+	// returned. (There is no workspace-scoped agent registry: agents carry no
+	// workspace binding, so per-workspace activity is read via agent entries.)
 	const byUser = (await (
 		await apiGet(`/api/v1/agents?ownerUserId=${memberId}`, iAdmin)
 	).json()) as Array<{ id: string; token: Record<string, unknown> | null }>;
 	expect(byUser.map((a) => a.id)).toContain(agent.id);
 	expect(byUser[0]?.token).not.toHaveProperty("tokenHash");
 	expect(byUser[0]).not.toHaveProperty("userId");
-
-	const byWs = (await (
-		await apiGet(`/api/v1/agents?workspaceId=${ws1.id}`, wsAdmin)
-	).json()) as Array<{ id: string }>;
-	expect(byWs.map((a) => a.id)).toContain(agent.id);
-
-	// A non-member non-admin cannot read by workspace.
-	expect(
-		(await apiGet(`/api/v1/agents?workspaceId=${ws1.id}`, outsider)).status,
-	).toBe(404);
 });
 
 it("requires the read scope for workspace-scoped admin reads via PAT", async () => {

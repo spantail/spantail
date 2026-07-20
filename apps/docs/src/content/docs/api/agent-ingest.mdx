@@ -26,8 +26,8 @@ Reads go through the regular user credentials (session or PAT) and follow the pr
 Ingest is the untrusted write path. It is rate-limited per token. The token is write-only:
 it can only ingest, never act as its owner elsewhere. The agent acts **for its owner** — on
 every ingest the owner's workspace membership and (when a project is named) project access
-are re-checked live, so a token bound earlier cannot write where the owner no longer
-belongs. A disabled or archived agent's token is rejected. Ingest into an archived
+are re-checked live, so the token cannot write where the owner does not
+belong. A disabled or archived agent's token is rejected. Ingest into an archived
 workspace returns `409 conflict` — archived workspaces are read-only.
 
 Every endpoint on this page is gated by the instance's **AI agents** feature. When an
@@ -88,9 +88,9 @@ Records one agent session. Idempotent on `(agent, sessionId)`: re-sending the sa
 updates the row instead of inserting a duplicate, so retries and batch reconciliation never
 double-count.
 
-`workspaceId` defaults to the token's bound workspace when omitted; if neither the body nor
-the token supplies a workspace, the request is rejected. `projectId` has no token-level
-default — omitting it records the work at the workspace level. `entryDate` is never sent —
+`workspaceId` is required: the token carries no workspace, so a payload that names none is
+rejected with `400` (the plugin resolves it from the repository link). `projectId` has no
+default anywhere — omitting it records the work at the workspace level. `entryDate` is never sent —
 it is derived from `startedAt` at read time. When `startedAt` is omitted it falls back to
 `endedAt`, then to ingest time.
 
@@ -100,7 +100,7 @@ it is derived from `startedAt` at read time. When `startedAt` is omitted it fall
 | --- | --- | --- | --- |
 | `sessionId` | string | yes | External session id (1–200 chars). |
 | `durationMinutes` | integer | yes | Session duration in minutes (≥ 0). |
-| `workspaceId` | string | no | Target workspace. Defaults to the token's bound workspace. |
+| `workspaceId` | string | yes | Target workspace. A payload naming none is rejected. |
 | `projectId` | string | no | Target project (must belong to the workspace). Omit for workspace-level work. |
 | `usage` | object | no | Token-usage totals (see above). |
 | `context` | object | no | Non-usage session context (see above); the summary path supplies every facet itself. |
@@ -164,9 +164,9 @@ idempotently inserts new events, then recomputes the session's rollup into the s
 the cumulative transcript every turn is safe — seen events are no-ops and the rollup is
 recomputed (not incremented), so totals converge.
 
-`workspaceId` defaults to the token's bound workspace when omitted; `projectId` has no
-token-level default (omitting it records workspace-level work). The same live delegation
-checks as the summary path apply.
+`workspaceId` is required, exactly as on the summary path; `projectId` has no default
+anywhere (omitting it records workspace-level work). The same live delegation checks as the
+summary path apply.
 
 **Request body**
 
@@ -174,7 +174,7 @@ checks as the summary path apply.
 | --- | --- | --- | --- |
 | `sessionId` | string | yes | External session id (1–200 chars). |
 | `events` | object[] | yes | 1–5000 per-turn events (see below). |
-| `workspaceId` | string | no | Target workspace. Defaults to the token's bound workspace. |
+| `workspaceId` | string | yes | Target workspace. A payload naming none is rejected. |
 | `projectId` | string | no | Target project (must belong to the workspace). |
 
 Each **event** is one assistant turn (one API response, one usage block):
@@ -270,7 +270,7 @@ request returns `404` and the client may simply ignore it.
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `sessionId` | string | yes | External session id (1–200 chars). |
-| `workspaceId` | string | no | Target workspace. Defaults to the token's bound workspace. |
+| `workspaceId` | string | yes | Target workspace. A payload naming none is rejected. |
 | `endedAt` | string | no | ISO 8601 wall-clock session end. |
 | `description` | string | no | Session summary (≤ 2000 chars). |
 | `context` | object | no | Only the `refs` facet — the other facets are server-derived from events and cannot be overridden here. |

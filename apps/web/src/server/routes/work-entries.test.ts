@@ -1169,7 +1169,7 @@ async function setupWithAgentIngest() {
 				await apiJson(
 					"POST",
 					"/api/v1/agents",
-					{ type: "claude_code", name: "CC", defaultWorkspaceId: base.ws.id },
+					{ type: "claude_code", name: "CC" },
 					cookie,
 				)
 			).json()) as { secret: string };
@@ -1180,7 +1180,12 @@ async function setupWithAgentIngest() {
 						authorization: `Bearer ${created.secret}`,
 						"content-type": "application/json",
 					},
-					body: JSON.stringify({ sessionId, durationMinutes: 10, ...body }),
+					body: JSON.stringify({
+						workspaceId: base.ws.id,
+						sessionId,
+						durationMinutes: 10,
+						...body,
+					}),
 				});
 				expect(res.status).toBe(200);
 				return ((await res.json()) as { id: string }).id;

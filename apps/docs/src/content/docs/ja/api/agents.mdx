@@ -25,14 +25,12 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | `createdAt` | string | ISO 8601 の作成時刻。 |
 | `disabledAt` | string \| null | 設定されている間、エージェントは一時停止され、トークンは ingest で拒否されます。 |
 | `archivedAt` | string \| null | 設定されているとアーカイブ済み（取り消し不可）。 |
-| `token` | object \| null | バインドされたアクセストークンの概要（下記）。 |
-| `projectIds` | string[] | エージェントに関連付けられたプロジェクト。空の場合はバインド先ワークスペースの全プロジェクト。 |
+| `token` | object \| null | アクセストークンの概要（下記）。 |
 
 トークン概要はシークレットやそのハッシュを一切公開しません。
 
 | フィールド | 型 | 説明 |
 | --- | --- | --- |
-| `defaultWorkspaceId` | string \| null | ingest が `workspaceId` を省略したときにログするワークスペース。登録時に固定。 |
 | `lastUsedAt` | string \| null | トークンが最後に ingest に使われた ISO 8601 時刻。 |
 | `expiresAt` | string \| null | ISO 8601 の有効期限。期限なしの場合は `null`。 |
 
@@ -46,8 +44,6 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
   新しい順で返します。対話的なセッションが必要です。
 - `?ownerUserId=<id>` <Badge text="scope: admin" variant="danger" /> — **インスタンス管理者** が
   他ユーザーのエージェントを読み取ります。
-- `?workspaceId=<id>` <Badge text="scope: read" variant="note" /> — **ワークスペース管理者** が
-  そのワークスペースにバインドされたエージェントを読み取ります。
 
 所有者の `userId` とトークンハッシュは決して返されません。
 
@@ -56,7 +52,6 @@ import { Aside, Badge, Tabs, TabItem } from '@astrojs/starlight/components';
 | 名前 | 型 | 必須 | 説明 |
 | --- | --- | --- | --- |
 | `ownerUserId` | string | いいえ | インスタンス管理者のみ: 特定ユーザーのエージェントを一覧。 |
-| `workspaceId` | string | いいえ | ワークスペース管理者のみ: このワークスペースにバインドされたエージェントを一覧。 |
 
 <Tabs>
 <TabItem label="curl">
@@ -76,11 +71,9 @@ curl "https://<your-instance>/api/v1/agents" \
     "disabledAt": null,
     "archivedAt": null,
     "token": {
-      "defaultWorkspaceId": "wrk_demo",
       "lastUsedAt": "2026-06-28T10:15:00.000Z",
       "expiresAt": null
-    },
-    "projectIds": ["prj_site"]
+    }
   }
 ]
 ```
@@ -92,9 +85,9 @@ curl "https://<your-instance>/api/v1/agents" \
 `POST /api/v1/agents` <Badge text="session only" variant="default" />
 
 呼び出し元が所有するエージェントを登録し、その単一のアクセストークンを発行します（エージェントと
-トークンは 1:1）。`defaultWorkspaceId` は呼び出し元が所属するワークスペースである必要があり、
-`projectIds` の各要素はそのワークスペースに属している必要があります。平文の `secret` はこの
-レスポンスで **一度だけ** 返されます。
+トークンは 1:1）。ワークスペースは関与しません: セッションがどこに記録されるかは、各 ingest
+ペイロードが指定します（[エージェント ingest](/ja/api/agent-ingest/) を参照）。平文の `secret`
+はこのレスポンスで **一度だけ** 返されます。
 
 **リクエストボディ**
 
@@ -102,8 +95,6 @@ curl "https://<your-instance>/api/v1/agents" \
 | --- | --- | --- | --- |
 | `type` | string | はい | エージェントの種別: `claude_code`、`codex`、`cursor`、`other`。 |
 | `name` | string | はい | 表示名（1〜100 文字）。 |
-| `defaultWorkspaceId` | string | はい | トークンが既定でログするワークスペース。呼び出し元はメンバーである必要があります。 |
-| `projectIds` | string[] | いいえ | 関連付けるプロジェクト（すべて既定ワークスペース内）。省略または `[]` で全プロジェクト。 |
 | `expiresInDays` | integer | いいえ | トークンの有効日数（1〜3650）。省略すると期限なし。 |
 
 <Tabs>
@@ -114,9 +105,7 @@ curl -X POST "https://<your-instance>/api/v1/agents" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "claude_code",
-    "name": "Build bot",
-    "defaultWorkspaceId": "wrk_demo",
-    "projectIds": ["prj_site"]
+    "name": "Build bot"
   }'
 ```
 </TabItem>
@@ -130,11 +119,9 @@ curl -X POST "https://<your-instance>/api/v1/agents" \
   "disabledAt": null,
   "archivedAt": null,
   "token": {
-    "defaultWorkspaceId": "wrk_demo",
     "lastUsedAt": null,
     "expiresAt": null
   },
-  "projectIds": ["prj_site"],
   "secret": "spantail_aat_9f8c2b1a4d6e0f3c5a7b9d1e2f4a6c8e"
 }
 ```
@@ -185,7 +172,7 @@ curl -X PATCH "https://<your-instance>/api/v1/agents/agt_bot" \
 
 `POST /api/v1/agents/:id/token/rotate` <Badge text="session only" variant="default" />
 
-ワークスペースのバインドと有効期限を保ったまま、エージェントのトークンシークレットをその場で
+有効期限を保ったまま、エージェントのトークンシークレットをその場で
 再生成します。古いシークレットは直ちに使えなくなります。新しい平文の `secret` は一度だけ返されます。
 
 <Tabs>

@@ -42,7 +42,7 @@ export const agents = sqliteTable(
 /**
  * Agent access token (AAT): a write-only ingest credential bound to one agent.
  * Carries no scopes — its capability is structurally "ingest for this agent".
- * An optional default workspace binds where omitted-scope ingests land.
+ * It also carries no workspace: every ingest names its workspace explicitly.
  */
 export const agentTokens = sqliteTable(
 	"agent_tokens",
@@ -54,33 +54,11 @@ export const agentTokens = sqliteTable(
 		name: text("name").notNull(),
 		// SHA-256 hex digest; the plaintext token is shown once and never stored.
 		tokenHash: text("token_hash").notNull().unique(),
-		defaultWorkspaceId: text("default_workspace_id").references(
-			() => workspaces.id,
-			{ onDelete: "cascade" },
-		),
 		lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
 		expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
 		createdAt: createdAtMs(),
 	},
 	(table) => [index("agent_tokens_agent_idx").on(table.agentId)],
-);
-
-/**
- * Projects an agent is associated with, within its bound workspace. Purely a
- * presentation grouping (it does not gate or default ingest): no rows for an
- * agent means "all projects". Chosen once at registration.
- */
-export const agentProjects = sqliteTable(
-	"agent_projects",
-	{
-		agentId: text("agent_id")
-			.notNull()
-			.references(() => agents.id, { onDelete: "cascade" }),
-		projectId: text("project_id")
-			.notNull()
-			.references(() => projects.id, { onDelete: "cascade" }),
-	},
-	(table) => [primaryKey({ columns: [table.agentId, table.projectId] })],
 );
 
 /** One agent work session, attributed to the owning user and a workspace. */
