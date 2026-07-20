@@ -139,7 +139,23 @@ app.route("/share", shareRoutes);
 // Registered last; closes over the finished app for loopback API calls.
 registerMcpRoute(app);
 
-export default app;
+// Collapse duplicate slashes in the request path before Hono routes so a
+// trailing slash on a configured base URL (e.g. the plugin's apiUrl) can't
+// produce an unroutable "//api/v1/…" or "//mcp". Hono matches the route once
+// from the incoming URL, so a middleware rewrite can't re-route a doubled-slash
+// path — the normalization has to sit in front of app.fetch. Only the pathname
+// is touched (query and everything else are preserved), and only a request that
+// actually contains a doubled slash pays the reconstruction cost.
+export default {
+	fetch(request, env, ctx) {
+		const url = new URL(request.url);
+		if (url.pathname.includes("//")) {
+			url.pathname = url.pathname.replace(/\/{2,}/g, "/");
+			request = new Request(url, request);
+		}
+		return app.fetch(request, env, ctx);
+	},
+} satisfies ExportedHandler<Env>;
 
 // The realtime fan-out Durable Object; wrangler resolves it from this export.
 export { UserHub } from "./realtime/user-hub";
