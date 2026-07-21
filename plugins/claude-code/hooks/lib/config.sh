@@ -115,7 +115,19 @@ _spantail_repo_value() {
 }
 
 # spantail_config ENV_VAR_NAME userConfigKey — echoes the resolved value.
+# apiUrl drops trailing slashes from every layer: hooks append /api/v1/...
+# to it, and a path-scoped proxy in front of the instance can reject the
+# doubled slash before the server-side normalization ever runs.
 spantail_config() {
+	local val
+	val="$(_spantail_config_resolve "$@")"
+	if [ "$2" = "apiUrl" ]; then
+		while [ "${val%/}" != "$val" ]; do val="${val%/}"; done
+	fi
+	printf '%s' "$val"
+}
+
+_spantail_config_resolve() {
 	local env_val="${!1:-}"
 	if [ -n "$env_val" ]; then
 		printf '%s' "$env_val"

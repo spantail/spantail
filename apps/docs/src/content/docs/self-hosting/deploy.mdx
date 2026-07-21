@@ -159,6 +159,12 @@ By default the app derives its origin from each request, so links and OAuth call
 proxy that rewrites the host — set **`BETTER_AUTH_URL`**. This and the optional social-login and
 email secrets are covered on the [Configuration](/self-hosting/configuration/) page.
 
+If a proxy in front of the instance applies path-scoped rules — for example a Cloudflare Access
+policy that bypasses SSO for `/api` and `/mcp` — make those path matchers tolerate a doubled
+slash (`//api/…`), or match on a prefix that covers it. A client configured with a
+trailing-slash base URL can emit such a path (the plugin's MCP endpoint URL is one it cannot
+normalize itself), and the Worker collapses doubled slashes only once the request reaches it.
+
 ![The deployed instance loaded at its Workers URL, showing the sign-up
 screen.](../../../assets/getting-started/01-signup.png)
 

@@ -159,6 +159,13 @@ Cloudflare の [D1 Time Travel](https://developers.cloudflare.com/d1/reference/t
 書き換えるプロキシの背後 — は **`BETTER_AUTH_URL`** を設定します。これと、任意のソーシャルログイン・
 メール用シークレットは[設定](/ja/self-hosting/configuration/)で扱います。
 
+インスタンスの前段のプロキシにパススコープ付きのルールを置く場合 — たとえば `/api` と `/mcp` を
+SSO から除外する Cloudflare Access ポリシー — は、パスマッチャが二重スラッシュ(`//api/…`)を
+許容するか、それを含むプレフィックスでマッチするようにしてください。末尾スラッシュ付きのベース URL を
+設定されたクライアントはそうしたパスを生成することがあり(プラグインの MCP エンドポイント URL は
+クライアント側では正規化できません)、Worker による二重スラッシュの正規化はリクエストが Worker に
+届いて初めて働きます。
+
 ![Workers の URL で読み込まれたインスタンスのサインアップ画面。](../../../../assets/getting-started/01-signup.ja.png)
 
 Worker が稼働したら、最初にサインアップした人がインスタンス管理者になります。
