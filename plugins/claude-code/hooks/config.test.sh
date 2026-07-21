@@ -161,6 +161,16 @@ check "agentToken never resolves from a repo file" "" \
 	"$(resolve SPANTAIL_AGENT_TOKEN agentToken \
 		CLAUDE_PROJECT_DIR="$repo" CLAUDE_CONFIG_DIR="$tmp/no-cfg")"
 
+# --- apiUrl normalization ---
+check "trailing slash is stripped from an env apiUrl" https://env.example \
+	"$(resolve SPANTAIL_API_URL apiUrl SPANTAIL_API_URL=https://env.example/)"
+check "trailing slash is stripped from a plugin-option apiUrl" https://opt.example \
+	"$(resolve SPANTAIL_API_URL apiUrl CLAUDE_PLUGIN_OPTION_apiUrl=https://opt.example/)"
+check "repeated trailing slashes are stripped" https://env.example \
+	"$(resolve SPANTAIL_API_URL apiUrl SPANTAIL_API_URL=https://env.example///)"
+check "other keys keep a trailing slash" ws-env/ \
+	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId SPANTAIL_WORKSPACE_ID=ws-env/)"
+
 # --- validation and degradation ---
 check "invalid charset in the owning file resolves empty, not shared/global" "" \
 	"$(resolve SPANTAIL_WORKSPACE_ID workspaceId \
