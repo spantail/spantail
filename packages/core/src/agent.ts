@@ -113,6 +113,15 @@ export const agentEntrySchema = z.object({
 	// a midnight-spanning session lands on the correct day for whoever is viewing.
 	entryDate: localDateSchema,
 	durationMinutes: z.number().int().min(0).max(MAX_DURATION_MINUTES),
+	// Idle-excluded time: consecutive event gaps ≤ AGENT_ACTIVE_IDLE_GAP_MS
+	// summed (WakaTime-style). Null on summary-path sessions, which carry no
+	// events; consumers fall back to `durationMinutes` (the wall-clock span).
+	activeDurationMinutes: z
+		.number()
+		.int()
+		.min(0)
+		.max(MAX_DURATION_MINUTES)
+		.nullable(),
 	// Null when the source can't expose token usage locally (e.g. Cursor).
 	usage: agentUsageSchema.nullable(),
 	context: agentEntryContextSchema.nullable(),
@@ -159,6 +168,43 @@ export function summarizeAgentSessions(
 		totalInputTokens,
 		totalOutputTokens,
 	};
+}
+
+/**
+ * Idle cutoff for a session's active duration: a gap between consecutive
+ * events at or under this counts in full, a longer one counts as zero
+ * (WakaTime-style). Single source of truth for the SQL rollup, the finalize
+ * tail, the migration backfill, and the seed.
+ */
+export const AGENT_ACTIVE_IDLE_GAP_MS = 15 * 60_000;
+
+/**
+ * Idle-excluded active duration over a session's event timestamps: the sum of
+ * consecutive gaps ≤ `AGENT_ACTIVE_IDLE_GAP_MS`, rounded to minutes. When
+ * `wallClockEndMs` is given (a finalized end past the last event), the tail is
+ * added under the same cutoff. This is the executable spec of the derivation —
+ * the rollup computes the same sum in SQL (`computeSessionRollup`) so ingest
+ * stays O(1) per session; an integration test keeps the two in agreement.
+ */
+export function computeActiveDurationMinutes(
+	timestampsMs: number[],
+	wallClockEndMs?: number,
+): number {
+	const sorted = [...timestampsMs].sort((a, b) => a - b);
+	let activeMs = 0;
+	let prev: number | undefined;
+	for (const ts of sorted) {
+		if (prev !== undefined) {
+			const gap = ts - prev;
+			if (gap <= AGENT_ACTIVE_IDLE_GAP_MS) activeMs += gap;
+		}
+		prev = ts;
+	}
+	if (prev !== undefined && wallClockEndMs !== undefined) {
+		const tail = wallClockEndMs - prev;
+		if (tail > 0 && tail <= AGENT_ACTIVE_IDLE_GAP_MS) activeMs += tail;
+	}
+	return Math.round(activeMs / 60000);
 }
 
 /**

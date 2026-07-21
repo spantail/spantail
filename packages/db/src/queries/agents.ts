@@ -1,4 +1,5 @@
 import {
+	AGENT_ACTIVE_IDLE_GAP_MS,
 	type AgentEntryContext,
 	type AgentUsage,
 	MAX_LINKED_AGENT_ENTRIES,
@@ -45,6 +46,13 @@ export type AgentEventInsert = Omit<
 	typeof agentEvents.$inferInsert,
 	"id" | "createdAt"
 >;
+
+// A session's last-activity instant: events-fed sessions advance `endedAt` to
+// the latest event timestamp on every ingest batch, so it doubles as "last
+// active at"; summary-path rows may lack it and fall back to `startedAt`.
+// Shared sort key for every session listing.
+const lastActivityAt = () =>
+	sql`coalesce(${agentEntries.endedAt}, ${agentEntries.startedAt})`;
 
 // --- agents (account-scoped registry) ---
 
@@ -374,7 +382,7 @@ export async function listAgentEntriesByRepo(
 				sql`${agentEntries.context} like '%' || ${opts.repoUrl} || '%'`,
 			),
 		)
-		.orderBy(desc(agentEntries.startedAt))
+		.orderBy(desc(lastActivityAt()))
 		.limit(opts.limit ?? 50);
 }
 
@@ -529,9 +537,10 @@ export async function listAgentEntries(
 			.select()
 			.from(agentEntries)
 			.where(and(...agentEntryConditions(query)))
-			// `id` breaks ties on equal `startedAt` so pagination is stable (no rows
-			// duplicated or skipped across pages).
-			.orderBy(desc(agentEntries.startedAt), desc(agentEntries.id))
+			// Most recently active first, so a long-running session surfaces when it
+			// moves. `id` breaks ties so pagination is stable (no rows duplicated or
+			// skipped across pages).
+			.orderBy(desc(lastActivityAt()), desc(agentEntries.id))
 			.limit(query.limit)
 			.offset(query.offset)
 	);
@@ -587,7 +596,7 @@ export async function listAgentEntriesForReport(
 		.select()
 		.from(agentEntries)
 		.where(and(...conditions))
-		.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id));
+		.orderBy(asc(lastActivityAt()), asc(agentEntries.id));
 }
 
 /**
@@ -632,8 +641,8 @@ export async function listAgentEntriesForWorkEntry(
 				eq(workEntryAgentEntries.agentEntryId, agentEntries.id),
 			)
 			.where(and(...conditions))
-			// Chronological, `id` breaking ties on equal `startedAt` for a stable order.
-			.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id))
+			// Chronological by last activity, `id` breaking ties for a stable order.
+			.orderBy(asc(lastActivityAt()), asc(agentEntries.id))
 			// The write path caps links at MAX_LINKED_AGENT_ENTRIES per entry; cap the
 			// read too so an unexpected surplus (legacy/manual rows) can't make the
 			// route read an unbounded set.
@@ -686,7 +695,12 @@ export async function getAgentEntryStats(
 		.select({
 			agentId: agentEntries.agentId,
 			startedAt: agentEntries.startedAt,
-			durationMinutes: agentEntries.durationMinutes,
+			// Session-time stats count active (idle-excluded) time when events
+			// exist, falling back to the wall-clock span on summary-path rows.
+			durationMinutes:
+				sql<number>`coalesce(${agentEntries.activeDurationMinutes}, ${agentEntries.durationMinutes})`.mapWith(
+					Number,
+				),
 			tokens: tokenBucket("totalTokens"),
 			inputTokens: tokenBucket("inputTokens"),
 			outputTokens: tokenBucket("outputTokens"),
@@ -792,6 +806,8 @@ export interface SessionRollup {
 	startedAt: Date;
 	endedAt: Date;
 	durationMinutes: number;
+	/** Idle-excluded active time: consecutive event gaps ≤ 15 min summed. */
+	activeDurationMinutes: number;
 	eventCount: number;
 }
 
@@ -843,6 +859,22 @@ export async function computeSessionRollup(
 	if (!agg || agg.count === 0 || agg.minTs == null || agg.maxTs == null) {
 		return null;
 	}
+
+	// Idle-excluded active time, summed in SQL like the other aggregates so the
+	// result stays O(1) per session regardless of event count (see the facet
+	// comment below). The cutoff — and the pure JS spec of this derivation,
+	// `computeActiveDurationMinutes` — live in core; an integration test keeps
+	// the two implementations in agreement.
+	const activeRow = await db.get<{ active_ms: number }>(sql`
+		select coalesce(sum(case when gap <= ${AGENT_ACTIVE_IDLE_GAP_MS} then gap end), 0) as active_ms
+		from (
+			select ${agentEvents.timestamp} - lag(${agentEvents.timestamp}) over (
+				order by ${agentEvents.timestamp}, ${agentEvents.id}
+			) as gap
+			from ${agentEvents}
+			where ${where}
+		)
+	`);
 
 	// Model of the most recent event that carries one; undefined when none do.
 	// id breaks timestamp ties so the pick is stable.
@@ -921,6 +953,10 @@ export async function computeSessionRollup(
 		startedAt: new Date(agg.minTs),
 		endedAt: new Date(agg.maxTs),
 		durationMinutes,
+		activeDurationMinutes: Math.max(
+			0,
+			Math.round((activeRow?.active_ms ?? 0) / 60000),
+		),
 		eventCount: agg.count,
 	};
 }
@@ -960,6 +996,10 @@ export async function materializeAgentSessionRollup(
 				// pushed endedAt past the last event, and only (end − start) covers
 				// that combination. Both bounds are monotonic, so the duration is too.
 				durationMinutes: sql`cast(round((max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0)) - excluded.started_at) / 60000.0) as integer)`,
+				// Monotonic like endedAt: events are append-only so a fuller recompute
+				// is always ≥ an earlier one, and a finalize tail already added here
+				// must survive a re-ingest of the same events.
+				activeDurationMinutes: sql`max(coalesce(excluded.active_duration_minutes, 0), coalesce(${agentEntries.activeDurationMinutes}, 0))`,
 				usage: values.usage,
 				context: sql`case
 					when excluded.context is null then ${agentEntries.context}
@@ -1031,6 +1071,18 @@ export async function finalizeAgentSession(
 						// Extend the duration to the finalized end; never shrink it.
 						durationMinutes: sql`max(${agentEntries.durationMinutes},
 							cast(round((${clampedEnd(endedAtMs)} - ${agentEntries.startedAt}) / 60000.0) as integer))`,
+						// Count the tail (last event → finalized end) as active when it is
+						// within the idle cutoff — trailing tool activity produces no event
+						// of its own. Idempotent: a finalize retry sees a zero gap and adds
+						// nothing; a later re-ingest can't shrink the sum (max guard in the
+						// rollup materialization).
+						activeDurationMinutes: sql`case
+							when ${clampedEnd(endedAtMs)} - coalesce(${agentEntries.endedAt}, ${agentEntries.startedAt})
+								between 1 and ${AGENT_ACTIVE_IDLE_GAP_MS}
+							then coalesce(${agentEntries.activeDurationMinutes}, 0)
+								+ cast(round((${clampedEnd(endedAtMs)} - coalesce(${agentEntries.endedAt}, ${agentEntries.startedAt})) / 60000.0) as integer)
+							else ${agentEntries.activeDurationMinutes}
+						end`,
 					}
 				: {}),
 			...(input.description !== null ? { description: input.description } : {}),

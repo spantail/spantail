@@ -124,6 +124,7 @@ function agentEntry(
 		agentId,
 		entryDate,
 		durationMinutes,
+		activeDurationMinutes: null,
 		usage: {
 			totalTokens,
 			inputTokens: totalTokens * 0.6,

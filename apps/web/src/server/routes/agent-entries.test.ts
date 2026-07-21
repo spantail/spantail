@@ -142,6 +142,46 @@ it("ingests a session idempotently on (agent, sessionId)", async () => {
 	expect(active.map((a) => a.id)).toContain(agentId);
 });
 
+it("lists sessions by last activity, not start time", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+
+	const hoursAgo = (n: number) =>
+		new Date(Date.now() - n * 3_600_000).toISOString();
+	// Started first but active most recently: must lead the list.
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-early",
+		durationMinutes: 120,
+		startedAt: hoursAgo(3),
+		endedAt: hoursAgo(1),
+	});
+	// No endedAt: last activity falls back to startedAt.
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-late",
+		durationMinutes: 0,
+		startedAt: hoursAgo(2),
+	});
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-mid",
+		durationMinutes: 15,
+		startedAt: hoursAgo(2.5),
+		endedAt: hoursAgo(2.25),
+	});
+
+	const list = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{
+		sessionId: string;
+		activeDurationMinutes: number | null;
+	}>;
+	expect(list.map((e) => e.sessionId)).toEqual(["s-early", "s-late", "s-mid"]);
+	// Summary-path sessions carry no events, so no active duration is derived.
+	expect(list.map((e) => e.activeDurationMinutes)).toEqual([null, null, null]);
+});
+
 it("derives an agent session's day in the viewer's timezone", async () => {
 	const { admin, ws, project } = await setup();
 	const { token } = await createAgentToken(admin);

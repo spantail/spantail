@@ -94,6 +94,7 @@ export const agentEventRoutes = new Hono<AppEnv>()
 			agentId: auth.agentId,
 			sessionId: input.sessionId,
 			durationMinutes: rollup.durationMinutes,
+			activeDurationMinutes: rollup.activeDurationMinutes,
 			usage: rollup.usage,
 			context: rollup.context,
 			rollupEventCount: rollup.eventCount,

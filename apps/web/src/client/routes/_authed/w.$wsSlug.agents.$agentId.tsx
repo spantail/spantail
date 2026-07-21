@@ -582,7 +582,9 @@ function AgentPage() {
 												{entry.usage?.model ?? "—"}
 											</TableCell>
 											<TableCell className="text-right whitespace-nowrap tabular-nums">
-												{formatDuration(entry.durationMinutes)}
+												{formatDuration(
+													entry.activeDurationMinutes ?? entry.durationMinutes,
+												)}
 											</TableCell>
 											<TableCell className="text-muted-foreground text-right tabular-nums">
 												{entry.usage?.inputTokens !== undefined
