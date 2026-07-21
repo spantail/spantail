@@ -89,8 +89,11 @@ webhook-driven logging).
    links this session's agent entry; do not pass it when logging unrelated
    past work. For several entries at once (e.g. "log everything I did
    today"), use `log_work_batch`.
-3. Report back what was logged: date, project, duration, description, and
-   whether the current session was linked.
+3. Report back what was logged: date, project, duration, description. When
+   you passed `sessionId`, say the current session link was requested — it
+   is best-effort (the server links only telemetry that has already been
+   ingested) and `log_work`'s response does not carry the outcome, so do
+   not assert that it happened.
 
 ## Privacy
 
