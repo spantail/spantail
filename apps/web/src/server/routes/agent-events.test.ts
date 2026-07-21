@@ -436,6 +436,46 @@ it("counts the finalize tail as active only within the idle cutoff", async () =>
 	expect(frac?.activeDurationMinutes).toBe(1);
 });
 
+it("clears the active duration when a summary upsert takes over the session", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		events: [
+			turn("m1", "2026-06-20T01:00:00.000Z", { output_tokens: 1 }),
+			turn("m2", "2026-06-20T01:05:00.000Z", { output_tokens: 1 }),
+		],
+	});
+
+	// The same session re-submitted through the summary endpoint replaces the
+	// wall-clock fields; the event-derived active duration must not sit stale
+	// next to them.
+	const summary = await appFetch("/api/v1/agent-entries", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			workspaceId: ws.id,
+			sessionId: "s1",
+			durationMinutes: 30,
+		}),
+	});
+	expect(summary.status).toBe(200);
+
+	const list = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{
+		durationMinutes: number;
+		activeDurationMinutes: number | null;
+	}>;
+	expect(list[0]?.durationMinutes).toBe(30);
+	expect(list[0]?.activeDurationMinutes).toBeNull();
+});
+
 it("keeps the materialized rollup monotonic against a stale write", async () => {
 	const { admin, ws } = await setup();
 	const { agentId } = await createAgentToken(admin);
