@@ -352,14 +352,15 @@ it("counts the finalize tail as active only within the idle cutoff", async () =>
 	expect(near?.durationMinutes).toBe(8);
 	expect(near?.activeDurationMinutes).toBe(8);
 
-	// A finalize retry sees a zero gap and adds nothing (idempotent).
+	// A finalize retry re-derives the same total (idempotent).
 	await finalize(token, {
 		workspaceId: ws.id,
 		sessionId: "s-near",
 		endedAt: t(8),
 	});
-	// A Stop re-post after the finalize recomputes 5 active minutes from events;
-	// the monotonic guard must keep the tail rather than shrink to 5.
+	// A Stop re-post after the finalize recomputes 5 active minutes from events
+	// and re-derives the 3-minute tail against the finalized end — the total
+	// must not shrink to 5.
 	await ingest(token, { workspaceId: ws.id, sessionId: "s-near", events });
 	near = bySession(await read(), "s-near");
 	expect(near?.durationMinutes).toBe(8);
@@ -384,9 +385,35 @@ it("counts the finalize tail as active only within the idle cutoff", async () =>
 			})
 		).status,
 	).toBe(200);
-	const far = bySession(await read(), "s-far");
+	let far = bySession(await read(), "s-far");
 	expect(far?.durationMinutes).toBe(30);
 	expect(far?.activeDurationMinutes).toBe(5);
+
+	// A second finalize with a later end measures the tail from the last EVENT,
+	// not the previously stored endedAt — repeated finalizes with growing ends
+	// must not accumulate pure idle as active time.
+	await finalize(token, {
+		workspaceId: ws.id,
+		sessionId: "s-far",
+		endedAt: t(35),
+	});
+	far = bySession(await read(), "s-far");
+	expect(far?.durationMinutes).toBe(35);
+	expect(far?.activeDurationMinutes).toBe(5);
+
+	// A late event after the finalize re-derives the tail against the new last
+	// event: gaps 5/20 keep 5 active, plus the now-in-range 25→35 tail.
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-far",
+		events: [
+			...farEvents,
+			turn("b3", t(25), { input_tokens: 1, output_tokens: 1 }),
+		],
+	});
+	far = bySession(await read(), "s-far");
+	expect(far?.durationMinutes).toBe(35);
+	expect(far?.activeDurationMinutes).toBe(15);
 });
 
 it("keeps the materialized rollup monotonic against a stale write", async () => {
