@@ -10,12 +10,17 @@ import {
 } from "./agent";
 import { MAX_DURATION_MINUTES } from "./duration";
 
-type Session = Pick<AgentEntry, "durationMinutes" | "usage">;
+type Session = Pick<
+	AgentEntry,
+	"durationMinutes" | "activeDurationMinutes" | "usage"
+>;
 const session = (
 	durationMinutes: number,
 	usage: Session["usage"],
+	activeDurationMinutes: number | null = null,
 ): Session => ({
 	durationMinutes,
+	activeDurationMinutes,
 	usage,
 });
 
@@ -150,6 +155,17 @@ it("summarizes linked sessions with input/output buckets", () => {
 		totalInputTokens: 600,
 		totalOutputTokens: 900,
 	});
+});
+
+it("sums active minutes when present, falling back to the wall-clock span", () => {
+	expect(
+		summarizeAgentSessions([
+			// Idle-gapped events session: the active value counts, not the span.
+			session(55, { totalTokens: 100 }, 20),
+			// Summary-path session (no events): the span is all there is.
+			session(15, null),
+		]).totalMinutes,
+	).toBe(35);
 });
 
 it("sums only the sessions that expose a bucket (partial sums)", () => {

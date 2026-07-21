@@ -143,7 +143,9 @@ export type AgentEntry = z.infer<typeof agentEntrySchema>;
  * sum can be less than `totalTokens`.
  */
 export function summarizeAgentSessions(
-	entries: Array<Pick<AgentEntry, "durationMinutes" | "usage">>,
+	entries: Array<
+		Pick<AgentEntry, "durationMinutes" | "activeDurationMinutes" | "usage">
+	>,
 ): {
 	sessionCount: number;
 	totalMinutes: number;
@@ -156,7 +158,9 @@ export function summarizeAgentSessions(
 	let totalInputTokens = 0;
 	let totalOutputTokens = 0;
 	for (const entry of entries) {
-		totalMinutes += entry.durationMinutes;
+		// Active (idle-excluded) time, like every session-time surface; sessions
+		// without events fall back to the wall-clock span.
+		totalMinutes += entry.activeDurationMinutes ?? entry.durationMinutes;
 		totalTokens += entry.usage?.totalTokens ?? 0;
 		totalInputTokens += entry.usage?.inputTokens ?? 0;
 		totalOutputTokens += entry.usage?.outputTokens ?? 0;
