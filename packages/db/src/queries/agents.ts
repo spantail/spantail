@@ -326,11 +326,14 @@ export async function upsertAgentEntry(
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
 				durationMinutes: values.durationMinutes,
-				// The summary path owns the row now: clear any event-derived active
-				// duration so it can't sit stale next to the replaced wall-clock
-				// fields (consumers fall back to durationMinutes; a later events
-				// ingest recomputes it).
+				// The summary path owns the row now: clear the event-derived fields so
+				// they can't sit stale next to the replaced wall-clock ones —
+				// activeDurationMinutes (consumers fall back to durationMinutes) and
+				// rollupEventCount (else a later finalize would re-derive active time
+				// from the superseded events, and eventCount would misreport). A later
+				// events ingest recomputes both.
 				activeDurationMinutes: null,
+				rollupEventCount: null,
 				usage: values.usage,
 				context: values.context,
 				description: values.description,

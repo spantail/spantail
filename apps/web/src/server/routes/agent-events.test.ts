@@ -466,13 +466,36 @@ it("clears the active duration when a summary upsert takes over the session", as
 	});
 	expect(summary.status).toBe(200);
 
-	const list = (await (
-		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
-	).json()) as Array<{
-		durationMinutes: number;
-		activeDurationMinutes: number | null;
-	}>;
+	const read = async () =>
+		(await (
+			await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		).json()) as Array<{
+			durationMinutes: number;
+			activeDurationMinutes: number | null;
+			eventCount: number | null;
+		}>;
+	let list = await read();
 	expect(list[0]?.durationMinutes).toBe(30);
+	expect(list[0]?.activeDurationMinutes).toBeNull();
+	// The takeover is complete: the rollup bookkeeping is cleared too, so the
+	// row reads as summary-path.
+	expect(list[0]?.eventCount).toBeNull();
+
+	// A finalize after the takeover must not re-derive active time from the
+	// superseded events.
+	await appFetch("/api/v1/agent-events/finalize", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			workspaceId: ws.id,
+			sessionId: "s1",
+			endedAt: new Date().toISOString(),
+		}),
+	});
+	list = await read();
 	expect(list[0]?.activeDurationMinutes).toBeNull();
 });
 
