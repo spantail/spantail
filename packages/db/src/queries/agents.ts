@@ -816,12 +816,6 @@ export interface SessionRollup {
 const CONTEXT_VALUES_MAX = 20;
 const CONTEXT_VALUE_LENGTH_MAX = 200;
 
-/**
- * Sum of one session's consecutive event gaps at or under the idle cutoff, in
- * ms (0 for zero or one event): the SQL side of `computeActiveDurationMinutes`
- * in core, kept as a fragment so the rollup and the finalize derive the same
- * events component.
- */
 /** The last event instant of one session (null when it has no events). */
 function lastEventTs(agentId: string, sessionId: string) {
 	return sql`(
@@ -831,6 +825,11 @@ function lastEventTs(agentId: string, sessionId: string) {
 	)`;
 }
 
+/**
+ * Sum of one session's consecutive event gaps at or under the idle cutoff, in
+ * ms (0 for zero or one event): the SQL side of `computeActiveDurationMinutes`
+ * in core.
+ */
 function eventGapActiveMs(agentId: string, sessionId: string) {
 	return sql`(
 		select coalesce(sum(case when gap <= ${AGENT_ACTIVE_IDLE_GAP_MS} then gap end), 0)
@@ -843,6 +842,30 @@ function eventGapActiveMs(agentId: string, sessionId: string) {
 				and ${agentEvents.sessionId} = ${sessionId}
 		)
 	)`;
+}
+
+/**
+ * A session's full active duration in minutes, derived in SQL: the event-gap
+ * sum plus the finalize tail — the stretch from the last event to `finalEnd`
+ * (a finalized wall-clock end), counted only when within the idle cutoff —
+ * summed in ms and rounded ONCE, exactly like `computeActiveDurationMinutes`.
+ * Deterministic against the current events table, so the rollup
+ * materialization and the finalize converge regardless of write order.
+ */
+function activeDurationMinutesExpr(
+	agentId: string,
+	sessionId: string,
+	finalEnd: SQL,
+) {
+	const tailStart = sql`coalesce(${lastEventTs(agentId, sessionId)}, ${agentEntries.startedAt})`;
+	return sql`cast(round((
+		${eventGapActiveMs(agentId, sessionId)}
+		+ (case
+			when ${finalEnd} - ${tailStart} between 1 and ${AGENT_ACTIVE_IDLE_GAP_MS}
+			then ${finalEnd} - ${tailStart}
+			else 0
+		end)
+	) / 60000.0) as integer)`;
 }
 
 /** Sums one raw usage bucket (snake_case JSON key) across a session's events. */
@@ -1018,22 +1041,19 @@ export async function materializeAgentSessionRollup(
 				// pushed endedAt past the last event, and only (end − start) covers
 				// that combination. Both bounds are monotonic, so the duration is too.
 				durationMinutes: sql`cast(round((max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0)) - excluded.started_at) / 60000.0) as integer)`,
-				// Recomputed, not max()-ed: excluded carries the events component (from
-				// the full recompute, so excluded.ended_at is the last event), and the
-				// finalize tail — the stretch past the last event up to a finalized
-				// wall-clock end within the idle cutoff — is re-derived against that
-				// last event. A late event after a finalize thus shrinks the tail and
-				// grows the events component consistently, instead of freezing an
-				// earlier total. Null excluded (a caller without a rollup) preserves
-				// the stored value.
+				// Recomputed, not max()-ed: the events component and the finalize tail
+				// (past the last event up to a finalized wall-clock end within the
+				// idle cutoff) are re-derived against the current events table, so a
+				// late event after a finalize shrinks the tail and grows the events
+				// component consistently instead of freezing an earlier total. Null
+				// excluded (a caller without a rollup) preserves the stored value.
 				activeDurationMinutes: sql`case
 					when excluded.active_duration_minutes is null then ${agentEntries.activeDurationMinutes}
-					else excluded.active_duration_minutes + (case
-						when max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0)) - excluded.ended_at
-							between 1 and ${AGENT_ACTIVE_IDLE_GAP_MS}
-						then cast(round((max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0)) - excluded.ended_at) / 60000.0) as integer)
-						else 0
-					end)
+					else ${activeDurationMinutesExpr(
+						values.agentId,
+						values.sessionId,
+						sql`max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0))`,
+					)}
 				end`,
 				usage: values.usage,
 				context: sql`case
@@ -1106,21 +1126,18 @@ export async function finalizeAgentSession(
 						// Extend the duration to the finalized end; never shrink it.
 						durationMinutes: sql`max(${agentEntries.durationMinutes},
 							cast(round((${clampedEnd(endedAtMs)} - ${agentEntries.startedAt}) / 60000.0) as integer))`,
-						// Recompute events component + finalize tail (last event → finalized
-						// end, counted only within the idle cutoff — trailing tool activity
+						// Recompute events component + finalize tail (trailing tool activity
 						// produces no event of its own). Measuring the tail from the last
 						// EVENT, not the stored endedAt, keeps repeated finalizes with
 						// growing ends from accumulating idle stretches, and makes a
 						// retry a no-op. Summary-path rows (no events) stay null.
 						activeDurationMinutes: sql`case
 							when ${agentEntries.rollupEventCount} is null then ${agentEntries.activeDurationMinutes}
-							else cast(round(${eventGapActiveMs(input.agentId, input.sessionId)} / 60000.0) as integer)
-								+ (case
-									when ${clampedEnd(endedAtMs)} - coalesce(${lastEventTs(input.agentId, input.sessionId)}, ${agentEntries.startedAt})
-										between 1 and ${AGENT_ACTIVE_IDLE_GAP_MS}
-									then cast(round((${clampedEnd(endedAtMs)} - coalesce(${lastEventTs(input.agentId, input.sessionId)}, ${agentEntries.startedAt})) / 60000.0) as integer)
-									else 0
-								end)
+							else ${activeDurationMinutesExpr(
+								input.agentId,
+								input.sessionId,
+								clampedEnd(endedAtMs),
+							)}
 						end`,
 					}
 				: {}),

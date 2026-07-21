@@ -414,6 +414,26 @@ it("counts the finalize tail as active only within the idle cutoff", async () =>
 	far = bySession(await read(), "s-far");
 	expect(far?.durationMinutes).toBe(35);
 	expect(far?.activeDurationMinutes).toBe(15);
+
+	// Fractional components round ONCE over the summed interval, matching
+	// computeActiveDurationMinutes: a 30 s gap + a 30 s tail is 1 minute, not
+	// round(0.5) + round(0.5) = 2.
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-frac",
+		events: [
+			turn("c1", t(0), { input_tokens: 1, output_tokens: 1 }),
+			turn("c2", t(0.5), { input_tokens: 1, output_tokens: 1 }),
+		],
+	});
+	await finalize(token, {
+		workspaceId: ws.id,
+		sessionId: "s-frac",
+		endedAt: t(1),
+	});
+	const frac = bySession(await read(), "s-frac");
+	expect(frac?.durationMinutes).toBe(1);
+	expect(frac?.activeDurationMinutes).toBe(1);
 });
 
 it("keeps the materialized rollup monotonic against a stale write", async () => {
