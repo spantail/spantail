@@ -33,12 +33,15 @@ other key there (`apiUrl` and tokens never resolve from a repo file).
    questions:
    - **Workspace ID** (required). Question text: paste the workspace id —
      copy it with the copy button in the sidebar's workspace switcher.
-     Options: "Keep current: `<id>`" (only when a link exists) and
-     "Cancel — leave unchanged"; a new id comes in via Other.
+     Options: "Keep current: `<id>`" when a link exists, "Where do I find
+     it?" when none does, plus "Cancel — leave unchanged"; a new id comes
+     in via Other. On "Where do I find it?", describe the copy button's
+     location and ask again.
    - **Project ID** (optional). Question text: paste the project id — copy
      it with the copy button next to the project in the sidebar. Options:
-     "No project — workspace only" and "Keep current: `<id>`" (only when
-     the link has one); a new id comes in via Other.
+     "No project — workspace only", "Keep current: `<id>`" when the link
+     has one, plus "Cancel — leave unchanged"; a new id comes in via
+     Other.
 
    Check only the format of a pasted id — 1–64 chars of `[A-Za-z0-9._-]`,
    the same constraint the hooks enforce — and re-ask on a mismatch. Do not
