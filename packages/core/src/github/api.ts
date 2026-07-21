@@ -15,6 +15,10 @@ export const logWorkFromGithubInputSchema = z.object({
 	issueNumber: z.number().int().positive().max(10_000_000),
 	// Raw "<duration> [date]" string, exactly as the user typed it.
 	args: z.string().max(200),
+	// The caller's current agent session (an external session id, e.g. Claude
+	// Code's session_id). Best-effort: the server links the caller's own agent
+	// entries whose sessionId matches, regardless of branch or refs.
+	sessionId: z.string().min(1).max(200).optional(),
 });
 export type LogWorkFromGithubInput = z.infer<
 	typeof logWorkFromGithubInputSchema

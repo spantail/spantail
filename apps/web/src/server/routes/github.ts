@@ -1,4 +1,5 @@
 import {
+	githubLogWorkNote,
 	logWorkErrorReply,
 	logWorkFromGithubInputSchema,
 	parseLogWorkArgs,
@@ -143,13 +144,14 @@ export const githubRoutes = new Hono<AppEnv>().post(
 			}
 		}
 
-		const agentEntryIds = await resolveLinkableAgentEntries({
+		const linkedEntries = await resolveLinkableAgentEntries({
 			db: c.var.db,
 			userId: user.id,
 			workspaceId: mapping.workspaceId,
 			repoFullName: mapping.repoFullName,
 			issueNumber: input.issueNumber,
 			installationToken,
+			sessionId: input.sessionId,
 		});
 
 		const entry = await createWorkEntryWithGithubRef(
@@ -166,7 +168,10 @@ export const githubRoutes = new Hono<AppEnv>().post(
 					title === null
 						? `#${input.issueNumber}`
 						: `${title} (#${input.issueNumber})`,
-				note: issueUrl,
+				note: githubLogWorkNote(
+					issueUrl,
+					linkedEntries.map((linked) => linked.description),
+				),
 				tags,
 				source: resolveSource(c),
 			},
@@ -175,7 +180,7 @@ export const githubRoutes = new Hono<AppEnv>().post(
 				issueNumber: input.issueNumber,
 				commentId: null,
 			},
-			agentEntryIds,
+			linkedEntries.map((linked) => linked.id),
 		);
 		publishToWorkspace(c, {
 			type: "work-entry",
@@ -192,7 +197,7 @@ export const githubRoutes = new Hono<AppEnv>().post(
 					projectName: project.name,
 					issue: { number: input.issueNumber, title, url: issueUrl },
 					tags,
-					linkedAgentEntryIds: agentEntryIds,
+					linkedAgentEntryIds: linkedEntries.map((linked) => linked.id),
 					degraded: title === null,
 				},
 			},

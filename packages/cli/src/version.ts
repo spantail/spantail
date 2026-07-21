@@ -10,4 +10,4 @@ export const VERSION: string = pkg.version;
  * rejects request fields it does not know. Raise this whenever the CLI starts
  * relying on an endpoint or field that a newer server introduced.
  */
-export const MIN_SERVER_VERSION = "v0.6.0";
+export const MIN_SERVER_VERSION = "v1.2.0";
