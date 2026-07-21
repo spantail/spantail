@@ -49,11 +49,9 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
 // Drop values outside the supported shape; keep scalar siblings inside a
-// bucket. A non-object input passes through untouched so the record schema
-// still rejects e.g. `usage: 5`. Null-prototype targets so a JSON-supplied
-// "__proto__" key becomes an own property instead of a setter call.
-function pruneUsage(input: unknown): unknown {
-	if (!isPlainObject(input)) return input;
+// bucket. Null-prototype targets so a JSON-supplied "__proto__" key becomes
+// an own property instead of a setter call.
+function pruneUsage(input: Record<string, unknown>): Record<string, unknown> {
 	const pruned: Record<string, unknown> = Object.create(null);
 	for (const [key, value] of Object.entries(input)) {
 		if (isUsageScalar(value)) {
@@ -69,26 +67,31 @@ function pruneUsage(input: unknown): unknown {
 	return pruned;
 }
 
-export const agentEventUsageSchema = z.preprocess(
-	pruneUsage,
-	z
-		.record(
-			usageKeySchema,
-			z.union([
-				usageValueSchema,
-				z
-					.record(usageKeySchema, usageValueSchema)
-					.refine(
-						(bucket) => Object.keys(bucket).length <= 20,
-						"usage bucket must have at most 20 entries",
-					),
-			]),
-		)
-		.refine(
-			(usage) => Object.keys(usage).length <= 20,
-			"usage must have at most 20 entries",
-		),
-);
+// The outer record rejects a non-record usage and keeps the SDK's input type
+// a record (z.preprocess would widen it to unknown); the prune runs on its
+// output, and the piped schema bounds what survives.
+export const agentEventUsageSchema = z
+	.record(z.string(), z.unknown())
+	.transform(pruneUsage)
+	.pipe(
+		z
+			.record(
+				usageKeySchema,
+				z.union([
+					usageValueSchema,
+					z
+						.record(usageKeySchema, usageValueSchema)
+						.refine(
+							(bucket) => Object.keys(bucket).length <= 20,
+							"usage bucket must have at most 20 entries",
+						),
+				]),
+			)
+			.refine(
+				(usage) => Object.keys(usage).length <= 20,
+				"usage must have at most 20 entries",
+			),
+	);
 export type AgentEventUsage = z.infer<typeof agentEventUsageSchema>;
 
 /**
