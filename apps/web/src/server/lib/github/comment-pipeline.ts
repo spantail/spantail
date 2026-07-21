@@ -1,4 +1,5 @@
 import {
+	githubLogWorkNote,
 	logWorkErrorReply,
 	logWorkSuccessReply,
 	noProjectAccessReply,
@@ -196,7 +197,7 @@ export async function handleIssueCommentCreated(opts: {
 			}
 		}
 
-		const agentEntryIds = await resolveLinkableAgentEntries({
+		const linkedEntries = await resolveLinkableAgentEntries({
 			db,
 			userId: identity.userId,
 			workspaceId: mapping.workspaceId,
@@ -217,7 +218,10 @@ export async function handleIssueCommentCreated(opts: {
 					startedAt: null,
 					endedAt: null,
 					description,
-					note: `https://github.com/${mapping.repoFullName}/issues/${issueNumber}`,
+					note: githubLogWorkNote(
+						`https://github.com/${mapping.repoFullName}/issues/${issueNumber}`,
+						linkedEntries.map((linked) => linked.description),
+					),
 					tags,
 					source: "github",
 				},
@@ -226,7 +230,7 @@ export async function handleIssueCommentCreated(opts: {
 					issueNumber,
 					commentId: comment.id,
 				},
-				agentEntryIds,
+				linkedEntries.map((linked) => linked.id),
 			);
 		} catch (error) {
 			// Unique violation on comment_id: a redelivery raced the pre-check —

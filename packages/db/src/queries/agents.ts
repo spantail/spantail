@@ -378,6 +378,30 @@ export async function listAgentEntriesByRepo(
 		.limit(opts.limit ?? 50);
 }
 
+/**
+ * The caller's own agent entries for one external session id — the "I am
+ * logging from inside this session" linking signal. sessionId is only unique
+ * per agent, so a user running several agents could in principle produce
+ * multiple rows; all of them are the caller's own within the workspace, so
+ * every row is linkable.
+ */
+export async function listAgentEntriesBySession(
+	db: Database,
+	opts: { workspaceId: string; ownerUserId: string; sessionId: string },
+): Promise<AgentEntryRow[]> {
+	return db
+		.select()
+		.from(agentEntries)
+		.where(
+			and(
+				eq(agentEntries.workspaceId, opts.workspaceId),
+				eq(agentEntries.ownerUserId, opts.ownerUserId),
+				eq(agentEntries.sessionId, opts.sessionId),
+			),
+		)
+		.orderBy(desc(agentEntries.startedAt));
+}
+
 // Each (agentId, sessionId) pair binds 2 parameters: a chunk of 40 keeps an
 // event-delete statement at 80 binds, under D1's 100-bound-parameter cap.
 const EVENT_DELETE_CHUNK = 40;

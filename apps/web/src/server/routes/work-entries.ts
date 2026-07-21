@@ -2,6 +2,7 @@ import {
 	createWorkEntriesBatchInputSchema,
 	createWorkEntryInputSchema,
 	listWorkEntriesQuerySchema,
+	MAX_LINKED_AGENT_ENTRIES,
 	MAX_PROJECTS_PER_BATCH,
 	resolveUserTimezone,
 	todayInTimezone,
@@ -20,6 +21,7 @@ import {
 	getWorkEntryOwnersByIds,
 	getWorkEntryStats,
 	isProjectMember,
+	listAgentEntriesBySession,
 	listAgentEntriesForWorkEntry,
 	listMembers,
 	listWorkEntries,
@@ -156,6 +158,22 @@ export const workEntryRoutes = new Hono<AppEnv>()
 					"agentEntryIds contains an unknown or inaccessible agent entry",
 				);
 			}
+		}
+		// The caller's current session, by contrast, links best-effort: an id
+		// with no matching entry (not ingested yet, or recorded under another
+		// workspace) is not an error — the query's owner + workspace scope is
+		// the same ACL the explicit-id path enforces above. Explicit ids come
+		// first so the cap cannot evict what the caller asked for by name.
+		if (input.sessionId) {
+			const own = await listAgentEntriesBySession(c.var.db, {
+				workspaceId: input.workspaceId,
+				ownerUserId: user.id,
+				sessionId: input.sessionId,
+			});
+			for (const row of own) {
+				if (!agentEntryIds.includes(row.id)) agentEntryIds.push(row.id);
+			}
+			agentEntryIds.splice(MAX_LINKED_AGENT_ENTRIES);
 		}
 
 		const entry = await createWorkEntry(

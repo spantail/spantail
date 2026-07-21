@@ -1,4 +1,5 @@
 import { formatDuration, formatHours } from "../duration";
+import { MAX_WORK_ENTRY_NOTE_LENGTH } from "../work-entry";
 import type { LogWorkParseError } from "./command";
 
 /**
@@ -53,4 +54,44 @@ export function noProjectAccessReply(): string {
 
 export function onboardingReply(connectUrl: string): string {
 	return `To log work from GitHub, connect your GitHub account to Spantail first: ${connectUrl}. Then re-post your command.`;
+}
+
+/** Session titles are timeline lines, not bodies; align with the plugin's cap. */
+const MAX_NOTE_SESSION_TITLE_LENGTH = 200;
+
+/**
+ * The note of a GitHub-logged work entry: the issue URL, then the titles of
+ * the linked agent sessions. Titles come from agent-entry descriptions the
+ * session owner opted into sending, in link order (most precise signal
+ * first), so cutting for length drops the least precise first. English label
+ * for the same reason as the reply templates above; empty titles drop out
+ * (the link itself is kept — the note is a summary, not the link registry).
+ */
+export function githubLogWorkNote(
+	issueUrl: string,
+	sessionTitles: Array<string | null>,
+): string {
+	const seen = new Set<string>();
+	const lines: string[] = [];
+	for (const title of sessionTitles) {
+		// Collapse whitespace (a multi-line description must not open a new
+		// list item or paragraph) and truncate before dedup, so variants that
+		// render identically collapse too.
+		const flat = (title ?? "")
+			.replace(/\s+/g, " ")
+			.trim()
+			.slice(0, MAX_NOTE_SESSION_TITLE_LENGTH);
+		if (flat === "" || seen.has(flat)) continue;
+		seen.add(flat);
+		lines.push(`- ${flat}`);
+	}
+	if (lines.length === 0) return issueUrl;
+	let note = `${issueUrl}\n\nAgent sessions:`;
+	for (const line of lines) {
+		if (note.length + 1 + line.length > MAX_WORK_ENTRY_NOTE_LENGTH) break;
+		note += `\n${line}`;
+	}
+	// All bullets dropped for length: an URL followed by a bare label reads
+	// broken, so fall back to the URL alone.
+	return note.endsWith("Agent sessions:") ? issueUrl : note;
 }

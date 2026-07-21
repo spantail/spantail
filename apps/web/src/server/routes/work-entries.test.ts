@@ -1307,6 +1307,50 @@ it("caps agentEntryIds per entry", async () => {
 	expect(res.status).toBe(400);
 });
 
+it("links the caller's own agent entry via sessionId, best-effort", async () => {
+	const { admin, member, ws, project, agentFor } = await setupWithAgentIngest();
+	const ingest = await agentFor(admin);
+	const own = await ingest("cc-live", { projectId: project.id });
+
+	const create = (cookie: string, body: object) =>
+		apiJson(
+			"POST",
+			"/api/v1/work-entries",
+			{
+				workspaceId: ws.id,
+				projectId: project.id,
+				entryDate: "2026-06-01",
+				durationMinutes: 20,
+				description: "from the live session",
+				...body,
+			},
+			cookie,
+		);
+
+	// The caller's own session links; explicit ids and the session merge
+	// without duplicating (the session row is also named explicitly).
+	const linked = await create(admin, {
+		sessionId: "cc-live",
+		agentEntryIds: [own],
+	});
+	expect(linked.status).toBe(201);
+	const entry = (await linked.json()) as { id: string };
+	expect(await linkRowsFor(entry.id)).toEqual([own]);
+
+	// A session id with no matching entry is not an error — nothing links.
+	const noMatch = await create(admin, { sessionId: "never-ingested" });
+	expect(noMatch.status).toBe(201);
+	const noMatchEntry = (await noMatch.json()) as { id: string };
+	expect(await linkRowsFor(noMatchEntry.id)).toEqual([]);
+
+	// A colleague naming the admin's session id links nothing (owner scope),
+	// while the create itself still succeeds.
+	const foreign = await create(member, { sessionId: "cc-live" });
+	expect(foreign.status).toBe(201);
+	const foreignEntry = (await foreign.json()) as { id: string };
+	expect(await linkRowsFor(foreignEntry.id)).toEqual([]);
+});
+
 it("cascades link rows when either side is deleted", async () => {
 	const { admin, ws, project, agentFor } = await setupWithAgentIngest();
 	const ingest = await agentFor(admin);

@@ -616,6 +616,43 @@ it("links agent entries whose context matches the issue", async () => {
 	expect(links.map((l) => l.agentEntryId)).toEqual(["session-on-issue"]);
 });
 
+it("appends linked session titles to the entry note", async () => {
+	const ctx = await seedIntegration();
+	const agentId = crypto.randomUUID();
+	await db().insert(schema.agents).values({
+		id: agentId,
+		userId: ctx.memberId,
+		type: "claude_code",
+		name: "cc",
+	});
+	await db()
+		.insert(schema.agentEntries)
+		.values({
+			id: "titled-session",
+			workspaceId: ctx.ws.id,
+			ownerUserId: ctx.memberId,
+			projectId: ctx.project.id,
+			agentId,
+			sessionId: "titled-session",
+			durationMinutes: 30,
+			usage: null,
+			context: {
+				repositories: ["https://github.com/acme/spantail"],
+				branches: ["5-fix-auth"],
+			},
+			rollupEventCount: null,
+			description: "Fix the auth bug",
+			startedAt: new Date("2026-07-04T10:00:00Z"),
+			endedAt: null,
+		});
+
+	await runPipeline(commentPayload());
+	const entry = (await listEntries())[0];
+	expect(entry?.note).toBe(
+		"https://github.com/acme/spantail/issues/5\n\nAgent sessions:\n- Fix the auth bug",
+	);
+});
+
 // --- manifest + setup flow ---
 
 it("gates the manifest endpoint to instance admins and binds a state cookie", async () => {

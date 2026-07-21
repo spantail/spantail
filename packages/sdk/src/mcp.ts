@@ -208,6 +208,18 @@ export function registerSpantailTools(
 					),
 				note: z.string().max(10000).optional().describe("Optional longer note"),
 				tags: z.array(tagSchema).max(20).optional().describe("Optional tags"),
+				sessionId: z
+					.string()
+					.min(1)
+					.max(200)
+					.optional()
+					.describe(
+						"When logging the current session's work from inside a coding " +
+							"agent, its session id (e.g. $SPANTAIL_SESSION_ID exported by " +
+							"the Spantail Claude Code plugin) — the server links that " +
+							"session's agent entry to this work entry. Omit when unset or " +
+							"when logging unrelated past work.",
+					),
 			},
 		},
 		(input) => run(() => client.createWorkEntry(input)),
@@ -268,6 +280,17 @@ export function registerSpantailTools(
 					.max(200)
 					.describe(
 						'Raw "<duration> [date]" string exactly as the user typed it, e.g. "2h yesterday"',
+					),
+				sessionId: z
+					.string()
+					.min(1)
+					.max(200)
+					.optional()
+					.describe(
+						"When running inside a coding agent, its session id (e.g. " +
+							"$SPANTAIL_SESSION_ID exported by the Spantail Claude Code " +
+							"plugin) — the server links the current session's agent entry " +
+							"even when no branch or PR signal matches. Omit when unset.",
 					),
 			},
 		},

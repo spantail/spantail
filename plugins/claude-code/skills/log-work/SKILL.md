@@ -42,19 +42,40 @@ project, and do NOT hold a project id in this plugin.
 
 1. Split the leading `#N` off `$ARGUMENTS` → `issueNumber`. Everything after
    it is the raw `args` string — pass it verbatim (e.g. `"2h yesterday"`).
-2. Collect the repo's remotes: run `git remote -v`, take the fetch URLs,
-   deduplicate, and pass them verbatim as `remotes`.
-3. Call `log_work_github` with `{ remotes, issueNumber, args }`.
+2. Collect the repo's remotes and the current session id in one shell call:
+   run `git remote -v; printf '%s\n' "$SPANTAIL_SESSION_ID"`. Take the fetch
+   URLs, deduplicate, and pass them verbatim as `remotes`. If
+   `$SPANTAIL_SESSION_ID` is non-empty, pass it as `sessionId` — the server
+   then links this session's agent entry to the work entry even when no
+   branch or PR signal matches. Omit it when unset.
+3. Call `log_work_github` with `{ remotes, issueNumber, args, sessionId? }`.
 4. Report back from `resolved`: repo, project name, date, duration, how many
    agent sessions were linked (`linkedAgentEntryIds`), and — if `degraded`
-   is true — that the description is just the issue link because issue
-   metadata was unavailable.
+   is true — that issue metadata was unavailable (see the fallback below).
 5. On error, surface the server's message verbatim: it contains the fix
    (grammar examples, or where to add the repo mapping).
 
-Optional nicety when `degraded` is true and the `gh` CLI is available: fetch
-the issue title with `gh issue view <N> --json title` and offer to update
-the entry's description via `update_entry`.
+### Degraded fallback: fill the title with the local `gh` CLI
+
+When `resolved.degraded` is true, the server could not read the issue (no
+App, or its installation does not cover this repo), so the description is
+the bare `#N`. If the `gh` CLI is available, recover the title
+automatically — best-effort, never failing the log itself:
+
+1. Fetch the title with `gh api repos/<resolved.repo>/issues/<N> --jq .title`
+   (the Issues API answers for PR numbers too; use `resolved.repo` from the
+   response — do not re-resolve the repo yourself).
+2. On success, call `update_entry` setting the description to
+   `<title> (#N)` — the same shape the server writes when metadata is
+   available, so degraded and non-degraded entries look uniform.
+3. On any failure (`gh` missing, unauthenticated, no access), leave the
+   entry as `#N` and report the degraded state as before.
+
+When the fallback fills the title, say so in the summary: the title came
+from the local `gh` CLI because the App cannot read this repo — installing
+the App on the repo's account remains the real fix (the fallback cannot
+recover server-side features like branch→PR agent-session linking or
+webhook-driven logging).
 
 ## Logging
 
@@ -62,12 +83,23 @@ the entry's description via `update_entry`.
    workspace. If the workspace or project is ambiguous, present the options
    and ask instead of guessing.
 2. Create the entry with `log_work` (`durationMinutes`, `description`,
-   optional `entryDate`, `note`, `tags`). For several entries at once (e.g.
-   "log everything I did today"), use `log_work_batch`.
-3. Report back what was logged: date, project, duration, description.
+   optional `entryDate`, `note`, `tags`). When the entry records the
+   current session's work, read `$SPANTAIL_SESSION_ID` (exported by this
+   plugin's SessionStart hook) and pass it as `sessionId` so the server
+   links this session's agent entry; do not pass it when logging unrelated
+   past work. For several entries at once (e.g. "log everything I did
+   today"), use `log_work_batch`.
+3. Report back what was logged: date, project, duration, description. When
+   you passed `sessionId`, say the current session link was requested — it
+   is best-effort (the server links only telemetry that has already been
+   ingested) and `log_work`'s response does not carry the outcome, so do
+   not assert that it happened.
 
 ## Privacy
 
 The description and note are stored verbatim and can appear in reports,
 public share links, and sent copies. Never put secrets, tokens, or private
-personal data in them.
+personal data in them. The degraded-title fallback stores, via your
+personal `gh` credential, an issue title the instance's App is not entitled
+to read — the same trust level as a hand-typed description, but visible to
+workspace members like any other entry.

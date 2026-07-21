@@ -16,6 +16,10 @@ export const tagSchema = z
 		"tags must be a single line (no control characters or line breaks)",
 	);
 
+/** Shared by the note schemas and the GitHub note builder, which must never
+ * compose a note the create/update schemas would reject. */
+export const MAX_WORK_ENTRY_NOTE_LENGTH = 10000;
+
 /** Client channel a work entry was created through. Server-determined, not user input. */
 export const workEntrySources = ["web", "cli", "mcp", "api", "github"] as const;
 export const workEntrySourceSchema = z.enum(workEntrySources);
@@ -32,7 +36,7 @@ export const workEntrySchema = z.object({
 	startedAt: z.string().nullable(),
 	endedAt: z.string().nullable(),
 	description: z.string().min(1).max(2000),
-	note: z.string().max(10000).nullable(),
+	note: z.string().max(MAX_WORK_ENTRY_NOTE_LENGTH).nullable(),
 	tags: z.array(tagSchema).max(20),
 	source: workEntrySourceSchema,
 	createdAt: z.string(),
@@ -56,10 +60,15 @@ export const createWorkEntryInputSchema = z.object({
 	startedAt: z.iso.datetime().optional(),
 	endedAt: z.iso.datetime().optional(),
 	description: z.string().min(1).max(2000),
-	note: z.string().max(10000).optional(),
+	note: z.string().max(MAX_WORK_ENTRY_NOTE_LENGTH).optional(),
 	tags: z.array(tagSchema).max(20).default([]),
 	// Agent entries this work entry was logged from; must be the caller's own.
 	agentEntryIds: z.array(z.string()).max(MAX_LINKED_AGENT_ENTRIES).optional(),
+	// The caller's current agent session (an external session id, e.g. Claude
+	// Code's session_id — same bound as the ingest sessionId). Best-effort: the
+	// server links the caller's own agent entries whose sessionId matches; no
+	// match links nothing.
+	sessionId: z.string().min(1).max(200).optional(),
 });
 export type CreateWorkEntryInput = z.infer<typeof createWorkEntryInputSchema>;
 export type CreateWorkEntryInputData = z.input<
@@ -99,14 +108,15 @@ export const externalIdSchema = z
 	});
 
 // The single-create input minus workspaceId (lifted to the request top level)
-// and agentEntryIds (linking is a web-create concern, not an import one), with
-// entryDate required — a migration must state dates explicitly — and an
+// and the agent-session linking fields (linking is a live-create concern, not
+// an import one), with entryDate required — a migration must state dates
+// explicitly — and an
 // optional externalId as the idempotency key (same id ⇒ upsert, not duplicate).
 // `user` is the author's email; only instance admins may name someone other
 // than themselves (an admin importing a whole team at once). Non-admins have it
 // rejected — see the batch route. Lowercased so matching is case-insensitive.
 export const batchWorkEntryItemSchema = createWorkEntryInputSchema
-	.omit({ workspaceId: true, agentEntryIds: true })
+	.omit({ workspaceId: true, agentEntryIds: true, sessionId: true })
 	.extend({
 		entryDate: localDateSchema,
 		externalId: externalIdSchema.optional(),
@@ -147,7 +157,7 @@ export const updateWorkEntryInputSchema = z
 		startedAt: z.iso.datetime().nullable(),
 		endedAt: z.iso.datetime().nullable(),
 		description: z.string().min(1).max(2000),
-		note: z.string().max(10000).nullable(),
+		note: z.string().max(MAX_WORK_ENTRY_NOTE_LENGTH).nullable(),
 		tags: z.array(tagSchema).max(20),
 	})
 	.partial();

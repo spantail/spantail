@@ -352,6 +352,152 @@ it("links agent sessions by refs, branch convention, and PR lookup", async () =>
 	]);
 });
 
+it("links the caller's current session by sessionId regardless of branch or refs", async () => {
+	const ctx = await setup();
+	const agentId = crypto.randomUUID();
+	await db().insert(schema.agents).values({
+		id: agentId,
+		userId: ctx.memberId,
+		type: "claude_code",
+		name: "cc",
+	});
+	// No issue number in the branch, no refs — none of the A/B/C signals hit.
+	await db()
+		.insert(schema.agentEntries)
+		.values({
+			id: "live-session",
+			workspaceId: ctx.ws.id,
+			ownerUserId: ctx.memberId,
+			projectId: ctx.project.id,
+			agentId,
+			sessionId: "cc-session-1",
+			durationMinutes: 30,
+			usage: null,
+			context: {
+				repositories: ["https://github.com/acme/spantail"],
+				branches: ["main"],
+			},
+			rollupEventCount: null,
+			description: "Improve work entries",
+			startedAt: new Date("2026-07-01T10:00:00Z"),
+			endedAt: null,
+		});
+
+	const res = await logWork(ctx.token, {
+		remotes: REMOTES,
+		issueNumber: 5,
+		args: "2h",
+		sessionId: "cc-session-1",
+	});
+	expect(res.status).toBe(201);
+	const { entry, resolved } = (await res.json()) as {
+		entry: { note: string };
+		resolved: { linkedAgentEntryIds: string[] };
+	};
+	expect(resolved.linkedAgentEntryIds).toEqual(["live-session"]);
+	// The linked session's title lands in the note, after the issue URL.
+	expect(entry.note).toBe(
+		"https://github.com/acme/spantail/issues/5\n\nAgent sessions:\n- Improve work entries",
+	);
+});
+
+it("does not link foreign sessions and keeps a bare-URL note without titles", async () => {
+	const ctx = await setup();
+	const other = await signUpUser("Other", "other@example.com");
+	const otherId = (
+		(await (await apiGet("/api/v1/me", other)).json()) as {
+			user: { id: string };
+		}
+	).user.id;
+	await apiJson(
+		"POST",
+		`/api/v1/workspaces/${ctx.ws.id}/members`,
+		{ email: "other@example.com" },
+		ctx.admin,
+	);
+	const agentId = crypto.randomUUID();
+	await db().insert(schema.agents).values({
+		id: agentId,
+		userId: otherId,
+		type: "claude_code",
+		name: "cc",
+	});
+	// A colleague's session with the very session id the caller sends: it must
+	// not link (a link asserts "my work came from this session").
+	await db()
+		.insert(schema.agentEntries)
+		.values({
+			id: "foreign-session",
+			workspaceId: ctx.ws.id,
+			ownerUserId: otherId,
+			projectId: ctx.project.id,
+			agentId,
+			sessionId: "cc-session-1",
+			durationMinutes: 30,
+			usage: null,
+			context: { repositories: ["https://github.com/acme/spantail"] },
+			rollupEventCount: null,
+			description: "Someone else's work",
+			startedAt: new Date("2026-07-01T10:00:00Z"),
+			endedAt: null,
+		});
+
+	const res = await logWork(ctx.token, {
+		remotes: REMOTES,
+		issueNumber: 5,
+		args: "2h",
+		sessionId: "cc-session-1",
+	});
+	expect(res.status).toBe(201);
+	const { entry, resolved } = (await res.json()) as {
+		entry: { note: string };
+		resolved: { linkedAgentEntryIds: string[] };
+	};
+	expect(resolved.linkedAgentEntryIds).toEqual([]);
+	expect(entry.note).toBe("https://github.com/acme/spantail/issues/5");
+});
+
+it("keeps the bare-URL note when linked sessions have no description", async () => {
+	const ctx = await setup();
+	const agentId = crypto.randomUUID();
+	await db().insert(schema.agents).values({
+		id: agentId,
+		userId: ctx.memberId,
+		type: "claude_code",
+		name: "cc",
+	});
+	await db()
+		.insert(schema.agentEntries)
+		.values({
+			id: "untitled-session",
+			workspaceId: ctx.ws.id,
+			ownerUserId: ctx.memberId,
+			projectId: ctx.project.id,
+			agentId,
+			sessionId: "cc-session-2",
+			durationMinutes: 30,
+			usage: null,
+			context: { repositories: ["https://github.com/acme/spantail"] },
+			rollupEventCount: null,
+			startedAt: new Date("2026-07-01T10:00:00Z"),
+			endedAt: null,
+		});
+
+	const res = await logWork(ctx.token, {
+		remotes: REMOTES,
+		issueNumber: 5,
+		args: "2h",
+		sessionId: "cc-session-2",
+	});
+	expect(res.status).toBe(201);
+	const { entry, resolved } = (await res.json()) as {
+		entry: { note: string };
+		resolved: { linkedAgentEntryIds: string[] };
+	};
+	expect(resolved.linkedAgentEntryIds).toEqual(["untitled-session"]);
+	expect(entry.note).toBe("https://github.com/acme/spantail/issues/5");
+});
+
 it("manages workspace repo mappings with admin gating and 409 on conflicts", async () => {
 	const ctx = await setup();
 	const list = await apiGet(
