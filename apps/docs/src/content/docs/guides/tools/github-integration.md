@@ -46,8 +46,8 @@ Spantail reacts with 👍 and replies with the running total for that issue:
 
 Recent [agent sessions](/guides/capturing-agents/) on that repository whose
 branch or pull request points at the issue are attached to the entry
-automatically, and the titles of the attached sessions are appended to the
-entry's note.
+automatically, and the titles of the attached sessions — when they have
+one — are appended to the entry's note.
 
 Get the grammar wrong and the bot says how to fix it. On a public repository it
 deliberately stays silent for anyone who is not an owner, member, or
@@ -64,9 +64,9 @@ With the [Claude Plugin](/guides/tools/claude-plugin/):
 The server resolves the project from the repository's mapping, fills in the
 issue title and labels, and links matching agent sessions — the same entry you
 would get from a comment, with one addition: the Claude Code session you run
-the command from is always linked, even when no branch or pull request points
-at the issue. This form works even when the instance has no GitHub
-App registered; the entry then carries just the issue link, without the title
+the command from is linked too, even when no branch or pull request points at
+the issue (it must have completed a turn, so its telemetry exists). This form
+works even when the instance has no GitHub App registered; the entry then carries just the issue link, without the title
 and labels.
 
 ## When it stops working

@@ -90,8 +90,8 @@ unless you turn it on.
 
 | What | Purpose |
 |---|---|
-| `/spantail:log-work` | Log a work entry — from your words or from the current session's work. When it records the current session, that session's agent entry is linked to the work entry automatically. |
-| `/spantail:log-work #N <duration> [date]` | Log against a GitHub issue: the server resolves the project from its repo mapping (see [GitHub integration](/admin/github-integration/)), fills in the issue title and labels, and links matching agent sessions — always including the session you run it from. The titles of linked sessions are appended to the entry's note. |
+| `/spantail:log-work` | Log a work entry — from your words or from the current session's work. When it records the current session, that session's agent entry (once captured) is linked to the work entry automatically. |
+| `/spantail:log-work #N <duration> [date]` | Log against a GitHub issue: the server resolves the project from its repo mapping (see [GitHub integration](/admin/github-integration/)), fills in the issue title and labels, and links matching agent sessions — including the session you run it from, once its telemetry exists (its first completed turn creates it). Titles of linked sessions are appended to the entry's note when they have one. |
 | `/spantail:create-report` | Compose a report; always previews before saving. |
 | `/spantail:summary on\|off` | Per-session toggle for sending the plan title as the description. |
 | `/spantail:link [--shared]` | Link the current repository to a workspace and project (see [Link a repository](#link-a-repository)). |
