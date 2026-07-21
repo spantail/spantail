@@ -112,6 +112,14 @@ export const agentEntries = sqliteTable(
 		// Range queries filter by startedAt (the day-bucket key) within a workspace.
 		index("agent_entries_workspace_idx").on(table.workspaceId, table.startedAt),
 		index("agent_entries_agent_idx").on(table.agentId),
+		// Current-session work-entry linking resolves (workspace, owner, session)
+		// on every sessionId-carrying log call; the unique index above leads with
+		// agent_id, which that lookup does not know.
+		index("agent_entries_owner_session_idx").on(
+			table.workspaceId,
+			table.ownerUserId,
+			table.sessionId,
+		),
 	],
 );
 

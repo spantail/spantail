@@ -1,0 +1,1 @@
+CREATE INDEX `agent_entries_owner_session_idx` ON `agent_entries` (`workspace_id`,`owner_user_id`,`session_id`);
