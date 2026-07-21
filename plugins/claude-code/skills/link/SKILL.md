@@ -53,8 +53,9 @@ other key there (`apiUrl` and tokens never resolve from a repo file).
    ```
 
    `projectId` may be omitted to link the workspace only.
-4. For `.spantail/config.local.json`: run
-   `git check-ignore -q .spantail/config.local.json`; if it is not ignored,
+4. For `.spantail/config.local.json`: from the repository root, run
+   `git check-ignore -q .spantail/config.local.json` (a cwd-relative path
+   would test the wrong file from a subdirectory); if it is not ignored,
    tell the user to add `.spantail/config.local.json` to `.gitignore` or
    `.git/info/exclude` — do not edit either file yourself. For the shared
    file: remind the user to commit it.
