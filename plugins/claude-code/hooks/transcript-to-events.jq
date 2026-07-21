@@ -33,6 +33,22 @@ def normalize_repo_url:
 # First non-null value of a field across the message's transcript lines.
 def first_of(f): [ .[] | f ] | map(select(. != null)) | first;
 
+# The ingest schema stores scalars and one-level buckets of scalars; prune
+# usage to that shape before posting (the server prunes too, but keeping the
+# body small is the client's job). Anything deeper — e.g. the newer
+# usage.iterations array — is dropped; inside a bucket only the offending
+# entries are dropped, scalar siblings survive. A non-object usage (malformed
+# line) becomes {} — still a valid event.
+def is_usage_scalar: type | (. != "array" and . != "object");
+def prune_usage:
+	if type != "object" then {}
+	else with_entries(
+		if (.value | is_usage_scalar) then .
+		elif (.value | type) == "object"
+			then .value |= with_entries(select(.value | is_usage_scalar))
+		else empty end)
+	end;
+
 [ inputs ]
 | map(select(
     .type == "assistant"
@@ -48,7 +64,7 @@ def first_of(f): [ .[] | f ] | map(select(. != null)) | first;
       # Earliest line wins; ISO-8601 UTC strings sort lexicographically.
       timestamp: (min_by(.timestamp) | .timestamp),
       model: first_of(.message.model),
-      usage: .[0].message.usage,
+      usage: (.[0].message.usage | prune_usage),
       # Every value is capped at the API's 500-char attribute limit — one
       # oversized value (e.g. a deep cwd) would 400 the whole batch.
       attributes: ({

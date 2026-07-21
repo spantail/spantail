@@ -14,18 +14,23 @@ import { z } from "zod";
  */
 
 /**
- * The agent's native `message.usage` object, stored verbatim (schema-on-read).
- * Lenient on purpose: the transcript format is unversioned and unstable, so we
- * pin no bucket as required and read them defensively downstream (via
- * json_extract on the stored JSON). For Claude Code this is the snake_case
- * usage (`input_tokens`, `cache_creation_input_tokens`, ...), some of whose
- * buckets nest one level (`cache_creation`, `server_tool_use`).
+ * The agent's native `message.usage` object, stored as pruned at ingest
+ * (schema-on-read). Lenient on purpose: the transcript format is unversioned
+ * and unstable, so we pin no bucket as required and read them defensively
+ * downstream (via json_extract on the stored JSON). For Claude Code this is
+ * the snake_case usage (`input_tokens`, `cache_creation_input_tokens`, ...),
+ * some of whose buckets nest one level (`cache_creation`, `server_tool_use`).
  *
  * Bounded, because ingest is the untrusted write path (docs/security.md §1):
  * a leaked agent token must not be able to write an unbounded blob into D1.
- * Sizes are capped, shapes are not — with one exception, nesting stops at the
- * depth the format actually uses, so an array or a third level is rejected
- * rather than stored.
+ * Sizes are capped; shapes are pruned, not rejected. Storage keeps scalars and
+ * one-level buckets of scalars — the depth the readers consume — and anything
+ * else (an array, a deeper level — e.g. Claude Code's newer `usage.iterations`)
+ * is dropped before validation. Rejecting on shape instead would turn any
+ * additive transcript change into a 400 for the session's whole batch, which
+ * the Stop hook drops silently — a total, invisible ingest outage (#257).
+ * Only cap violations still reject: the caps bound what is stored, while the
+ * request body limit bounds what is transported.
  */
 const usageKeySchema = z.string().min(1).max(100);
 const usageValueSchema = z.union([
@@ -34,23 +39,56 @@ const usageValueSchema = z.union([
 	z.boolean(),
 	z.null(),
 ]);
-export const agentEventUsageSchema = z
-	.record(
-		usageKeySchema,
-		z.union([
-			usageValueSchema,
-			z
-				.record(usageKeySchema, usageValueSchema)
-				.refine(
-					(bucket) => Object.keys(bucket).length <= 20,
-					"usage bucket must have at most 20 entries",
-				),
-		]),
-	)
-	.refine(
-		(usage) => Object.keys(usage).length <= 20,
-		"usage must have at most 20 entries",
-	);
+
+const isUsageScalar = (value: unknown): boolean =>
+	value === null ||
+	typeof value === "string" ||
+	typeof value === "number" ||
+	typeof value === "boolean";
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+// Drop values outside the supported shape; keep scalar siblings inside a
+// bucket. A non-object input passes through untouched so the record schema
+// still rejects e.g. `usage: 5`. Null-prototype targets so a JSON-supplied
+// "__proto__" key becomes an own property instead of a setter call.
+function pruneUsage(input: unknown): unknown {
+	if (!isPlainObject(input)) return input;
+	const pruned: Record<string, unknown> = Object.create(null);
+	for (const [key, value] of Object.entries(input)) {
+		if (isUsageScalar(value)) {
+			pruned[key] = value;
+		} else if (isPlainObject(value)) {
+			const bucket: Record<string, unknown> = Object.create(null);
+			for (const [bucketKey, bucketValue] of Object.entries(value)) {
+				if (isUsageScalar(bucketValue)) bucket[bucketKey] = bucketValue;
+			}
+			pruned[key] = bucket;
+		}
+	}
+	return pruned;
+}
+
+export const agentEventUsageSchema = z.preprocess(
+	pruneUsage,
+	z
+		.record(
+			usageKeySchema,
+			z.union([
+				usageValueSchema,
+				z
+					.record(usageKeySchema, usageValueSchema)
+					.refine(
+						(bucket) => Object.keys(bucket).length <= 20,
+						"usage bucket must have at most 20 entries",
+					),
+			]),
+		)
+		.refine(
+			(usage) => Object.keys(usage).length <= 20,
+			"usage must have at most 20 entries",
+		),
+);
 export type AgentEventUsage = z.infer<typeof agentEventUsageSchema>;
 
 /**

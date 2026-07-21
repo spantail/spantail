@@ -170,9 +170,10 @@ export const agentEvents = sqliteTable(
 		operation: text("operation").notNull().default("chat"),
 		// Latest model on the message; null when the source line omits it.
 		model: text("model"),
-		// The raw `message.usage` object, stored verbatim (schema-on-read). Its
-		// shape is the agent's native usage (snake_case for Claude Code), distinct
-		// from agent_entries.usage which is the normalized AgentUsage rollup.
+		// The raw `message.usage` object, stored as pruned at ingest
+		// (schema-on-read). Its shape is the agent's native usage (snake_case for
+		// Claude Code), distinct from agent_entries.usage which is the normalized
+		// AgentUsage rollup.
 		usage: text("usage", { mode: "json" })
 			.$type<Record<string, unknown>>()
 			.notNull(),

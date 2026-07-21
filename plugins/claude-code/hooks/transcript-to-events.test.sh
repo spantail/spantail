@@ -38,10 +38,12 @@ check "msg_A output_tokens == 323 (deduped)" \
 	'(.[] | select(.sourceId == "msg_A") | .usage.output_tokens) == 323'
 check "msg_A keeps cache_creation_input_tokens" \
 	'(.[] | select(.sourceId == "msg_A") | .usage.cache_creation_input_tokens) == 777'
-# Usage is passed through verbatim, nested buckets included — the ingest schema
-# bounds them but accepts one nesting level.
+# Usage is pruned to the ingest schema's supported shape: scalars and one-level
+# buckets of scalars survive; arrays and deeper nesting (usage.iterations) drop.
 check "msg_A keeps the nested cache_creation bucket" \
 	'(.[] | select(.sourceId == "msg_A") | .usage.cache_creation.ephemeral_5m_input_tokens) == 777'
+check "msg_A iterations array pruned" \
+	'(.[] | select(.sourceId == "msg_A") | .usage | has("iterations")) == false'
 # Earliest line wins for the timestamp.
 check "msg_A earliest timestamp" \
 	'(.[] | select(.sourceId == "msg_A") | .timestamp) == "2026-06-21T11:16:15.122Z"'
@@ -131,6 +133,17 @@ if [ "$(jq -r 'length' <<<"$no_ts")" = "0" ]; then
 	echo "ok   - missing timestamp drops the line"
 else
 	echo "FAIL - missing timestamp drops the line"
+	fail=1
+fi
+
+# Inside a usage bucket only the out-of-shape entries are dropped; scalar
+# siblings survive. Top-level arrays drop entirely.
+mixed="$(jq -nc '{type: "assistant", timestamp: "2026-06-21T11:00:00.000Z", message: {id: "msg_M", model: "m", usage: {a: {ok: 1, deep: {x: 1}, arr: [2]}, list: [1], n: 7}}}' |
+	jq -n --arg repo_url "" -f "$here/transcript-to-events.jq")"
+if [ "$(jq -c '.[0].usage' <<<"$mixed")" = '{"a":{"ok":1},"n":7}' ]; then
+	echo "ok   - out-of-shape usage values pruned"
+else
+	echo "FAIL - out-of-shape usage values pruned"
 	fail=1
 fi
 

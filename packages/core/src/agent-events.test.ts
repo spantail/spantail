@@ -155,7 +155,7 @@ describe("ingestAgentEventsInputSchema", () => {
 		expect(parsed.events[1]?.usage).toMatchObject({ tier: null });
 	});
 
-	it("bounds usage: entry count, key/value length, nesting depth", () => {
+	it("bounds usage: entry count, key/value length", () => {
 		const tooManyKeys = Object.fromEntries(
 			Array.from({ length: 21 }, (_, i) => [`k${i}`, 1]),
 		);
@@ -171,9 +171,6 @@ describe("ingestAgentEventsInputSchema", () => {
 			{ cache_creation: { ["k".repeat(101)]: 1 } },
 			{ service_tier: "x".repeat(201) },
 			{ cache_creation: { tier: "x".repeat(201) } },
-			// Arrays and a third nesting level carry no plausible ceiling.
-			{ buckets: [1, 2, 3] },
-			{ a: { b: { c: 1 } } },
 			// JSON "1e309" arrives as Infinity and would corrupt SQL sums.
 			{ input_tokens: Number.POSITIVE_INFINITY },
 		]) {
@@ -184,6 +181,80 @@ describe("ingestAgentEventsInputSchema", () => {
 				}).success,
 			).toBe(false);
 		}
+	});
+
+	it("rejects a non-record usage", () => {
+		for (const usage of [5, [1], "x", null]) {
+			expect(
+				ingestAgentEventsInputSchema.safeParse({
+					sessionId: "s1",
+					events: [{ ...validEvent, usage }],
+				}).success,
+			).toBe(false);
+		}
+	});
+
+	// Out-of-shape values (arrays, nesting past one level) are pruned rather
+	// than rejected: a shape rejection would 400 the session's whole batch on
+	// any additive transcript change, and the Stop hook drops the failure
+	// silently — a total, invisible ingest outage (#257).
+	it("prunes usage.iterations and other out-of-shape values instead of rejecting", () => {
+		const usage = {
+			input_tokens: 2,
+			output_tokens: 337,
+			cache_creation: {
+				ephemeral_1h_input_tokens: 48799,
+				ephemeral_5m_input_tokens: 0,
+			},
+			iterations: [
+				{
+					type: "message",
+					input_tokens: 2,
+					output_tokens: 337,
+					cache_creation: { ephemeral_1h_input_tokens: 48799 },
+				},
+			],
+		};
+		const parsed = ingestAgentEventsInputSchema.parse({
+			sessionId: "s1",
+			events: [
+				{ ...validEvent, usage },
+				{
+					...validEvent,
+					sourceId: "msg_B",
+					usage: { weird: { ok: 1, deep: { x: 1 }, arr: [1] } },
+				},
+			],
+		});
+		// The array is gone; the one-level bucket survives untouched.
+		expect(parsed.events[0]?.usage).toEqual({
+			input_tokens: 2,
+			output_tokens: 337,
+			cache_creation: {
+				ephemeral_1h_input_tokens: 48799,
+				ephemeral_5m_input_tokens: 0,
+			},
+		});
+		// Inside a bucket only the offending entries are dropped.
+		expect(parsed.events[1]?.usage).toEqual({ weird: { ok: 1 } });
+	});
+
+	// The entry-count caps bound what is stored, so they apply after the prune.
+	it("applies the usage entry cap to the surviving entries", () => {
+		const scalars = (n: number) =>
+			Object.fromEntries(Array.from({ length: n }, (_, i) => [`k${i}`, 1]));
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [{ ...validEvent, usage: { ...scalars(20), a: [1], b: [2] } }],
+			}).success,
+		).toBe(true);
+		expect(
+			ingestAgentEventsInputSchema.safeParse({
+				sessionId: "s1",
+				events: [{ ...validEvent, usage: { ...scalars(21), a: [1] } }],
+			}).success,
+		).toBe(false);
 	});
 
 	it("bounds attributes: entry count, value length, scalar values only", () => {

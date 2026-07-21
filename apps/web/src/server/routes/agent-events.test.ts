@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { createDb, materializeAgentSessionRollup } from "@spantail/db";
+import { createDb, materializeAgentSessionRollup, schema } from "@spantail/db";
 import { expect, it } from "vitest";
 
 import { apiGet, apiJson, appFetch, signUpUser } from "../../../test/helpers";
@@ -655,6 +655,55 @@ it("ingests the real nested usage shape and rolls up the flat buckets", async ()
 	expect(res.status).toBe(200);
 	const entry = (await res.json()) as { usage: { totalTokens: number } };
 	expect(entry.usage.totalTokens).toBe(19687);
+});
+
+// Current Claude Code usage carries `iterations` — an array of records with a
+// third nesting level. Out-of-shape values are pruned at ingest, not rejected:
+// a 400 here would kill the session's whole batch and the Stop hook drops the
+// failure silently (#257).
+it("prunes usage.iterations at ingest and stores the pruned usage", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+
+	const res = await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		events: [
+			{
+				sourceId: "m1",
+				timestamp: "2026-06-20T01:00:00.000Z",
+				usage: {
+					input_tokens: 5,
+					output_tokens: 1,
+					cache_creation_input_tokens: 19681,
+					cache_read_input_tokens: 0,
+					cache_creation: {
+						ephemeral_5m_input_tokens: 19681,
+						ephemeral_1h_input_tokens: 0,
+					},
+					iterations: [
+						{
+							type: "message",
+							input_tokens: 5,
+							output_tokens: 1,
+							cache_creation: { ephemeral_5m_input_tokens: 19681 },
+						},
+					],
+				},
+			},
+		],
+	});
+	expect(res.status).toBe(200);
+	const entry = (await res.json()) as { usage: { totalTokens: number } };
+	expect(entry.usage.totalTokens).toBe(19687);
+
+	const db = createDb(env.DB);
+	const stored = await db.select().from(schema.agentEvents);
+	const ev = stored.find((e) => e.sourceId === "m1");
+	expect(ev?.usage).not.toHaveProperty("iterations");
+	expect(ev?.usage).toMatchObject({
+		cache_creation: { ephemeral_5m_input_tokens: 19681 },
+	});
 });
 
 it("rejects an unbounded usage object", async () => {
