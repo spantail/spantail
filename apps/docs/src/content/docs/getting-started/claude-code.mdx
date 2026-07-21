@@ -104,10 +104,11 @@ log work and build a report without leaving your editor.
    /spantail:link
    ```
 
-   The skill lists your workspaces and projects (over the plugin's MCP server
-   when the personal API token is set; otherwise it asks you for the ids
-   directly) and writes your choice to `.spantail/config.local.json` — personal
-   and gitignored. Repeat this in every repository you want attributed; an
+   The skill asks for the workspace and project ids (copy them with the copy
+   buttons in the sidebar: workspace switcher and project list) and writes
+   them to `.spantail/config.local.json` — personal; keep it out of git (the
+   skill reminds you if it is not ignored yet). Repeat this in every
+   repository you want attributed; an
    unlinked repository has nowhere to land, so its sessions are rejected
    rather than silently misattributed. `/spantail:doctor` shows the effective
    configuration and flags an unlinked repository.

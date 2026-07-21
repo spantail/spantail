@@ -43,8 +43,10 @@ in the repository itself. In each repository you want attributed, run:
 /spantail:link
 ```
 
-It picks a workspace and project (via the MCP server when available) and
-writes `.spantail/config.local.json` — personal and gitignored. For a
+It asks for the workspace and project ids (copy them with the copy buttons
+in the sidebar: workspace switcher and project list) and writes them to
+`.spantail/config.local.json` — personal; keep it out of git
+(the skill reminds you if it is not ignored yet). For a
 team-shared link, `/spantail:link --shared` writes `.spantail/config.json`
 instead; commit it once and every collaborator who installs the plugin
 inherits it.
@@ -102,8 +104,8 @@ The skills and analysis agents act **as you**, so they use the
 separate credential from the hooks' write-only agent token. The plugin bundles
 this MCP server: set the optional `apiToken` and it connects to your instance's
 `/mcp` over HTTP as you. Hook-only users can leave `apiToken` blank; no CLI is
-needed. Two exceptions: `/spantail:doctor` works without the MCP, and
-`/spantail:link` falls back to asking for ids when it is unavailable.
+needed. Two exceptions: `/spantail:doctor` and `/spantail:link` work
+without the MCP.
 
 To use the MCP from another client, or without the plugin, register it
 manually — see [MCP](/guides/tools/mcp/).

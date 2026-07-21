@@ -33,8 +33,7 @@ work and building reports.
     saving.
   - `/spantail:summary on|off` — per-session toggle for sending the plan
     title as the entry description.
-- **Attribution skills** (no MCP needed for `doctor`; `link` uses the MCP
-  when available):
+- **Attribution skills** (no MCP needed):
   - `/spantail:link` — link the current repository to a workspace and
     project (see [Per-repository attribution](#per-repository-attribution)).
   - `/spantail:doctor` — show where every config value resolves from and
@@ -84,7 +83,7 @@ read two files at the repository root (`$CLAUDE_PROJECT_DIR`):
 
 | File | Tracked | For |
 |---|---|---|
-| `.spantail/config.local.json` | gitignored | You only — `/spantail:link` writes it and adds the `.gitignore` entry. When present it replaces the shared file entirely (delete it to return to the team link). |
+| `.spantail/config.local.json` | gitignored | You only — `/spantail:link` writes it and reminds you to ignore it (`.gitignore` or `.git/info/exclude`) if it isn't yet. When present it replaces the shared file entirely (delete it to return to the team link). |
 | `.spantail/config.json` | committed | The whole team — `/spantail:link --shared` writes it; commit it once and every collaborator who installs the plugin inherits it. |
 
 Both may contain only `workspaceId` and `projectId`:
