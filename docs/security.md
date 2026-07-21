@@ -35,10 +35,13 @@ Standing rules:
   (`INGEST_RATE_LIMITER`) guards every ingest route; there is no storage quota yet.
 - **Validate, don't just format-check.** ISO-8601 shape is not a date-range check;
   `min(0)` is not an upper bound.
-- **Schema-on-read payloads are still bounded on write.** Fields stored verbatim and read
-  defensively later (an event's raw `usage`, its `attributes` metadata, an entry's
+- **Schema-on-read payloads are still bounded on write.** Fields stored near-verbatim and
+  read defensively later (an event's raw `usage`, its `attributes` metadata, an entry's
   `context` facets) get size/count/length caps at ingest, and every read of them treats
-  the stored value as hostile (type-checked, length-checked, never coerced).
+  the stored value as hostile (type-checked, length-checked, never coerced). The caps
+  reject; unsupported *shapes* (an array, nesting deeper than the readers consume) are
+  stripped rather than rejected — an upstream format change must not silently kill
+  ingest, whose clients drop failures without surfacing them.
 - **Bound the request, not just its fields.** Ingest routes cap the body size and answer 413
   above it, so no per-field cap has to hold the line alone.
 
