@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isTimestampInRange } from "./common";
+
 /**
  * Raw per-turn agent telemetry: one event per assistant message (one API
  * response, which carries exactly one usage block). The materialized
@@ -122,8 +124,14 @@ export type AgentEventAttributes = z.infer<typeof agentEventAttributesSchema>;
 export const agentEventSchema = z.object({
 	// Transcript assistant message.id; the idempotency key within an agent.
 	sourceId: z.string().min(1).max(200),
-	// ISO-8601 (UTC) wall-clock time of the message.
-	timestamp: z.iso.datetime(),
+	// ISO-8601 (UTC) wall-clock time of the message. Range-bound like the
+	// summary and finalize timestamps: the rollup copies the max event
+	// timestamp into `endedAt` — the last-activity sort key — so a leaked
+	// write-only token or a bad client clock must not be able to pin a session
+	// to the top of every listing with a far-future instant.
+	timestamp: z.iso
+		.datetime()
+		.refine(isTimestampInRange, "must be a plausible timestamp"),
 	// What the event records, in `gen_ai.operation.name` terms ("chat" is an
 	// inference turn). Free-form — the semconv values are still in flux.
 	operation: z.string().min(1).max(100).default("chat"),

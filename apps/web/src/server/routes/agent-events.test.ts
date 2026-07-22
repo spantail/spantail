@@ -582,6 +582,25 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 	expect(afterNewer[0]?.durationMinutes).toBe(20);
 });
 
+it("rejects a far-future event timestamp at validation", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+	// endedAt — the last-activity sort key — is the max event timestamp; an
+	// implausible instant must not be able to pin a session to the top.
+	const res = await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		events: [
+			turn(
+				"m1",
+				new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+				{ output_tokens: 1 },
+			),
+		],
+	});
+	expect(res.status).toBe(400);
+});
+
 it("rejects an empty events array at validation", async () => {
 	const { admin, ws } = await setup();
 	const { token } = await createAgentToken(admin);
