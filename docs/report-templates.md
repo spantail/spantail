@@ -33,7 +33,7 @@ The render context exposes:
 | `agent_entries` | The AI-agent sessions in scope; iterate for the per-session fields below. |
 | `totals.agents` | AI-agent rollup: `sessions`, `minutes`, `hours`, `tokens`, `input_tokens`, `output_tokens`. |
 | `agent_groups.by_agent` | Agent sessions grouped by agent; each group has `name`, `session_count`, `total_minutes`, `total_tokens`, `entries` (also `by_date`, `by_project`, `by_user`). |
-| `agent_entry.duration_minutes`, `agent_entry.total_tokens`, `agent_entry.input_tokens`, `agent_entry.output_tokens`, `agent_entry.cost_usd`, `agent_entry.model`, `agent_entry.agent_name` | Per-session fields (iterate `agent_entries`). |
+| `agent_entry.duration_minutes`, `agent_entry.active_duration_minutes`, `agent_entry.total_tokens`, `agent_entry.input_tokens`, `agent_entry.output_tokens`, `agent_entry.cost_usd`, `agent_entry.model`, `agent_entry.agent_name` | Per-session fields (iterate `agent_entries`). `duration_minutes` is the wall-clock span; `active_duration_minutes` excludes idle gaps (> 15 min between events) and is `nil` on sessions without events — fall back with `{{ agent_entry.active_duration_minutes | default: agent_entry.duration_minutes }}`. |
 
 Agent-activity notes: sessions carry no tags, so a report's tag filter never narrows them. Token
 buckets are optional per agent, so `input_tokens + output_tokens` can be less than `total_tokens`,

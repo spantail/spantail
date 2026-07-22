@@ -308,6 +308,7 @@ async function renderReportDocument(
 		agentId: entry.agentId,
 		entryDate: todayInTimezone(timezone, entry.startedAt),
 		durationMinutes: entry.durationMinutes,
+		activeDurationMinutes: entry.activeDurationMinutes,
 		usage: entry.usage,
 		description: entry.description,
 		startedAt: entry.startedAt.toISOString(),

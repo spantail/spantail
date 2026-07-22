@@ -83,6 +83,10 @@ export const agentEntries = sqliteTable(
 		// External session identifier; (agentId, sessionId) is the idempotency key.
 		sessionId: text("session_id").notNull(),
 		durationMinutes: integer("duration_minutes").notNull(),
+		// Idle-excluded active time (consecutive event gaps ≤ 15 min summed),
+		// recomputed from events on each ingest. Null on summary-path rows, which
+		// carry no events; durationMinutes stays the wall-clock span.
+		activeDurationMinutes: integer("active_duration_minutes"),
 		// Null when the source can't expose token usage locally (e.g. Cursor).
 		usage: text("usage", { mode: "json" }).$type<AgentUsage | null>(),
 		// Non-usage session context (distinct models, branches, refs, ...). The

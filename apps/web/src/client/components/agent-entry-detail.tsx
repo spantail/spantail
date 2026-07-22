@@ -158,7 +158,9 @@ export function AgentEntryDetail({
 						/>
 						<AgentStat
 							label={t("agents.detail.active")}
-							value={formatDuration(entry.durationMinutes)}
+							value={formatDuration(
+								entry.activeDurationMinutes ?? entry.durationMinutes,
+							)}
 						/>
 						<AgentStat
 							label={t("agents.detail.tokens")}

@@ -1,19 +1,26 @@
 import { expect, it } from "vitest";
 
 import {
+	AGENT_ACTIVE_IDLE_GAP_MS,
 	type AgentEntry,
+	computeActiveDurationMinutes,
 	finalizeAgentSessionInputSchema,
 	ingestAgentEntryInputSchema,
 	summarizeAgentSessions,
 } from "./agent";
 import { MAX_DURATION_MINUTES } from "./duration";
 
-type Session = Pick<AgentEntry, "durationMinutes" | "usage">;
+type Session = Pick<
+	AgentEntry,
+	"durationMinutes" | "activeDurationMinutes" | "usage"
+>;
 const session = (
 	durationMinutes: number,
 	usage: Session["usage"],
+	activeDurationMinutes: number | null = null,
 ): Session => ({
 	durationMinutes,
+	activeDurationMinutes,
 	usage,
 });
 
@@ -150,6 +157,17 @@ it("summarizes linked sessions with input/output buckets", () => {
 	});
 });
 
+it("sums active minutes when present, falling back to the wall-clock span", () => {
+	expect(
+		summarizeAgentSessions([
+			// Idle-gapped events session: the active value counts, not the span.
+			session(55, { totalTokens: 100 }, 20),
+			// Summary-path session (no events): the span is all there is.
+			session(15, null),
+		]).totalMinutes,
+	).toBe(35);
+});
+
 it("sums only the sessions that expose a bucket (partial sums)", () => {
 	// One session omits the input/output split and one has no usage at all; both
 	// contribute 0 to those buckets, so their sum stays below totalTokens.
@@ -176,4 +194,38 @@ it("is empty for no sessions", () => {
 		totalInputTokens: 0,
 		totalOutputTokens: 0,
 	});
+});
+
+const min = (n: number) => n * 60_000;
+
+it("computes 0 active minutes for zero or one event", () => {
+	expect(computeActiveDurationMinutes([])).toBe(0);
+	expect(computeActiveDurationMinutes([min(10)])).toBe(0);
+});
+
+it("counts a gap exactly at the idle cutoff, drops one just past it", () => {
+	expect(computeActiveDurationMinutes([0, AGENT_ACTIVE_IDLE_GAP_MS])).toBe(15);
+	expect(computeActiveDurationMinutes([0, AGENT_ACTIVE_IDLE_GAP_MS + 1])).toBe(
+		0,
+	);
+});
+
+it("sums only the gaps under the cutoff", () => {
+	// 5 min + 35 min (idle, dropped) + 10 min → 15 active out of a 50-min span.
+	expect(computeActiveDurationMinutes([0, min(5), min(40), min(50)])).toBe(15);
+});
+
+it("is order-insensitive over unsorted input", () => {
+	expect(computeActiveDurationMinutes([min(40), 0, min(50), min(5)])).toBe(15);
+});
+
+it("adds a wall-clock tail within the cutoff, ignores a longer one", () => {
+	expect(computeActiveDurationMinutes([0, min(5)], min(10))).toBe(10);
+	expect(computeActiveDurationMinutes([0, min(5)], min(30))).toBe(5);
+	// A tail at or before the last event adds nothing.
+	expect(computeActiveDurationMinutes([0, min(5)], min(5))).toBe(5);
+});
+
+it("ignores a wall-clock end when there are no events", () => {
+	expect(computeActiveDurationMinutes([], min(10))).toBe(0);
 });

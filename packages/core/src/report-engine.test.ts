@@ -83,11 +83,21 @@ const fixture: ReportContextInput = {
 		{ id: "a2", name: "Cursor", type: "claude_code" },
 	],
 	agentEntries: [
-		agentEntry("ae1", "a1", "p1", "u1", "2026-05-25", 40, {
-			totalTokens: 1000,
-			inputTokens: 600,
-			outputTokens: 300,
-		}),
+		// Idle-excluded active minutes below the wall-clock span.
+		agentEntry(
+			"ae1",
+			"a1",
+			"p1",
+			"u1",
+			"2026-05-25",
+			40,
+			{
+				totalTokens: 1000,
+				inputTokens: 600,
+				outputTokens: 300,
+			},
+			25,
+		),
 		agentEntry("ae2", "a1", "p1", "u1", "2026-05-26", 20, {
 			totalTokens: 500,
 			inputTokens: 300,
@@ -144,6 +154,7 @@ function agentEntry(
 		costUsd?: number;
 		model?: string;
 	} | null,
+	activeDurationMinutes: number | null = null,
 ) {
 	return {
 		id,
@@ -153,6 +164,7 @@ function agentEntry(
 		agentId,
 		entryDate,
 		durationMinutes,
+		activeDurationMinutes,
 		usage,
 		description: null,
 		startedAt: `${entryDate}T00:00:00.000Z`,
@@ -380,6 +392,13 @@ it("exposes agent totals, groups, and flattened token buckets", () => {
 	expect(
 		context.agent_groups.by_agent.find((g) => g.name === "Claude Code"),
 	).toMatchObject({ session_count: 3, total_minutes: 75, total_tokens: 1700 });
+});
+
+it("exposes active_duration_minutes with a template-side fallback to the span", async () => {
+	// ae1 carries an idle-excluded value; ae3 (summary path, no events) is nil
+	// and falls back to the wall-clock span via Liquid's default filter.
+	const body = `{% for s in agent_entries %}{{ s.id }}:{{ s.active_duration_minutes | default: s.duration_minutes }}{% unless forloop.last %} {% endunless %}{% endfor %}`;
+	expect(await renderReport(body, fixture)).toBe("ae1:25 ae2:20 ae3:60 ae4:15");
 });
 
 it("places a no-project agent session under the no-project placeholder", () => {

@@ -81,7 +81,11 @@ function buildPrefill(
 	const descriptions = entries
 		.map((entry) => entry.description?.trim())
 		.filter((d): d is string => Boolean(d));
-	const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
+	// Same active-duration fallback as the table's Duration column, so the
+	// prefilled work entry matches what the selection displayed.
+	const minutesOf = (e: AgentEntry) =>
+		e.activeDurationMinutes ?? e.durationMinutes;
+	const totalMinutes = entries.reduce((sum, e) => sum + minutesOf(e), 0);
 	return {
 		projectId: entries[0]?.projectId ?? undefined,
 		// A work entry's duration must be positive; an all-zero selection leaves
@@ -95,7 +99,7 @@ function buildPrefill(
 					.map((e) => ({
 						startedAt: e.startedAt as string,
 						endedAt: e.endedAt,
-						durationMinutes: e.durationMinutes,
+						durationMinutes: minutesOf(e),
 					})),
 				timezone,
 			) ?? undefined,
@@ -582,7 +586,9 @@ function AgentPage() {
 												{entry.usage?.model ?? "—"}
 											</TableCell>
 											<TableCell className="text-right whitespace-nowrap tabular-nums">
-												{formatDuration(entry.durationMinutes)}
+												{formatDuration(
+													entry.activeDurationMinutes ?? entry.durationMinutes,
+												)}
 											</TableCell>
 											<TableCell className="text-muted-foreground text-right tabular-nums">
 												{entry.usage?.inputTokens !== undefined

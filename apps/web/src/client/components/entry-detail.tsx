@@ -278,8 +278,10 @@ export function EntryDetail({
 											t("entries.agentSessions.untitled")}
 									</span>
 									<span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-										{formatDuration(session.durationMinutes)} ·{" "}
-										{formatCompactNumber(session.usage?.totalTokens ?? 0)}
+										{formatDuration(
+											session.activeDurationMinutes ?? session.durationMinutes,
+										)}{" "}
+										· {formatCompactNumber(session.usage?.totalTokens ?? 0)}
 									</span>
 								</div>
 							))}

@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { computeActiveDurationMinutes } from "@spantail/core";
 import { createDb, materializeAgentSessionRollup, schema } from "@spantail/db";
 import { expect, it } from "vitest";
 
@@ -263,6 +264,241 @@ it("ingests a session spanning multiple insert chunks", async () => {
 	expect(list[0]?.durationMinutes).toBe(N - 1); // 1-minute spacing
 });
 
+it("derives an idle-excluded active duration from event gaps", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+
+	// Gaps of 5 min, 35 min (idle, dropped), and exactly 15 min (the cutoff,
+	// counted): 20 active minutes out of a 55-minute wall-clock span.
+	const instants = [
+		"2026-06-20T01:00:00.000Z",
+		"2026-06-20T01:05:00.000Z",
+		"2026-06-20T01:40:00.000Z",
+		"2026-06-20T01:55:00.000Z",
+	];
+	expect(
+		(
+			await ingest(token, {
+				workspaceId: ws.id,
+				sessionId: "s1",
+				events: instants.map((ts, i) =>
+					turn(`m${i}`, ts, { input_tokens: 1, output_tokens: 1 }),
+				),
+			})
+		).status,
+	).toBe(200);
+
+	const list = (await (
+		await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+	).json()) as Array<{
+		durationMinutes: number;
+		activeDurationMinutes: number | null;
+	}>;
+	expect(list[0]?.durationMinutes).toBe(55);
+	expect(list[0]?.activeDurationMinutes).toBe(20);
+	// The SQL rollup and the core JS spec must agree on the same inputs.
+	expect(list[0]?.activeDurationMinutes).toBe(
+		computeActiveDurationMinutes(instants.map((ts) => Date.parse(ts))),
+	);
+
+	// Session-time stats count the active minutes, not the wall-clock span.
+	const stats = (await (
+		await apiGet(
+			`/api/v1/agent-entries/stats?workspaceId=${ws.id}&from=2020-01-01&to=2030-12-31`,
+			admin,
+		)
+	).json()) as { totalMinutes: number };
+	expect(stats.totalMinutes).toBe(20);
+});
+
+it("counts the finalize tail as active only within the idle cutoff", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+
+	// Finalize timestamps run through isTimestampInRange; anchor near the clock.
+	const anchor = Date.now() - 60 * 60_000;
+	const t = (minutes: number) =>
+		new Date(anchor + minutes * 60_000).toISOString();
+	const read = async () =>
+		(await (
+			await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		).json()) as Array<{
+			sessionId: string;
+			durationMinutes: number;
+			activeDurationMinutes: number | null;
+		}>;
+	const bySession = (
+		entries: Awaited<ReturnType<typeof read>>,
+		sessionId: string,
+	) => entries.find((e) => e.sessionId === sessionId);
+
+	const events = [
+		turn("a1", t(0), { input_tokens: 1, output_tokens: 1 }),
+		turn("a2", t(5), { input_tokens: 1, output_tokens: 1 }),
+	];
+	await ingest(token, { workspaceId: ws.id, sessionId: "s-near", events });
+	// Trailing tool activity 3 min past the last event: within the cutoff, so
+	// the tail counts as active (5 + 3).
+	expect(
+		(
+			await finalize(token, {
+				workspaceId: ws.id,
+				sessionId: "s-near",
+				endedAt: t(8),
+			})
+		).status,
+	).toBe(200);
+	let near = bySession(await read(), "s-near");
+	expect(near?.durationMinutes).toBe(8);
+	expect(near?.activeDurationMinutes).toBe(8);
+
+	// A finalize retry re-derives the same total (idempotent).
+	await finalize(token, {
+		workspaceId: ws.id,
+		sessionId: "s-near",
+		endedAt: t(8),
+	});
+	// A Stop re-post after the finalize recomputes 5 active minutes from events
+	// and re-derives the 3-minute tail against the finalized end — the total
+	// must not shrink to 5.
+	await ingest(token, { workspaceId: ws.id, sessionId: "s-near", events });
+	near = bySession(await read(), "s-near");
+	expect(near?.durationMinutes).toBe(8);
+	expect(near?.activeDurationMinutes).toBe(8);
+
+	// A tail beyond the cutoff extends the wall-clock span only.
+	const farEvents = [
+		turn("b1", t(0), { input_tokens: 1, output_tokens: 1 }),
+		turn("b2", t(5), { input_tokens: 1, output_tokens: 1 }),
+	];
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-far",
+		events: farEvents,
+	});
+	expect(
+		(
+			await finalize(token, {
+				workspaceId: ws.id,
+				sessionId: "s-far",
+				endedAt: t(30),
+			})
+		).status,
+	).toBe(200);
+	let far = bySession(await read(), "s-far");
+	expect(far?.durationMinutes).toBe(30);
+	expect(far?.activeDurationMinutes).toBe(5);
+
+	// A second finalize with a later end measures the tail from the last EVENT,
+	// not the previously stored endedAt — repeated finalizes with growing ends
+	// must not accumulate pure idle as active time.
+	await finalize(token, {
+		workspaceId: ws.id,
+		sessionId: "s-far",
+		endedAt: t(35),
+	});
+	far = bySession(await read(), "s-far");
+	expect(far?.durationMinutes).toBe(35);
+	expect(far?.activeDurationMinutes).toBe(5);
+
+	// A late event after the finalize re-derives the tail against the new last
+	// event: gaps 5/20 keep 5 active, plus the now-in-range 25→35 tail.
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-far",
+		events: [
+			...farEvents,
+			turn("b3", t(25), { input_tokens: 1, output_tokens: 1 }),
+		],
+	});
+	far = bySession(await read(), "s-far");
+	expect(far?.durationMinutes).toBe(35);
+	expect(far?.activeDurationMinutes).toBe(15);
+
+	// Fractional components round ONCE over the summed interval, matching
+	// computeActiveDurationMinutes: a 30 s gap + a 30 s tail is 1 minute, not
+	// round(0.5) + round(0.5) = 2.
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s-frac",
+		events: [
+			turn("c1", t(0), { input_tokens: 1, output_tokens: 1 }),
+			turn("c2", t(0.5), { input_tokens: 1, output_tokens: 1 }),
+		],
+	});
+	await finalize(token, {
+		workspaceId: ws.id,
+		sessionId: "s-frac",
+		endedAt: t(1),
+	});
+	const frac = bySession(await read(), "s-frac");
+	expect(frac?.durationMinutes).toBe(1);
+	expect(frac?.activeDurationMinutes).toBe(1);
+});
+
+it("clears the active duration when a summary upsert takes over the session", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+
+	await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		events: [
+			turn("m1", "2026-06-20T01:00:00.000Z", { output_tokens: 1 }),
+			turn("m2", "2026-06-20T01:05:00.000Z", { output_tokens: 1 }),
+		],
+	});
+
+	// The same session re-submitted through the summary endpoint replaces the
+	// wall-clock fields; the event-derived active duration must not sit stale
+	// next to them.
+	const summary = await appFetch("/api/v1/agent-entries", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			workspaceId: ws.id,
+			sessionId: "s1",
+			durationMinutes: 30,
+		}),
+	});
+	expect(summary.status).toBe(200);
+
+	const read = async () =>
+		(await (
+			await apiGet(`/api/v1/agent-entries?workspaceId=${ws.id}`, admin)
+		).json()) as Array<{
+			durationMinutes: number;
+			activeDurationMinutes: number | null;
+			eventCount: number | null;
+		}>;
+	let list = await read();
+	expect(list[0]?.durationMinutes).toBe(30);
+	expect(list[0]?.activeDurationMinutes).toBeNull();
+	// The takeover is complete: the rollup bookkeeping is cleared too, so the
+	// row reads as summary-path.
+	expect(list[0]?.eventCount).toBeNull();
+
+	// A finalize after the takeover must not re-derive active time from the
+	// superseded events.
+	await appFetch("/api/v1/agent-events/finalize", {
+		method: "POST",
+		headers: {
+			authorization: `Bearer ${token}`,
+			"content-type": "application/json",
+		},
+		body: JSON.stringify({
+			workspaceId: ws.id,
+			sessionId: "s1",
+			endedAt: new Date().toISOString(),
+		}),
+	});
+	list = await read();
+	expect(list[0]?.activeDurationMinutes).toBeNull();
+});
+
 it("keeps the materialized rollup monotonic against a stale write", async () => {
 	const { admin, ws } = await setup();
 	const { agentId } = await createAgentToken(admin);
@@ -344,6 +580,25 @@ it("keeps the materialized rollup monotonic against a stale write", async () => 
 	}>;
 	expect(afterNewer[0]?.usage.totalTokens).toBe(500);
 	expect(afterNewer[0]?.durationMinutes).toBe(20);
+});
+
+it("rejects a far-future event timestamp at validation", async () => {
+	const { admin, ws } = await setup();
+	const { token } = await createAgentToken(admin);
+	// endedAt — the last-activity sort key — is the max event timestamp; an
+	// implausible instant must not be able to pin a session to the top.
+	const res = await ingest(token, {
+		workspaceId: ws.id,
+		sessionId: "s1",
+		events: [
+			turn(
+				"m1",
+				new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+				{ output_tokens: 1 },
+			),
+		],
+	});
+	expect(res.status).toBe(400);
 });
 
 it("rejects an empty events array at validation", async () => {

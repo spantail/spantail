@@ -37,6 +37,22 @@ describe("ingestAgentEventsInputSchema", () => {
 		expect(res.success).toBe(false);
 	});
 
+	it("rejects an implausible event timestamp (range-bound like the other paths)", () => {
+		// endedAt — the last-activity sort key — is the max event timestamp, so a
+		// far-future instant would pin the session to the top of every listing.
+		for (const timestamp of [
+			"1970-01-01T00:00:00.000Z",
+			new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+		]) {
+			expect(
+				ingestAgentEventsInputSchema.safeParse({
+					sessionId: "s1",
+					events: [{ ...validEvent, timestamp }],
+				}).success,
+			).toBe(false);
+		}
+	});
+
 	it("rejects an empty/whitespace projectId at the boundary", () => {
 		const res = ingestAgentEventsInputSchema.safeParse({
 			sessionId: "s1",

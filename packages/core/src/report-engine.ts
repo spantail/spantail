@@ -56,6 +56,8 @@ export interface ReportContextInput {
 		agentId: string;
 		entryDate: string;
 		durationMinutes: number;
+		// Idle-excluded active time; null on summary-path sessions (no events).
+		activeDurationMinutes: number | null;
 		usage: AgentUsage | null;
 		description: string | null;
 		startedAt: string | null;
@@ -97,6 +99,9 @@ type ContextAgentEntry = {
 	agent_name: string;
 	entry_date: string;
 	duration_minutes: number;
+	// Idle-excluded active minutes; null on summary-path sessions (no events),
+	// where templates fall back to `duration_minutes`.
+	active_duration_minutes: number | null;
 	// Token buckets flattened from `usage`; 0 when the source exposes no usage.
 	// `input_tokens + output_tokens` can be less than `total_tokens` (buckets are
 	// optional per agent), so never derive one from the others.
@@ -311,6 +316,7 @@ export function buildReportContext(
 		agent_name: named(agentNames, entry.agentId),
 		entry_date: entry.entryDate,
 		duration_minutes: entry.durationMinutes,
+		active_duration_minutes: entry.activeDurationMinutes,
 		total_tokens: entry.usage?.totalTokens ?? 0,
 		input_tokens: entry.usage?.inputTokens ?? 0,
 		output_tokens: entry.usage?.outputTokens ?? 0,

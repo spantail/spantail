@@ -1,4 +1,5 @@
 import {
+	AGENT_ACTIVE_IDLE_GAP_MS,
 	type AgentEntryContext,
 	type AgentUsage,
 	MAX_LINKED_AGENT_ENTRIES,
@@ -45,6 +46,13 @@ export type AgentEventInsert = Omit<
 	typeof agentEvents.$inferInsert,
 	"id" | "createdAt"
 >;
+
+// A session's last-activity instant: events-fed sessions advance `endedAt` to
+// the latest event timestamp on every ingest batch, so it doubles as "last
+// active at"; summary-path rows may lack it and fall back to `startedAt`.
+// Shared sort key for every session listing.
+const lastActivityAt = () =>
+	sql`coalesce(${agentEntries.endedAt}, ${agentEntries.startedAt})`;
 
 // --- agents (account-scoped registry) ---
 
@@ -318,6 +326,14 @@ export async function upsertAgentEntry(
 				ownerUserId: values.ownerUserId,
 				projectId: values.projectId,
 				durationMinutes: values.durationMinutes,
+				// The summary path owns the row now: clear the event-derived fields so
+				// they can't sit stale next to the replaced wall-clock ones —
+				// activeDurationMinutes (consumers fall back to durationMinutes) and
+				// rollupEventCount (else a later finalize would re-derive active time
+				// from the superseded events, and eventCount would misreport). A later
+				// events ingest recomputes both.
+				activeDurationMinutes: null,
+				rollupEventCount: null,
 				usage: values.usage,
 				context: values.context,
 				description: values.description,
@@ -374,7 +390,7 @@ export async function listAgentEntriesByRepo(
 				sql`${agentEntries.context} like '%' || ${opts.repoUrl} || '%'`,
 			),
 		)
-		.orderBy(desc(agentEntries.startedAt))
+		.orderBy(desc(lastActivityAt()))
 		.limit(opts.limit ?? 50);
 }
 
@@ -529,9 +545,10 @@ export async function listAgentEntries(
 			.select()
 			.from(agentEntries)
 			.where(and(...agentEntryConditions(query)))
-			// `id` breaks ties on equal `startedAt` so pagination is stable (no rows
-			// duplicated or skipped across pages).
-			.orderBy(desc(agentEntries.startedAt), desc(agentEntries.id))
+			// Most recently active first, so a long-running session surfaces when it
+			// moves. `id` breaks ties so pagination is stable (no rows duplicated or
+			// skipped across pages).
+			.orderBy(desc(lastActivityAt()), desc(agentEntries.id))
 			.limit(query.limit)
 			.offset(query.offset)
 	);
@@ -587,7 +604,7 @@ export async function listAgentEntriesForReport(
 		.select()
 		.from(agentEntries)
 		.where(and(...conditions))
-		.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id));
+		.orderBy(asc(lastActivityAt()), asc(agentEntries.id));
 }
 
 /**
@@ -632,8 +649,8 @@ export async function listAgentEntriesForWorkEntry(
 				eq(workEntryAgentEntries.agentEntryId, agentEntries.id),
 			)
 			.where(and(...conditions))
-			// Chronological, `id` breaking ties on equal `startedAt` for a stable order.
-			.orderBy(asc(agentEntries.startedAt), asc(agentEntries.id))
+			// Chronological by last activity, `id` breaking ties for a stable order.
+			.orderBy(asc(lastActivityAt()), asc(agentEntries.id))
 			// The write path caps links at MAX_LINKED_AGENT_ENTRIES per entry; cap the
 			// read too so an unexpected surplus (legacy/manual rows) can't make the
 			// route read an unbounded set.
@@ -686,7 +703,12 @@ export async function getAgentEntryStats(
 		.select({
 			agentId: agentEntries.agentId,
 			startedAt: agentEntries.startedAt,
-			durationMinutes: agentEntries.durationMinutes,
+			// Session-time stats count active (idle-excluded) time when events
+			// exist, falling back to the wall-clock span on summary-path rows.
+			durationMinutes:
+				sql<number>`coalesce(${agentEntries.activeDurationMinutes}, ${agentEntries.durationMinutes})`.mapWith(
+					Number,
+				),
 			tokens: tokenBucket("totalTokens"),
 			inputTokens: tokenBucket("inputTokens"),
 			outputTokens: tokenBucket("outputTokens"),
@@ -792,6 +814,8 @@ export interface SessionRollup {
 	startedAt: Date;
 	endedAt: Date;
 	durationMinutes: number;
+	/** Idle-excluded active time: consecutive event gaps ≤ 15 min summed. */
+	activeDurationMinutes: number;
 	eventCount: number;
 }
 
@@ -799,6 +823,58 @@ export interface SessionRollup {
 // long — the bounds `agentEntryContextSchema` enforces on the read side.
 const CONTEXT_VALUES_MAX = 20;
 const CONTEXT_VALUE_LENGTH_MAX = 200;
+
+/** The last event instant of one session (null when it has no events). */
+function lastEventTs(agentId: string, sessionId: string) {
+	return sql`(
+		select max(${agentEvents.timestamp}) from ${agentEvents}
+		where ${agentEvents.agentId} = ${agentId}
+			and ${agentEvents.sessionId} = ${sessionId}
+	)`;
+}
+
+/**
+ * Sum of one session's consecutive event gaps at or under the idle cutoff, in
+ * ms (0 for zero or one event): the SQL side of `computeActiveDurationMinutes`
+ * in core.
+ */
+function eventGapActiveMs(agentId: string, sessionId: string) {
+	return sql`(
+		select coalesce(sum(case when gap <= ${AGENT_ACTIVE_IDLE_GAP_MS} then gap end), 0)
+		from (
+			select ${agentEvents.timestamp} - lag(${agentEvents.timestamp}) over (
+				order by ${agentEvents.timestamp}, ${agentEvents.id}
+			) as gap
+			from ${agentEvents}
+			where ${agentEvents.agentId} = ${agentId}
+				and ${agentEvents.sessionId} = ${sessionId}
+		)
+	)`;
+}
+
+/**
+ * A session's full active duration in minutes, derived in SQL: the event-gap
+ * sum plus the finalize tail — the stretch from the last event to `finalEnd`
+ * (a finalized wall-clock end), counted only when within the idle cutoff —
+ * summed in ms and rounded ONCE, exactly like `computeActiveDurationMinutes`.
+ * Deterministic against the current events table, so the rollup
+ * materialization and the finalize converge regardless of write order.
+ */
+function activeDurationMinutesExpr(
+	agentId: string,
+	sessionId: string,
+	finalEnd: SQL,
+) {
+	const tailStart = sql`coalesce(${lastEventTs(agentId, sessionId)}, ${agentEntries.startedAt})`;
+	return sql`cast(round((
+		${eventGapActiveMs(agentId, sessionId)}
+		+ (case
+			when ${finalEnd} - ${tailStart} between 1 and ${AGENT_ACTIVE_IDLE_GAP_MS}
+			then ${finalEnd} - ${tailStart}
+			else 0
+		end)
+	) / 60000.0) as integer)`;
+}
 
 /** Sums one raw usage bucket (snake_case JSON key) across a session's events. */
 function usageBucketSum(key: string) {
@@ -843,6 +919,15 @@ export async function computeSessionRollup(
 	if (!agg || agg.count === 0 || agg.minTs == null || agg.maxTs == null) {
 		return null;
 	}
+
+	// Idle-excluded active time, summed in SQL like the other aggregates so the
+	// result stays O(1) per session regardless of event count (see the facet
+	// comment below). The cutoff — and the pure JS spec of this derivation,
+	// `computeActiveDurationMinutes` — live in core; an integration test keeps
+	// the two implementations in agreement.
+	const activeRow = await db.get<{ active_ms: number }>(
+		sql`select ${eventGapActiveMs(agentId, sessionId)} as active_ms`,
+	);
 
 	// Model of the most recent event that carries one; undefined when none do.
 	// id breaks timestamp ties so the pick is stable.
@@ -921,6 +1006,10 @@ export async function computeSessionRollup(
 		startedAt: new Date(agg.minTs),
 		endedAt: new Date(agg.maxTs),
 		durationMinutes,
+		activeDurationMinutes: Math.max(
+			0,
+			Math.round((activeRow?.active_ms ?? 0) / 60000),
+		),
 		eventCount: agg.count,
 	};
 }
@@ -960,6 +1049,20 @@ export async function materializeAgentSessionRollup(
 				// pushed endedAt past the last event, and only (end − start) covers
 				// that combination. Both bounds are monotonic, so the duration is too.
 				durationMinutes: sql`cast(round((max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0)) - excluded.started_at) / 60000.0) as integer)`,
+				// Recomputed, not max()-ed: the events component and the finalize tail
+				// (past the last event up to a finalized wall-clock end within the
+				// idle cutoff) are re-derived against the current events table, so a
+				// late event after a finalize shrinks the tail and grows the events
+				// component consistently instead of freezing an earlier total. Null
+				// excluded (a caller without a rollup) preserves the stored value.
+				activeDurationMinutes: sql`case
+					when excluded.active_duration_minutes is null then ${agentEntries.activeDurationMinutes}
+					else ${activeDurationMinutesExpr(
+						values.agentId,
+						values.sessionId,
+						sql`max(coalesce(excluded.ended_at, 0), coalesce(${agentEntries.endedAt}, 0))`,
+					)}
+				end`,
 				usage: values.usage,
 				context: sql`case
 					when excluded.context is null then ${agentEntries.context}
@@ -1031,6 +1134,19 @@ export async function finalizeAgentSession(
 						// Extend the duration to the finalized end; never shrink it.
 						durationMinutes: sql`max(${agentEntries.durationMinutes},
 							cast(round((${clampedEnd(endedAtMs)} - ${agentEntries.startedAt}) / 60000.0) as integer))`,
+						// Recompute events component + finalize tail (trailing tool activity
+						// produces no event of its own). Measuring the tail from the last
+						// EVENT, not the stored endedAt, keeps repeated finalizes with
+						// growing ends from accumulating idle stretches, and makes a
+						// retry a no-op. Summary-path rows (no events) stay null.
+						activeDurationMinutes: sql`case
+							when ${agentEntries.rollupEventCount} is null then ${agentEntries.activeDurationMinutes}
+							else ${activeDurationMinutesExpr(
+								input.agentId,
+								input.sessionId,
+								clampedEnd(endedAtMs),
+							)}
+						end`,
 					}
 				: {}),
 			...(input.description !== null ? { description: input.description } : {}),

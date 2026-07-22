@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
 	buildReportFrontMatter,
+	computeActiveDurationMinutes,
 	generateShareToken,
 	hashToken,
 	lastDayOfMonth,
@@ -988,6 +989,7 @@ export async function generateDataset(
 
 				let minTs = Number.POSITIVE_INFINITY;
 				let maxTs = Number.NEGATIVE_INFINITY;
+				const eventTimestamps: number[] = [];
 				let input = 0;
 				let output = 0;
 				let cacheCreation = 0;
@@ -1007,6 +1009,7 @@ export async function generateDataset(
 					cacheRead += crTok;
 					minTs = Math.min(minTs, tsMs);
 					maxTs = Math.max(maxTs, tsMs);
+					eventTimestamps.push(tsMs);
 					agentEventRows.push({
 						id: randomUUID(),
 						agentId,
@@ -1068,6 +1071,9 @@ export async function generateDataset(
 					agentId,
 					sessionId,
 					durationMinutes: Math.max(0, Math.round((maxTs - minTs) / 60_000)),
+					// Derived with the runtime's own spec so the seed and the rollup
+					// stay coherent (seed turns are ~90s apart, so active ≈ wall-clock).
+					activeDurationMinutes: computeActiveDurationMinutes(eventTimestamps),
 					usage: {
 						inputTokens: input,
 						outputTokens: output,
