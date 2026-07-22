@@ -37,8 +37,9 @@ work and building reports.
     server-side — the plugin sends your raw arguments verbatim.
   - `/spantail:create-report` — compose a report; always previews before
     saving.
-  - `/spantail:summary on|off` — per-session toggle for sending the plan
-    title as the entry description.
+  - `/spantail:summary on|off` — per-session toggle for sending the
+    session's title (plan-file title, else the generated session title) as
+    the entry description.
 - **Attribution skills** (no MCP needed):
   - `/spantail:link` — link the current repository to a workspace and
     project (see [Per-repository attribution](#per-repository-attribution)).
@@ -63,7 +64,7 @@ Enabling the plugin prompts for:
 | `apiUrl` | yes | Your instance's base URL, e.g. `https://spantail.example.com`. |
 | `agentToken` | yes | The **agent access token** from Settings → Agents (`spantail_aat_…`), a write-only ingest credential. |
 | `apiToken` | no | A **personal API token** (`spantail_pat_…`) for the bundled MCP server the skills and agents use — acts as you, separate from the agent token. Leave blank if you only use the hooks. |
-| `sendSessionSummary` | no | Send the plan-file title as the entry description when a plan-mode session ends (default off — see Privacy). |
+| `sendSessionSummary` | no | Send the session's title — its plan-file title, else the session title Claude Code generated — as the entry description when the session ends (default off — see Privacy). |
 
 Claude Code stores this config **per plugin, user-globally** — every
 repository shares it, whatever install scope you pick, and the dialog only
@@ -162,10 +163,12 @@ and PR references. Conversation bodies, thinking, and tool input/output never
 leave your machine.
 
 The one opt-in exception is `sendSessionSummary`: with the setting (or
-`/spantail:summary on`) enabled, the SessionEnd hook extracts the session's
-plan-file title — mechanically, from the transcript's structured plan-mode
-records, with no extra inference — and stores it as the entry's description.
-Sessions that never used plan mode send nothing (the description is
+`/spantail:summary on`) enabled, the SessionEnd hook extracts a title —
+the session's plan-file title, or, when no plan exists, the session title
+Claude Code generated (present only on compacted/resumed sessions; it is
+derived from your conversation) — mechanically, from the transcript's
+structured records, with no extra inference — and stores it as the entry's
+description. Sessions with neither send nothing (the description is
 nullable). Anything placed in a description is stored verbatim and can
 surface in reports, public share links, and Send-to deliveries — see
 [`docs/security.md`](../../docs/security.md) (§2). The same applies to
@@ -183,7 +186,7 @@ whatever you put into descriptions via `/spantail:log-work`.
 | `hooks/spantail-doctor.sh` | Resolution report for `/spantail:doctor` (values, sources, warnings; credentials masked). |
 | `hooks/lib/config.sh` | Env → repo `.spantail/` files → plugin user-config resolution. |
 | `hooks/transcript-to-events.jq` | Transcript → compact events (deduped by `message.id`). |
-| `hooks/transcript-to-finalize.jq` | Transcript → finalize body (endedAt, refs, opt-in plan title). |
+| `hooks/transcript-to-finalize.jq` | Transcript → finalize body (endedAt, refs, opt-in title: plan title, else session title). |
 | `hooks/transcript-to-plan-path.jq` | Transcript → the session's plan-file path (structured records only). |
 | `skills/`, `agents/` | The skills and agents listed above. |
 

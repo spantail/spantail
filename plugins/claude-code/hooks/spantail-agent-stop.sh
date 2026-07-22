@@ -80,8 +80,10 @@ if [ "$mode" = "worker" ]; then
 		skip "payload file missing; skipping"
 	# The payload is single-use state; arm its removal before anything can
 	# skip (a missing jq below must not strand payload files turn after turn).
-	# shellcheck disable=SC2064 -- expand $payload_file now, it never changes
-	trap "rm -f '$payload_file'" EXIT
+	# A function, not interpolated trap source: the path must never be
+	# reparsed as shell (a TMPDIR containing a quote would break the trap).
+	cleanup_payload() { rm -f "$payload_file"; }
+	trap cleanup_payload EXIT
 	hook_payload="$(cat "$payload_file")"
 	# Sweep leftovers of workers that were killed before their own trap ran —
 	# swept here, off the Stop path, because enumerating a crowded TMPDIR
