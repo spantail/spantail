@@ -2,10 +2,23 @@
 #
 # Claude Code "Stop" hook → Spantail agent-events ingest.
 #
-# Reads the hook payload (JSON on stdin), extracts per-assistant-message token
-# usage and non-usage attributes from the transcript with jq (conversation
-# bodies never leave this machine), and POSTs the compact events to Spantail.
-# Idempotent on (agent, message.id), so it is safe to run on every Stop.
+# Modes:
+#   (no args)        The Stop hook entry. Persists the stdin payload to a temp
+#                    file and detaches a worker, then exits immediately — the
+#                    user's turn is never blocked on config resolution, jq, or
+#                    the network. A worker that dies mid-flight (host teardown)
+#                    loses nothing durable: the next Stop or the SessionEnd
+#                    reconcile re-posts the full transcript idempotently.
+#   --sync           Synchronous ingest of the stdin payload. Used by the
+#                    SessionEnd hook, whose finalize step must run after this
+#                    reconcile has created the entry.
+#   --ingest <file>  Internal: the detached worker. Reads the payload file and
+#                    removes it on exit.
+#
+# The ingest extracts per-assistant-message token usage and non-usage
+# attributes from the transcript with jq (conversation bodies never leave this
+# machine), and POSTs the compact events to Spantail. Idempotent on
+# (agent, message.id), so it is safe to run on every Stop.
 # Never fails the turn: any problem logs to stderr and exits 0.
 #
 # Requirements: bash, jq, curl.
@@ -22,10 +35,63 @@ skip() {
 	exit 0
 }
 
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+mode="async"
+payload_file=""
+case "${1:-}" in
+--sync) mode="sync" ;;
+--ingest)
+	mode="worker"
+	payload_file="${2:-}"
+	;;
+esac
+
+if [ "$mode" = "async" ]; then
+	# Do the bare minimum before returning the turn: persist stdin, detach a
+	# worker, exit. Even config resolution waits for the worker (it costs
+	# several jq runs) — misconfiguration is still surfaced synchronously by
+	# the SessionEnd hook and by /spantail:doctor. The payload travels via a
+	# file, not argv (argv would hit the OS size limit on long sessions), and
+	# the worker inherits the environment, so it resolves the same config.
+	tmp="$(mktemp "${TMPDIR:-/tmp}/spantail-stop-payload.XXXXXX")" ||
+		skip "mktemp failed; skipping"
+	if ! cat >"$tmp"; then
+		rm -f "$tmp"
+		skip "failed to persist hook payload; skipping"
+	fi
+	# Sweep leftovers of workers that were killed before their EXIT trap ran.
+	find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'spantail-stop-payload.*' \
+		-mmin +1440 -delete 2>/dev/null || true
+	# Full fd redirection is what actually frees the turn: a child holding the
+	# hook's stdout/stderr pipes would keep the host waiting for EOF. setsid
+	# detaches into a new session where available (Linux); macOS has no setsid,
+	# so a backgrounded subshell double-forks the worker into an orphan, with
+	# nohup shielding it from SIGHUP either way.
+	if command -v setsid >/dev/null 2>&1; then
+		setsid nohup "$here/spantail-agent-stop.sh" --ingest "$tmp" \
+			</dev/null >/dev/null 2>&1 &
+	else
+		(nohup "$here/spantail-agent-stop.sh" --ingest "$tmp" \
+			</dev/null >/dev/null 2>&1 &)
+	fi
+	exit 0
+fi
+
 command -v jq >/dev/null 2>&1 || skip "jq not found; skipping"
 command -v curl >/dev/null 2>&1 || skip "curl not found; skipping"
 
-here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ "$mode" = "worker" ]; then
+	[ -n "$payload_file" ] && [ -f "$payload_file" ] ||
+		skip "payload file missing; skipping"
+	# The payload is single-use state; remove it however this worker exits.
+	# shellcheck disable=SC2064 -- expand $payload_file now, it never changes
+	trap "rm -f '$payload_file'" EXIT
+	hook_payload="$(cat "$payload_file")"
+else
+	hook_payload="$(cat)"
+fi
+
 # shellcheck source=lib/config.sh
 . "$here/lib/config.sh"
 spantail_load_user_config
@@ -36,7 +102,6 @@ SPANTAIL_PROJECT_ID="$(spantail_config SPANTAIL_PROJECT_ID projectId)"
 [ -n "$SPANTAIL_API_URL" ] || skip "SPANTAIL_API_URL not configured; skipping"
 [ -n "$SPANTAIL_AGENT_TOKEN" ] || skip "SPANTAIL_AGENT_TOKEN not configured; skipping"
 
-hook_payload="$(cat)"
 transcript="$(jq -r '.transcript_path // empty' <<<"$hook_payload")"
 session="$(jq -r '.session_id // empty' <<<"$hook_payload")"
 cwd="$(jq -r '.cwd // empty' <<<"$hook_payload")"
@@ -74,7 +139,7 @@ if [ -n "$SPANTAIL_PROJECT_ID" ]; then
 	filter+=' + {projectId: $p}'
 fi
 
-# Bounded timeouts so a slow or down network never blocks the user's turn:
+# Bounded timeouts so a slow or down network never blocks the SessionEnd path:
 # this is best-effort telemetry and the hook exits 0 on any failure.
 jq "${jq_args[@]}" "$filter" <<<"$events" |
 	curl -fsS --connect-timeout 2 --max-time 10 -X POST \

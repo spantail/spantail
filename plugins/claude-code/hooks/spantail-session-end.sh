@@ -3,15 +3,17 @@
 # Claude Code "SessionEnd" hook → final reconcile + Spantail session finalize.
 #
 # Two steps, both best-effort:
-#   1. Re-run the Stop hook with the same payload. Event ingest is idempotent
+#   1. Re-run the Stop hook with the same payload, in its synchronous mode
+#      (the finalize below must not race it). Event ingest is idempotent
 #      on (agent, message.id), so this only recovers turns a Stop hook missed
 #      (e.g. right after a compact) and never double-counts.
 #   2. POST the session's closing facts to /api/v1/agent-events/finalize:
-#      wall-clock end, PR refs, and — only when opted in — the title of the
-#      session's plan file as the description (extracted mechanically from
-#      plan-mode attachment records; no inference, and sessions without a
-#      plan just leave the description null). A 404 (no entry yet: the
-#      session produced no events) is expected and ignored.
+#      wall-clock end, PR refs, and — only when opted in — a title as the
+#      description: the session's plan-file title, else the transcript's own
+#      session title (both extracted mechanically from structured records;
+#      no inference, and sessions with neither just leave the description
+#      null). A 404 (no entry yet: the session produced no events) is
+#      expected and ignored.
 #
 # Never blocks the session from ending: any problem logs to stderr and exits 0.
 #
@@ -48,9 +50,10 @@ reason="$(jq -r '.reason // "unknown"' <<<"$hook_payload")"
 [ -f "$transcript" ] || skip "transcript not found: $transcript; skipping"
 [ -n "$session" ] || skip "no session_id in hook payload; skipping"
 
-# Step 1: final reconcile. The Stop hook exits 0 on any failure, so this can
-# never break the chain.
-printf '%s' "$hook_payload" | "$here/spantail-agent-stop.sh"
+# Step 1: final reconcile, synchronously — the finalize below 404s (and drops
+# the description) if it runs before this reconcile has created the entry.
+# The Stop hook exits 0 on any failure, so this can never break the chain.
+printf '%s' "$hook_payload" | "$here/spantail-agent-stop.sh" --sync
 
 # Summary opt-in: per-session marker > env var > user config, default off.
 # The session id becomes part of the marker path, so only accept the expected

@@ -9,12 +9,16 @@ work and building reports.
   - `Stop` posts each turn's compact telemetry to
     `POST /api/v1/agent-events` — token usage plus OTel-keyed attributes
     (git branch, repository URL, working directory, client version, request
-    id). Conversation bodies never leave your machine.
+    id). Conversation bodies never leave your machine. The post is detached
+    into a background worker, so the hook returns in milliseconds and never
+    delays the turn; ingest is idempotent, so a worker that dies is repaired
+    by the next turn's re-post.
   - `SessionEnd` re-posts the final events (idempotent reconcile) and
     finalizes the session via `POST /api/v1/agent-events/finalize` with the
     wall-clock end and the PRs the session touched (`pr-link` records →
-    `context.refs`). The title of the session's plan file is sent as the
-    entry description **only if you opt in**.
+    `context.refs`). A title — the session's plan-file title, else the
+    transcript's own session title — is sent as the entry description
+    **only if you opt in**.
   - `SessionStart` exports `SPANTAIL_SESSION_ID` and `SPANTAIL_PLUGIN_DATA`
     so the `/spantail:summary` toggle can target the current session, plus
     presence markers (never values) for the keychain-stored tokens so
