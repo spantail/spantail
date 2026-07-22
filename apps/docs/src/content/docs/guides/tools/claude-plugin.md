@@ -72,19 +72,21 @@ thinking, and tool input/output never leave your machine:
 - On every **Stop** (end of a turn): per-turn token usage, timestamps, and
   model names, plus the git branch, repository URL, working directory, Claude
   Code version, and provider request ids as
-  [event attributes](/api/agent-ingest/).
+  [event attributes](/api/agent-ingest/). The post runs detached in the
+  background, so a slow network never delays your next prompt.
 - On **SessionEnd**: a final idempotent re-post of the events, then a
   [finalize](/api/agent-ingest/#finalize-a-session) with the wall-clock end
   and the pull requests the session touched (as `context.refs`).
 
 One thing is opt-in: with the `sendSessionSummary` setting (or
 `/spantail:summary on` for a single session), the SessionEnd hook also sends
-the title of the session's **plan file** as the entry's description. The
-title is extracted mechanically from the transcript's structured plan-mode
-records — no extra inference — so only sessions that used plan mode send one;
-the description simply stays empty otherwise. Like any description it is
-stored verbatim and can appear in reports and share links — it stays off
-unless you turn it on.
+a title as the entry's description: the title of the session's **plan file**,
+or — when the session used no plan — the transcript's own **session title**
+(the one Claude Code generates; it exists only on compacted or resumed
+sessions). Both are extracted mechanically from structured transcript
+records — no extra inference — and a session with neither simply leaves the
+description empty. Like any description it is stored verbatim and can appear
+in reports and share links — it stays off unless you turn it on.
 
 ## Skills and agents
 
@@ -93,7 +95,7 @@ unless you turn it on.
 | `/spantail:log-work` | Log a work entry — from your words or from the current session's work. When it records the current session, that session's agent entry (once captured) is linked to the work entry automatically. |
 | `/spantail:log-work #N <duration> [date]` | Log against a GitHub issue: the server resolves the project from its repo mapping (see [GitHub integration](/admin/github-integration/)), fills in the issue title and labels, and links matching agent sessions — including the session you run it from, once its telemetry exists (its first completed turn creates it). Titles of linked sessions are appended to the entry's note when they have one. |
 | `/spantail:create-report` | Compose a report; always previews before saving. |
-| `/spantail:summary on\|off` | Per-session toggle for sending the plan title as the description. |
+| `/spantail:summary on\|off` | Per-session toggle for sending the session's title (plan title, else the generated session title) as the description. |
 | `/spantail:link [--shared]` | Link the current repository to a workspace and project (see [Link a repository](#link-a-repository)). |
 | `/spantail:doctor` | Show where every plugin setting resolves from and what to fix. |
 | `spantail-work-analyst` (agent) | Retrospectives over your work entries. |

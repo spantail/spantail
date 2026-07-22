@@ -1,6 +1,6 @@
 {
 	"name": "spantail",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"description": "Spantail integration: per-turn agent telemetry hooks, work-logging and reporting skills, and analysis agents.",
 	"author": { "name": "Spantail" },
 	"homepage": "https://spantail.com",
@@ -27,8 +27,8 @@
 		},
 		"sendSessionSummary": {
 			"type": "boolean",
-			"title": "Send plan title as session summary",
-			"description": "ON: when a session that used plan mode ends, its plan file's title is sent to Spantail as the entry description (extracted mechanically, no inference; stored verbatim, may appear in reports and share links; /spantail:summary off skips one session). OFF (default): nothing is sent unless you run /spantail:summary on in a session.",
+			"title": "Send session title as summary",
+			"description": "ON: when a session ends, its plan file's title — or, without a plan, the session title Claude Code generated (exists only on compacted/resumed sessions) — is sent to Spantail as the entry description (extracted mechanically, no inference; stored verbatim, may appear in reports and share links; /spantail:summary off skips one session). OFF (default): nothing is sent unless you run /spantail:summary on in a session.",
 			"default": false
 		}
 	}

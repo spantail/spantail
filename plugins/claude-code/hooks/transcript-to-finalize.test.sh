@@ -82,6 +82,46 @@ check "no pr-links omits context" "$min_body" 'has("context") == false'
 check "endedAt from the latest record" "$min_body" \
 	'.endedAt == "2026-06-21T09:05:00.000Z"'
 
+# --- session-title fallback (type:"summary" records) ---
+# Opted in, no plan: the last summary record's text becomes the description.
+with_summary='{"type":"summary","summary":"Old title","leafUuid":"a"}
+{"type":"summary","summary":"Fix the auth flow","leafUuid":"b"}
+{"type":"user","timestamp":"2026-06-21T09:00:00.000Z"}'
+sum_body="$(printf '%s\n' "$with_summary" |
+	jq -n --arg session s5 --arg send_summary true --arg plan_title "" \
+		-f "$here/transcript-to-finalize.jq")"
+check "summary title used when no plan title" "$sum_body" \
+	'.description == "Fix the auth flow"'
+# A plan title outranks the summary title.
+sum_plan_body="$(printf '%s\n' "$with_summary" |
+	jq -n --arg session s5 --arg send_summary true \
+		--arg plan_title "Refactor the auth middleware" \
+		-f "$here/transcript-to-finalize.jq")"
+check "plan title outranks the summary title" "$sum_plan_body" \
+	'.description == "Refactor the auth middleware"'
+# Opt-out: the summary title must not leave the machine either.
+sum_off_body="$(printf '%s\n' "$with_summary" |
+	jq -n --arg session s5 --arg send_summary false --arg plan_title "" \
+		-f "$here/transcript-to-finalize.jq")"
+check "summary title withheld when opted out" "$sum_off_body" \
+	'has("description") == false'
+# Degenerate summary records (empty or non-string) yield no description.
+bad_summary='{"type":"summary","summary":""}
+{"type":"summary","summary":42}
+{"type":"summary"}'
+bad_sum_body="$(printf '%s\n' "$bad_summary" |
+	jq -n --arg session s6 --arg send_summary true --arg plan_title "" \
+		-f "$here/transcript-to-finalize.jq")"
+check "degenerate summary records omit description" "$bad_sum_body" \
+	'has("description") == false'
+# An over-long summary title is capped like the plan title.
+long_sum_body="$(printf '{"type":"summary","summary":"%s"}\n' \
+	"$(printf 'y%.0s' $(seq 1 260))" |
+	jq -n --arg session s7 --arg send_summary true --arg plan_title "" \
+		-f "$here/transcript-to-finalize.jq")"
+check "summary title capped at 200 chars" "$long_sum_body" \
+	'(.description | length) == 200'
+
 # Synthetic: an empty-string timestamp is ignored, not emitted as endedAt.
 blank_ts="$(printf '{"type":"user","timestamp":""}\n' |
 	jq -n --arg session s4 --arg send_summary false --arg plan_title "" \
