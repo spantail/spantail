@@ -60,9 +60,6 @@ if [ "$mode" = "async" ]; then
 		rm -f "$tmp"
 		skip "failed to persist hook payload; skipping"
 	fi
-	# Sweep leftovers of workers that were killed before their EXIT trap ran.
-	find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'spantail-stop-payload.*' \
-		-mmin +1440 -delete 2>/dev/null || true
 	# Full fd redirection is what actually frees the turn: a child holding the
 	# hook's stdout/stderr pipes would keep the host waiting for EOF. setsid
 	# detaches into a new session where available (Linux); macOS has no setsid,
@@ -78,19 +75,25 @@ if [ "$mode" = "async" ]; then
 	exit 0
 fi
 
-command -v jq >/dev/null 2>&1 || skip "jq not found; skipping"
-command -v curl >/dev/null 2>&1 || skip "curl not found; skipping"
-
 if [ "$mode" = "worker" ]; then
 	[ -n "$payload_file" ] && [ -f "$payload_file" ] ||
 		skip "payload file missing; skipping"
-	# The payload is single-use state; remove it however this worker exits.
+	# The payload is single-use state; arm its removal before anything can
+	# skip (a missing jq below must not strand payload files turn after turn).
 	# shellcheck disable=SC2064 -- expand $payload_file now, it never changes
 	trap "rm -f '$payload_file'" EXIT
 	hook_payload="$(cat "$payload_file")"
+	# Sweep leftovers of workers that were killed before their own trap ran —
+	# swept here, off the Stop path, because enumerating a crowded TMPDIR
+	# is unbounded work that must never delay the turn.
+	find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'spantail-stop-payload.*' \
+		-mmin +1440 -delete 2>/dev/null || true
 else
 	hook_payload="$(cat)"
 fi
+
+command -v jq >/dev/null 2>&1 || skip "jq not found; skipping"
+command -v curl >/dev/null 2>&1 || skip "curl not found; skipping"
 
 # shellcheck source=lib/config.sh
 . "$here/lib/config.sh"

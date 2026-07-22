@@ -88,6 +88,19 @@ else
 	flunk "--ingest without a payload file exits 0"
 fi
 
+# A worker that skips (here: no config) still removes its payload file — the
+# cleanup trap is armed before any skip can fire.
+rm -f "$SPANTAIL_TEST_CURL_BODY"
+pf2="$workdir/spantail-stop-payload.skip"
+payload >"$pf2"
+SPANTAIL_API_URL="" SPANTAIL_AGENT_TOKEN="" \
+	"$here/spantail-agent-stop.sh" --ingest "$pf2" 2>/dev/null
+if [ ! -f "$pf2" ] && [ ! -f "$SPANTAIL_TEST_CURL_BODY" ]; then
+	pass "a skipping worker still removes its payload file"
+else
+	flunk "a skipping worker still removes its payload file"
+fi
+
 # --- async (no args): returns immediately, ingest happens detached ---
 rm -f "$SPANTAIL_TEST_CURL_BODY"
 start="$(date +%s)"
