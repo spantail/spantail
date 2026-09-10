@@ -14,7 +14,7 @@
 		"@astrojs/starlight": "^0.41.3",
 		"@fontsource-variable/geist": "^5.2.9",
 		"@fontsource-variable/geist-mono": "^5.2.8",
-		"astro": "^7.1.0",
+		"astro": "^7.2.8",
 		"starlight-sidebar-topics": "^0.8.0",
 		"starlight-theme-nova": "^0.12.1"
 	},
