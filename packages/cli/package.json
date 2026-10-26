@@ -37,7 +37,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.29.0",
+		"@modelcontextprotocol/sdk": "^1.32.0",
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
@@ -45,6 +45,6 @@
 		"@spantail/sdk": "workspace:*",
 		"@types/node": "^26.1.1",
 		"tsdown": "^0.22.14",
-		"vitest": "^4.1.10"
+		"vitest": "^4.1.12"
 	}
 }

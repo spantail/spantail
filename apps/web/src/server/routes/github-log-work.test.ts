@@ -15,6 +15,8 @@ import { encryptSecret, toBase64 } from "../lib/github/crypto";
 import { privateKeyPemToPkcs8Der } from "../lib/github/pkcs8";
 
 const db = () => createDb(env.DB);
+// Session linking only considers recent sessions, so fixtures start an hour ago.
+const RECENT = new Date(Date.now() - 3_600_000);
 
 let issueStatus = 200;
 let pullsByHead: unknown[] = [];
@@ -328,7 +330,7 @@ it("links agent sessions by refs, branch convention, and PR lookup", async () =>
 					...context,
 				},
 				rollupEventCount: null,
-				startedAt: new Date("2026-07-01T10:00:00Z"),
+				startedAt: RECENT,
 				endedAt: null,
 			});
 	await mkEntry("by-ref", { refs: ["github:acme/spantail#5"], branches: [] });
@@ -379,7 +381,7 @@ it("links the caller's current session by sessionId regardless of branch or refs
 			},
 			rollupEventCount: null,
 			description: "Improve work entries",
-			startedAt: new Date("2026-07-01T10:00:00Z"),
+			startedAt: RECENT,
 			endedAt: null,
 		});
 
@@ -438,7 +440,7 @@ it("does not link foreign sessions and keeps a bare-URL note without titles", as
 			context: { repositories: ["https://github.com/acme/spantail"] },
 			rollupEventCount: null,
 			description: "Someone else's work",
-			startedAt: new Date("2026-07-01T10:00:00Z"),
+			startedAt: RECENT,
 			endedAt: null,
 		});
 
@@ -479,7 +481,7 @@ it("keeps the bare-URL note when linked sessions have no description", async () 
 			usage: null,
 			context: { repositories: ["https://github.com/acme/spantail"] },
 			rollupEventCount: null,
-			startedAt: new Date("2026-07-01T10:00:00Z"),
+			startedAt: RECENT,
 			endedAt: null,
 		});
 
