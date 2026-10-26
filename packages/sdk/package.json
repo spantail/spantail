@@ -14,7 +14,7 @@
 		"@cfworker/json-schema": "^4.1.1",
 		"@modelcontextprotocol/sdk": "^1.29.0",
 		"@spantail/core": "workspace:*",
-		"zod": "^4.4.3"
+		"zod": "^4.6.6"
 	},
 	"devDependencies": {
 		"vitest": "^4.1.10"
