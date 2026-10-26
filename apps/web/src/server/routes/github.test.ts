@@ -25,6 +25,8 @@ import { decryptSecret, encryptSecret, toBase64 } from "../lib/github/crypto";
 import { privateKeyPemToPkcs8Der } from "../lib/github/pkcs8";
 
 const db = () => createDb(env.DB);
+// Session linking only considers recent sessions, so fixtures start an hour ago.
+const RECENT = new Date(Date.now() - 3_600_000);
 
 interface RecordedCall {
 	method: string;
@@ -605,7 +607,7 @@ it("links agent entries whose context matches the issue", async () => {
 					branches,
 				},
 				rollupEventCount: null,
-				startedAt: new Date("2026-07-04T10:00:00Z"),
+				startedAt: RECENT,
 				endedAt: null,
 			});
 	await mkEntry("session-on-issue", ["5-fix-auth"]);
@@ -642,7 +644,7 @@ it("appends linked session titles to the entry note", async () => {
 			},
 			rollupEventCount: null,
 			description: "Fix the auth bug",
-			startedAt: new Date("2026-07-04T10:00:00Z"),
+			startedAt: RECENT,
 			endedAt: null,
 		});
 
