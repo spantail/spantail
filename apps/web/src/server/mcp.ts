@@ -3,7 +3,7 @@ import { hashPat, isPatFormat } from "@spantail/core";
 import { createDb, findApiTokenByHash, getUserById } from "@spantail/db";
 import { SpantailClient } from "@spantail/sdk";
 import { registerSpantailTools } from "@spantail/sdk/mcp";
-import { createMcpHandler } from "agents/mcp";
+import { createLegacyMcpHandler } from "agents/mcp";
 import type { Context, Hono } from "hono";
 
 import type { AppEnv } from "./types";
@@ -46,7 +46,7 @@ export function registerMcpRoute(app: Hono<AppEnv>): void {
 		registerSpantailTools(server, client);
 
 		// Stateless: no session ids, plain JSON responses.
-		const handler = createMcpHandler(server, {
+		const handler = createLegacyMcpHandler(server, {
 			route: "/mcp",
 			sessionIdGenerator: undefined,
 			enableJsonResponse: true,
