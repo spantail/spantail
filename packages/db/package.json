@@ -19,7 +19,7 @@
 		"@cloudflare/workers-types": "^5.20260723.1",
 		"@spantail/templates": "workspace:*",
 		"@types/node": "^26.1.1",
-		"better-auth": "^1.6.25",
+		"better-auth": "^1.7.7",
 		"drizzle-kit": "^0.31.10",
 		"sharp": "^0.35.5",
 		"yaml": "^2.9.0"
